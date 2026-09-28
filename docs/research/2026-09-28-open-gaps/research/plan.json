@@ -1,0 +1,85 @@
+{
+  "topic": "MoonAliza open gaps: accurate context accounting across providers, native SQLite in the packaged Electron app, Research Kit redistribution rights",
+  "notes": "Primary pages named directly; the phase-0 search candidates were forum and blog noise for this compound topic.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 5,
+  "perQuery": 2,
+  "maxScrapes": 12,
+  "prefer": [
+    "docs.ollama.com",
+    "platform.openai.com",
+    "platform.claude.com",
+    "github.com",
+    "electronjs.org",
+    "docs.github.com"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.ollama.com/api/chat",
+      "type": "P",
+      "why": "U-01: token counts in the native chat response"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/api/types.go",
+      "type": "P",
+      "why": "U-01: pinned Metrics fields and num_ctx option"
+    },
+    {
+      "url": "https://docs.ollama.com/api/openai-compatibility",
+      "type": "P",
+      "why": "U-02: usage reporting on Ollama's OpenAI-compatible endpoint"
+    },
+    {
+      "url": "https://platform.openai.com/docs/api-reference/chat/object",
+      "type": "P",
+      "why": "U-02: usage object in an OpenAI Chat Completions response"
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+      "type": "P",
+      "why": "U-03: pre-send token counting endpoint"
+    },
+    {
+      "url": "https://www.electronjs.org/docs/latest/tutorial/using-native-node-modules",
+      "type": "P",
+      "why": "U-04: native modules must match Electron's ABI"
+    },
+    {
+      "url": "https://github.com/WiseLibs/better-sqlite3/releases/expanded_assets/v13.0.3",
+      "type": "P",
+      "why": "U-04: which Electron prebuilds v13.0.3 publishes"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/electron/node-abi/main/abi_registry.json",
+      "type": "P",
+      "why": "U-04: the module ABI Electron 44 uses"
+    },
+    {
+      "url": "https://github.com/electron/electron/releases/tag/v44.4.5",
+      "type": "P",
+      "why": "U-06: second reading of the Node version Electron 44.4.5 embeds"
+    },
+    {
+      "url": "https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository",
+      "type": "P",
+      "why": "U-05: what a repository without a license permits"
+    },
+    {
+      "url": "https://github.com/StepenkoAnatoli/Research-Kit",
+      "type": "P",
+      "why": "U-05: whether the kit's repository declares a license"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/electron/electron/v44.4.5/DEPS",
+      "type": "P",
+      "why": "U-06: node_version pinned at the v44.4.5 tag"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/WiseLibs/better-sqlite3/v13.0.3/package.json",
+      "type": "P",
+      "why": "U-04: how v13.0.3 obtains its native binary at install"
+    }
+  ]
+}
