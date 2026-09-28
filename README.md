@@ -2,6 +2,8 @@
 
 A Windows desktop coding assistant under active development. The full product plan includes local and API models, approved coding tools, research, skills, teams, and missions. The implementation follows working stages; the full scope is preserved in [the implementation plan](docs/superpowers/plans/2026-09-24-moonaliza.md).
 
+**Continuing this project with another AI or a fresh checkout? Start with [HANDOFF.md](HANDOFF.md).** It maps the code, current state, next tasks, setup and verification. The repository includes the [research and working-history snapshot](docs/handoff/README.md), with exact-byte integrity checks and an inventory of all original workspace artifacts. No original chat or sibling folders are required.
+
 The current desktop build supports trusted local projects, encrypted model profiles, Ask/Plan file and Git inspection, reviewed Build edits and commands, Stop, persistent history, crash recovery and local model readiness. Ollama and OpenAI-compatible tool calling are implemented. Each write waits for an explicit before/after review; recorded file edits can be viewed and undone when the file still matches. Research, managed models, skills, teams, missions, and broader release qualification remain in progress.
 
 ## Run on Windows x64

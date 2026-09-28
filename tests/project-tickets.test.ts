@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
@@ -16,9 +16,10 @@ test('a native selection creates a bounded single-use ticket tied to its window'
   const root = await fixture();
   const tickets = new ProjectTickets(async () => true);
   const result = await tickets.issue(root, 11);
-  expect(result.pathLabel).toBe(root);
+  const canonicalRoot = await realpath(root);
+  expect(result.pathLabel).toBe(canonicalRoot);
   expect(() => tickets.consume(result.ticket, 12)).toThrow('PROJECT_TICKET_INVALID');
-  expect(tickets.consume(result.ticket, 11).rootPath).toBe(root);
+  expect(tickets.consume(result.ticket, 11).rootPath).toBe(canonicalRoot);
   expect(() => tickets.consume(result.ticket, 11)).toThrow('PROJECT_TICKET_INVALID');
 });
 

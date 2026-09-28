@@ -31,6 +31,7 @@ async function digest(path: string) {
 export async function findCommand(program: string, environment: NodeJS.ProcessEnv, excluded: string[]): Promise<string> {
   const filename = ({ node: 'node.exe', python: 'python.exe', git: 'git.exe', powershell: 'powershell.exe' } as Record<string, string>)[program];
   if (!filename) throw new Error('COMMAND_UNAVAILABLE');
+  const canonicalExcluded = await Promise.all(excluded.map(root => realpath(root)));
   const search = Object.entries(environment).find(([key]) => key.toLowerCase() === 'path')?.[1] ?? '';
   const systemRoot = Object.entries(environment).find(([key]) => key.toLowerCase() === 'systemroot')?.[1];
   const directories = program === 'powershell' && systemRoot ? [join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')] : search.split(';');
@@ -38,7 +39,7 @@ export async function findCommand(program: string, environment: NodeJS.ProcessEn
     const directory = entry.replace(/^"|"$/g, ''); if (!isAbsolute(directory)) continue;
     try {
       const path = await realpath(join(directory, filename));
-      if (excluded.some(root => within(root, path))) continue;
+      if (canonicalExcluded.some(root => within(root, path))) continue;
       const info = await lstat(path); if (info.isFile()) return path;
     } catch { /* Try the next installed location. */ }
   }
@@ -80,7 +81,8 @@ export class CommandBroker {
       for (const part of name.split('/')) { component = join(component, part); if ((await lstat(component)).isSymbolicLink()) throw new Error('PATH_OUTSIDE_PROJECT'); }
       result = await resolveProjectPath(canonical, name);
     }
-    if (!(await lstat(result)).isDirectory() || this.host.protectedRoots.some(protectedRoot => within(protectedRoot, result) || within(result, protectedRoot))) throw new Error('PATH_OUTSIDE_PROJECT');
+    const protectedRoots = await Promise.all(this.host.protectedRoots.map(protectedRoot => realpath(protectedRoot)));
+    if (!(await lstat(result)).isDirectory() || protectedRoots.some(protectedRoot => within(protectedRoot, result) || within(result, protectedRoot))) throw new Error('PATH_OUTSIDE_PROJECT');
     return result;
   }
   async prepare(runId: string, raw: unknown, signal: AbortSignal): Promise<CommandPlan> {
@@ -108,7 +110,8 @@ export class CommandBroker {
     const plan = CommandPlanSchema.parse(op.input);
     if (plan.files[0]?.path !== plan.executable) throw new Error('APPROVAL_STALE');
     for (const file of plan.files) if (await digest(file.path) !== file.sha256) throw new Error('COMMAND_CHANGED');
-    const cwd = await this.cwd(context.project.rootPath, relative(context.project.rootPath, plan.cwd).replaceAll('\\', '/'));
+    const canonicalRoot = await realpath(context.project.rootPath);
+    const cwd = await this.cwd(canonicalRoot, relative(canonicalRoot, plan.cwd).replaceAll('\\', '/'));
     if (cwd !== plan.cwd) throw new Error('COMMAND_CHANGED');
     await this.context(runId, signal, operationId);
     const result = await this.host.execute(plan, signal);

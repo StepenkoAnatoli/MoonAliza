@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'vitest';
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, symlink, writeFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveProjectPath, validateRelativePath, isSensitiveContextPath } from '../src/tools/paths';
@@ -21,7 +21,7 @@ test('resolves absent files beneath an existing safe ancestor', async () => {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-paths-'));
   roots.push(root);
   await mkdir(join(root, 'src'));
-  expect(await resolveProjectPath(root, 'src/new.ts', { allowMissing: true })).toBe(join(root, 'src', 'new.ts'));
+  expect(await resolveProjectPath(root, 'src/new.ts', { allowMissing: true })).toBe(join(await realpath(root), 'src', 'new.ts'));
 });
 
 test('rejects a junction escaping the project root', async () => {

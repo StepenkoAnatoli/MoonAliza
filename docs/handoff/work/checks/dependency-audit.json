@@ -1,0 +1,312 @@
+{
+  "checkedAt": "2026-09-24T17:27:38.472Z",
+  "sourcePlanSha256": "a65d00c44e231cc94339ae854c72a17e3dcf2c0ec4930c59b013f996b492b82d",
+  "packageCount": 27,
+  "pins": [
+    {
+      "name": "@tanstack/react-virtual",
+      "requestedVersion": "3.14.13",
+      "url": "https://registry.npmjs.org/%40tanstack%2Freact-virtual/3.14.13",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-JbDTAwtzZ99aOeCrAfW5EsE5KSq5RWh6Af2dtFwyLIIk48Ja7vm6n4axu/43T3vfjFnEGJalxJ1wyYjSQD6bSg=="
+    },
+    {
+      "name": "better-sqlite3",
+      "requestedVersion": "13.0.3",
+      "url": "https://registry.npmjs.org/better-sqlite3/13.0.3",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=22"
+      },
+      "integrity": "sha512-RbOBxmLBG8uvFUc15X9+9SFemKcQ0WBuISBVkpuiaUB2qblC8UWlHEjdWVoZ8AdhSwmoEgsiXKfopX0CQxaACQ=="
+    },
+    {
+      "name": "electron-updater",
+      "requestedVersion": "6.8.9",
+      "url": "https://registry.npmjs.org/electron-updater/6.8.9",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-ZhVxM9iGONUpZGI1FxdMRgJjUFXi7AYGVa5PwKlO1tV1/4zDxQmfKpXOHVztKrd6L9rLcFjERvi1Mf2vxyTkig=="
+    },
+    {
+      "name": "markdown-it",
+      "requestedVersion": "15.0.2",
+      "url": "https://registry.npmjs.org/markdown-it/15.0.2",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-q4IGxMv56jCqT4OCRCADBoDP3LO4MhmTXjFbphHPXs4g3j9Xg5RDnxqN8IF/3vIWEU+VCnUq+7JUg/cfy2E6Qw=="
+    },
+    {
+      "name": "react",
+      "requestedVersion": "19.3.0",
+      "url": "https://registry.npmjs.org/react/19.3.0",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=0.10.0"
+      },
+      "integrity": "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="
+    },
+    {
+      "name": "react-dom",
+      "requestedVersion": "19.3.0",
+      "url": "https://registry.npmjs.org/react-dom/19.3.0",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-JDk8dgif51OjFoDE70+OT9ICyYr+69HlmihNwp1+Nsfbna3t5sIiCa9ZJktDmQ4/1b/rn26hIAR2uYXDMr5r0Q=="
+    },
+    {
+      "name": "yauzl",
+      "requestedVersion": "3.4.0",
+      "url": "https://registry.npmjs.org/yauzl/3.4.0",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=12"
+      },
+      "integrity": "sha512-jIH9yLR9wqr0wOS0TpBvo/g/2UgZH5qePVbjgRliiF0BYvOZyaBknKsF+x9Iht0O6sqgnB93rCICdOZFecJuDw=="
+    },
+    {
+      "name": "zod",
+      "requestedVersion": "4.6.5",
+      "url": "https://registry.npmjs.org/zod/4.6.5",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="
+    },
+    {
+      "name": "@eslint/js",
+      "requestedVersion": "10.0.1",
+      "url": "https://registry.npmjs.org/%40eslint%2Fjs/10.0.1",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": "^20.19.0 || ^22.13.0 || >=24"
+      },
+      "integrity": "sha512-zeR9k5pd4gxjZ0abRoIaxdc7I3nDktoXZk2qOv9gCNWx3mVwEn32VRhyLaRsDiJjTs0xq/T8mfPtyuXu7GWBcA=="
+    },
+    {
+      "name": "@playwright/test",
+      "requestedVersion": "1.63.0",
+      "url": "https://registry.npmjs.org/%40playwright%2Ftest/1.63.0",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=20"
+      },
+      "integrity": "sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ=="
+    },
+    {
+      "name": "@testing-library/dom",
+      "requestedVersion": "10.4.2",
+      "url": "https://registry.npmjs.org/%40testing-library%2Fdom/10.4.2",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=18"
+      },
+      "integrity": "sha512-yzr2S9HyAIdhz2/6qHgbs665Q7PKVcDF05vsOlHPxG1mo36gKVesdYVeDLnXgfjJ03CrKRk08knc6+E/9m8v2Q=="
+    },
+    {
+      "name": "@testing-library/react",
+      "requestedVersion": "16.3.3",
+      "url": "https://registry.npmjs.org/%40testing-library%2Freact/16.3.3",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=18"
+      },
+      "integrity": "sha512-Uo193NgQbPMz6lrrhtRQQFcMC6Re/ELLFbbuVL30WDlZxlpZf9/lMHTAVxPRLw1q1iu9OJmR1c2BLiENRstdBg=="
+    },
+    {
+      "name": "@testing-library/user-event",
+      "requestedVersion": "14.6.7",
+      "url": "https://registry.npmjs.org/%40testing-library%2Fuser-event/14.6.7",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "npm": ">=6",
+        "node": ">=12"
+      },
+      "integrity": "sha512-MPCpX8bxe8zS+JmmTwLp8jd0dy1rAm60Te/SL8JrQM3qvQJcBOs1d7IefJMyZzqM3EWBrDn/LWDt1BCGu4ASfg=="
+    },
+    {
+      "name": "@types/better-sqlite3",
+      "requestedVersion": "9.6.0",
+      "url": "https://registry.npmjs.org/%40types%2Fbetter-sqlite3/9.6.0",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-ZEEwBSgMu7GYJOynoagg5X9JbxfL6dTJDsgViJIqh67jV44kyOr9RXfmFjLK5rzC4MWssP06t9hu/JwGDnUbCg=="
+    },
+    {
+      "name": "@types/node",
+      "requestedVersion": "26.6.2",
+      "url": "https://registry.npmjs.org/%40types%2Fnode/26.6.2",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-X1P21scMv4zGKLYqjdGjaKa7COa0RKVYYZZN/NfvLQ1JegxFhdhpZG/Lyn8AXx6CDUavKAd11v6BvfpkDByK8g=="
+    },
+    {
+      "name": "@types/react",
+      "requestedVersion": "19.3.0",
+      "url": "https://registry.npmjs.org/%40types%2Freact/19.3.0",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg=="
+    },
+    {
+      "name": "@types/react-dom",
+      "requestedVersion": "19.3.0",
+      "url": "https://registry.npmjs.org/%40types%2Freact-dom/19.3.0",
+      "status": 200,
+      "exists": true,
+      "engines": null,
+      "integrity": "sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q=="
+    },
+    {
+      "name": "electron",
+      "requestedVersion": "44.4.5",
+      "url": "https://registry.npmjs.org/electron/44.4.5",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">= 22.12.0"
+      },
+      "integrity": "sha512-SjgoaeYsSWZfJzubgQU7juvuXMTvn6/e1gAHdGFA/yuMbpF+I+skYqIJ6DdXBXHeWbkbpNpmwZCTpiivtlWZSw=="
+    },
+    {
+      "name": "electron-builder",
+      "requestedVersion": "26.15.3",
+      "url": "https://registry.npmjs.org/electron-builder/26.15.3",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=14.0.0"
+      },
+      "integrity": "sha512-a1KM5heqS3gQCZzizXEI8RjJy3QVogULPdeSknt76uLDpBIW/HDGsMg/XgP0riP6PI9COsRvFITKKGDqA8fJxA=="
+    },
+    {
+      "name": "esbuild",
+      "requestedVersion": "0.28.2",
+      "url": "https://registry.npmjs.org/esbuild/0.28.2",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=18"
+      },
+      "integrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA=="
+    },
+    {
+      "name": "eslint",
+      "requestedVersion": "10.11.0",
+      "url": "https://registry.npmjs.org/eslint/10.11.0",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": "^20.19.0 || ^22.13.0 || >=24"
+      },
+      "integrity": "sha512-P7a6UEEqb9G95MYAtqkmsTbVXIYyzIfl6NGOIJk162PaahFxFyeGcrlXYFSiagECg4sEm8IseJdZBKR3rx6MsQ=="
+    },
+    {
+      "name": "jsdom",
+      "requestedVersion": "30.1.1",
+      "url": "https://registry.npmjs.org/jsdom/30.1.1",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+      },
+      "integrity": "sha512-FahmoPK5vbPc+jxV1iErMHmAZypCZ942NHF4+qqaWAuvaKKTBZxawnmAtrbGWLU7MtlxfqIP0qw6aSI+aWGtLg=="
+    },
+    {
+      "name": "tsx",
+      "requestedVersion": "4.23.15",
+      "url": "https://registry.npmjs.org/tsx/4.23.15",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=18.0.0"
+      },
+      "integrity": "sha512-Yiex1Ovn8z2xPpOWckIiysV1SSyRMY9BkLF++q0yKiDxCqRhosKfMg3janKkiLBwZ5c/YryloKwGZcrEmtwxKw=="
+    },
+    {
+      "name": "typescript",
+      "requestedVersion": "5.9.3",
+      "url": "https://registry.npmjs.org/typescript/5.9.3",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": ">=14.17"
+      },
+      "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="
+    },
+    {
+      "name": "typescript-eslint",
+      "requestedVersion": "8.70.1",
+      "url": "https://registry.npmjs.org/typescript-eslint/8.70.1",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+      },
+      "integrity": "sha512-AcWG7KDjZ2THNXsgwttMaGmzVi0VFRlFYfqFHYQRbDpF3owuYbuiL8c7UUrd2k8s3PoSfIQrWfrGXfcElrWLYA=="
+    },
+    {
+      "name": "vite",
+      "requestedVersion": "8.3.0",
+      "url": "https://registry.npmjs.org/vite/8.3.0",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      },
+      "integrity": "sha512-lhZBVvEHefgE+HQZC9O7EBJgCU/nVzFNl7vkS4RE0APtWLP02/8QVIkQtzBxPquh7lq5/78NHipTj7ODQ6XuyQ=="
+    },
+    {
+      "name": "vitest",
+      "requestedVersion": "5.0.1",
+      "url": "https://registry.npmjs.org/vitest/5.0.1",
+      "status": 200,
+      "exists": true,
+      "engines": {
+        "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+      },
+      "integrity": "sha512-iA95lQbKEkvrtTkdAgnWbXfbipWiiWe/hDl2P5tMi6WFwD76G0NxXAGp/M9EOcYupeGJRr6wppMc7CoA41TQjg=="
+    }
+  ],
+  "researchKit": {
+    "commit": "e4a799f3fa07eb0c7377a1f350bae7cf987c5110",
+    "treeStatus": 200,
+    "credentialUsed": false,
+    "truncated": false,
+    "relevantPaths": [
+      {
+        "path": "research-kit/bin/artifact.mjs",
+        "sha": "0e132f72497a5801acc51907dcf454a5cd48b24d"
+      },
+      {
+        "path": "research-kit/bin/handoff.mjs",
+        "sha": "08df2a2026daaf50007c7fb6179c5c27750bb826"
+      },
+      {
+        "path": "research-kit/bin/preflight.mjs",
+        "sha": "73fe40e91cf779ad14c51b9557e45c82b1daa7a9"
+      },
+      {
+        "path": "research-kit/lib/artifact-validator.mjs",
+        "sha": "3c5e1047ede760e389a1dcff3a4888c15df81e13"
+      }
+    ],
+    "files": []
+  }
+}

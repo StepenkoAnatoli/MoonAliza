@@ -1,0 +1,11 @@
+{
+  "topic": "MoonAliza verified runtime artifact transport and extraction",
+  "depth": "quick",
+  "refreshDays": 1,
+  "maxScrapes": 2,
+  "queries": [],
+  "urls": [
+    { "url": "https://github.com/thejoshwolfe/yauzl", "type": "P", "why": "Pinned ZIP library async bounded iteration and size/path validation semantics" },
+    { "url": "https://www.rfc-editor.org/rfc/rfc9110.html", "type": "P", "why": "HTTP range identity and If-Range semantics for resumable verified downloads" }
+  ]
+}

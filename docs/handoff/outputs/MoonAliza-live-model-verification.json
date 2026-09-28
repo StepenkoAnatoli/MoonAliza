@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-09-27T00:52:58.860Z",
+  "model": "Qwen/Qwen3-4B-Instruct-2507:nscale",
+  "syntheticOnly": true,
+  "outcome": "passed",
+  "stages": {
+    "profileSaved": true,
+    "profileConnection": true,
+    "readAndExactReview": true,
+    "approvedEditApplied": true,
+    "runCompleted": true,
+    "undoRestoredOriginal": true,
+    "credentialAbsentFromVaultPlaintext": true
+  },
+  "step": "undo",
+  "version": "0.5.0",
+  "temporaryDataRemoved": true
+}

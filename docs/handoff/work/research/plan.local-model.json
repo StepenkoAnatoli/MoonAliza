@@ -1,0 +1,20 @@
+{
+  "topic": "MoonAliza local-model readiness: Windows hardware memory, Ollama portable runtime, API inspection and exact artifact identity",
+  "depth": "deep",
+  "refreshDays": 1,
+  "maxScrapes": 12,
+  "queries": [],
+  "urls": [
+    {"url":"https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex","type":"P","why":"U-08 host RAM measurement"},
+    {"url":"https://learn.microsoft.com/en-us/windows/win32/api/dxgi/ns-dxgi-dxgi_adapter_desc","type":"P","why":"U-08 full-width adapter capacities"},
+    {"url":"https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_4/nf-dxgi1_4-idxgiadapter3-queryvideomemoryinfo","type":"P","why":"U-08 process budget is not global free VRAM"},
+    {"url":"https://docs.nvidia.com/deploy/nvml-api/api/group__nvmlDeviceQueries.html","type":"P","why":"U-08 matched adapter memory telemetry and unavailable measurements"},
+    {"url":"https://docs.ollama.com/windows","type":"P","why":"U-09 Windows portable integration"},
+    {"url":"https://docs.ollama.com/api/tags","type":"P","why":"U-10 read-only model inventory"},
+    {"url":"https://docs.ollama.com/api/ps","type":"P","why":"U-10 runtime-loaded model observations"},
+    {"url":"https://docs.ollama.com/api/chat","type":"P","why":"U-10 native chat controls and terminal response"},
+    {"url":"https://github.com/ollama/ollama/releases/expanded_assets/v0.34.4","type":"P","why":"U-09 pinned Windows release asset hashes"},
+    {"url":"https://raw.githubusercontent.com/ollama/ollama/v0.34.4/envconfig/config.go","type":"P","why":"U-09 pinned ownership and cloud-disable environment controls"},
+    {"url":"https://ollama.com/library/qwen3/tags","type":"P","why":"U-11 candidate artifact sizes do not establish qualification"}
+  ]
+}

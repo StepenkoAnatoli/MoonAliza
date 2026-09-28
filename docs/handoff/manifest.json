@@ -1,0 +1,575 @@
+{
+  "schemaVersion": 1,
+  "snapshotDate": "2026-09-28",
+  "sourceRevision": "6fbb3c5c5d079efbbb81025cb8d31318ffd290d9",
+  "description": "Historical workspace evidence snapshot. Current instructions and status are in HANDOFF.md and docs/development-status.md. No credential values or installers are included.",
+  "files": [
+    {
+      "source": "work/check-dependencies.mjs",
+      "bytes": 4223,
+      "sha256": "14bf0a8c5690f74e37fed65b506f602baf193657c1b7ce7478ad6970d59efcc7",
+      "disposition": "included",
+      "path": "work/check-dependencies.mjs"
+    },
+    {
+      "source": "work/checks/dependency-audit.json",
+      "bytes": 10383,
+      "sha256": "e6985b0ab45109394e9c28e752fa4d38007121bd20311e5a7f742ddf61af6d4d",
+      "disposition": "included",
+      "path": "work/checks/dependency-audit.json"
+    },
+    {
+      "source": "work/checks/provider-identity-reproduction.json",
+      "bytes": 263,
+      "sha256": "18db6b87c9cb33a58239a2a751ba11d8b5c7bad34a4b31d2082bc5b4a85bf53d",
+      "disposition": "included",
+      "path": "work/checks/provider-identity-reproduction.json"
+    },
+    {
+      "source": "work/moonaliza-build/findings.md",
+      "bytes": 7765,
+      "sha256": "c2675b7c2b0d3211c2903ec91b2905c43bb9fdb41e1e65516f7a768d3bfcf5dd",
+      "disposition": "included",
+      "path": "work/moonaliza-build/findings.md"
+    },
+    {
+      "source": "work/moonaliza-build/progress.md",
+      "bytes": 23036,
+      "sha256": "ae8717460cb3893da200a24626a172f1773b05a1b371c2478ef616eea871b380",
+      "disposition": "included",
+      "path": "work/moonaliza-build/progress.md"
+    },
+    {
+      "source": "work/moonaliza-build/task_plan.md",
+      "bytes": 9031,
+      "sha256": "178142fb80823eb80b744419fc9f0089774d9f6b7bda72223ca732ac88b1f635",
+      "disposition": "included",
+      "path": "work/moonaliza-build/task_plan.md"
+    },
+    {
+      "source": "work/reproduce-plan-guard.mjs",
+      "bytes": 1351,
+      "sha256": "8eae40ddbbd440b8db26e5a0c28ae07c1f907754a8c2168f43a2176e5ab8ddff",
+      "disposition": "included",
+      "path": "work/reproduce-plan-guard.mjs"
+    },
+    {
+      "source": "work/research/BRIEF.model-store.md",
+      "bytes": 1808,
+      "sha256": "17e67c3fea35fb1a087942ab7e7174d09d49de07149b0071381835c92134f146",
+      "disposition": "included",
+      "path": "work/research/BRIEF.model-store.md"
+    },
+    {
+      "source": "work/research/DISCOVERY.md",
+      "bytes": 8033,
+      "sha256": "8ea253e14ec9e6bc199b71178fa2691a2200c673a6b30f34f7e5f03a5486bcbe",
+      "disposition": "included",
+      "path": "work/research/DISCOVERY.md"
+    },
+    {
+      "source": "work/research/EVIDENCE.md",
+      "bytes": 9862,
+      "sha256": "298f988531e03834d1385765dcbacf137f5c6c0414f68a22dfc8ddb1f15977da",
+      "disposition": "included",
+      "path": "work/research/EVIDENCE.md"
+    },
+    {
+      "source": "work/research/plan.artifacts.json",
+      "bytes": 488,
+      "sha256": "209d4be7b78c4decb142c69f0ede2f05b0b5503554beea11f2a4ab06c53dd3b3",
+      "disposition": "included",
+      "path": "work/research/plan.artifacts.json"
+    },
+    {
+      "source": "work/research/plan.json",
+      "bytes": 1206,
+      "sha256": "b578646181787cb9622a8f4b1a2e19fd706339a3f4a97d2048bb13268d12901d",
+      "disposition": "included",
+      "path": "work/research/plan.json"
+    },
+    {
+      "source": "work/research/plan.local-model.json",
+      "bytes": 1766,
+      "sha256": "82fdab29f1ffab545418a7409636926c58de2c20a22b780c85fe56a15e825a0a",
+      "disposition": "included",
+      "path": "work/research/plan.local-model.json"
+    },
+    {
+      "source": "work/research/plan.local-version.json",
+      "bytes": 338,
+      "sha256": "89328201e4d939cc83f9c54c43db67df75534c93bc854478f13ed08992ccf7f7",
+      "disposition": "included",
+      "path": "work/research/plan.local-version.json"
+    },
+    {
+      "source": "work/research/plan.managed-provider.json",
+      "bytes": 1212,
+      "sha256": "d9dc13184e878b82bc6fa7e1fc16a883d984e22542b3aba9af9ed5f64c619576",
+      "disposition": "included",
+      "path": "work/research/plan.managed-provider.json"
+    },
+    {
+      "source": "work/research/plan.model-store.json",
+      "bytes": 1094,
+      "sha256": "1554a8c0c677de1a5ff24bf7a752bb08aa5cdb04e45c22077c13f82499a67f61",
+      "disposition": "included",
+      "path": "work/research/plan.model-store.json"
+    },
+    {
+      "source": "work/research/raw/.fetches.jsonl",
+      "bytes": 21781,
+      "sha256": "8cf41900cfeb21a73698eecf72441c7516330eecb1e65ee3bd0aefa656010067",
+      "disposition": "included",
+      "path": "work/research/raw/.fetches.jsonl"
+    },
+    {
+      "source": "work/research/raw/.usage.jsonl",
+      "bytes": 2201,
+      "sha256": "cbf4aa0fed07f31e7171a1fd211a98cdbd95a60f2db62fe8887289e45e4c7592",
+      "disposition": "included",
+      "path": "work/research/raw/.usage.jsonl"
+    },
+    {
+      "source": "work/research/raw/2026-09-24-collect-yml-githubusercontent-f28daef1.md",
+      "bytes": 40082,
+      "sha256": "1108a8ab697e4bee145d975b3477e28991903d11cc5f146e4018442e3207c294",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-24-collect-yml-githubusercontent-f28daef1.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-24-electron-releases-electronjs-f80ac164.md",
+      "bytes": 2121,
+      "sha256": "ccc4e007c46456fc42af34bbab3c7b5e9d25a579d9d5398a7e2c033458cacaac",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-24-electron-releases-electronjs-f80ac164.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-24-git-git-config-documentation-git-scm-42ef5cc3.md",
+      "bytes": 417780,
+      "sha256": "f88b592349d27769dc5291c912737ea53396ae0035fb9ea8c1c1ffc4ed5a9027",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-24-git-git-config-documentation-git-scm-42ef5cc3.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-24-git-git-diff-documentation-git-scm-49c19fcf.md",
+      "bytes": 99676,
+      "sha256": "73ed9ff1d51bba6184745da74bb2c901ce0b8ce09d78675566ffec3399ae0be3",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-24-git-git-diff-documentation-git-scm-49c19fcf.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-24-net-electron-electronjs-1f7179a1.md",
+      "bytes": 10582,
+      "sha256": "b7dfda52f14f56b84e8504da1b27293826830f10db871b9a7fcfa764ab97ed66",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-24-net-electron-electronjs-1f7179a1.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-24-thinking-claude-platform-docs-claude-03550646.md",
+      "bytes": 54981,
+      "sha256": "74b030bbb4d584e16a86d00ea4e6b25939495ab5587704ac2324f33501067077",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-24-thinking-claude-platform-docs-claude-03550646.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-config-go-githubusercontent-6a1b660d.md",
+      "bytes": 16644,
+      "sha256": "574bafc643a813823d66af9b74f3134fde9877a7b86a1aa777da8369055dac68",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-config-go-githubusercontent-6a1b660d.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-device-queries-nvml-api-reference-guide-nvidia-fa52d22e.md",
+      "bytes": 503054,
+      "sha256": "cb4f3dde47e56aa9b84956c025bae5dee750f6a4b7d6f1bc8a0b79c6f828605c",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-device-queries-nvml-api-reference-guide-nvidia-fa52d22e.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-dxgi-adapter-desc-dxgi-h-win32-apps-micr-microsoft-cc569ba3.md",
+      "bytes": 6807,
+      "sha256": "970ab12529b236bc01031f6e519ebec706e3193c2c2ffd3a8a602533e7a3988d",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-dxgi-adapter-desc-dxgi-h-win32-apps-micr-microsoft-cc569ba3.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-generate-a-chat-message-ollama-ollama-03d080ba.md",
+      "bytes": 6520,
+      "sha256": "c87a6576a90f5f5f132895c438d8cd8c286520d163863c6ba217fd01e4735a4b",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-generate-a-chat-message-ollama-ollama-03d080ba.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-globalmemorystatusex-function-sysinfoapi-microsoft-3d4bac10.md",
+      "bytes": 6818,
+      "sha256": "7ff48d9df806b24cbf6592c8afb46b9a38e62adb38b8a4ee2f0bf03ea290e242",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-globalmemorystatusex-function-sysinfoapi-microsoft-3d4bac10.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-idxgiadapter3-queryvideomemoryinfo-dxgi1-microsoft-adb4845a.md",
+      "bytes": 4903,
+      "sha256": "b490aecdec0a70005597b6583822556b6856f944b3d663ad569f53d58b6f9aad",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-idxgiadapter3-queryvideomemoryinfo-dxgi1-microsoft-adb4845a.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-list-models-ollama-ollama-6c296178.md",
+      "bytes": 1954,
+      "sha256": "a5519af6b8eeb25b88c40d07b285f40a70ec4348953bc6638791ed5477ad1ddd",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-list-models-ollama-ollama-6c296178.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-list-running-models-ollama-ollama-a1b66a8d.md",
+      "bytes": 2178,
+      "sha256": "2f6d04c237920c38100cb8e80fe65a3fff1ef2cc17b6ca3e3924d149d5fa77f4",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-list-running-models-ollama-ollama-a1b66a8d.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-tags-qwen3-ollama-0eff70ea.md",
+      "bytes": 19596,
+      "sha256": "28fe1f2045aa4426feeec3768738ac1a201f59f7627996c3db0be234abd68b2e",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-tags-qwen3-ollama-0eff70ea.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-v0-34-4-github-d6ee437b.md",
+      "bytes": 4199,
+      "sha256": "e36655de801592211141841d20aad8bd3d22ff28009c38d8d0f5ba905975b610",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-v0-34-4-github-d6ee437b.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-26-windows-ollama-ollama-179702d8.md",
+      "bytes": 5800,
+      "sha256": "3c4790607c019db8b15a71d66aeae4ff60f5e9133bf51d8979e2f838a18db000",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-26-windows-ollama-ollama-179702d8.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-config-go-githubusercontent-7c378d2d.md",
+      "bytes": 1812,
+      "sha256": "8ee07da03b203e80be1293840ed045ef30489974e7d2a49bb983ff4f5046fa4e",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-config-go-githubusercontent-7c378d2d.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-getextendedtcptable-function-iphlpapi-h--microsoft-e19ba5ed.md",
+      "bytes": 11290,
+      "sha256": "9907473b58a111c115547a4c5255e6f307e6f1e1b5273f3a467ce7cd7c40e95c",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-getextendedtcptable-function-iphlpapi-h--microsoft-e19ba5ed.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-getprocesstimes-function-processthreadsa-microsoft-703b5004.md",
+      "bytes": 7462,
+      "sha256": "c170e83becf32595fbe7f6a6ed9b3f91377a7c9f8eab9af5816ecc8b18b0baaf",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-getprocesstimes-function-processthreadsa-microsoft-703b5004.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-github-thejoshwolfe-yauzl-yet-another-un-github-33140a1c.md",
+      "bytes": 72017,
+      "sha256": "a084b8459da036cb93a33a3ecdb6e236711805fc7a5588a6edca241398c35188",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-github-thejoshwolfe-yauzl-yet-another-un-github-33140a1c.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-http-node-js-v24-21-0-documentation-nodejs-3288c3f4.md",
+      "bytes": 216722,
+      "sha256": "579739b40767ad012c8e099936f3ec8d44c9ad3e37c96f448c73462852d59954",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-http-node-js-v24-21-0-documentation-nodejs-3288c3f4.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-manifest-go-githubusercontent-65e4e489.md",
+      "bytes": 5750,
+      "sha256": "471f8cdbb7d382f2813008edec74deab042ababe45a9aade977012fc8f0341dd",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-manifest-go-githubusercontent-65e4e489.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-name-go-githubusercontent-97902dc3.md",
+      "bytes": 10409,
+      "sha256": "455692451d6d1829712c5a6380812570281cbb46795356d86f9f0828ec4ca944",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-name-go-githubusercontent-97902dc3.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-page-not-found-ollama-e88df72c.md",
+      "bytes": 634,
+      "sha256": "7b3f1c496417734c722b1ae3e68d5e657b121f6fb4de230a81f30d0ad93cfa0f",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-page-not-found-ollama-e88df72c.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-paths-go-githubusercontent-b170ddef.md",
+      "bytes": 2485,
+      "sha256": "b439b169ceffe7950cf1b137a1dd84a01f810be87e4d2395d181aef25fc96994",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-paths-go-githubusercontent-b170ddef.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-rfc-9110-http-semantics-rfc-editor-b1b13a12.md",
+      "bytes": 753310,
+      "sha256": "11e90eb4c836c9e24ebe87cc7280d1c1ab12949eecc999579090097c9d752a19",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-rfc-9110-http-semantics-rfc-editor-b1b13a12.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-routes-go-githubusercontent-6669b9b0.md",
+      "bytes": 90689,
+      "sha256": "b46ac2c6b25a3e2ca83095f084fe0132930e9db472a847609a95d67a2cc9d77b",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-routes-go-githubusercontent-6669b9b0.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-27-types-go-githubusercontent-4d8bd3e9.md",
+      "bytes": 40920,
+      "sha256": "a8e10532ffe625716b80687c63414e95953d62077b8fc8bad4ff77b4bdb71e47",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-27-types-go-githubusercontent-4d8bd3e9.md"
+    },
+    {
+      "source": "work/research/raw/2026-09-28-gguf-metadata-go-githubusercontent-f2563598.md",
+      "bytes": 9425,
+      "sha256": "2f240decb52cc73d8a99f340e15ee4f6463e9b3907e334e9241da9e21f1a4c50",
+      "disposition": "included",
+      "path": "work/research/raw/2026-09-28-gguf-metadata-go-githubusercontent-f2563598.md"
+    },
+    {
+      "source": "work/research/research/EVIDENCE.md",
+      "bytes": 1130,
+      "sha256": "94f330626aebf815e7a9fb11e9e937152264746f9ccd4d436d12d4d2ccbc8e50",
+      "disposition": "included",
+      "path": "work/research/research/EVIDENCE.md"
+    },
+    {
+      "source": "work/research/research/raw/.fetches.jsonl",
+      "bytes": 2528,
+      "sha256": "80e1f64c97d0a02ec7eab1fac979ea2dc412166bef648af6e17b17351fb44831",
+      "disposition": "included",
+      "path": "work/research/research/raw/.fetches.jsonl"
+    },
+    {
+      "source": "work/research/research/raw/.usage.jsonl",
+      "bytes": 217,
+      "sha256": "b3f2514fd777274f75b37bf3ea63173932b8420b545e913f875f7ff208c836d8",
+      "disposition": "included",
+      "path": "work/research/research/raw/.usage.jsonl"
+    },
+    {
+      "source": "work/research/research/raw/2026-09-27-config-go-githubusercontent-6a1b660d.md",
+      "bytes": 16644,
+      "sha256": "54dbc69e65297ef4d8edfc5cf0d720cf879290a25096b2db77ecaf7fbb36cc62",
+      "disposition": "included",
+      "path": "work/research/research/raw/2026-09-27-config-go-githubusercontent-6a1b660d.md"
+    },
+    {
+      "source": "work/research/research/raw/2026-09-27-http-node-js-v26-10-0-documentation-nodejs-c92190c7.md",
+      "bytes": 202837,
+      "sha256": "e831a8657bbe6723132248de5bd3886f61331891cd43865a35b9d3c70d6091db",
+      "disposition": "included",
+      "path": "work/research/research/raw/2026-09-27-http-node-js-v26-10-0-documentation-nodejs-c92190c7.md"
+    },
+    {
+      "source": "work/research/research/raw/2026-09-27-routes-go-githubusercontent-6669b9b0.md",
+      "bytes": 90689,
+      "sha256": "b46ac2c6b25a3e2ca83095f084fe0132930e9db472a847609a95d67a2cc9d77b",
+      "disposition": "included",
+      "path": "work/research/research/raw/2026-09-27-routes-go-githubusercontent-6669b9b0.md"
+    },
+    {
+      "source": "work/research/research/raw/2026-09-27-types-go-githubusercontent-4d8bd3e9.md",
+      "bytes": 40920,
+      "sha256": "a8e10532ffe625716b80687c63414e95953d62077b8fc8bad4ff77b4bdb71e47",
+      "disposition": "included",
+      "path": "work/research/research/raw/2026-09-27-types-go-githubusercontent-4d8bd3e9.md"
+    },
+    {
+      "source": "work/research/research/SOURCES.md",
+      "bytes": 711,
+      "sha256": "865aa463f5fb1842165a1bcef4c602a194f53adc36074e8e9b9975ddee1a176d",
+      "disposition": "included",
+      "path": "work/research/research/SOURCES.md"
+    },
+    {
+      "source": "work/research/SOURCES.md",
+      "bytes": 5250,
+      "sha256": "88985e62a73efb7496a187546fb8935e53bdc363e530e90c9be86af0673a709c",
+      "disposition": "included",
+      "path": "work/research/SOURCES.md"
+    },
+    {
+      "source": "outputs/MoonAliza Setup 0.1.0.exe",
+      "bytes": 122419978,
+      "sha256": "c171cce03f2610d73bf2749a5408c691aa51dd3758be4e8e89facf26d35e9ac0",
+      "disposition": "metadata-only",
+      "reason": "Historical unsigned installer, over 100 MB; optional archive artifact, not required to develop or build from this checkout. Retained in the original workspace outputs directory. Current installer can be rebuilt with npm run package:win."
+    },
+    {
+      "source": "outputs/MoonAliza Setup 0.2.0.exe",
+      "bytes": 122431725,
+      "sha256": "e97d6452d462bcfb099e63f8e6e55af4e4a70a3f6ec449e6bafd45013ad12784",
+      "disposition": "metadata-only",
+      "reason": "Historical unsigned installer, over 100 MB; optional archive artifact, not required to develop or build from this checkout. Retained in the original workspace outputs directory. Current installer can be rebuilt with npm run package:win."
+    },
+    {
+      "source": "outputs/MoonAliza Setup 0.3.0.exe",
+      "bytes": 122535130,
+      "sha256": "02e3a044873a11dca77080030c9c58441af0aff4187a718a46e4fa54b71499e2",
+      "disposition": "metadata-only",
+      "reason": "Historical unsigned installer, over 100 MB; optional archive artifact, not required to develop or build from this checkout. Retained in the original workspace outputs directory. Current installer can be rebuilt with npm run package:win."
+    },
+    {
+      "source": "outputs/MoonAliza Setup 0.4.0.exe",
+      "bytes": 122539532,
+      "sha256": "e25c303e49d87d5b3b14fafcb4f7bfc405e977367bca118ee413bb49949909ce",
+      "disposition": "metadata-only",
+      "reason": "Historical unsigned installer, over 100 MB; optional archive artifact, not required to develop or build from this checkout. Retained in the original workspace outputs directory. Current installer can be rebuilt with npm run package:win."
+    },
+    {
+      "source": "outputs/MoonAliza Setup 0.5.0.exe",
+      "bytes": 122546634,
+      "sha256": "858e07474cfdb0bc7732fbc0326bc3af50f4fedbb759c0f544a142a6299f3f50",
+      "disposition": "metadata-only",
+      "reason": "Historical unsigned installer, over 100 MB; optional archive artifact, not required to develop or build from this checkout. Retained in the original workspace outputs directory. Current installer can be rebuilt with npm run package:win."
+    },
+    {
+      "source": "outputs/MoonAliza-build-notes.md",
+      "bytes": 5518,
+      "sha256": "6d129b3b4173e3aa4113932292502deb117ca96b4d9266d5fbf7733a4a1c8088",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-build-notes.md"
+    },
+    {
+      "source": "outputs/MoonAliza-command-review.png",
+      "bytes": 118629,
+      "sha256": "aead7dda0d5dfc9de31ca0021ac84f10ec04e9721953092d47ab3eb7ea55a46c",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-command-review.png"
+    },
+    {
+      "source": "outputs/MoonAliza-edit-review.png",
+      "bytes": 115443,
+      "sha256": "2b602b6506eb326aae686ec78de068ad0e6c7e3a5e74e5a34e89fc514904b8f9",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-edit-review.png"
+    },
+    {
+      "source": "outputs/MoonAliza-hardware.png",
+      "bytes": 142880,
+      "sha256": "93b1062a1f62e161bff7700360465b0a83fe68b268b2fd3f2d14806de799e321",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-hardware.png"
+    },
+    {
+      "source": "outputs/MoonAliza-live-edit.png",
+      "bytes": 133240,
+      "sha256": "aee69d83547190f1840505b524bddf9d3f97f489cfc107c4ae4f0b43b9575a4d",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-live-edit.png"
+    },
+    {
+      "source": "outputs/MoonAliza-live-model-verification.json",
+      "bytes": 462,
+      "sha256": "29beae119afac66bd79a97fa6be7bcb62f0367c0709f2d9aa699f7e2f0e3e189",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-live-model-verification.json"
+    },
+    {
+      "source": "outputs/MoonAliza-local-models.png",
+      "bytes": 162808,
+      "sha256": "e178764b20d6fca10bfb8f72b42f329ead6fd366f856cdeb9790fc5ea2f73412",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-local-models.png"
+    },
+    {
+      "source": "outputs/MoonAliza-local-runtime-verification.json",
+      "bytes": 15009,
+      "sha256": "e8a8e295b4955a3e5372ebf6e8a91d16184ce413d90fbbb94822c0719c6d6451",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-local-runtime-verification.json"
+    },
+    {
+      "source": "outputs/MoonAliza-managed-artifacts-checkpoint.md",
+      "bytes": 3302,
+      "sha256": "6ccecd72118ad7ad976036560c97db677a0811370443729400f18f80453904f3",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-managed-artifacts-checkpoint.md"
+    },
+    {
+      "source": "outputs/MoonAliza-managed-provider-checkpoint.md",
+      "bytes": 3466,
+      "sha256": "c18abfa5496b4bdbf38a7cfa3502271dbcf38197088028f6761818293eeecdf6",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-managed-provider-checkpoint.md"
+    },
+    {
+      "source": "outputs/MoonAliza-managed-provider-runtime-verification.json",
+      "bytes": 15215,
+      "sha256": "9bd5ad1eb22f65f2feeae4d8eb88618da76c211d51636a35356289cca631344c",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-managed-provider-runtime-verification.json"
+    },
+    {
+      "source": "outputs/MoonAliza-model-store-checkpoint.md",
+      "bytes": 3596,
+      "sha256": "dd1f1951227ea2f12a53a14592a7b486335e5d0affee57226d2a490588f4f182",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-model-store-checkpoint.md"
+    },
+    {
+      "source": "outputs/MoonAliza-model-store-runtime-verification.json",
+      "bytes": 2865,
+      "sha256": "b747b17812290f65dcd445c5e6b1292c239424c4b6c9b31b90639db6d8c45d0f",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-model-store-runtime-verification.json"
+    },
+    {
+      "source": "outputs/MoonAliza-recovery.png",
+      "bytes": 119485,
+      "sha256": "b4876dc20f8861c065018e6b33c07ef0d6d4ef6bd4c5fe8ba00545ed87f30e8a",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-recovery.png"
+    },
+    {
+      "source": "outputs/MoonAliza-scheduler-checkpoint.md",
+      "bytes": 3297,
+      "sha256": "ad697b4a37b62074bf7a7710741459d13d5243e372a663a91d39a0a2e7f30805",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-scheduler-checkpoint.md"
+    },
+    {
+      "source": "outputs/MoonAliza-scheduler-runtime-verification.json",
+      "bytes": 15046,
+      "sha256": "02e2d65f1dc3b9ac2b07d25aa796cd8f960303690704872dfcf50b519d6cbbdd",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-scheduler-runtime-verification.json"
+    },
+    {
+      "source": "outputs/MoonAliza-workbench.png",
+      "bytes": 92861,
+      "sha256": "f6281e1fbaf2f0293980f6c014ac6e0f9a0e61ac0fcad832579a2f90e6c03304",
+      "disposition": "included",
+      "path": "outputs/MoonAliza-workbench.png"
+    },
+    {
+      "source": "outputs/REWORK-FIRST-BUILD.md",
+      "bytes": 9640,
+      "sha256": "c586b32d87fe3af71cd257d6159a07e550c2333b6bc54fdf21abd72c5196a246",
+      "disposition": "included",
+      "path": "outputs/REWORK-FIRST-BUILD.md"
+    },
+    {
+      "source": "outputs/REWORK-PLAN-REVIEW.md",
+      "bytes": 18635,
+      "sha256": "abbeb675d27af642aecaf807fee1ddf9463d66a4e1beefdc08f61b9991519a76",
+      "disposition": "included",
+      "path": "outputs/REWORK-PLAN-REVIEW.md"
+    }
+  ]
+}

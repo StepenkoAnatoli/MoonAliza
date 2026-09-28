@@ -1,0 +1,700 @@
+---
+url: https://raw.githubusercontent.com/StepenkoAnatoli/Research-Kit/e4a799f3fa07eb0c7377a1f350bae7cf987c5110/.github/workflows/collect.yml
+retrieved: 2026-09-24
+command: firecrawl scrape https://raw.githubusercontent.com/StepenkoAnatoli/Research-Kit/e4a799f3fa07eb0c7377a1f350bae7cf987c5110/.github/workflows/collect.yml --only-main-content --json
+statusCode: 200
+transport: firecrawl-cli
+completeness: full
+---
+name: collect
+
+# THE COLLECTOR. It spends real credits and returns a portable artifact (ADR-0032).
+#
+# `live-collection.yml` is a TEST of the transport; this is the product. They are separate
+# files because they answer different questions and deserve different approvers: one asks
+# "does the adapter still work", the other asks "collect this, for a person, now".
+#
+# WHAT A DISPATCHER GETS BACK, AND HOW IT FINDS THIS RUN
+#
+# Pin the API version and read the run id out of the response body:
+#
+#   gh api -X POST repos/OWNER/REPO/actions/workflows/collect.yml/dispatches \
+#     -H "X-GitHub-Api-Version: 2026-03-10" \
+#     -f ref=main -f 'inputs[topic]=...' -f 'inputs[max_pages]=8'
+#   -> 200 {"workflow_run_id": 35548135379, "run_url": "...", "html_url": "..."}
+#
+# Under the DEFAULT version, `2022-11-28`, the same call returns `204 No Content` and the
+# caller learns nothing - it must then poll /runs and correlate by created_at, which is
+# racy. Verified both ways against this repository on 2026-09-21; see ADR-0031 and
+# docs/decisions/2026-09-21-delivery-architecture/research/EVIDENCE.md E-01. The run id
+# this job writes into the manifest is `github.run_id`, which is the same number the 200
+# returned, so a caller identifies its own artifact by something it already holds.
+#
+# `client_ref` is OPTIONAL insurance for a caller stuck on the old API version, and for
+# display. It is not the correlation mechanism.
+#
+# AND IT IS PUBLIC. It becomes the run name and the artifact name, both of which an
+# anonymous caller can read on a public repository. Everything this file does to keep the
+# topic out of those names is undone by a caller who puts the subject in the reference -
+# `layoff-plan-q3` fits the permitted shape perfectly. Treat it as an opaque job id.
+# The input description says so at the point of entry, which is the only place a
+# dispatcher is actually looking.
+#
+# THE TOPIC IS NOT IN THE RUN NAME OR THE ARTIFACT NAME
+#
+# An artifact listing and a run listing are readable by an ANONYMOUS caller on a public
+# repository - measured, not assumed (E-08 of the same corpus: run metadata, job listing
+# and artifact listing all return 200 unauthenticated; secrets 401 and raw logs 403). A
+# name leaks before anybody opens anything, so neither carries the topic.
+#
+# WHAT A PUBLIC RUN ACTUALLY EXPOSES, MEASURED RATHER THAN ASSUMED.
+#
+# An earlier version of this comment said dispatch inputs are visible on the run page to
+# anyone with read access. That was asserted, not checked, and checking it found the
+# opposite. Unauthenticated, on this repository, on 2026-09-21:
+#
+#   200  run metadata, jobs and step names, timing, artifact LISTING   readable
+#   401  artifact DOWNLOAD                                             refused
+#   403  job LOGS                                                      refused
+#   401  repository secrets                                            refused
+#
+# The topic appeared in none of the readable responses. So a stranger learns the SHAPE of
+# a run - that one happened, when, how long it took, what the steps were called, that an
+# artifact of N bytes exists - and not its subject or its contents.
+#
+# AND THE SIGNED-IN SURFACE IS DIFFERENT. MEASURED 2026-09-22, AND IT IS NOT SAFE.
+#
+# The paragraph above is scoped to ANONYMOUS REST, where it still holds. This comment used
+# to leave the rest at "treat that as unknown rather than safe". It is no longer unknown.
+#
+# Runs 35762363585 and 35762574315, checked both ways on the same run:
+#
+#   anonymous, web UI run page   the input values appear NOWHERE in 236 KB of HTML,
+#                                not even collapsed. Run name, status, duration, step
+#                                names, annotations, artifact name/size/digest only.
+#   anonymous, web UI job log    "Sign in to view logs" - refused, agreeing with REST 403.
+#   SIGNED IN, job log           EVERY dispatch input passed through `env:` is echoed
+#                                VERBATIM, because Actions prints a step's env block:
+#                                  TOPIC: probe
+#                                  PRIOR: PROBE-START length=1200 xxxxxxxx...
+#
+# So on a PUBLIC repository the topic and the prior are readable by anyone with a GitHub
+# account. Not by a passer-by, and not a secret either. The 403 is an authentication wall,
+# not a need-to-know one.
+#
+# Nothing here is the place to fix that - passing an input through `env:` is exactly the
+# rule that keeps it out of a shell (see below), and routing it around the log would mean
+# routing it around that protection. What changes is the CLAIM: do not read "the topic
+# appeared in none of the readable responses" as "the topic is private". Research a subject
+# you would not publish, and use a private repository or a different route.
+#
+# bin/disclosure.mjs cannot see this and should not: it probes unauthenticated on purpose,
+# because a probe that quietly authenticated would answer a different question. A clean
+# disclosure report means "a stranger learns the shape", never "nobody learns the subject".
+#
+# That is why the naming rules above are the primary control rather than a minor one: the
+# names are the disclosure surface, and they are the part this workflow governs.
+#
+# Re-run the measurement instead of trusting this comment, which can go stale:
+#   node research-kit/bin/disclosure.mjs --repository OWNER/REPO --run <id> --topic "..."
+#
+# What the disclosure probe does NOT measure: the signed-in surface, because it is
+# unauthenticated by design. That was measured separately, and the answer is above - a
+# signed-in reader sees every dispatch input in the job log. Do not read a clean probe as
+# "nobody learns the subject".
+#
+# And the reason going private is not the reflex fix: per E-06, converting a GitHub Free
+# repository from public to private makes its protection rules and environment secrets
+# IGNORED rather than refused. That is a plan change, not a visibility toggle.
+#
+# NOTHING IS INTERPOLATED INTO A SHELL
+#
+# Every dispatch input reaches a step through `env:` and is read as an environment
+# variable, never substituted into a script body by the expression engine. `${{ inputs.x }}`
+# inside a `run:` block is textual substitution before the shell ever sees it, so a topic
+# containing a backtick or `$(...)` would execute. This is the same rule ADR-0020 applies
+# to the collector's own argv: data does not reach a shell.
+
+on:
+  workflow_dispatch:
+    # SEVEN INPUTS, AND THE CEILING IS PROBABLY TEN.
+    #
+    # Checked after `prior` became the seventh, using this collector (run 35757458056).
+    # `workflow_dispatch` refuses at dispatch with ``you may only define up to 10 `inputs`
+    # for a `workflow_dispatch` event`` - which is the reassuring half, because exceeding it
+    # fails loudly rather than dropping an input silently.
+    #
+    # Held to the weaker claim it deserves: the only witness is a GitHub community
+    # discussion quoting that runtime error, and it calls the figure a SOFT limit while
+    # asking for it to be raised to 25. The official workflow-syntax page says nothing about
+    # it - its own "10"s are about concurrency and background steps. So treat three as the
+    # remaining budget, not as a guarantee, and expect a loud failure rather than a quiet one.
+    #
+    # PER-INPUT LENGTH: NOTHING TRUNCATES. MEASURED 2026-09-22, after the corpus failed.
+    #
+    # This was recorded as unknown, and search could not close it. The one on-topic capture
+    # was a 2024 community question asserting "its length is limited to 1024 characters",
+    # whose only reply is a dormancy bot - nobody ever confirmed it. So it was measured
+    # instead, by dispatching a payload of known length with a marker at the very end:
+    #
+    #   1200 chars  run 35762363585  accepted, arrived as 1200, PROBE-END intact
+    #   8000 chars  run 35762574315  accepted, arrived as 8000, PROBE-END intact
+    #
+    # The 1024 figure is NOT what this repository observes, and the dangerous case does not
+    # occur: no silent truncation, so a registered prior cannot be quietly corrupted while
+    # still looking intact.
+    #
+    # What is still unknown, stated rather than rounded off: WHERE the ceiling is. It is
+    # above 8000, and locating it costs one dispatch per probe, so it was not bisected. A
+    # realistic prior is a few hundred characters, which is an order of magnitude inside
+    # what has actually been shown to work.
+    inputs:
+      topic:
+        description: 'What to research. Visible to anyone who can read this repository.'
+        required: true
+      max_pages:
+        description: 'Pages to collect. Each costs at least one credit.'
+        required: true
+        default: '8'
+      depth:
+        description: 'Collection tier'
+        required: true
+        default: 'quick'
+        type: choice
+        options: [probe, quick, normal]
+      prefer:
+        description: 'Domains that OWN the fact, comma-separated - e.g. "tavily.com,docs.github.com". Ranked above pages merely about it. Optional, and it only bites because the candidate pool is now wider than the page budget.'
+        required: false
+        default: ''
+      queries:
+        description: 'The actual search queries, one per line. Optional: without them the topic is used verbatim, which is how three corpora here came back mostly noise. A topic is a description; a query is a question.'
+        required: false
+        default: ''
+      prior:
+        description: 'What you EXPECT the evidence to say, and what you know you cannot know yet. Optional, and this is the only moment it can be registered - it is chained into the ledger ahead of the first page and refused afterwards. Nothing grades it; being wrong is the point (ADR-0039). Same disclosure as topic: not in any name, and not in an unauthenticated response.'
+        required: false
+        default: ''
+      client_ref:
+        description: 'PUBLIC on a public repository - it becomes the run name and the artifact name. Use an opaque id (job-0417), never the subject. Optional: correlation does not need it - pin X-GitHub-Api-Version and read workflow_run_id. Shape [A-Za-z0-9][A-Za-z0-9._-]{0,63}.'
+        required: false
+        default: ''
+      search_transport:
+        description: 'Which provider performs the SEARCH. auto follows the ladder - a SerpApi key wins, else the fetch provider. Pin one to compare them on the same topic.'
+        required: true
+        default: 'auto'
+        type: choice
+        options: [auto, serpapi, firecrawl-cli]
+      runner:
+        description: 'Which runner to collect on'
+        required: true
+        default: 'ubuntu-latest'
+        type: choice
+        options: [ubuntu-latest, windows-latest]
+
+# No topic. See the header.
+run-name: collect ${{ inputs.client_ref != '' && inputs.client_ref || github.run_id }}
+
+# Paid runs are SERIALISED PER CALLER, not globally: two people researching different
+# things should not queue behind each other, and the same caller retrying should not run
+# twice concurrently. `cancel-in-progress: false` is deliberate - cancelling a paid
+# collection wastes the credits already spent and can tear a scratch ledger.
+concurrency:
+  group: collect-${{ inputs.client_ref != '' && inputs.client_ref || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # THE SCOPE CANARY. This job proves the credential is NOT reachable without approval.
+  #
+  # It declares NO environment, deliberately. A job without `environment:` cannot see
+  # environment secrets - it sees only repository and organization ones. So if
+  # `secrets.FIRECRAWL_API_KEY` resolves to anything HERE, the credential exists at a
+  # scope that no protection rule guards, and any workflow in the repository can read it
+  # without a reviewer ever being asked.
+  #
+  # This supersedes what ADR-0033 originally recorded as an unprovable limit. It is true
+  # that GitHub tells a job nothing about where a resolved secret CAME from - but it does
+  # not have to. Asking from a context that can only see one scope answers the question by
+  # construction. What remains genuinely undecidable is repository versus organization,
+  # and that distinction does not matter here: neither is behind the approval gate.
+  #
+  # It runs FIRST so a misplaced credential costs no reviewer's time and no credits.
+  scope-check:
+    name: the credential is not reachable without approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: a credential visible without an environment is a credential without a gate
+        env:
+          # If either resolves, it did NOT come from the environment.
+          UNSCOPED_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          UNSCOPED_SEARCH_KEY: ${{ secrets.SERPAPI_API_KEY }}
+        run: |
+          if [ -n "${UNSCOPED_SEARCH_KEY:-}" ]; then
+            echo "::error::SERPAPI_API_KEY is readable by a job with NO environment, so it exists as a repository or organization secret."
+            echo ""
+            echo "The same argument as for the fetch credential: a key reachable without an"
+            echo "environment is a key the approval gate does not protect. Move it to"
+            echo "Settings > Environments > research-collection > Environment secrets, and"
+            echo "delete the repository-level copy."
+            exit 1
+          fi
+          if [ -n "${UNSCOPED_KEY:-}" ]; then
+            echo "::error::FIRECRAWL_API_KEY is readable by a job with NO environment, so it exists as a repository or organization secret."
+            echo ""
+            echo "Collection would still work - and the approval gate would be protecting nothing."
+            echo "Any workflow in this repository, including one added in a pull request, could read"
+            echo "this credential without a reviewer ever being asked."
+            echo ""
+            echo "Fix, in this order:"
+            echo "  1. Settings > Environments > research-collection > Environment secrets"
+            echo "     Add FIRECRAWL_API_KEY there."
+            echo "  2. Settings > Secrets and variables > Actions > Repository secrets"
+            echo "     DELETE FIRECRAWL_API_KEY."
+            echo "  3. Re-run. This job will go green when the only copy is the scoped one."
+            exit 1
+          fi
+          echo "no unscoped copy: the credential is reachable only through the protected environment"
+
+  collect:
+    name: collect
+    needs: scope-check
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 30
+    # THE CREDENTIAL SCOPE. Naming an environment is what lets the Firecrawl key live
+    # somewhere only this job can read it; a repository secret is readable by every
+    # workflow in the repository, including one added in a pull request. The `scope-check`
+    # job above proves that is where it actually lives.
+    #
+    # It is ALSO where protection rules would go - required reviewers, a wait timer - and
+    # this repository deliberately has NONE configured. A reviewer approving a dispatch is
+    # a spend gate, not a review: there is nothing collected yet to review, and a human in
+    # that position cannot tell a good run from a bad one. The research review happens at
+    # the end, where the corpus exists, and is carried by `buildAuthorized` rather than by
+    # a button.
+    #
+    # So what bounds the spend is not approval. It is `max_pages` (1..25), the depth tier,
+    # and the vendor's own account cap, which returns 402 at zero rather than billing over.
+    # Worst case is a month's allowance, not an open-ended bill. Add required reviewers
+    # here if that trade ever stops being the right one - nothing in the workflow depends
+    # on their absence.
+    environment: research-collection
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, resolved 2026-09-21
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4, resolved 2026-09-21
+        with:
+          node-version: '22'
+
+      # ---- everything below this line runs BEFORE a credit can be spent ----
+
+      - name: refuse an unbounded run
+        env:
+          MAX_PAGES: ${{ inputs.max_pages }}
+        run: |
+          case "$MAX_PAGES" in (''|*[!0-9]*) echo "::error::max_pages must be a whole number"; exit 1;; esac
+          if [ "$MAX_PAGES" -lt 1 ] || [ "$MAX_PAGES" -gt 25 ]; then
+            echo "::error::max_pages=$MAX_PAGES is outside 1..25"
+            echo "This workflow spends real credits. A larger run belongs on a machine where"
+            echo "somebody is watching the meter."
+            exit 1
+          fi
+
+      - name: the client reference is a safe identifier, or absent
+        env:
+          CLIENT_REF: ${{ inputs.client_ref }}
+        run: |
+          node -e '
+            const value = process.env.CLIENT_REF ?? "";
+            if (value === "") { console.log("no client_ref; the run id is the correlation key"); process.exit(0); }
+            if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value)) {
+              console.error("::error::client_ref is not [A-Za-z0-9][A-Za-z0-9._-]{0,63}");
+              console.error("Refused rather than rewritten: a sanitised token means you poll for a reference the artifact does not carry.");
+              process.exit(1);
+            }
+            // A WARNING, not a refusal. Whether a reference discloses a subject is a
+            // judgement about meaning, and a regex that tried to make it would refuse
+            // honest ids and pass `layoff-plan-q3` anyway - it fits the shape perfectly.
+            // What this can do is make sure nobody can say they were not told, on the run
+            // that used it, where they will see it.
+            // NO APOSTROPHE ANYWHERE IN THIS SCRIPT, including in a comment. The whole
+            // block is a single-quoted shell string, so one apostrophe ends it early and
+            // hands node a truncated program. Not hypothetical: the phrase "this run" plus
+            // a possessive s did exactly that on the first live run, and the offline tests
+            // could not see it because they check the YAML as TEXT and never parse what
+            // the text contains. A test now extracts every embedded script and parses it.
+            console.log(`::warning::client_ref "${value}" is PUBLIC. It becomes the name of this run and the name of the artifact, both readable by anyone who can read this repository. If it names the subject, the subject is disclosed.`);
+            console.log("client_ref accepted");
+          '
+
+      # THE ENVIRONMENT IS REAL, AND THIS IS HOW WE KNOW.
+      #
+      # A workflow that names an environment which does not exist does not fail - GitHub
+      # CREATES it, with no protection rules and no secrets (E-06, verbatim: "Running a
+      # workflow that references an environment that does not exist will create an
+      # environment with the referenced name ... the newly created environment will not
+      # have any protection rules or secrets configured"). So a typo in the name above,
+      # or a deleted environment, silently removes the approval gate and this job would
+      # otherwise run straight past it.
+      #
+      # `RESEARCH_KIT_COLLECTION_ENV` is a VARIABLE set on the environment itself. An
+      # auto-created environment has none, so an absent or wrong value means the gate that
+      # was supposed to guard this run is not there - and the run stops before spending.
+      #
+      # HONEST LIMIT, STATED RATHER THAN IMPLIED: GitHub does not tell a workflow which
+      # SCOPE a secret or variable came from. `secrets.X` resolves environment-first and
+      # falls back to repository and organization, and there is no syntax and no API
+      # available to this job that distinguishes them. So this check proves the
+      # environment was configured for this purpose; it cannot prove a repository-level
+      # value did not serve the request. Setting a repository-level variable of this name
+      # would defeat it - which is why it is a deliberate act, and why the enforcement
+      # that matters is the environment's own protection rules rather than this step.
+      - name: the protected environment is the one that approved this run
+        env:
+          DECLARED_ENV: ${{ vars.RESEARCH_KIT_COLLECTION_ENV }}
+        run: |
+          expected='research-collection'
+          if [ -z "${DECLARED_ENV:-}" ]; then
+            echo "::error::the research-collection environment did not supply RESEARCH_KIT_COLLECTION_ENV"
+            echo "Either the environment does not exist - in which case GitHub created an UNPROTECTED one"
+            echo "with that name and there is no approval gate on this run - or its variables are unset."
+            echo "Fix: Settings > Environments > research-collection > add variable"
+            echo "     RESEARCH_KIT_COLLECTION_ENV = research-collection, and add the required reviewers."
+            exit 1
+          fi
+          if [ "$DECLARED_ENV" != "$expected" ]; then
+            echo "::error::RESEARCH_KIT_COLLECTION_ENV is '$DECLARED_ENV', expected '$expected'"
+            exit 1
+          fi
+          echo "environment marker present"
+
+      - name: the credential is present, and is never printed
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          if [ -z "${FIRECRAWL_API_KEY:-}" ]; then
+            echo "::error::FIRECRAWL_API_KEY is not set for the research-collection environment"
+            echo "This collector has no keyless route on purpose: a beginner asking for research"
+            echo "should get the metered quality or a clear refusal, not a silently worse corpus."
+            echo "Fix: Settings > Environments > research-collection > Environment secrets."
+            exit 1
+          fi
+          # Presence only. The value is never echoed, never written to a file, and never
+          # put on a command line - the CLI reads it from its own config.
+          echo "credential present"
+
+      - name: install the vendor CLI, pinned to the tested version
+        run: |
+          set -e
+          # The SPEC comes from the adapter, package name included. A workflow that spells
+          # the package itself is a second place for it to be wrong, and that is exactly
+          # how `firecrawl@1.23.3` survived here for weeks: the package is `firecrawl-cli`,
+          # and `firecrawl` on npm is the SDK, which ships no binary at all.
+          spec=$(node -e 'import("./research-kit/lib/firecrawl.mjs").then(m => process.stdout.write(m.cliInstallSpec()))')
+          if ! npm install -g "$spec"; then
+            echo "::error::could not install $spec - this is an INSTALLATION failure, not an incompatibility"
+            exit 1
+          fi
+          tested=$(node -e 'import("./research-kit/lib/firecrawl.mjs").then(m => process.stdout.write(m.TESTED_CLI_VERSION))')
+          echo "| CLI | \`$(firecrawl --version)\` (tested against \`$tested\`) |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: the CLI is a major this adapter supports
+        run: |
+          node -e '
+            import("./research-kit/lib/firecrawl.mjs").then((m) => {
+              const c = m.cliCompatibility();
+              console.log(`${c.level}: ${c.detail}`);
+              if (!c.supported) { console.error(`::error::${c.remedy}`); process.exit(1); }
+            });
+          '
+
+      # ---- from here a credit can be spent ----
+
+      # Names and paths are decided BEFORE anything is collected, so the artifact's name
+      # cannot end up derived from something the collection produced - a topic, a title, a
+      # hostname. It is the caller's reference, or the run id the dispatch already returned.
+      - name: decide the paths and the artifact name, without naming the subject
+        env:
+          CLIENT_REF: ${{ inputs.client_ref }}
+        run: |
+          set -e
+          suffix="${CLIENT_REF:-run-$GITHUB_RUN_ID}"
+          {
+            echo "KIT=$PWD/research-kit"
+            echo "SCRATCH=$RUNNER_TEMP/collect-project"
+            echo "ARTIFACT_NAME=research-kit-corpus-v1-$suffix"
+            echo "ARTIFACT_PATH=$RUNNER_TEMP/research-kit-corpus-v1-$suffix.zip"
+          } >> "$GITHUB_ENV"
+          echo "artifact will be named research-kit-corpus-v1-$suffix"
+
+      - name: scaffold a scratch project, never this repository's corpus
+        env:
+          TOPIC: ${{ inputs.topic }}
+          MAX_PAGES: ${{ inputs.max_pages }}
+          PREFER: ${{ inputs.prefer }}
+          QUERIES: ${{ inputs.queries }}
+        run: |
+          set -e
+          mkdir -p "$SCRATCH"
+          cd "$SCRATCH"
+
+          # The topic reaches node through the ENVIRONMENT and then through an argv ARRAY.
+          # It is never substituted into this script by the expression engine and never
+          # concatenated into a command line. See the header, and ADR-0020.
+          node -e '
+            const { execFileSync } = require("node:child_process");
+            // `--kit` with the DOCUMENTED install location, rather than the one this runner
+            // resolved. The project inside the artifact gets read on another machine, where
+            // a runner path means nothing. No apostrophes: this is a single-quoted shell string.
+            execFileSync(process.execPath, [`${process.env.KIT}/bin/new-project.mjs`, ".", "--topic", process.env.TOPIC, "--kit", "~/.agents/research-kit"], { stdio: "inherit" });
+          '
+          node -e '
+            const fs = require("node:fs");
+            const topic = process.env.TOPIC;
+            const plan = JSON.parse(fs.readFileSync("research/plan.json", "utf8"));
+            plan.topic = topic;
+            plan.maxScrapes = Number(process.env.MAX_PAGES);
+            // perQuery is the REAL ceiling on breadth: selectCandidates slices the
+            // results of each query to it, so one seeded query and a default of 3
+            // capped every dispatched run at three candidates however large max_pages
+            // was. Matching it to max_pages is what makes the advertised 1..25 control
+            // mean what it says. Nothing about SPEND changes - maxScrapes still bounds
+            // the fetches, and this only widens the list they are chosen from.
+            plan.perQuery = Number(process.env.MAX_PAGES);
+            // The FUNNEL: ask for more than you keep, or ranking has nothing to choose.
+            //
+            // limit is how many results the search is asked for; perQuery is how many of
+            // them survive the ranked slice in selectCandidates. Setting both to max_pages made
+            // them equal, so the slice kept everything the search returned and rankCandidate
+            // - the preferred-domain bonus, the docs/terms bonuses, the blog/forum penalty -
+            // could not affect a single collection. Measured on job-0922h: "searched
+            // firecrawl-cli 8 -> 8 distinct", max_pages 8, and all 8 were collected
+            // including seven that were off topic.
+            //
+            // Widening costs nothing. A search is billed per search, not per result - so
+            // this changes what the ranking gets to choose FROM, and spend stays bounded by
+            // maxScrapes and perQuery exactly as before.
+            plan.limit = Math.max(Number(process.env.MAX_PAGES) * 3, 10);
+            // Preferred domains - prefer the page that OWNS the fact - restored on
+            // the path everyone actually uses. Applied to every query - runResearch unions
+            // plan.prefer with the per-query list.
+            plan.prefer = (process.env.PREFER || "").split(/[\s,]+/).filter(Boolean);
+            // The dispatcher may supply the real queries. A topic is a DESCRIPTION, and
+            // using it verbatim as the one search string is why three corpora here came back
+            // mostly noise: "input", "data retention" and "regulation" are common words, so
+            // the search matched the words rather than the subject. Nothing guesses how to
+            // split a topic - four heuristics have been measured and rejected in this
+            // repository already. The caller knows the question; it can say it.
+            const supplied = (process.env.QUERIES || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+            plan.queries = supplied.length
+              ? supplied.map((q) => ({ q, why: "dispatched", prefer: [] }))
+              : [{ q: topic, why: "the dispatched topic", prefer: [] }];
+            plan.urls = [];
+            fs.writeFileSync("research/plan.json", `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+            console.log(`plan written: ${plan.queries.length} quer${plan.queries.length === 1 ? "y" : "ies"}, maxScrapes ${plan.maxScrapes}, perQuery ${plan.perQuery}, limit ${plan.limit}, prefer [${plan.prefer.join(", ")}]`);
+          '
+
+      - name: seed the map, spending nothing
+        env:
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          set -e
+          cd "$SCRATCH"
+          node -e '
+            const { execFileSync } = require("node:child_process");
+            execFileSync(process.execPath, [`${process.env.KIT}/bin/decompose.mjs`, "--topic", process.env.TOPIC, "--dry-run"], { stdio: "inherit" });
+          '
+
+      # The prediction, chained BEFORE the first page - which is the only place it can go.
+      #
+      # This step exists because the mechanism was nearly useless without it. A prior
+      # registered on the operator's laptop cannot reach this corpus: the runner scaffolds a
+      # fresh project above, with an empty ledger, so the two corpora have nothing in common.
+      # Every corpus in this repository since the remote collector shipped was collected on
+      # THIS path, so a prior that only worked locally would have been a discipline for a
+      # route nobody takes.
+      #
+      # Like TOPIC, it reaches node through the ENVIRONMENT and then an argv ARRAY, never
+      # through the expression engine and never concatenated into a command line (ADR-0020).
+      # Its disclosure profile is the topic's, measured in ADR-0035: dispatch inputs did not
+      # appear in any unauthenticated response, and it reaches no run name or artifact name.
+      # It is NOT a credential and must never carry one - it is a sentence about what you
+      # expect, published in the artifact that comes back.
+      - name: register the prior, if one was dispatched
+        if: inputs.prior != ''
+        env:
+          PRIOR: ${{ inputs.prior }}
+        run: |
+          set -e
+          cd "$SCRATCH"
+          node -e '
+            const { execFileSync } = require("node:child_process");
+            execFileSync(process.execPath, [`${process.env.KIT}/bin/prior.mjs`, process.env.PRIOR], { stdio: "inherit" });
+          '
+
+      - name: collect
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          # The SEARCH side is a separate seam and a separate meter (ADR-0027). Supplying
+          # this key is what makes the documented auto-detect rule - "a SerpAPI key wins,
+          # otherwise the search side IS the fetch provider" - able to fire at all. Without
+          # it every search was billed to Firecrawl credits, which is the meter the page
+          # budget is for. Absent on a fork, collection degrades to the old behaviour rather
+          # than failing, because the ladder's last rung is the fetch provider.
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          RESEARCH_KIT_TRANSPORT: firecrawl-cli
+          # NOT a ${{ cond && '' || value }} ternary. In GitHub Actions the empty string
+          # is FALSY, so the true-branch collapses and the expression yields the third
+          # operand - it passed the literal "auto", which is not a provider, and every
+          # default dispatch failed with "unknown search provider". The input is carried
+          # raw and blanked in the shell below, where an empty string is just an empty
+          # string.
+          SEARCH_TRANSPORT_INPUT: ${{ inputs.search_transport }}
+          MAX_PAGES: ${{ inputs.max_pages }}
+          DEPTH: ${{ inputs.depth }}
+        run: |
+          set -e
+          cd "$SCRATCH"
+          # 'auto' means "no explicit choice": leave the variable unset so the ladder
+          # falls through to its own detection. Any other value pins the provider.
+          if [ "${SEARCH_TRANSPORT_INPUT:-auto}" != "auto" ]; then
+            export RESEARCH_KIT_SEARCH_TRANSPORT="$SEARCH_TRANSPORT_INPUT"
+            echo "search side: pinned to $SEARCH_TRANSPORT_INPUT by dispatch input"
+          fi
+          # Which side won, recorded in the log before anything is spent. A run that
+          # silently changed meters would be the kind of thing nobody notices until a bill.
+          if [ -n "${SERPAPI_API_KEY:-}" ]; then
+            echo "search side: a SerpAPI key is present, so search is metered separately from fetch"
+          else
+            echo "search side: no SerpAPI key, so search falls back to the fetch provider and spends its credits"
+          fi
+          node "$KIT/bin/research.mjs" --dry-run --depth "$DEPTH"
+          # NOT --max-scrapes: research.mjs has no such flag and silently ignored it until
+          # 2026-09-22. The page bound is real and is set above, as plan.maxScrapes.
+          node "$KIT/bin/research.mjs" --depth "$DEPTH"
+
+      # NOT the whole preflight verdict, and this was found by RUNNING it rather than by
+      # reading it: `preflight` answers "is the research sufficient to build", a
+      # human-authored question, and a freshly collected project has no closed unknowns -
+      # so it fails `discovery-contract/no-unknowns` however perfectly collection worked.
+      # Requiring it would fail every run for a reason unrelated to collection.
+      - name: the corpus arrived whole and passes its integrity checks
+        run: |
+          set -e
+          cd "$SCRATCH"
+          if ! node "$KIT/bin/handoff.mjs"; then
+            echo "::error::handoff failed: the collected corpus did not arrive whole"
+            exit 1
+          fi
+          for check in provenance corpus-shape citations transport-provenance hygiene; do
+            if ! node "$KIT/bin/preflight.mjs" --check "$check"; then
+              echo "::error::integrity check '$check' failed on the collected corpus"
+              exit 1
+            fi
+          done
+          echo "all integrity checks passed"
+
+      # The artifact's authorization state is DERIVED here by the kit, from this corpus.
+      # Nothing in this workflow can assert it: `artifact.mjs` has no --build-authorized
+      # and refuses the flag if it is passed (ADR-0032). A freshly collected corpus is
+      # HUMAN_REVIEW_REQUIRED with buildAuthorized false, and the ZIP says so at its top.
+      - name: package the corpus, honestly labelled
+        env:
+          CLIENT_REF: ${{ inputs.client_ref }}
+        run: |
+          set -e
+          cd "$SCRATCH"
+          node -e '
+            const { execFileSync } = require("node:child_process");
+            const ref = process.env.CLIENT_REF ?? "";
+            const args = [
+              `${process.env.KIT}/bin/artifact.mjs`, "create",
+              "--root", ".",
+              "--output", process.env.ARTIFACT_PATH,
+              "--repository", process.env.GITHUB_REPOSITORY,
+              "--ref", process.env.GITHUB_REF_NAME,
+              "--commit", process.env.GITHUB_SHA,
+              "--workflow", "collect.yml",
+              "--run-id", process.env.GITHUB_RUN_ID,
+              "--run-attempt", process.env.GITHUB_RUN_ATTEMPT,
+              "--api-version", "2026-03-10",
+            ];
+            if (ref) args.push("--client-ref", ref);
+            execFileSync(process.execPath, args, { stdio: "inherit" });
+          '
+
+      - name: validate the package with the consumer's own validator
+        run: |
+          set -e
+          node "$KIT/bin/artifact.mjs" validate --file "$ARTIFACT_PATH" --json
+          node "$KIT/bin/artifact.mjs" validate --file "$ARTIFACT_PATH" --quiet
+
+      # `retention-days` BOUNDS the exposure. It does not remove it, and the difference is
+      # worth stating because the naming rules above are easy to over-trust.
+      #
+      # On a public repository, ANY signed-in GitHub account can open this run, read these
+      # logs - which echo the dispatched topic in the `env:` group above - and download
+      # this artifact, which is the whole collected corpus. The documentation is explicit:
+      # "You must be logged in to a GitHub account to view workflow run information,
+      # including for public repositories", and viewing, searching and downloading logs and
+      # artifacts each require only "read access to the repository", which on a public
+      # repository is universal. The 401 and 403 an anonymous probe gets are refusals of
+      # ANONYMITY, not of strangers.
+      #
+      # Seven days rather than the 90-day default, because the only dial here is how long
+      # the window stays open. The agent path fetches within minutes, so a short window
+      # costs nothing real. See docs/decisions/2026-09-21-public-run-visibility/.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, resolved 2026-09-21
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_PATH }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: the repository is unchanged
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::a collection modified the repository"
+            git status --porcelain
+            exit 1
+          fi
+          echo "repository untouched"
+
+      # HOSTNAMES AND COUNTS ONLY. This summary is public on a public repository, and a
+      # URL path or query string discloses what was being researched - which is the one
+      # thing the naming rules above exist to keep out of listings.
+      - name: sanitized summary
+        if: always()
+        run: |
+          cd "$SCRATCH" 2>/dev/null || exit 0
+          node -e '
+            const fs = require("node:fs");
+            const led = "research/raw/.fetches.jsonl";
+            const out = [];
+            out.push("| setting | value |", "|---|---|");
+            out.push(`| run | ${process.env.GITHUB_RUN_ID} |`);
+            out.push(`| runner | ${process.env.RUNNER_OS} |`);
+            out.push(`| artifact | ${process.env.ARTIFACT_NAME ?? "(not written)"} |`);
+            out.push("");
+            if (!fs.existsSync(led)) { out.push("no ledger written"); }
+            else {
+              const rows = fs.readFileSync(led, "utf8").trim().split("\n").filter(Boolean)
+                .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+              out.push("| op | status | transport | completeness | host |", "|---|---|---|---|---|");
+              for (const r of rows) {
+                let host = "-";
+                try { host = r.url ? new URL(r.url).hostname : "-"; } catch { host = "unparseable"; }
+                out.push(`| ${r.op ?? "-"} | ${r.statusCode ?? "-"} | ${r.transport ?? "-"} | ${r.completeness ?? "-"} | ${host} |`);
+              }
+            }
+            out.push("", "**This artifact is a COLLECTED CORPUS, not an approved brief.** It does not",
+                     "authorize building. Three human review steps remain; `README-FIRST.md` inside",
+                     "the package lists them, and `manifest.json` carries the authorization state.");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${out.join("\n")}\n`);
+          ' || true
+

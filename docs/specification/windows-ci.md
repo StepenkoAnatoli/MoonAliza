@@ -1,0 +1,43 @@
+# Windows CI evidence and path-alias repair
+
+Initial source revision `6fbb3c5c5d079efbbb81025cb8d31318ffd290d9` passed 364 local tests but failed both GitHub Windows runs:
+
+- [Initial PR run 36407097176](https://github.com/StepenkoAnatoli/MoonAliza/actions/runs/36407097176)
+- [Initial push run 36407091191](https://github.com/StepenkoAnatoli/MoonAliza/actions/runs/36407091191)
+
+Each reached the test step. The PR run reported seven failed tests across command-broker, paths and project-tickets, plus an unhandled rejection. Setup, native compilation, typecheck and lint had passed. A local pass did not establish runner portability.
+
+## Cause and repair
+
+The runner's temporary directory uses the Windows 8.3 alias `C:\Users\RUNNER~1\...`; `realpath` returns `C:\Users\runneradmin\...`. `CommandBroker` canonicalized executable/working-directory paths but compared them with uncanonicalized project and protected roots. This both rejected a legitimate approved working directory and failed to exclude a project-local executable found through an alias. These are production comparison defects, not merely runner configuration differences.
+
+The repair canonicalizes exclusion roots and protected working-directory boundaries, and derives the execution-relative path from the canonical project root. Missing/unreadable excluded roots fail closed. Three new tests use real junction aliases to reproduce valid execution, project/protected executable exclusion and protected-directory enforcement independently of whether a local volume creates 8.3 aliases. All three failed against the previous implementation and passed with the fix.
+
+Two existing tests assumed the returned canonical path equalled the raw temporary path. Their expected values now use the filesystem's canonical root. The command Stop test now observes early rejection while waiting for dispatch, so a failed admission reports its actual error rather than an unhandled rejection plus timeout. No test was skipped or containment guard removed.
+
+## Local verification
+
+The initial focused verification passed **33 tests across three files**. The complete repaired source then passed:
+
+- **370 tests across 31 files**, no failed or pending tests, in **159.72 seconds**; report `.build/handoff-ci-tests.json`.
+- TypeScript checking, lint, native compilation and application build.
+- Actual Electron 44.4.5 / Node 24.21.0 utility-engine and SQLite loading.
+- **All five desktop journeys**, about **1.4 minutes**: reviewed edits/Undo/Stop; real Git and commands/process-tree Stop/denial; Windows hardware/local-model readiness; restart recovery without command replay; encrypted profiles, IPC inference and durable history.
+- Independent checkout of the staged Git tree: all 76 included snapshot hashes and main handoff links, without dependencies, the old chat or original sibling folders.
+- All 219 publishable files scanned against the five supplied credential files, with zero matches; seven archived screenshots visually checked.
+
+The dependency-free handoff verification also runs before dependency installation in Windows CI. The ordinary pipeline does not build/install a new installer or perform real-model coding qualification.
+
+## Remote verification
+
+Use [PR #2's current-head checks](https://github.com/StepenkoAnatoli/MoonAliza/pull/2/checks) for live status. Its description records exact validated revisions and successful run links after publication; this avoids describing a queued run as passed or confusing the original failed revision with its repair. A new push requires checking its own head. The initial failed runs above remain useful diagnostic history.
+
+## Continuation commands
+
+```powershell
+gh pr checks 2 --repo StepenkoAnatoli/MoonAliza
+gh run list --repo StepenkoAnatoli/MoonAliza --branch feat/moonaliza-desktop
+gh run view <run-id> --repo StepenkoAnatoli/MoonAliza --log-failed
+```
+
+Use the run's exact head SHA when recording a result. Current local verification commands and platform requirements are in [HANDOFF.md](../../HANDOFF.md); the historical workspace snapshot remains unchanged.

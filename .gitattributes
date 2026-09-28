@@ -1,0 +1,5 @@
+# Historical research ledgers and snapshots must keep their original hashed bytes on every platform.
+# Preserve original whitespace too; integrity is checked against the manifest.
+docs/handoff/work/** -text -whitespace
+docs/handoff/outputs/** -text -whitespace
+docs/handoff/manifest.json text eol=lf

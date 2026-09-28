@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
@@ -66,7 +66,7 @@ test('Stop waits for native command termination and timeouts remain explicit', a
   const plan = await f.broker.prepare('r', { program: 'node', args: ['-e', 'setInterval(()=>{},1000)'], timeoutSeconds: 1 }, stop.signal);
   approve(f, plan);
   const pending = f.broker.execute('r', 'op', stop.signal);
-  await f.started; stop.abort();
+  await Promise.race([f.started, pending.then(() => { throw new Error('Command ended before dispatch was observed'); })]); stop.abort();
   expect((await pending).cancelled).toBe(true);
 });
 test('an executable modified after review is rejected before dispatch', async () => {
@@ -85,6 +85,35 @@ test('npm uses the installed Node and npm CLI with literal arguments and no impl
   expect(plan.executable.toLowerCase()).toMatch(/node\.exe$/); expect(plan.args[0]).toMatch(/npm-cli\.js$/); expect(plan.files).toHaveLength(2);
   approve(f, plan); const result = await f.broker.execute('r', 'op', signal);
   expect(result.code).toBe(0); expect(result.output.trim()).toMatch(/^\d+\.\d+\.\d+$/);
+});
+
+test('a trusted root alias uses the same canonical working directory at approval and execution', async () => {
+  const f = await fixture(); const alias = join(f.root, 'project-alias'); await symlink(f.project, alias, 'junction');
+  f.context.project.rootPath = alias;
+  await mkdir(join(f.project, 'subfolder'));
+  const signal = new AbortController().signal;
+  const plan = await f.broker.prepare('r', { program: 'node', args: ['-e', 'require("fs").writeFileSync("result.txt","aliased root")'], cwd: 'subfolder' }, signal);
+  expect(plan.cwd).toBe(await realpath(join(f.project, 'subfolder'))); approve(f, plan);
+  expect((await f.broker.execute('r', 'op', signal)).code).toBe(0);
+  expect(await readFile(join(f.project, 'subfolder', 'result.txt'), 'utf8')).toBe('aliased root');
+});
+
+test('canonical executable resolution cannot bypass project and protected-root exclusions through aliases', async () => {
+  const f = await fixture(); const alias = join(f.root, 'project-alias'); await symlink(f.project, alias, 'junction');
+  await writeFile(join(f.project, 'node.exe'), 'project executable'); f.context.project.rootPath = alias;
+  const signal = new AbortController().signal;
+  const broker = new CommandBroker({ context: async () => f.context, environment: { PATH: alias }, protectedRoots: [], execute: spawnOwned, redact: async text => text });
+  await expect(broker.prepare('r', { program: 'node', args: [] }, signal)).rejects.toThrow('COMMAND_UNAVAILABLE');
+  const outside = join(f.root, 'protected'); await mkdir(outside); await writeFile(join(outside, 'node.exe'), 'protected executable');
+  const protectedAlias = join(f.root, 'protected-alias'); await symlink(outside, protectedAlias, 'junction');
+  const protectedBroker = new CommandBroker({ context: async () => f.context, environment: { PATH: outside }, protectedRoots: [protectedAlias], execute: spawnOwned, redact: async text => text });
+  await expect(protectedBroker.prepare('r', { program: 'node', args: [] }, signal)).rejects.toThrow('COMMAND_UNAVAILABLE');
+});
+
+test('working-directory protection compares canonical ancestors of protected aliases', async () => {
+  const f = await fixture(); const alias = join(f.root, 'protected-alias'); await symlink(f.project, alias, 'junction');
+  const broker = new CommandBroker({ context: async () => f.context, environment: { PATH: dirname(process.execPath) }, protectedRoots: [alias], execute: spawnOwned, redact: async text => text });
+  await expect(broker.prepare('r', { program: 'node', args: [] }, new AbortController().signal)).rejects.toThrow('PATH_OUTSIDE_PROJECT');
 });
 test('redaction expansion and control characters cannot exceed private reply or event bounds', async () => {
   const f = await fixture(); const signal = new AbortController().signal;

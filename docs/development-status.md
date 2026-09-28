@@ -1,6 +1,18 @@
-# Development status — 2026-09-28 · installed 0.5, model storage and selection source checkpoint
+# Development status — 2026-09-28 · portable handoff and Windows CI repair
 
 The full MoonAliza product remains the target. This is a working development checkpoint, not a completed agent or qualified release.
+
+## Portable handoff and Windows CI repair
+
+Start with [HANDOFF.md](../HANDOFF.md) and [the snapshot index](handoff/README.md). The repository now includes all 57 original working/research files and all 19 non-installer outputs, preserved byte-for-byte. A manifest accounts for all 81 original files; five historical installers are metadata-only. Root `AGENTS.md` supplies continuation instructions, and the dependency-free handoff verifier checks the 76 included files and main documentation links. A new checkout needs neither the old chat nor sibling workspace folders. Supplied credentials and private app data are excluded.
+
+The initial GitHub Windows runs failed on temporary-folder aliases despite the earlier local pass. Command preparation/execution now compares canonical project and protected roots consistently; real junction regressions cover valid execution and exclusion boundaries. Two tests now expect canonical filesystem paths, and the Stop test observes admission failures directly. See [the repair and evidence record](specification/windows-ci.md).
+
+The repaired source passes **370 tests across 31 files** (159.72 seconds), TypeScript checking, lint, native compilation, application build and the real Electron/SQLite runtime check. All **five desktop journeys passed** in about 1.4 minutes, including reviewed commands, process-tree Stop and restart recovery. The six added tests cover three command-alias regressions and three handoff integrity/link cases. The full local report is `.build/handoff-ci-tests.json`. An independent checkout of the staged Git tree also passed all 76 snapshot hashes and the main handoff links without dependencies or sibling workspace files.
+
+Remote results are tracked in [PR #2's checks](https://github.com/StepenkoAnatoli/MoonAliza/pull/2/checks), with exact checked revisions and run links in its description. Inspect the current head: historical failures and local passes are separate evidence. The Windows workflow now verifies the portable handoff immediately after Node setup, before installing dependencies.
+
+The installed app remains **0.5.0**. This handoff does not finish managed-model qualification/integration or the remaining full-product roadmap. After confirming current-head checks, continue the actionable privacy/provider and context-budget work described in HANDOFF.md, followed by genuine qualification and the remaining plan dependencies. Earlier checkpoints below are retained as historical evidence.
 
 ## Model storage and selection source checkpoint
 
