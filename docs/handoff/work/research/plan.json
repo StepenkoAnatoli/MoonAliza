@@ -1,0 +1,18 @@
+{
+  "topic": "Rework Windows desktop plan: dependency, transport, continuation, Git tool and research integration checks",
+  "depth": "normal",
+  "refreshDays": 1,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 6,
+  "prefer": ["electronjs.org", "platform.claude.com", "git-scm.com", "github.com"],
+  "queries": [],
+  "urls": [
+    {"url":"https://releases.electronjs.org/","type":"P","why":"U-01: verify specified Electron and embedded Node versions"},
+    {"url":"https://www.electronjs.org/docs/latest/api/net","type":"P","why":"U-02: verify Chromium networking and Windows proxy capabilities"},
+    {"url":"https://platform.claude.com/docs/en/build-with-claude/thinking","type":"P","why":"U-03: verify continuation blocks and model-specific thinking configuration"},
+    {"url":"https://raw.githubusercontent.com/StepenkoAnatoli/Research-Kit/e4a799f3fa07eb0c7377a1f350bae7cf987c5110/.github/workflows/collect.yml","type":"P","why":"U-04: inspect the exact workflow contract"},
+    {"url":"https://git-scm.com/docs/git-diff","type":"P","why":"U-05: external diff and textconv execution"},
+    {"url":"https://git-scm.com/docs/git-config","type":"P","why":"U-05: filesystem-monitor hook execution"}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "topic": "MoonAliza local runtime version endpoint",
+  "depth": "quick",
+  "refreshDays": 1,
+  "maxScrapes": 1,
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/server/routes.go",
+      "type": "P",
+      "why": "Local runtime version response schema"
+    }
+  ]
+}

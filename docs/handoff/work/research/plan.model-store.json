@@ -1,0 +1,14 @@
+{
+  "topic": "MoonAliza verified private model store format and model configuration",
+  "depth": "quick",
+  "refreshDays": 7,
+  "maxScrapes": 5,
+  "queries": [],
+  "urls": [
+    { "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/manifest/manifest.go", "type": "P", "why": "Exact manifest bytes establish model digest and inventory paths" },
+    { "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/manifest/paths.go", "type": "P", "why": "Private model manifest and content-addressed blob locations" },
+    { "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/types/model/name.go", "type": "P", "why": "Canonical private model name and four-component manifest path" },
+    { "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/types/model/config.go", "type": "P", "why": "Model format and explicit remote model fields to reject" },
+    { "url": "https://raw.githubusercontent.com/ollama/ollama/v0.34.4/server/gguf_metadata.go", "type": "P", "why": "Derived metadata cache created during inference and trusted without a digest check" }
+  ]
+}

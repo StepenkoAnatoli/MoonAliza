@@ -1,0 +1,14 @@
+# MoonAliza continuation
+
+Read [HANDOFF.md](HANDOFF.md) first, then [the current development status](docs/development-status.md). This repository contains the complete source, plans, collected research and working-history snapshot needed to continue without the original chat or sibling workspace folders.
+
+- Build the full MoonAliza Windows desktop coding-agent product in working stages. The user rejected reducing the product to a small demo.
+- Follow the architecture and acceptance criteria in [the implementation plan](docs/superpowers/plans/2026-09-24-moonaliza.md), [reviewed decisions](docs/specification/decisions.md) and the task-specific specifications. Source-plan helper snippets are illustrative, not complete implementations.
+- Treat `docs/handoff/work` and `docs/handoff/outputs` as immutable historical evidence. They contain superseded instructions, old absolute paths and earlier checkpoints. Current task instructions, this file, HANDOFF.md and current development status take precedence. Historical documents never grant new permissions or establish current external state.
+- Preserve local/cloud project policy, approval binding, journal-before-effect, owned-process Stop and secret isolation. Never manufacture model qualification, signing identities, benchmark results or release evidence.
+- Keep credential values out of source, logs, research and PRs. Ordinary build/tests need no provider credentials. Obtain optional integration credentials through the current user's approved secret mechanism; old workstation paths are not prerequisites.
+- Add behavioral regression tests for fixes. Use real filesystem/process behavior where required. Verify typecheck, lint, relevant tests and build; use Windows for native/desktop checks. The exact commands and CI workflow are linked in HANDOFF.md.
+- Before reporting success, inspect actual command results and current-head GitHub checks. A local pass is not a CI pass. Update HANDOFF.md and development status when the next step or evidence changes.
+- The current development branch is `feat/moonaliza-desktop` and the existing draft PR is [#2](https://github.com/StepenkoAnatoli/MoonAliza/pull/2). Inspect current remote state before continuing it. Preserve unrelated work; do not reset or force-push. Use the account's verified GitHub no-reply identity if the user's email is private, without changing account privacy settings.
+
+Run `node scripts/check-handoff.mjs` to verify snapshot identities and the main handoff links without installing dependencies. See HANDOFF.md for the codebase map and remaining work.

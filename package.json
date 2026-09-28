@@ -1,0 +1,57 @@
+{
+  "name": "moonaliza",
+  "productName": "MoonAliza",
+  "version": "0.5.0",
+  "description": "A durable Windows coding-agent workbench with interchangeable API and local models",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "author": "MoonAliza",
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && electron .",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests scripts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "native:build": "node scripts/build-native.mjs",
+    "package:win": "npm run native:build && npm run build && electron-builder --win nsis",
+    "package:release": "npm run native:build && npm run build && electron-builder --win nsis -c.forceCodeSigning=true"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "3.14.13",
+    "better-sqlite3": "13.0.3",
+    "electron-updater": "6.8.9",
+    "markdown-it": "15.0.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "yauzl": "3.4.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.6.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "eslint": "10.11.0",
+    "jsdom": "30.1.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
+  }
+}

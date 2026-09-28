@@ -1,0 +1,26 @@
+appId: com.moonaliza.desktop
+productName: MoonAliza
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+  - '!**/*.map'
+asar: true
+asarUnpack:
+  - node_modules/better-sqlite3/prebuilds/*.node
+npmRebuild: false
+extraResources:
+  - from: .build/native/MoonAlizaHost.exe
+    to: native/MoonAlizaHost.exe
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

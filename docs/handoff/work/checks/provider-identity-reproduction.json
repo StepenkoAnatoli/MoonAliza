@@ -1,0 +1,7 @@
+{
+  "source": "REWORK FULL PLAN.txt, C1 lines 2033-2043",
+  "fixtureOnly": true,
+  "firstAccepted": true,
+  "differentProfileAndEndpointAccepted": true,
+  "conclusion": "The example guard cannot distinguish these profiles. Production needs an identity binding."
+}

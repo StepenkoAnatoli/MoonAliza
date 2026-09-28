@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-09-28T05:14:58.716Z",
+  "version": "0.34.4",
+  "archiveSha256": "535193f38f3344e5b08f5d1c171c31ce11aa17f0124ff69ae26d8ec7fe06fa62",
+  "manifest": {
+    "sha256": "7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435",
+    "sizeBytes": 858
+  },
+  "blobs": [
+    {
+      "sha256": "b0830f4ff6a0220cfd995455206353b0ed23c0aee865218b154b7a75087b4e55",
+      "sizeBytes": 490
+    },
+    {
+      "sha256": "7f4030143c1c477224c5434f8272c662a8b042079a0a584f0a27a1684fe2e1fa",
+      "sizeBytes": 522640096
+    },
+    {
+      "sha256": "ae370d884f108d16e7cc8fd5259ebc5773a0afa6e078b11f4ed7e39a27e0dfc4",
+      "sizeBytes": 1723
+    },
+    {
+      "sha256": "d18a5cc71b84bc4af394a31116bd3932b42241de70c77d2b76d69a314ec8aa12",
+      "sizeBytes": 11338
+    },
+    {
+      "sha256": "cff3f395ef3756ab63e58b0ad1b32bb6f802905cae1472e6a12034e4246fbbdb",
+      "sizeBytes": 120
+    }
+  ],
+  "inferencePerformed": false,
+  "modelQualification": "not-performed",
+  "activationPerformed": false,
+  "materialized": {
+    "digest": "7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435",
+    "name": "moonaliza/7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435:verified",
+    "quantization": "Q4_K_M",
+    "sizeBytes": 522653767
+  },
+  "exactManifestBytes": true,
+  "runtimeFilesDigest": "f1ce5ca614931eabda0172e775cd33bd92dab3b346318244c1e4b192844e35d0",
+  "runtimeFileCount": 82,
+  "authenticode": {
+    "status": "Valid",
+    "subject": "CN=Ollama Inc., O=Ollama Inc., L=Toronto, S=Ontario, C=CA, SERIALNUMBER=2713355, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=Ontario, OID.1.3.6.1.4.1.311.60.2.1.3=CA"
+  },
+  "hardware": {
+    "totalRamBytes": 8515145728,
+    "availableRamBytes": 1235644416,
+    "adapters": [
+      {
+        "id": "dxgi:00008086:00001906:19068086:00000007:000000000000c6de",
+        "name": "Intel(R) HD Graphics 510",
+        "vendorId": 32902,
+        "deviceId": 6406,
+        "dedicatedBytes": 134217728,
+        "availableBytes": null,
+        "driver": "31.0.101.2111"
+      }
+    ]
+  },
+  "runtimeReadyAfterMs": 26291,
+  "socketOwnershipVerified": true,
+  "ownershipMethod": "established-tuple-pid-creation-time",
+  "cloudDisabled": true,
+  "inventory": [
+    {
+      "name": "moonaliza/7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435:verified",
+      "digest": "7df6b6e09427a769808717c0a93cadc4ae99ed4eb8bf5ca557c90846becea435",
+      "size": 522653767,
+      "details": {
+        "format": "gguf",
+        "quantization_level": "Q4_K_M"
+      }
+    }
+  ],
+  "inventoryMatched": true,
+  "noLoadedModels": true,
+  "followupAfterStop": true,
+  "storeVerifiedAfterStop": true,
+  "stop": {
+    "status": "exited",
+    "cancelled": true,
+    "timedOut": false
+  },
+  "portReleased": true,
+  "temporaryStoreRemoved": true,
+  "passed": true,
+  "elapsedMs": 86085
+}

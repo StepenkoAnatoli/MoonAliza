@@ -1,0 +1,9 @@
+# Verified private model storage — 28 September 2026
+
+The authorized full MoonAliza build now has a signed artifact store and owned Ollama provider. The next step materializes verified model files and implements conservative receipt/resource selection. The prior review-only scope is superseded by the user's repeated build authorization.
+
+E-26–E-28 establish that exact manifest bytes and host/namespace/model/tag paths determine inventory identity, and that blobs use sha256-hex filenames under OLLAMA_MODELS/blobs. E-29 exposes remote model configuration fields; reject them in the managed local store. E-30 shows a writable derived metadata cache that is not rehashed on use; validate its filesystem shape and clear it before starting a managed runtime. Preserve manifests and blobs, never use hardlinks to the artifact cache, and publish only a fully verified new activation set.
+
+The approved source plan D3 supplies the selection targets: at least 0.85 quality, successful tools, no unauthorized or post-cancellation effects, exact configuration/runtime/hardware/activation identities, load <=90s, first token <=30s, throughput >=4 tokens/s, and host reserve max(2 GiB,15% total). These are policy targets, not benchmark findings. Tests may supply synthetic receipts but must not produce release or machine success claims.
+
+No actual qualified model or exact GPU backend attestation currently exists in this project. Selection must return explicit local unavailability or a lab-qualified probe candidate; it cannot create receipts or fall back to cloud. Model quality measurement, authenticated production catalogue generation and setup UI remain distinct full-project work. The first implementation is a staging-only, bounded, digest-verifying model materializer integrated with ActivationStore.
