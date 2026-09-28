@@ -41,7 +41,7 @@ The original PC has version **0.5.0** installed. Current source includes later b
 
 ## Immediate continuation
 
-First confirm current-head CI and [the CI repair record](docs/specification/windows-ci.md). Initial CI on `6fbb3c5` failed because 8.3 temp paths were compared with canonical Windows paths. The repair uses canonical project/protected roots for executable exclusion and command revalidation, and corrects canonical-path test expectations. Follow the remote run evidence in the repair record; do not assume a queued run passed.
+First confirm current-head CI and [the CI repair record](docs/specification/windows-ci.md). Initial CI on `6fbb3c5` failed because 8.3 temp paths were compared with canonical Windows paths. The repair uses canonical project/protected roots for executable exclusion and command revalidation, and corrects canonical-path test expectations. The follow-up run passed all 370 tests, then exposed a smaller-window layout bug: Project details covered Send. The layout now keeps details in its own column, with a desktop regression across four window widths. Follow the remote run evidence in the repair record; do not assume a queued run passed.
 
 Then continue the approved product plan:
 

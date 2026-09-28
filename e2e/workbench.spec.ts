@@ -42,6 +42,15 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     await page.getByRole('button', { name: 'Save profile' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.getByLabel('Message MoonAliza').fill('Remember this conversation');
+    // A CI desktop can constrain the window below the details-pane breakpoint.
+    // Exercise actual pointer hit testing, including the minimum supported width.
+    for (const width of [960, 1180, 1440, 1024]) {
+      await app.evaluate(({ BrowserWindow }, value) => BrowserWindow.getAllWindows()[0]!.setSize(value, 768), width);
+      await page.getByRole('button', { name: 'Send message' }).click({ trial: true, timeout: 5000 });
+      await page.getByRole('button', { name: 'Project details', exact: true }).click();
+      await page.getByRole('button', { name: 'Send message' }).click({ trial: true, timeout: 5000 });
+      await page.getByRole('button', { name: 'Project details', exact: true }).click();
+    }
     await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByText('Fixture model response', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);

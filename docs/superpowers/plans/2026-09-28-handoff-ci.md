@@ -11,4 +11,6 @@ Publication gate: commit and push updates to the existing PR, verify a fresh clo
 
 Initial diagnosis: GitHub temp paths use an 8.3 alias (`RUNNER~1`) while `realpath` yields `runneradmin`. CommandBroker compared canonical executables/working directories against noncanonical roots, causing both incorrect denial and a project-executable exclusion bypass. Two tests expected raw input paths despite canonical-path contracts. The interrupted command test also left a rejection unobserved while waiting for a dispatch that could never occur.
 
+Follow-up remote diagnosis: the repaired path revision passed 370 tests and reached desktop checks, where four journeys found the open details pane covering Send at smaller window widths. A four-width pointer-action regression reproduced the same failure locally. Keeping details in its own grid column and wrapping composer controls fixed it; typecheck/lint/build and all five desktop journeys passed again. Exact failed-run history and current-head result lookup are retained in the Windows CI record.
+
 Snapshot documents are historical evidence, not new instructions or authority grants. Current root handoff and development status identify superseded scope and claims. Actual model quality remains unqualified and installed 0.5 remains separate from current source.
