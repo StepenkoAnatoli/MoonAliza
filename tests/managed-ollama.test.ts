@@ -2,11 +2,19 @@ import { mkdtemp, copyFile, writeFile, readFile, rm, mkdir } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { expect, test } from 'vitest';
 import { hashFile } from '../src/models/artifact-files';
 import { ManagedOllamaRuntime } from '../src/models/managed-ollama';
 import { completeManagedOllama, ManagedOllamaProvider } from '../src/models/managed-provider';
 import { InferenceScheduler } from '../src/engine/scheduler';
+
+function expectExited(pid: number) {
+  let failure: unknown;
+  try { process.kill(pid, 0); } catch (error) { failure = error; }
+  expect(failure).toMatchObject({ code: 'ESRCH' });
+}
 
 async function fixture(mode = 'normal') {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-managed-')); const directory = join(root, 'runtime'); await mkdir(directory);
@@ -16,7 +24,15 @@ async function fixture(mode = 'normal') {
   const files = await Promise.all(['ollama.exe', 'serve', 'fixture.json'].map(async path => ({ path, ...await hashFile(join(directory, path), 128 * 1024 ** 2) })));
   const installation = { directory, executable: 'ollama.exe', files, version: 'fixture-v1', homeDirectory: join(root, 'home'), modelsDirectory: join(root, 'models') };
   const owner = new ManagedOllamaRuntime(); const scheduler = new InferenceScheduler({ stopRuntime: async () => { await owner.stop(); } });
-  return { root, installation, owner, scheduler, requests: async () => (await readFile(join(root, 'home', 'requests.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line)), close: async () => { await scheduler.shutdown(); await rm(root, { recursive: true, force: true }); } };
+  const requests = async () => (await readFile(join(root, 'home', 'requests.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  return { root, installation, owner, scheduler, requests, close: async () => {
+    await scheduler.shutdown();
+    const observed = await requests().catch(error => { if (error.code === 'ENOENT') return []; throw error; });
+    for (const pid of new Set<number>(observed.map(item => item.pid))) expectExited(pid);
+    // Windows can briefly retain image/file handles after process exit. Retry only
+    // fixture deletion, after the independent exit assertions above have passed.
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } };
 }
 const configuration = { model: 'fixture:local', digest: 'a'.repeat(64), contextTokens: 2048, outputTokens: 128, quantization: 'Q4_K_M', placement: 'cpu' as const };
 const messages = [{ role: 'user' as const, content: 'private project prompt' }];
@@ -62,6 +78,19 @@ test('managed startup clears derived model metadata before launching the owned r
       await expect(readFile(join(metadata, `sha256-${'a'.repeat(64)}.json`))).rejects.toMatchObject({ code: 'ENOENT' });
     });
   } finally { await f.close(); }
+}, 30000);
+
+test('fixture cleanup tolerates a temporary file lock after the owned runtime has exited', async () => {
+  const f = await fixture();
+  const session = await f.scheduler.run(lease => f.owner.start(f.installation, lease));
+  expectExited(session.identity.pid);
+  const locker = spawn(join(process.env.SystemRoot!, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', '$f = [IO.File]::Open($env:MOONALIZA_TEST_LOCK_FILE, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read); try { [Console]::Out.WriteLine("locked"); Start-Sleep -Milliseconds 800 } finally { $f.Dispose() }'], { windowsHide: true, env: { ...process.env, MOONALIZA_TEST_LOCK_FILE: join(f.installation.directory, 'ollama.exe') }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const exited = once(locker, 'exit');
+  try {
+    const ready = await Promise.race([once(locker.stdout, 'data').then(([bytes]) => String(bytes)), exited.then(() => { throw new Error('LOCK_FIXTURE_FAILED'); })]);
+    expect(ready.trim()).toBe('locked');
+    await f.close();
+  } finally { await exited; await f.close(); }
 }, 30000);
 
 test('Stop during startup waits for preparation to settle before a subsequent runtime can start', async () => {

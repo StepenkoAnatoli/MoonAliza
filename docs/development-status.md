@@ -14,6 +14,8 @@ The repaired source passes **370 tests across 31 files** (159.72 seconds), TypeS
 
 Remote results are tracked in [PR #2's checks](https://github.com/StepenkoAnatoli/MoonAliza/pull/2/checks), with exact checked revisions and run links in its description. Inspect the current head: historical failures and local passes are separate evidence. The Windows workflow now verifies the portable handoff immediately after Node setup, before installing dependencies.
 
+The layout revision passed a complete GitHub push run. Its separate PR run exposed a transient `EBUSY` while removing a test runtime executable. Fixture cleanup now independently asserts that observed runtime processes have exited before bounded filesystem deletion retries. A real held-file regression reproduced the failure after process exit; lifecycle assertions and test execution are never retried. The latest complete local run passes **371 tests across 31 files** in **152.26 seconds**, with no failed or pending tests; report `.build/handoff-verified-tests.json`. Typecheck and lint also pass. The CI record preserves both remote outcomes and the detailed repair, including an earlier isolated local timeout that did not recur in the focused or final full run.
+
 The installed app remains **0.5.0**. This handoff does not finish managed-model qualification/integration or the remaining full-product roadmap. After confirming current-head checks, continue the actionable privacy/provider and context-budget work described in HANDOFF.md, followed by genuine qualification and the remaining plan dependencies. Earlier checkpoints below are retained as historical evidence.
 
 ## Model storage and selection source checkpoint
