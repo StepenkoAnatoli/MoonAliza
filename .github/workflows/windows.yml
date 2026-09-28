@@ -1,0 +1,46 @@
+name: Windows verification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: node node_modules/electron/install.js
+      - run: npm run native:build
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: node node_modules/electron/cli.js scripts/check-runtime.cjs
+      - run: npm run test:e2e
+      - name: Build unsigned development installer
+        if: github.event_name == 'workflow_dispatch'
+        run: npm run package:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Verify packaged desktop workflows
+        if: github.event_name == 'workflow_dispatch'
+        run: npm run test:e2e
+        env:
+          MOONALIZA_TEST_EXECUTABLE: '${{ github.workspace }}/release/win-unpacked/MoonAliza.exe'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: windows-verification
+          path: |
+            test-results/
+            playwright-report/
+            release/*.exe
+          if-no-files-found: ignore
+          retention-days: 14
