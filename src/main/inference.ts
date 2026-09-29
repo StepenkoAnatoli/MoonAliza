@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, InferenceToolsSchema, InferenceToolCallsSchema } from '../engine/control';
 import { IdSchema, type ToolCall, type ToolSpec } from '../shared';
+import { OllamaAccumulator, OpenAIAccumulator, readNdjson, readSse } from './provider-stream';
 
 export type ProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama';
 export interface InferenceProfile { kind: ProviderKind; endpoint: string; model: string; outputTokens: number; contextTokens?: number }
@@ -84,6 +85,18 @@ function parseCalls(raw: unknown, local: boolean, tools: ToolSpec[], usedIds: Se
 
 function hasCalls(raw: unknown): boolean { return raw !== undefined && (!Array.isArray(raw) || raw.length > 0); }
 
+/**
+ * Folds a streamed answer back into the one-body shape validated below. Ollama's NDJSON reads a
+ * non-streamed body as its single line; an OpenAI-compatible server that ignores `stream` answers
+ * with plain JSON rather than `text/event-stream`, and is read as before.
+ */
+async function readStreamed(response: Response, local: boolean): Promise<unknown> {
+  if (!local && !/^text\/event-stream\b/i.test(response.headers.get('content-type') ?? '')) return readBoundedJson(response);
+  const accumulator = local ? new OllamaAccumulator() : new OpenAIAccumulator();
+  for await (const chunk of local ? readNdjson(response) : readSse(response)) accumulator.push(chunk);
+  return accumulator.result();
+}
+
 /** The caller supplies the correct main-owned network session and obtains credentials from the vault. */
 export async function complete(profile: InferenceProfile, messages: InferenceMessage[], options: { fetcher: Fetcher; secret?: string; signal: AbortSignal; tools?: ToolSpec[]; managedOllama?: { numGpu: 0; keepAlive: -1 } }): Promise<Completion> {
   if (options.signal.aborted) throw new Error('RUN_CANCELLED');
@@ -103,14 +116,14 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   const tools = declaredTools.data;
   const requestBody = JSON.stringify({ model: profile.model, messages: history.messages,
     ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: tool })) } : {}),
-    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive, truncate: false, shift: false } : {}) } : { max_completion_tokens: profile.outputTokens }), stream: false });
+    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive, truncate: false, shift: false } : {}) } : { max_completion_tokens: profile.outputTokens, stream_options: { include_usage: true } }), stream: true });
   if (Buffer.byteLength(requestBody) > 8 * 1024 * 1024) throw new Error('INVALID_INFERENCE_REQUEST');
   const response = await options.fetcher(`${endpoint}${local ? '/api/chat' : '/chat/completions'}`, {
     method: 'POST', headers, signal, redirect: 'error',
     body: requestBody,
   });
   if (!response.ok) { await response.body?.cancel(); throw new Error(`PROVIDER_HTTP_${response.status}`); }
-  const data = await readBoundedJson(response);
+  const data = await readStreamed(response, local);
   if (options.signal.aborted) throw new Error('RUN_CANCELLED');
   if (local) {
     const parsed = OllamaSchema.safeParse(data);
