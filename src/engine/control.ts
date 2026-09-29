@@ -57,7 +57,7 @@ export const ToEngineSchema = z.discriminatedUnion('type', [
   z.object({ ...identity, type: z.literal('request'), request: RequestSchema }).strict(),
   z.object({ ...identity, type: z.literal('control'), control: ControlSchema }).strict(),
   z.object({ ...identity, type: z.literal('inference.result'), result: CompletionSchema }).strict(),
-  z.object({ ...identity, type: z.literal('inference.error'), code: z.enum(['RUN_CANCELLED', 'PROVIDER_ERROR']) }).strict(),
+  z.object({ ...identity, type: z.literal('inference.error'), code: z.enum(['RUN_CANCELLED', 'PROVIDER_ERROR', 'CONTEXT_LIMIT']) }).strict(),
   z.object({ ...identity, type: z.literal('command.prepared'), result: CommandPlanSchema }).strict(),
   z.object({ ...identity, type: z.literal('command.result'), result: CommandResultSchema }).strict(),
   z.object({ ...identity, type: z.literal('command.error'), code: z.enum(['RUN_CANCELLED', 'COMMAND_UNAVAILABLE', 'COMMAND_CHANGED', 'APPROVAL_STALE', 'COMMAND_UNKNOWN', 'GIT_UNAVAILABLE', 'GIT_UNSAFE_REPOSITORY', 'GIT_INSPECTION_LIMIT']) }).strict(),

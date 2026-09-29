@@ -86,6 +86,31 @@ function parseCalls(raw: unknown, local: boolean, tools: ToolSpec[], usedIds: Se
 function hasCalls(raw: unknown): boolean { return raw !== undefined && (!Array.isArray(raw) || raw.length > 0); }
 
 /**
+ * The code an inference failure crosses into the engine with. Only an overflow is told apart:
+ * the engine already explains CONTEXT_LIMIT to the user. Everything else stays PROVIDER_ERROR,
+ * as it always crossed - RUN_CANCELLED included, whose passage would change how a run that lost
+ * its trust or policy mid-flight is reported, a separate decision.
+ */
+export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'PROVIDER_ERROR' {
+  return error instanceof Error && error.message === 'CONTEXT_LIMIT' ? 'CONTEXT_LIMIT' : 'PROVIDER_ERROR';
+}
+
+// Overflow has no error code on any provider (docs/research/2026-09-29-context-overflow, E-11);
+// these are the phrasings the research collected (E-02, E-04). The text is read, never kept.
+const OVERFLOW = /context (length|size|window)|maximum context|exceeds? .{0,40}context/i;
+
+/** A refusal's public code: an overflow 400 is CONTEXT_LIMIT, anything else PROVIDER_HTTP_<status>. */
+async function refusalCode(response: Response): Promise<string> {
+  if (response.status !== 400) { await response.body?.cancel(); return `PROVIDER_HTTP_${response.status}`; }
+  let text = '';
+  try { const reader = response.body?.getReader(); let bytes = 0;
+    while (reader && bytes < 65536) { const chunk = await reader.read(); if (chunk.done) break; bytes += chunk.value.byteLength; text += new TextDecoder().decode(chunk.value, { stream: true }); }
+    await reader?.cancel();
+  } catch { /* an unreadable body is not an overflow */ }
+  return OVERFLOW.test(text) ? 'CONTEXT_LIMIT' : 'PROVIDER_HTTP_400';
+}
+
+/**
  * Folds a streamed answer back into the one-body shape validated below. Ollama's NDJSON reads a
  * non-streamed body as its single line; an OpenAI-compatible server that ignores `stream` answers
  * with plain JSON rather than `text/event-stream`, and is read as before.
@@ -116,13 +141,13 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   const tools = declaredTools.data;
   const requestBody = JSON.stringify({ model: profile.model, messages: history.messages,
     ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: tool })) } : {}),
-    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive, truncate: false, shift: false } : {}) } : { max_completion_tokens: profile.outputTokens, stream_options: { include_usage: true } }), stream: true });
+    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, truncate: false, shift: false, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive } : {}) } : { max_completion_tokens: profile.outputTokens, stream_options: { include_usage: true } }), stream: true });
   if (Buffer.byteLength(requestBody) > 8 * 1024 * 1024) throw new Error('INVALID_INFERENCE_REQUEST');
   const response = await options.fetcher(`${endpoint}${local ? '/api/chat' : '/chat/completions'}`, {
     method: 'POST', headers, signal, redirect: 'error',
     body: requestBody,
   });
-  if (!response.ok) { await response.body?.cancel(); throw new Error(`PROVIDER_HTTP_${response.status}`); }
+  if (!response.ok) throw new Error(await refusalCode(response));
   const data = await readStreamed(response, local);
   if (options.signal.aborted) throw new Error('RUN_CANCELLED');
   if (local) {
