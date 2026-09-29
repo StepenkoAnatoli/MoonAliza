@@ -1,0 +1,12 @@
+{
+  "topic": "Streaming tool calls: how Ollama /api/chat and OpenAI-compatible Chat Completions deliver tool calls when stream is true",
+  "notes": "Owning pages named directly; phase 0 ran (2 scrapes).",
+  "depth": "normal", "refreshDays": 30, "limit": 5, "perQuery": 2, "maxScrapes": 5, "prefer": [], "queries": [],
+  "urls": [
+    {"url": "https://docs.ollama.com/capabilities/tool-calling", "type": "P", "why": "U-01: how native /api/chat streams tool calls"},
+    {"url": "https://ollama.com/blog/streaming-tool", "type": "P", "why": "U-01: Ollama's announcement of streaming with tool calls"},
+    {"url": "https://docs.ollama.com/api/openai-compatibility", "type": "P", "why": "U-03: what the OpenAI-compatible endpoint supports when streaming"},
+    {"url": "https://platform.openai.com/docs/api-reference/chat-streaming/streaming", "type": "P", "why": "U-02: the chat.completion.chunk shape, tool_calls deltas"},
+    {"url": "https://platform.openai.com/docs/guides/function-calling", "type": "P", "why": "U-02: how streamed tool-call arguments are assembled"}
+  ]
+}
