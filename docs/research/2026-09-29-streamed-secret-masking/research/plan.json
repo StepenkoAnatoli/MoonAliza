@@ -1,0 +1,46 @@
+{
+  "topic": "Masking secrets in streamed output: how GitHub Actions and GitLab Runner mask a secret split across chunks, and which encodings they also mask",
+  "notes": "Owners named directly: the maskers' source in actions/runner and gitlab-org/gitlab-runner, and each vendor's docs on masking.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 8,
+  "prefer": [],
+  "queries": [
+    {
+      "q": "gitlab-runner trace masker masked secret split across writes source",
+      "prefer": [
+        "gitlab.com/gitlab-org/gitlab-runner"
+      ],
+      "why": "U-01, U-04: GitLab Runner's streaming masker source"
+    }
+  ],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/actions/runner/main/src/Sdk/DTLogging/Logging/SecretMasker.cs",
+      "type": "P",
+      "why": "U-01, U-04: how the Actions runner masks secrets in log lines"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/actions/runner/main/src/Sdk/DTLogging/Logging/ValueEncoders.cs",
+      "type": "P",
+      "why": "U-02: which encodings of a secret the Actions runner also masks"
+    },
+    {
+      "url": "https://gitlab.com/gitlab-org/gitlab-runner/-/raw/main/helpers/trace/internal/masker/masker.go",
+      "type": "P",
+      "why": "U-01, U-04: how GitLab Runner masks a secret across writes to the job trace"
+    },
+    {
+      "url": "https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions",
+      "type": "P",
+      "why": "U-03: what GitHub says masking does not cover"
+    },
+    {
+      "url": "https://docs.gitlab.com/ci/variables/",
+      "type": "P",
+      "why": "U-02, U-03: GitLab's requirements for a variable to be maskable"
+    }
+  ]
+}
