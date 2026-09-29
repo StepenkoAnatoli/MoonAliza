@@ -109,13 +109,19 @@ const OpenAIChunkSchema = z.object({
   usage: Nullable(z.object({ prompt_tokens: z.number().int().nonnegative().optional(), completion_tokens: z.number().int().nonnegative().optional() })),
 });
 
-interface PartialCall { id?: string; type?: string; name?: string; arguments: string }
+interface PartialCall { index: number; id?: string; type?: string; name?: string; arguments: string }
 
-/** OpenAI-compatible: calls keyed by index; id, type and name from the first delta carrying them. */
+/**
+ * OpenAI-compatible: calls keyed by index; id, type and name from the first delta carrying them.
+ * A delta whose id differs from the call already at its index starts a new call: Ollama's /v1
+ * sends whole calls and has been seen reusing index 0 for parallel ones with distinct ids
+ * (docs/research/2026-09-29-ollama-v1-stream-chunking), while OpenAI sends the id only once.
+ */
 export class OpenAIAccumulator {
   private content: string | null = null;
   private refusal: string | null = null;
-  private readonly calls = new Map<number, PartialCall>();
+  private readonly calls: PartialCall[] = [];
+  private readonly latest = new Map<number, PartialCall>();
   private finishReason: string | null = null;
   usage: { inputTokens?: number; outputTokens?: number } | undefined;
 
@@ -131,7 +137,13 @@ export class OpenAIAccumulator {
     if (typeof delta.refusal === 'string') this.refusal = (this.refusal ?? '') + delta.refusal;
     if ((this.content?.length ?? 0) > MAX_TEXT || (this.refusal?.length ?? 0) > MAX_TEXT) throw new Error('PROVIDER_RESPONSE_TOO_LARGE');
     for (const fragment of delta.tool_calls ?? []) {
-      const call = this.calls.get(fragment.index) ?? { arguments: '' };
+      let call = this.latest.get(fragment.index);
+      if (!call || (fragment.id && call.id !== undefined && call.id !== fragment.id)) {
+        if (this.calls.length >= 128) throw new Error('PROVIDER_INVALID_RESPONSE');
+        call = { index: fragment.index, arguments: '' };
+        this.calls.push(call);
+        this.latest.set(fragment.index, call);
+      }
       for (const [key, value] of [['id', fragment.id], ['type', fragment.type], ['name', fragment.function?.name]] as const) {
         if (value === null || value === undefined) continue;
         // A later delta may repeat a call's identity, never change it.
@@ -140,15 +152,14 @@ export class OpenAIAccumulator {
       }
       call.arguments += fragment.function?.arguments ?? '';
       if (call.arguments.length > MAX_ARGUMENTS) throw new Error('PROVIDER_INVALID_RESPONSE');
-      this.calls.set(fragment.index, call);
     }
     if (choice.finish_reason) this.finishReason = choice.finish_reason;
   }
 
-  /** The shape of a non-streamed completion; calls in index order, arguments still an unparsed string. */
+  /** The shape of a non-streamed completion; calls in index order, then arrival, arguments still unparsed. */
   result() {
-    const calls = [...this.calls.entries()].sort(([a], [b]) => a - b)
-      .map(([, call]) => ({ id: call.id, type: call.type, function: { name: call.name, arguments: call.arguments } }));
+    const calls = this.calls.map((call, order) => ({ call, order })).sort((a, b) => a.call.index - b.call.index || a.order - b.order)
+      .map(({ call }) => ({ id: call.id, type: call.type, function: { name: call.name, arguments: call.arguments } }));
     return { choices: [{ message: { role: 'assistant' as const, content: this.content, refusal: this.refusal, ...(calls.length ? { tool_calls: calls } : {}) }, finish_reason: this.finishReason }] };
   }
 }

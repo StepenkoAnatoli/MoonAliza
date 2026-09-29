@@ -85,13 +85,19 @@ test('streamed text accumulates, and a stream cut before its terminal never look
   expect(await complete(openai, [], { tools: [tool('get_weather')], fetcher: async () => sse(partial, false), signal: signal() })).toEqual({ content: '', outcome: 'incomplete' });
 });
 
-test('a call whose identity changes mid-stream, or a mid-stream error, is rejected without its text', async () => {
+test('a new id without a name, a renamed call, or a mid-stream error is rejected without its text', async () => {
   const renamed = async () => sse([
     delta({ tool_calls: [E07[0]] }),
     delta({ tool_calls: [{ index: 0, id: 'call_other', function: { arguments: '{}' } }] }),
     delta({}, 'tool_calls'),
   ]);
   await expect(complete(openai, [], { tools: [tool('get_weather')], fetcher: renamed, signal: signal() })).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
+  const retitled = async () => sse([
+    delta({ tool_calls: [E07[0]] }),
+    delta({ tool_calls: [{ index: 0, id: E07[0]!.id, function: { name: 'other_tool', arguments: '{}' } }] }),
+    delta({}, 'tool_calls'),
+  ]);
+  await expect(complete(openai, [], { tools: [tool('get_weather'), tool('other_tool')], fetcher: retitled, signal: signal() })).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
   const failing = async () => ndjson([assistant('partial'), { error: 'leaked-token in a runtime error' }]);
   const rejection = complete(ollama, [], { fetcher: failing, signal: signal() });
   await expect(rejection).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
@@ -112,4 +118,21 @@ test('a stream abandoned mid-way is cancelled, so the provider stops sending', a
   const fetcher = async () => new Response(open, { headers: { 'Content-Type': 'text/event-stream' } });
   await expect(complete(openai, [], { fetcher, signal: signal() })).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
   expect(cancelled).toBe(true);
+});
+
+// docs/research/2026-09-29-ollama-v1-stream-chunking: Ollama's /v1 sends each call whole, and
+// one report (E-05) shows parallel calls both at index 0 with distinct ids; the finish reason
+// arrives on its own chunk, carrying usage (E-03, E-04).
+test('Ollama /v1: whole calls sharing index 0 with distinct ids are two calls, not a conflict', async () => {
+  const whole = (id: string, sides: number) => ({ id: 'chatcmpl-914', object: 'chat.completion.chunk', system_fingerprint: 'fp_ollama',
+    choices: [{ index: 0, delta: { role: 'assistant', content: '', tool_calls: [{ id, index: 0, type: 'function', function: { name: 'roll_dice', arguments: JSON.stringify({ sides }) } }] }, finish_reason: null }] });
+  const fetcher = async () => sse([
+    whole('call_a', 6), whole('call_b', 20),
+    { id: 'chatcmpl-914', object: 'chat.completion.chunk', choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 } },
+  ]);
+  const result = await complete(openai, [], { tools: [tool('roll_dice')], fetcher, signal: signal() });
+  expect(result).toEqual({ content: '', outcome: 'tool_calls', toolCalls: [
+    { id: 'call_a', name: 'roll_dice', input: { sides: 6 } },
+    { id: 'call_b', name: 'roll_dice', input: { sides: 20 } },
+  ] });
 });
