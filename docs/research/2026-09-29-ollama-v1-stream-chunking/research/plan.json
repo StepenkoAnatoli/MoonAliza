@@ -1,0 +1,33 @@
+{
+  "topic": "Ollama's OpenAI-compatible /v1/chat/completions: how tool calls arrive when stream is true (whole or index-keyed fragments)",
+  "notes": "Owning sources named directly: Ollama's source for the /v1 chunk shape, and the PR that closed issue #7881.",
+  "depth": "quick",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 10,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/openai/openai.go",
+      "type": "P",
+      "why": "U-01, U-02, U-03: how a ChatResponse becomes a chat.completion.chunk (tool calls, finish_reason)"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/middleware/openai.go",
+      "type": "P",
+      "why": "U-02: how the /v1 stream writer emits each chunk"
+    },
+    {
+      "url": "https://github.com/ollama/ollama/pull/7888",
+      "type": "P",
+      "why": "U-04: the change that closed issue #7881 (tool calls without index)"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/tools/tools.go",
+      "type": "P",
+      "why": "U-01: where a streamed call's Function.Index is assigned, across chunks"
+    }
+  ]
+}
