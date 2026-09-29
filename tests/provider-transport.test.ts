@@ -75,7 +75,7 @@ test('Ollama uses its native route and only reports complete after a stop termin
   const result = await complete({ ...profile, kind: 'ollama', endpoint: 'http://127.0.0.1:11434' }, [], { fetcher, signal: new AbortController().signal });
   expect(target).toBe('http://127.0.0.1:11434/api/chat');
   expect(body.options).toEqual({ num_predict: 512 });
-  expect(body.stream).toBe(false);
+  expect(body.stream).toBe(true);
   expect(result).toEqual({ content: 'Local reply', outcome: 'complete' });
 });
 
