@@ -53,7 +53,8 @@ U-03 stays a known unknown instead of taking the prior's word.
 ## Known unknowns
 
 - **U-03** - Does Ollama's OpenAI-compatible endpoint stream tool calls whole or as index-keyed fragments?
-  - Day-one verification: E-05 says Streaming and Tools are supported (tool_choice is not) but shows no streamed tool call. Day-one verification: against a local Ollama, POST /v1/chat/completions with stream true and one tool, log every delta.tool_calls, and check the index-keyed accumulator (U-02) yields one call with parseable arguments - it must, whether the arguments arrive whole or in fragments.
+  - Known so far: E-05 says Streaming and Tools are supported (tool_choice is not) but shows no streamed tool call.
+  - Day-one verification: against a local Ollama, POST /v1/chat/completions with stream true and one tool, log every delta.tool_calls, and check the index-keyed accumulator (U-02) yields one call with parseable arguments - it must, whether the arguments arrive whole or in fragments.
 
 ## Decision
 
