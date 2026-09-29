@@ -1,0 +1,48 @@
+{
+  "topic": "Context overflow: what Ollama /api/chat and OpenAI-compatible Chat Completions return when a request exceeds the model's context window",
+  "notes": "Owners named directly after phase 0 (ADR-0097's skipped-owner list and the captures). Ollama's source for truncation, OpenAI's docs for the error shape.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 7,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.ollama.com/api/chat",
+      "type": "P",
+      "why": "U-01: the truncate parameter and its default on /api/chat"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/server/prompt.go",
+      "type": "P",
+      "why": "U-01, U-04: how the chat prompt is fitted to num_ctx"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/openai/openai.go",
+      "type": "P",
+      "why": "U-02: what the /v1 request converter sets for truncate"
+    },
+    {
+      "url": "https://platform.openai.com/docs/guides/error-codes",
+      "type": "P",
+      "why": "U-03: the error OpenAI returns for an over-window request"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/api/types.go",
+      "type": "P",
+      "why": "U-01: the ChatRequest truncate/shift fields and what their absence means"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/server/routes.go",
+      "type": "P",
+      "why": "U-01, U-02: the default truncate applies, and the error when a prompt does not fit"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/ollama/ollama/main/llm/server.go",
+      "type": "P",
+      "why": "U-01: the error a chat completion returns when truncate is false and the prompt does not fit"
+    }
+  ]
+}
