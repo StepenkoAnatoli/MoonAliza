@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { validateEndpoint, readBoundedJson, complete, type InferenceMessage } from '../src/main/inference';
+import { validateEndpoint, readBoundedJson, complete, inferenceErrorCode, type InferenceMessage } from '../src/main/inference';
 import { CompletionSchema, FromEngineSchema, ToEngineSchema } from '../src/engine/control';
 import type { ToolSpec } from '../src/shared';
 
@@ -87,7 +87,7 @@ test('Ollama uses its native route and only reports complete after a stop termin
   const result = await complete({ ...profile, kind: 'ollama', endpoint: 'http://127.0.0.1:11434' }, [], { fetcher, signal: new AbortController().signal });
   expect(target).toBe('http://127.0.0.1:11434/api/chat');
   expect(body.options).toEqual({ num_predict: 512 });
-  expect(body.stream).toBe(false);
+  expect(body.stream).toBe(true);
   expect(result).toEqual({ content: 'Local reply', outcome: 'complete' });
 });
 
@@ -204,4 +204,45 @@ test('control messages admit bounded canonical tool data and reject wire fields'
   for (const result of [{ content: '', outcome: 'tool_calls' }, { content: '', outcome: 'tool_calls', toolCalls: [] }, { content: '', outcome: 'incomplete', toolCalls: [call] }, { content: '', outcome: 'tool_calls', toolCalls: [call, call] }, { content: 'x'.repeat(2_000_001), outcome: 'complete' }]) {
     expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.result', result }).success).toBe(false);
   }
+});
+
+// docs/research/2026-09-29-context-overflow: Ollama truncates silently when `truncate` and
+// `shift` are absent (E-13), and no provider names a code for overflow (E-11).
+test('every native Ollama request refuses silent truncation, not only the managed one', async () => {
+  let body: Record<string, unknown> = {};
+  await complete({ ...profile, kind: 'ollama', endpoint: 'http://127.0.0.1:11434' }, [], {
+    signal: signal(),
+    fetcher: async (_url, init) => { body = JSON.parse(String(init.body)); return Response.json({ message: { content: 'ok' }, done: true, done_reason: 'stop' }); },
+  });
+  expect(body).toMatchObject({ truncate: false, shift: false });
+});
+
+test('an overflow 400 becomes CONTEXT_LIMIT without its text; another 400 stays PROVIDER_HTTP_400', async () => {
+  const refuse = (text: string) => async () => new Response(JSON.stringify({ error: { message: text, type: 'invalid_request_error' } }), { status: 400 });
+  const overflow = complete(profile, [], { fetcher: refuse("This model's maximum context length is 128000 tokens. However, your messages resulted in 131072 tokens (private prompt)."), signal: signal() });
+  await expect(overflow).rejects.toThrow('CONTEXT_LIMIT');
+  await expect(overflow).rejects.not.toThrow('private prompt');
+  await expect(complete(profile, [], { fetcher: refuse('the request exceeds the available context size, try increasing it'), signal: signal() })).rejects.toThrow('CONTEXT_LIMIT');
+  await expect(complete(profile, [], { fetcher: refuse('Invalid value for temperature'), signal: signal() })).rejects.toThrow('PROVIDER_HTTP_400');
+});
+
+test('a context overflow crosses into the engine as CONTEXT_LIMIT, not a generic provider error', () => {
+  expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.error', code: 'CONTEXT_LIMIT' }).success).toBe(true);
+  expect(inferenceErrorCode(new Error('CONTEXT_LIMIT'))).toBe('CONTEXT_LIMIT');
+  expect(inferenceErrorCode(new Error('RUN_CANCELLED'))).toBe('PROVIDER_ERROR');
+  // Anything else, including a provider's own status, crosses as the generic code it always did.
+  expect(inferenceErrorCode(new Error('PROVIDER_HTTP_400'))).toBe('PROVIDER_ERROR');
+  expect(inferenceErrorCode('not an error')).toBe('PROVIDER_ERROR');
+});
+
+
+test.each([400, 413, 422])('overflow status %i is classified within a strict 64 KiB inspection bound', async status => {
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({ start(controller) {
+    controller.enqueue(new TextEncoder().encode('x'.repeat(65536) + ' maximum context length private text'));
+  }, cancel() { cancelled = true; } });
+  const response = new Response(body, { status });
+  await expect(complete(profile, [], { fetcher: async () => response, signal: signal() })).rejects.toThrow(`PROVIDER_HTTP_${status}`);
+  expect(cancelled).toBe(true); expect(body.locked).toBe(false);
+  await expect(complete(profile, [], { fetcher: async () => Response.json({ error: { code: 'prompt_too_long' } }, { status }), signal: signal() })).rejects.toThrow('CONTEXT_LIMIT');
 });

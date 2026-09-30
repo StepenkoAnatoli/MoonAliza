@@ -1,0 +1,17 @@
+# Evidence
+
+One row per fetched page. `Raw` points at the cached page text under `research/raw/`,
+which is what makes the claim checkable - a row without raw evidence fails preflight.
+
+The `Finding` cell arrives as an auto-extracted summary. Rewrite it into a real claim:
+what the page actually establishes, with the quote or number that proves it.
+
+| ID | Retrieved | Type | URL | Finding | Raw |
+|---|---|---|---|---|---|
+| E-01 | 2026-09-29 | L | https://github.com/supernovae-st/nika-spec/blob/main/stdlib/providers-v0.1.md | A third-party provider spec (nika-spec) found by phase 0 search; lists providers and an OpenAI-compatible escape hatch. Context only, cited by no unknown. | research/raw/2026-09-29-nika-spec-stdlib-providers-v0-1-md-at-ma-github-eef14645.md |
+| E-02 | 2026-09-29 | L | https://community.openai.com/t/help-for-function-calls-with-streaming/627170 | OpenAI developer forum thread (2024): users assembling streamed function-call arguments by hand. A lead to the owning guide (E-07), not evidence. | research/raw/2026-09-29-help-for-function-calls-with-streaming-a-openai-4162fbac.md |
+| E-03 | 2026-09-29 | P | https://docs.ollama.com/capabilities/tool-calling | Ollama docs, tool calling: with stream true, tool_calls arrive inside streamed message chunks; the client gathers thinking, content and tool_calls across chunks (the Python example extends a list), then sends all of them back with the tool results. [quote: then return those fields together with any tool results in the follow-up request] | research/raw/2026-09-29-tool-calling-ollama-ollama-282a74b8.md |
+| E-04 | 2026-09-29 | P | https://ollama.com/blog/streaming-tool | Ollama blog, 28 May 2025: streaming with tool calling shipped. Its sample stream shows content chunks, then one chunk (done: false) whose message.tool_calls holds a complete call - name and arguments as a JSON object, not a string fragment. [quote: Ollama now supports streaming responses with tool calling] | research/raw/2026-09-29-streaming-responses-with-tool-calling-ol-ollama-55bbc4f1.md |
+| E-05 | 2026-09-29 | P | https://docs.ollama.com/api/openai-compatibility | Ollama docs, OpenAI compatibility: /v1/chat/completions supports Streaming and Tools, and the request fields stream, stream_options.include_usage and tools; tool_choice is NOT supported. The page does not show how a streamed tool call is chunked on this endpoint. | research/raw/2026-09-29-openai-compatibility-ollama-ollama-ddcc6cfd.md |
+| E-06 | 2026-09-29 | P | https://platform.openai.com/docs/api-reference/chat-streaming/streaming | OpenAI API reference, ChatCompletionChunk: finish_reason is tool_calls when the model called a tool - the signal a streamed turn ends in tool calls rather than text. [quote: if the model called a tool] | research/raw/2026-09-29-chat-openai-api-reference-openai-e5a436f3.md |
+| E-07 | 2026-09-29 | P | https://platform.openai.com/docs/guides/function-calling | OpenAI guide, function calling / Streaming: each delta.tool_calls item carries index (which call it belongs to); id, type and function.name are set only on a call's first delta; function.arguments arrives as string fragments to concatenate per index into an encoded JSON string, parsed only once complete. [quote: Many of these fields are only set for the first] [quote: Identifies which function call the] [quote: aggregating chunks into an encoded] | research/raw/2026-09-29-function-calling-openai-api-openai-ec4f8c98.md |

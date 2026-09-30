@@ -1,14 +1,14 @@
-# Development status — 2026-09-28 · context recovery and development delivery
+# Development status — 2026-09-30 · context recovery and development delivery
 
 The full MoonAliza product remains the target. This is a working development checkpoint, not a completed agent or qualified release.
 
 ## Current 0.6 source milestone
 
-The new development branch is `feat/context-recovery`, based on merged PR #2. [The stage plan](superpowers/plans/2026-09-28-context-recovery.md), [behavior specification](specification/context-recovery.md), [new primary research](../research/BRIEF.md) and [release evidence](releases/0.6.0-dev.1.md) are portable parts of this checkout.
+The new development branch is `feat/context-recovery`, reconciled with merged PRs #3–10 at `7f68fb2`. [The stage plan](superpowers/plans/2026-09-28-context-recovery.md), [behavior specification](specification/context-recovery.md), [new primary research](../research/BRIEF.md) and [release evidence](releases/0.6.0-dev.1.md) are portable parts of this checkout.
 
 Cloud-profile incompatibility is now explained before Send. Explicit project consent preserves the draft and sends nothing. Existing model profiles can be edited with revision checks; saved credentials cannot silently move to a different endpoint/provider kind. Long tool outputs remain stored in full and can be paged through a session-scoped read tool without re-executing commands. Context assembly preserves current tool exchanges and removes whole historical turns when necessary. Unicode byte estimates, response reserve and observed provider usage are shown separately. Persistent context failures offer profile settings and a fresh draft without automatic retry.
 
-The focused checks passed 52 tests. The actual Electron privacy/context journey passed, including restart persistence and credential-destination rejection. The first full suite passed 387 of 388 tests; its sole failure was the simulated-checkout fixture omitting the newly linked research directory. That fixture now copies the directory. The corrected full suite passes **388 tests across 32 files** in **147.52 seconds**, with no failures or pending tests. Typecheck, lint, native build, application build and the actual Electron/SQLite check pass. All **six source desktop journeys** pass in about **1.8 minutes**. Packaged and release evidence is tracked in the release record. No production model qualification is claimed.
+On September 30 the reconciled source passed **408 tests across 33 files** in **150.00 seconds**, with no failures or pending tests. The first merged run passed 404/405 while documentation was still being written; its only failure was a missing new review link in the checkout fixture. The completed documentation and final full run resolved that failure. Streamed usage regressions first reproduced dropped native/compatible counts and malformed-usage rejection, then passed with the reconciliation. All five newly merged research corpora passed their handoff/ledger checks. Desktop, packaged and remote CI evidence is tracked in [the release record](releases/0.6.0-dev.1.md). No production model qualification is claimed.
 
 ## Historical checkpoints
 
@@ -128,9 +128,9 @@ Previous 0.1 installer SHA-256: `C171CCE03F2610D73BF2749A5408C691AA51DD3758BE4E8
 ## In progress and next
 
 1. Managed local-model setup remains the next product milestone. Artifact storage, selection policy, scheduler and provider subsystems are implemented and checked; real qualification, production trust inputs and main/setup integration remain. Stage B snapshot quotas and recovery review are connected and packaged checks passed; handle-relative path hardening and wider Git configuration qualification remain.
-2. Stage C: privacy guidance, bounded/retrievable outputs and manual context recovery are now connected. Continue provider-specific exact accounting, streaming, remaining provider families, skills, teams and mission verification. Research remains disabled in the UI until implemented.
+2. Stage C: privacy guidance, bounded/retrievable outputs and manual context recovery are now connected. Provider transport now streams, preserves optional terminal usage and refuses native Ollama truncation. Continue safe live text display, provider-specific exact accounting/calibration, remaining provider families, skills, teams and mission verification. Research remains disabled in the UI until implemented.
 3. Stage D: connect verified activation, selection and the managed provider to main/engine and setup UI; implement real lab/machine qualification, production trust inputs and storage management. Native RAM/CPU/DXGI readiness is connected; exact NVML adapter mapping and global free-memory telemetry remain.
-4. Stage E: research provisioning, durable GitHub job reconciliation, evidence and review workflows. Resolve the pinned Research Kit's redistribution license before bundling it.
+4. Stage E: research provisioning, durable GitHub job reconciliation, evidence and review workflows. Use the [reviewed Research Kit integration plan](specification/research-kit-integration-review.md), updated for artifact format 2.0 and agent review. Resolve redistribution rights before bundling kit code.
 5. Stage F: broader installed-app qualification, signed release inputs, diagnostics, updates and release evidence. Per-user install/uninstall/reinstall and upgrade now pass on this PC. The Windows workflow passed for merged PR #2; verify the current PR head separately.
 
 ## Limits requiring further engineering
@@ -138,3 +138,7 @@ Previous 0.1 installer SHA-256: `C171CCE03F2610D73BF2749A5408C691AA51DD3758BE4E8
 The current file journal supports bounded UTF-8 text files and existing parent directories. Snapshots now have a shared 256 MiB content budget, but SQLite history, conversations, filesystem allocation overhead and model storage are not bounded by this quota. JavaScript path/config rechecks do not provide a complete handle-relative defense against concurrent hostile filesystem changes. Git inspection rejects unknown local config keys and bounds scanning to 50,000 entries/15 seconds, followed by a 15-second process timeout. Executable hashes do not freeze project scripts or their dependencies: approved commands read current files. Context sizing uses an explicitly labeled UTF-8 estimate rather than an exact model tokenizer; actual provider usage is separate and optional. No real model/tool quality qualification has been performed; no Ollama service was found at the standard endpoint at the earlier checkpoint.
 
 No API keys are committed and no real model benchmark is claimed. Development prerelease evidence is tracked in the current release record; a signed production release remains unfinished.
+
+## Newly merged research
+
+All five corpora from PRs #3–10 are retained without editing their captures: [token accounting, SQLite and licensing](research/2026-09-28-open-gaps/research/BRIEF.md), [streamed tool calls](research/2026-09-29-streaming-tool-calls/research/BRIEF.md), [Ollama compatible chunks](research/2026-09-29-ollama-v1-stream-chunking/research/BRIEF.md), [context overflow](research/2026-09-29-context-overflow/research/BRIEF.md), and [secret masking](research/2026-09-29-streamed-secret-masking/research/BRIEF.md). Research is reference evidence, not a permission grant. The integration attachment was reviewed only; no Research Kit process or Build gate has been added to MoonAliza in this stage.

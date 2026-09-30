@@ -1,0 +1,487 @@
+Architecture: consumer, not merge
+
+text
+┌─────────────────────────┐         ┌──────────────────────────┐
+│   Research-Kit (tool)   │         │   MoonAliza (consumer)   │
+│                         │         │                          │
+│  research-kit collect   │◄────────┤  ResearchKitAdapter      │
+│  research-kit handoff   │  spawn  │    (child_process)       │
+│  research-kit review    │────────►│                          │
+│  research-kit authorize │  stdout │  reads manifest.json     │
+│                         │  exit   │  reads/writes MAP.md     │
+│  emits manifest.json    │  codes  │  via CLI, not parser     │
+└─────────────────────────┘         └──────────────────────────┘
+        owns corpus format               owns build gate
+MoonAliza's only hard dependency on Research-Kit is: the binary exists and speaks the CLI contract below. If you ship Research-Kit as an npm package (or a local path), MoonAliza just runs it.
+
+1. The CLI contract (Research-Kit's public surface)
+This is the only thing MoonAliza is allowed to assume. Put it in Research-Kit's README as the "builder integration" section.
+
+text
+research-kit handoff  --project <dir>
+    exit 0  ⇒ corpus valid, ledger non-empty, chain verifies, all citations resolve
+    exit 1  ⇒ stderr names what's missing
+
+research-kit review   --project <dir> --format json
+    stdout  ⇒ JSON: { mapRows: [...], evidenceRows: [...] }
+    (a machine-readable view of MAP.md / EVIDENCE.md)
+
+research-kit review   --project <dir> --set <rowId> --status <COVERED|DISMISSED|GAP>
+    exit 0  ⇒ row written back to MAP.md
+
+research-kit review   --project <dir> --set-claim <findingId> --text "..."
+    exit 0  ⇒ claim written back to EVIDENCE.md; re-verifies citation
+
+research-kit authorize --project <dir> --reviewer <id>
+    exit 0  ⇒ writes review.reviewedBy/At, flips buildAuthorized=true
+    exit 1  ⇒ preflight not PASS, or rows unclassified
+If Research-Kit doesn't expose these verbs yet, these are the only additions it needs — thin wrappers around code it already has (verify(), the MAP.md/EVIDENCE.md parsers, the preflight runner). They're additive; no internal restructuring.
+
+2. The contract: manifest.json schema (both repos have their own copy)
+MoonAliza gets its own copy of the schema — it does not import Research-Kit's types. This is what "clean" means: schema is a contract, not a shared module.
+
+src/adapters/research-kit/manifest-schema.ts:
+
+typescript
+// src/adapters/research-kit/manifest-schema.ts
+// MoonAliza's OWN copy of the contract. Do not import from Research-Kit.
+
+import { z } from 'zod';
+
+export const RESEARCH_MANIFEST_SCHEMA_VERSION = 1;
+
+export const ResearchManifestSchema = z.object({
+  schemaVersion: z.literal(RESEARCH_MANIFEST_SCHEMA_VERSION),
+  corpusId: z.string().min(1),
+  topic: z.string(),
+  createdAt: z.string().datetime(),
+  buildAuthorized: z.boolean(),
+  preflight: z.object({
+    status: z.enum(['PASS', 'FAIL', 'INCOMPLETE', 'BLOCKED']),
+    checks: z.array(z.object({
+      id: z.string(),
+      status: z.enum(['PASS', 'FAIL', 'INCOMPLETE', 'BLOCKED']),
+    })),
+    ranAt: z.string().datetime(),
+  }),
+  ledger: z.object({
+    path: z.string(),
+    entries: z.number().int().nonnegative(),
+    chainValid: z.boolean(),
+  }),
+  review: z.object({
+    mapClassified: z.boolean(),
+    findingsRewritten: z.boolean(),
+    reviewedBy: z.string().nullable(),
+    reviewedAt: z.string().datetime().nullable(),
+  }),
+});
+
+export type ResearchManifest = z.infer<typeof ResearchManifestSchema>;
+
+/**
+ * Recompute the derived predicate. Never trust the cached boolean.
+ */
+export function deriveBuildAuthorized(m: ResearchManifest): boolean {
+  return (
+    m.preflight.status === 'PASS' &&
+    m.review.mapClassified === true &&
+    m.review.findingsRewritten === true
+  );
+}
+3. The adapter: MoonAliza's only door to Research-Kit
+Everything Research-Kit-related lives in src/adapters/research-kit/. One module, one binary path, one subprocess helper. Nothing else in MoonAliza knows Research-Kit exists.
+
+src/adapters/research-kit/adapter.ts:
+
+typescript
+// src/adapters/research-kit/adapter.ts
+
+import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+  ResearchManifestSchema,
+  RESEARCH_MANIFEST_SCHEMA_VERSION,
+  deriveBuildAuthorized,
+  type ResearchManifest,
+} from './manifest-schema';
+
+/**
+ * How MoonAliza finds the tool. Configured once at startup:
+ *   - "npx research-kit"  (published package)
+ *   - "node /path/to/Research-Kit/bin/research-kit.mjs"  (local dev)
+ */
+export interface ResearchKitConfig {
+  command: string;        // e.g. "research-kit" or "node"
+  baseArgs: string[];     // e.g. [] or ["/abs/path/to/research-kit.mjs"]
+}
+
+export interface CliResult {
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  ok: boolean;
+}
+
+export class ResearchKitAdapter {
+  constructor(private cfg: ResearchKitConfig) {}
+
+  // ────────────────────────────────────────────────────────────
+  // CLI wrapper — the only place spawn() is called
+  // ────────────────────────────────────────────────────────────
+
+  private run(args: string[], cwd: string): Promise<CliResult> {
+    return new Promise((resolve) => {
+      const child = spawn(this.cfg.command, [...this.cfg.baseArgs, ...args], {
+        cwd,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+      });
+
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (d) => (stdout += d.toString()));
+      child.stderr.on('data', (d) => (stderr += d.toString()));
+
+      child.on('close', (code) =>
+        resolve({ exitCode: code, stdout: stdout.trim(), stderr: stderr.trim(), ok: code === 0 })
+      );
+      child.on('error', (err) =>
+        resolve({ exitCode: null, stdout: '', stderr: err.message, ok: false })
+      );
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Public API — the surface MoonAliza actually uses
+  // ────────────────────────────────────────────────────────────
+
+  /** Health check. exit 0 = corpus is valid and ready to review. */
+  handoff(projectRoot: string): Promise<CliResult> {
+    return this.run(['handoff', '--project', projectRoot], projectRoot);
+  }
+
+  /** Read the review surface as structured JSON. */
+  async reviewView(projectRoot: string): Promise<{
+    mapRows: Array<{ id: string; question: string; status: string; evidenceId: string | null }>;
+    evidenceRows: Array<{ id: string; claim: string; citedCapture: string | null; captureVerified: boolean }>;
+  }> {
+    const r = await this.run(['review', '--project', projectRoot, '--format', 'json'], projectRoot);
+    if (!r.ok) throw new Error(`research-kit review failed: ${r.stderr}`);
+    return JSON.parse(r.stdout);
+  }
+
+  /** Classify one MAP.md row. */
+  setMapRowStatus(projectRoot: string, rowId: string, status: string): Promise<CliResult> {
+    return this.run(
+      ['review', '--project', projectRoot, '--set', rowId, '--status', status],
+      projectRoot
+    );
+  }
+
+  /** Rewrite one EVIDENCE.md claim. */
+  setFindingClaim(projectRoot: string, findingId: string, text: string): Promise<CliResult> {
+    return this.run(
+      ['review', '--project', projectRoot, '--set-claim', findingId, '--text', text],
+      projectRoot
+    );
+  }
+
+  /** Flip buildAuthorized once the predicate is satisfied. */
+  authorize(projectRoot: string, reviewerId: string): Promise<CliResult> {
+    return this.run(
+      ['authorize', '--project', projectRoot, '--reviewer', reviewerId],
+      projectRoot
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Manifest read — fail closed, re-derive on every read
+  // ────────────────────────────────────────────────────────────
+
+  async readManifest(projectRoot: string): Promise<{
+    manifest: ResearchManifest | null;
+    gate: ResearchGateStatus;
+  }> {
+    let raw: string;
+    try {
+      raw = await readFile(join(projectRoot, 'research', 'manifest.json'), 'utf8');
+    } catch {
+      return { manifest: null, gate: 'BLOCKED_MISSING' };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { manifest: null, gate: 'BLOCKED_MISSING' };
+    }
+
+    const version = (parsed as Record<string, unknown>)?.schemaVersion;
+    if (version !== RESEARCH_MANIFEST_SCHEMA_VERSION) {
+      return { manifest: null, gate: 'BLOCKED_UNKNOWN_SCHEMA' };
+    }
+
+    const result = ResearchManifestSchema.safeParse(parsed);
+    if (!result.success) return { manifest: null, gate: 'BLOCKED_MISSING' };
+
+    const derived = deriveBuildAuthorized(result.data);
+    if (result.data.buildAuthorized !== derived) {
+      return { manifest: result.data, gate: 'BLOCKED_TAMPERED' };
+    }
+    if (!derived) return { manifest: result.data, gate: 'BLOCKED_UNREVIEWED' };
+
+    return { manifest: result.data, gate: 'AUTHORIZED' };
+  }
+}
+
+export type ResearchGateStatus =
+  | 'AUTHORIZED'
+  | 'BLOCKED_MISSING'
+  | 'BLOCKED_UNKNOWN_SCHEMA'
+  | 'BLOCKED_UNREVIEWED'
+  | 'BLOCKED_TAMPERED';
+That's it. All of MoonAliza's knowledge of Research-Kit is in this one file plus the schema file next to it.
+
+4. Wiring into MoonAliza's policy engine
+MoonAliza's existing policy.ts gets one new gate. It imports the adapter, nothing else.
+
+typescript
+// src/engine/policy.ts — additions
+
+import type { ResearchKitAdapter, ResearchGateStatus } from '../adapters/research-kit/adapter';
+
+export interface ResearchGateState {
+  allowed: boolean;
+  status: ResearchGateStatus;
+}
+
+/**
+ * Called on project open AND on every Build invocation.
+ * Never cached across a running app — the file can change underneath.
+ */
+export async function evaluateResearchGate(
+  adapter: ResearchKitAdapter,
+  projectRoot: string
+): Promise<ResearchGateState> {
+  const { gate } = await adapter.readManifest(projectRoot);
+  return { allowed: gate === 'AUTHORIZED', status: gate };
+}
+
+/**
+ * Precedence (highest first):
+ *   1. Unresolved outcomes (existing Recovery gate)
+ *   2. Research gate (buildAuthorized !== derived)
+ *   3. Project not trusted
+ *   4. otherwise → Build allowed
+ */
+export function assertBuildAllowed(
+  project: PolicyProject,
+  recovery: { unresolvedCount: number },
+  research: ResearchGateState,
+  signal?: AbortSignal
+): void {
+  assertActive(project, signal);              // existing: untrusted project throws
+  if (recovery.unresolvedCount > 0) throw new Error('BUILD_BLOCKED_RECOVERY');
+  if (!research.allowed) throw new Error(`BUILD_BLOCKED_RESEARCH:${research.status}`);
+}
+In openProject() and in your Build handler:
+
+typescript
+// src/main/index.ts
+import { ResearchKitAdapter } from '../adapters/research-kit/adapter';
+import { evaluateResearchGate, assertBuildAllowed } from '../engine/policy';
+
+const researchKit = new ResearchKitAdapter({
+  command: 'research-kit',   // or: command: 'node', baseArgs: ['/path/to/bin.mjs']
+  baseArgs: [],
+});
+
+async function openProject(projectRoot: string) {
+  // existing trust prompt…
+  const research = await evaluateResearchGate(researchKit, projectRoot);
+  const recovery = await scanUnresolved(projectRoot);
+
+  publishBlockers({ recovery, research });
+  setBuildEnabled(recovery.unresolvedCount === 0 && research.allowed);
+
+  // health line — non-blocking
+  researchKit.handoff(projectRoot).then((r) =>
+    setResearchHealthLine(r.ok ? 'healthy' : r.stderr)
+  );
+}
+
+async function onBuildInvoked(projectRoot: string) {
+  const research = await evaluateResearchGate(researchKit, projectRoot); // re-read!
+  const recovery = await scanUnresolved(projectRoot);
+  assertBuildAllowed(project, recovery, research);
+  // … proceed
+}
+5. The Research panel — talks to Research-Kit, never parses its files
+Every mutation goes through the CLI. MoonAliza never opens MAP.md directly.
+
+typescript
+// src/renderer/ResearchPanel.tsx (or your UI layer)
+
+async function loadPanel(projectRoot: string, adapter: ResearchKitAdapter) {
+  const view = await adapter.reviewView(projectRoot);        // CLI --format json
+  const { manifest } = await adapter.readManifest(projectRoot);
+  return { ...view, manifest };
+}
+
+async function onStatusChange(
+  projectRoot: string,
+  adapter: ResearchKitAdapter,
+  rowId: string,
+  status: 'COVERED' | 'DISMISSED' | 'GAP'
+) {
+  const r = await adapter.setMapRowStatus(projectRoot, rowId, status);
+  if (!r.ok) throw new Error(r.stderr);
+  await refreshPanel();
+}
+
+async function onMarkReviewed(
+  projectRoot: string,
+  adapter: ResearchKitAdapter,
+  reviewerId: string
+) {
+  // Research-Kit re-validates the predicate itself — MoonAliza doesn't
+  // need to duplicate the "all rows classified" logic.
+  const r = await adapter.authorize(projectRoot, reviewerId);
+  if (!r.ok) throw new Error(r.stderr);   // e.g. "preflight not PASS"
+  await refreshPanel();
+  await reEvaluateBuildGate();
+}
+The "Mark reviewed" button's enabled-state can still be a cheap client-side check (it's UX, not enforcement) — but the authoritative check is inside research-kit authorize, which fails the subprocess if the predicate isn't satisfied.
+
+6. Integration test
+tests/integration/research-gate.e2e.ts — same six cases as the brief, but every fixture is a real project directory with a real research/manifest.json, and the adapter shells out to a stub research-kit binary you control.
+
+typescript
+// tests/integration/research-gate.e2e.ts
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtemp, writeFile, mkdir, rm, chmod } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { ResearchKitAdapter } from '../../src/adapters/research-kit/adapter';
+import { RESEARCH_MANIFEST_SCHEMA_VERSION } from '../../src/adapters/research-kit/manifest-schema';
+
+// A stub binary that mimics research-kit's exit-code contract.
+async function makeStubKit(dir: string, handoffExit: number): Promise<string> {
+  const bin = join(dir, 'research-kit-stub.mjs');
+  await writeFile(bin, `
+    const args = process.argv.slice(2);
+    if (args[0] === 'handoff') process.exit(${handoffExit});
+    if (args[0] === 'review') { console.log(JSON.stringify({mapRows:[],evidenceRows:[]})); process.exit(0); }
+    process.exit(0);
+  `, 'utf8');
+  await chmod(bin, 0o755);
+  return bin;
+}
+
+function makeManifest(overrides = {}) {
+  return {
+    schemaVersion: RESEARCH_MANIFEST_SCHEMA_VERSION,
+    corpusId: 'c1', topic: 't', createdAt: new Date().toISOString(),
+    buildAuthorized: false,
+    preflight: { status: 'FAIL', checks: [], ranAt: new Date().toISOString() },
+    ledger: { path: 'research/raw/.fetches.jsonl', entries: 1, chainValid: true },
+    review: { mapClassified: false, findingsRewritten: false, reviewedBy: null, reviewedAt: null },
+    ...overrides,
+  };
+}
+
+describe('research gate (subprocess integration)', () => {
+  let root: string;
+  let adapter: ResearchKitAdapter;
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'rk-gate-'));
+    await mkdir(join(root, 'research'), { recursive: true });
+    const stub = await makeStubKit(root, 0);
+    adapter = new ResearchKitAdapter({ command: 'node', baseArgs: [stub] });
+  });
+
+  afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+
+  it('1. unreviewed → BLOCKED_UNREVIEWED', async () => {
+    await writeFile(join(root, 'research/manifest.json'), JSON.stringify(makeManifest()), 'utf8');
+    const { gate } = await adapter.readManifest(root);
+    expect(gate).toBe('BLOCKED_UNREVIEWED');
+  });
+
+  it('2. missing manifest → BLOCKED_MISSING', async () => {
+    const { gate } = await adapter.readManifest(root);
+    expect(gate).toBe('BLOCKED_MISSING');
+  });
+
+  it('3. unknown schema → BLOCKED_UNKNOWN_SCHEMA', async () => {
+    await writeFile(join(root, 'research/manifest.json'),
+      JSON.stringify({ ...makeManifest(), schemaVersion: 999 }), 'utf8');
+    const { gate } = await adapter.readManifest(root);
+    expect(gate).toBe('BLOCKED_UNKNOWN_SCHEMA');
+  });
+
+  it('4. tampered cache (buildAuthorized=true, preflight=FAIL) → BLOCKED_TAMPERED', async () => {
+    await writeFile(join(root, 'research/manifest.json'),
+      JSON.stringify(makeManifest({ buildAuthorized: true })), 'utf8');
+    const { gate } = await adapter.readManifest(root);
+    expect(gate).toBe('BLOCKED_TAMPERED');
+  });
+
+  it('5. all clean → AUTHORIZED', async () => {
+    await writeFile(join(root, 'research/manifest.json'), JSON.stringify(makeManifest({
+      buildAuthorized: true,
+      preflight: { status: 'PASS', checks: [], ranAt: new Date().toISOString() },
+      review: { mapClassified: true, findingsRewritten: true, reviewedBy: 'u', reviewedAt: new Date().toISOString() },
+    })), 'utf8');
+    const { gate } = await adapter.readManifest(root);
+    expect(gate).toBe('AUTHORIZED');
+  });
+
+  it('6. handoff exits 1 → adapter surfaces the failure', async () => {
+    const stub = await makeStubKit(root, 1);
+    const failing = new ResearchKitAdapter({ command: 'node', baseArgs: [stub] });
+    const r = await failing.handoff(root);
+    expect(r.ok).toBe(false);
+    expect(r.exitCode).toBe(1);
+  });
+});
+7. What each repo needs to ship
+Research-Kit — one addition, additive only:
+
+Expose the five CLI verbs in §1 (thin wrappers around existing verify(), preflight runner, and MD parsers).
+
+Freeze manifest.json as schemaVersion: 1 in a doc page titled "How a builder consumes this."
+
+Nothing else changes. No new internal dependencies. The tool still works standalone from the terminal exactly as before.
+
+MoonAliza — three new files, one modified:
+
+src/adapters/research-kit/manifest-schema.ts (its own copy of the contract)
+
+src/adapters/research-kit/adapter.ts (subprocess wrapper — the only door)
+
+src/renderer/ResearchPanel.tsx (calls the adapter, never touches files)
+
+src/engine/policy.ts — add evaluateResearchGate + assertBuildAllowed
+
+Config — one setting in MoonAliza:
+
+jsonc
+// moonAliza.config.json
+{ "researchKit": { "command": "research-kit", "baseArgs": [] } }
+Point it at a global install, an npx shim, or a local node /path/to/bin.mjs for dev.
+
+Commit sequence
+Research-Kit: add the five CLI verbs + freeze manifest schema doc. (independently shippable — the tool is still usable from the shell)
+
+MoonAliza: adapter + schema + fail-closed gate in policy.ts. Plain banner. (delivers the whole promise)
+
+MoonAliza: Research panel wired to reviewView / setMapRowStatus / authorize.
+
+MoonAliza: handoff health line on project open.
+
+Both: the e2e test — it lives in MoonAliza's repo since MoonAliza is the consumer, and the stub stands in for the real binary.

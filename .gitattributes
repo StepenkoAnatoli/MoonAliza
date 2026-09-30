@@ -4,3 +4,5 @@ docs/handoff/work/** -text -whitespace
 docs/handoff/outputs/** -text -whitespace
 docs/handoff/manifest.json text eol=lf
 research/raw/** -text -whitespace
+
+docs/specification/proposals/*.txt -text

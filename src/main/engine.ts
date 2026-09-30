@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { utilityProcess, type UtilityProcess } from 'electron';
 import { FromEngineSchema, ToEngineSchema, type Control } from '../engine/control';
 import type { Request, RunEvent, ToolSpec } from '../shared';
-import type { Completion, InferenceMessage } from './inference';
+import { inferenceErrorCode, type Completion, type InferenceMessage } from './inference';
 import type { CommandInput, CommandPlan } from '../shared/commands';
 import type { OwnedResult } from '../tools/commands';
 
@@ -56,7 +56,7 @@ export class Engine {
         else if (message.type === 'inference') {
           void this.hooks.inference(message.runId, message.messages, epoch, message.tools).then(result => {
             if (this.epoch === epoch) child.postMessage(ToEngineSchema.parse({ type: 'inference.result', epoch, id: message.id, result }));
-          }).catch(error => { if (this.epoch === epoch) child.postMessage({ type: 'inference.error', epoch, id: message.id, code: error instanceof Error && ['RUN_CANCELLED', 'CONTEXT_LIMIT'].includes(error.message) ? error.message : 'PROVIDER_ERROR' }); });
+          }).catch(error => { if (this.epoch === epoch) child.postMessage({ type: 'inference.error', epoch, id: message.id, code: inferenceErrorCode(error) }); });
         }
       });
       child.once('exit', () => {

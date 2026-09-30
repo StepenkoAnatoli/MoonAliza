@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, InferenceToolsSchema, InferenceToolCallsSchema } from '../engine/control';
 import { IdSchema, type ToolCall, type ToolSpec } from '../shared';
 import { TokenUsageSchema, type TokenUsage } from '../shared/context';
+import { OllamaAccumulator, OpenAIAccumulator, readNdjson, readSse } from './provider-stream';
 
 export type ProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama';
 export interface InferenceProfile { kind: ProviderKind; endpoint: string; model: string; outputTokens: number; contextTokens?: number }
@@ -85,6 +86,53 @@ function parseCalls(raw: unknown, local: boolean, tools: ToolSpec[], usedIds: Se
 
 function hasCalls(raw: unknown): boolean { return raw !== undefined && (!Array.isArray(raw) || raw.length > 0); }
 
+/**
+ * The code an inference failure crosses into the engine with. Only an overflow is told apart:
+ * the engine already explains CONTEXT_LIMIT to the user. Everything else stays PROVIDER_ERROR,
+ * as it always crossed - RUN_CANCELLED included, whose passage would change how a run that lost
+ * its trust or policy mid-flight is reported, a separate decision.
+ */
+export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'PROVIDER_ERROR' {
+  return error instanceof Error && error.message === 'CONTEXT_LIMIT' ? 'CONTEXT_LIMIT' : 'PROVIDER_ERROR';
+}
+
+// Providers do not share one overflow code. Accept known structured codes and the
+// bounded refusal phrases established by docs/research/2026-09-29-context-overflow.
+const OVERFLOW = /context (length|size|window)|maximum context|exceeds? .{0,40}context/i;
+
+/** Refusal bodies are bounded, inspected only for classification and never exposed. */
+async function refusalCode(response: Response): Promise<string> {
+  const fallback = `PROVIDER_HTTP_${response.status}`;
+  if (![400, 413, 422].includes(response.status)) { await response.body?.cancel(); return fallback; }
+  const reader = response.body?.getReader();
+  if (!reader) return fallback;
+  const chunks: Uint8Array[] = []; let bytes = 0;
+  try {
+    while (bytes < 65536) {
+      const chunk = await reader.read(); if (chunk.done) break;
+      const bounded = chunk.value.subarray(0, 65536 - bytes);
+      chunks.push(bounded); bytes += bounded.byteLength;
+    }
+    const text = Buffer.concat(chunks).toString('utf8');
+    let code: unknown;
+    try { code = (JSON.parse(text) as { error?: { code?: unknown } } | null)?.error?.code; } catch { /* Plain text is also accepted. */ }
+    return ['context_length_exceeded', 'context_window_exceeded', 'prompt_too_long'].includes(String(code)) || OVERFLOW.test(text) ? 'CONTEXT_LIMIT' : fallback;
+  } catch { return fallback; }
+  finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
+}
+
+/**
+ * Folds a streamed answer back into the one-body shape validated below. Ollama's NDJSON reads a
+ * non-streamed body as its single line; an OpenAI-compatible server that ignores `stream` answers
+ * with plain JSON rather than `text/event-stream`, and is read as before.
+ */
+async function readStreamed(response: Response, local: boolean): Promise<unknown> {
+  if (!local && !/^text\/event-stream\b/i.test(response.headers.get('content-type') ?? '')) return readBoundedJson(response);
+  const accumulator = local ? new OllamaAccumulator() : new OpenAIAccumulator();
+  for await (const chunk of local ? readNdjson(response) : readSse(response)) accumulator.push(chunk);
+  return accumulator.result();
+}
+
 /** The caller supplies the correct main-owned network session and obtains credentials from the vault. */
 export async function complete(profile: InferenceProfile, messages: InferenceMessage[], options: { fetcher: Fetcher; secret?: string; signal: AbortSignal; tools?: ToolSpec[]; managedOllama?: { numGpu: 0; keepAlive: -1 } }): Promise<Completion> {
   if (options.signal.aborted) throw new Error('RUN_CANCELLED');
@@ -104,21 +152,14 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   const tools = declaredTools.data;
   const requestBody = JSON.stringify({ model: profile.model, messages: history.messages,
     ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: tool })) } : {}),
-    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive, truncate: false, shift: false } : {}) } : { max_completion_tokens: profile.outputTokens }), stream: false });
+    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, truncate: false, shift: false, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive } : {}) } : { max_completion_tokens: profile.outputTokens, stream_options: { include_usage: true } }), stream: true });
   if (Buffer.byteLength(requestBody) > 8 * 1024 * 1024) throw new Error('INVALID_INFERENCE_REQUEST');
   const response = await options.fetcher(`${endpoint}${local ? '/api/chat' : '/chat/completions'}`, {
     method: 'POST', headers, signal, redirect: 'error',
     body: requestBody,
   });
-  if (!response.ok) {
-    if ([400, 413, 422].includes(response.status)) {
-      let code: unknown;
-      try { const error = await readBoundedJson(response, 65536) as { error?: { code?: unknown } }; code = error?.error?.code; } catch { /* Never expose provider error bodies. */ }
-      if (['context_length_exceeded', 'context_window_exceeded', 'prompt_too_long'].includes(String(code))) throw new Error('CONTEXT_LIMIT');
-    } else await response.body?.cancel();
-    throw new Error(`PROVIDER_HTTP_${response.status}`);
-  }
-  const data = await readBoundedJson(response);
+  if (!response.ok) throw new Error(await refusalCode(response));
+  const data = await readStreamed(response, local);
   const observed = data as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown }; prompt_eval_count?: unknown; eval_count?: unknown } | null;
   const counts = TokenUsageSchema.safeParse({ inputTokens: local ? observed?.prompt_eval_count : observed?.usage?.prompt_tokens, outputTokens: local ? observed?.eval_count : observed?.usage?.completion_tokens });
   const usage = counts.success ? { usage: counts.data } : {};
