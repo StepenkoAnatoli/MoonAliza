@@ -6,10 +6,10 @@ This is the continuation guide for a new developer or AI. Everything required to
 
 Build the full Windows desktop coding-agent workbench named **MoonAliza**, following the reviewed Rework plan. The user explicitly chose working stages to catch problems early, and rejected a reduced product scope. The first usable target is their own Windows PC; broader release qualification remains necessary. The intended product includes local and API models, one owned agent engine, reviewed coding tools, research, skills, bounded teams, durable missions and a Windows installer.
 
-The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2–10 are merged into `main`; this branch incorporates `7f68fb2`. The current development milestone is on `feat/context-recovery`; inspect current PR state before continuing. To obtain that milestone while its PR is open:
+The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2–10 are merged into `main`; this branch incorporates `7f68fb2`. The current development milestone is [PR #11](https://github.com/StepenkoAnatoli/MoonAliza/pull/11) on `feat/context-recovery`; the user reviews and merges it. Inspect its current checks before continuing. To obtain that milestone while its PR is open:
 
 ```powershell
-git clone --branch feat/context-recovery https://github.com/StepenkoAnatoli/MoonAliza.git
+git -c core.longpaths=true clone --branch feat/context-recovery https://github.com/StepenkoAnatoli/MoonAliza.git
 cd MoonAliza
 node scripts/check-handoff.mjs
 ```
@@ -67,6 +67,8 @@ Next continue the full approved plan:
 ## Build and reproduce checks
 
 Use **Windows x64**, Node from [.node-version](.node-version), npm, Git and Windows PowerShell. Electron is pinned in [package.json](package.json); use the lockfile. The native build downloads a pinned Zig compiler into ignored `.tooling` and builds `.build/native/MoonAlizaHost.exe`. It does not require a global C++ compiler. Internet access is required for dependency/tool downloads; ordinary tests use local fixtures and no provider keys.
+
+Prefer a short checkout path on Windows. Some retained research capture names are long; the clone command above enables long-path handling for that command without changing global Git configuration. A nested fresh-checkout verification reproduced the Windows path limit and passed after checkout with `git -c core.longpaths=true`.
 
 Run these sequentially on a constrained machine:
 
