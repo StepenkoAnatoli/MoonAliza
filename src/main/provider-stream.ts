@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TokenUsageSchema, type TokenUsage } from '../shared/context';
 
 // Streamed provider responses, folded back into the one-body shapes `complete()` already validates.
 // Research: docs/research/2026-09-29-streaming-tool-calls (BRIEF.md). Native Ollama sends each tool
@@ -60,6 +61,8 @@ export async function* readSse(response: Response, maxBytes = 4 * 1024 * 1024): 
 
 const OllamaChunkSchema = z.object({
   message: z.object({ role: z.literal('assistant').optional(), content: z.string().max(MAX_TEXT).optional(), thinking: z.string().max(MAX_TEXT).optional(), tool_calls: z.array(z.unknown()).max(128).nullable().optional() }).optional(),
+  prompt_eval_count: z.unknown().optional(),
+  eval_count: z.unknown().optional(),
   done: z.boolean(),
   done_reason: z.string().max(128).optional(),
 });
@@ -70,6 +73,7 @@ export class OllamaAccumulator {
   private readonly calls: unknown[] = [];
   private done = false;
   private doneReason: string | undefined;
+  private usage: TokenUsage | undefined;
 
   push(raw: unknown): void {
     const parsed = OllamaChunkSchema.safeParse(raw);
@@ -79,13 +83,17 @@ export class OllamaAccumulator {
     if (this.content.length > MAX_TEXT) throw new Error('PROVIDER_RESPONSE_TOO_LARGE');
     this.calls.push(...(chunk.message?.tool_calls ?? []));
     if (this.calls.length > 128) throw new Error('PROVIDER_INVALID_RESPONSE');
+    if (chunk.done) {
+      const counts = TokenUsageSchema.safeParse({ inputTokens: chunk.prompt_eval_count, outputTokens: chunk.eval_count });
+      if (counts.success) this.usage = counts.data;
+    }
     this.done = chunk.done;
     this.doneReason = chunk.done_reason;
   }
 
   /** The shape of a non-streamed `/api/chat` answer; a stream cut before `done` stays not done. */
   result() {
-    return { message: { role: 'assistant' as const, content: this.content, ...(this.calls.length ? { tool_calls: this.calls } : {}) }, done: this.done, ...(this.doneReason !== undefined ? { done_reason: this.doneReason } : {}) };
+    return { ...(this.usage ? { prompt_eval_count: this.usage.inputTokens, eval_count: this.usage.outputTokens } : {}), message: { role: 'assistant' as const, content: this.content, ...(this.calls.length ? { tool_calls: this.calls } : {}) }, done: this.done, ...(this.doneReason !== undefined ? { done_reason: this.doneReason } : {}) };
   }
 }
 
@@ -106,7 +114,7 @@ const OpenAIChunkSchema = z.object({
     }).optional(),
     finish_reason: Nullable(z.string().max(128)),
   })).max(1),
-  usage: Nullable(z.object({ prompt_tokens: z.number().int().nonnegative().optional(), completion_tokens: z.number().int().nonnegative().optional() })),
+  usage: z.unknown().optional(),
 });
 
 interface PartialCall { index: number; id?: string; type?: string; name?: string; arguments: string }
@@ -123,13 +131,15 @@ export class OpenAIAccumulator {
   private readonly calls: PartialCall[] = [];
   private readonly latest = new Map<number, PartialCall>();
   private finishReason: string | null = null;
-  usage: { inputTokens?: number; outputTokens?: number } | undefined;
+  private usage: TokenUsage | undefined;
 
   push(raw: unknown): void {
     const parsed = OpenAIChunkSchema.safeParse(raw);
     if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
     const { choices, usage } = parsed.data;
-    if (usage) this.usage = { inputTokens: usage.prompt_tokens, outputTokens: usage.completion_tokens };
+    const observed = usage as { prompt_tokens?: unknown; completion_tokens?: unknown } | null | undefined;
+    const counts = TokenUsageSchema.safeParse({ inputTokens: observed?.prompt_tokens, outputTokens: observed?.completion_tokens });
+    if (counts.success) this.usage = counts.data;
     const choice = choices[0];
     if (!choice) return; // the usage chunk carries no choice
     const delta = choice.delta ?? {};
@@ -160,6 +170,6 @@ export class OpenAIAccumulator {
   result() {
     const calls = this.calls.map((call, order) => ({ call, order })).sort((a, b) => a.call.index - b.call.index || a.order - b.order)
       .map(({ call }) => ({ id: call.id, type: call.type, function: { name: call.name, arguments: call.arguments } }));
-    return { choices: [{ message: { role: 'assistant' as const, content: this.content, refusal: this.refusal, ...(calls.length ? { tool_calls: calls } : {}) }, finish_reason: this.finishReason }] };
+    return { ...(this.usage ? { usage: { prompt_tokens: this.usage.inputTokens, completion_tokens: this.usage.outputTokens } } : {}), choices: [{ message: { role: 'assistant' as const, content: this.content, refusal: this.refusal, ...(calls.length ? { tool_calls: calls } : {}) }, finish_reason: this.finishReason }] };
   }
 }

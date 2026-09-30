@@ -60,7 +60,7 @@ test('E-07: OpenAI index-keyed fragments join into one call, parsed once finish_
   };
   const result = await complete(openai, [], { tools: [tool('get_weather')], fetcher, signal: signal() });
   expect(body).toMatchObject({ stream: true, stream_options: { include_usage: true } });
-  expect(result).toEqual({ content: '', outcome: 'tool_calls', toolCalls: [{ id: 'call_DdmO9pD3xa9XTPNJ32zg2hcA', name: 'get_weather', input: { location: 'Paris, France' } }] });
+  expect(result).toEqual({ usage: { inputTokens: 80, outputTokens: 17 }, content: '', outcome: 'tool_calls', toolCalls: [{ id: 'call_DdmO9pD3xa9XTPNJ32zg2hcA', name: 'get_weather', input: { location: 'Paris, France' } }] });
 });
 
 test('interleaved OpenAI calls are joined by index and returned in index order', async () => {
@@ -131,8 +131,24 @@ test('Ollama /v1: whole calls sharing index 0 with distinct ids are two calls, n
     { id: 'chatcmpl-914', object: 'chat.completion.chunk', choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 } },
   ]);
   const result = await complete(openai, [], { tools: [tool('roll_dice')], fetcher, signal: signal() });
-  expect(result).toEqual({ content: '', outcome: 'tool_calls', toolCalls: [
+  expect(result).toEqual({ usage: { inputTokens: 40, outputTokens: 12 }, content: '', outcome: 'tool_calls', toolCalls: [
     { id: 'call_a', name: 'roll_dice', input: { sides: 6 } },
     { id: 'call_b', name: 'roll_dice', input: { sides: 20 } },
   ] });
+});
+
+
+test('native streamed usage comes from terminal counts and compatible usage may share the finish chunk', async () => {
+  expect(await complete(ollama, [], { signal: signal(), fetcher: async () => ndjson([
+    assistant('hello'), { message: { content: '' }, done: true, done_reason: 'stop', prompt_eval_count: 123, eval_count: 7 },
+  ]) })).toMatchObject({ content: 'hello', outcome: 'complete', usage: { inputTokens: 123, outputTokens: 7 } });
+  expect(await complete(openai, [], { signal: signal(), fetcher: async () => sse([
+    { ...delta({ content: 'hello' }, 'stop'), usage: { prompt_tokens: 123, completion_tokens: 7 } },
+  ]) })).toMatchObject({ usage: { inputTokens: 123, outputTokens: 7 } });
+});
+
+test.each([null, {}, { prompt_tokens: -1, completion_tokens: 2 }, { prompt_tokens: 3.5, completion_tokens: 2 }, { prompt_tokens: 3, completion_tokens: '2' }])('malformed optional stream usage stays unknown: %j', async usage => {
+  expect(await complete(openai, [], { signal: signal(), fetcher: async () => sse([
+    delta({ content: 'ok' }, 'stop'), { choices: [], usage },
+  ]) })).toEqual({ content: 'ok', outcome: 'complete' });
 });

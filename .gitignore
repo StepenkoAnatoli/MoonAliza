@@ -17,3 +17,6 @@ coverage/
 *.sqlite-wal
 *.sqlite-shm
 *.secret
+
+# Machine-local research hook diagnostics; provenance ledgers stay tracked.
+research/raw/.diagnostics.jsonl

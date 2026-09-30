@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { RequestSchema, ProfileSchema, EventSchema, IdSchema, ToolCallSchema, ToolSpecSchema } from '../shared';
 import { CommandInputSchema, CommandPlanSchema, CommandResultSchema } from '../shared/commands';
+import { TokenUsageSchema } from '../shared/context';
 
 const id = z.string().min(1).max(128);
 const { hasCredential: _hasCredential, ...storedProfileShape } = ProfileSchema.shape;
@@ -50,7 +51,7 @@ export const InferenceMessageSchema = z.object({
   return message.role === 'assistant' || message.toolCalls === undefined;
 }, 'Tool data does not match the message role');
 export const InferenceMessagesSchema = z.array(InferenceMessageSchema).max(1000);
-export const CompletionSchema = z.object({ content: z.string().max(2_000_000), outcome: z.enum(['complete', 'incomplete', 'blocked', 'tool_calls']), toolCalls: InferenceToolCallsSchema.optional() }).strict()
+export const CompletionSchema = z.object({ content: z.string().max(2_000_000), outcome: z.enum(['complete', 'incomplete', 'blocked', 'tool_calls']), toolCalls: InferenceToolCallsSchema.optional(), usage: TokenUsageSchema.optional() }).strict()
   .refine(result => result.outcome === 'tool_calls' ? result.toolCalls !== undefined : result.toolCalls === undefined, 'Only complete tool-call outcomes may contain executable calls');
 const identity = { epoch: id, id };
 export const ToEngineSchema = z.discriminatedUnion('type', [

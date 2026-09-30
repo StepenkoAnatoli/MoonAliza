@@ -18,6 +18,18 @@ test('response size is enforced while reading, without trusting content-length',
 });
 
 const profile = { kind: 'openai-compatible' as const, endpoint: 'https://model.example/v1', model: 'test-model', outputTokens: 512 };
+test.each(['ollama', 'openai-compatible'] as const)('preserves reported %s token usage through private IPC', async kind => {
+  const response = kind === 'ollama' ? { message: { content: 'ok' }, done: true, done_reason: 'stop', prompt_eval_count: 123, eval_count: 9 } : { choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 123, completion_tokens: 9 } };
+  const result = await complete({ ...profile, kind, endpoint: 'http://127.0.0.1:11434' }, [], { signal: new AbortController().signal, fetcher: async () => Response.json(response) });
+  expect(CompletionSchema.parse(result)).toMatchObject({ usage: { inputTokens: 123, outputTokens: 9 } });
+});
+test('provider context error codes survive sanitization without echoing private response text', async () => {
+  await expect(complete(profile, [], { signal: new AbortController().signal, fetcher: async () => Response.json({ error: { code: 'context_length_exceeded', message: 'private prompt secret' } }, { status: 400 }) })).rejects.toThrow('CONTEXT_LIMIT');
+});
+test.each([undefined, { prompt_tokens: -1, completion_tokens: 1 }, { prompt_tokens: '12', completion_tokens: 1 }, { prompt_tokens: 12.5, completion_tokens: 1 }])('missing or invalid provider usage stays unknown: %j', async usage => {
+  const output = await complete(profile, [], { signal: new AbortController().signal, fetcher: async () => Response.json({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }], usage }) });
+  expect(output).not.toHaveProperty('usage');
+});
 test('managed Ollama disallows silent history truncation and context shifting', async () => {
   let body: Record<string, unknown> = {};
   await complete({ ...profile, kind: 'ollama', endpoint: 'http://127.0.0.1:11434', contextTokens: 2048 }, [{ role: 'user', content: 'hello' }], {
@@ -221,4 +233,16 @@ test('a context overflow crosses into the engine as CONTEXT_LIMIT, not a generic
   // Anything else, including a provider's own status, crosses as the generic code it always did.
   expect(inferenceErrorCode(new Error('PROVIDER_HTTP_400'))).toBe('PROVIDER_ERROR');
   expect(inferenceErrorCode('not an error')).toBe('PROVIDER_ERROR');
+});
+
+
+test.each([400, 413, 422])('overflow status %i is classified within a strict 64 KiB inspection bound', async status => {
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({ start(controller) {
+    controller.enqueue(new TextEncoder().encode('x'.repeat(65536) + ' maximum context length private text'));
+  }, cancel() { cancelled = true; } });
+  const response = new Response(body, { status });
+  await expect(complete(profile, [], { fetcher: async () => response, signal: signal() })).rejects.toThrow(`PROVIDER_HTTP_${status}`);
+  expect(cancelled).toBe(true); expect(body.locked).toBe(false);
+  await expect(complete(profile, [], { fetcher: async () => Response.json({ error: { code: 'prompt_too_long' } }, { status }), signal: signal() })).rejects.toThrow('CONTEXT_LIMIT');
 });

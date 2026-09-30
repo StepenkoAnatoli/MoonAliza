@@ -158,6 +158,13 @@ export class Store {
     return { events, nextSeq: events.at(-1)?.seq ?? after, hasMore };
   }
   eventsAfter(runId: string, after = 0, limit = 100): StoreEvent[] { return this.events(runId,after,limit).events; }
+  latestRunEvent(sessionId: string, type: string): unknown | null {
+    const row = this.db.prepare('SELECT payload FROM events WHERE run_id=(SELECT id FROM runs WHERE session_id=? ORDER BY rowid DESC LIMIT 1) AND type=? ORDER BY seq DESC LIMIT 1').get(sessionId, type) as { payload: string } | undefined;
+    return row ? JSON.parse(row.payload) as unknown : null;
+  }
+  toolResult(sessionId: string, id: string): StoreMessage | undefined {
+    return this.many<StoreMessage>("SELECT * FROM messages WHERE session_id=? AND id=? AND role='tool'", messageColumns, sessionId, id)[0];
+  }
 
   appendMessage(message: StoreMessage): StoreMessage {
     this.transaction(() => {

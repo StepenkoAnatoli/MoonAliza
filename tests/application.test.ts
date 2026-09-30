@@ -18,6 +18,68 @@ function fixture() {
 }
 const request = (method: string, params: unknown, id: string) => ({ protocolVersion: 1, clientRequestId: id, method, params });
 
+test('large tool results remain saved and can be paged without overflowing the model request', async () => {
+  const { store, root } = fixture();
+  writeFileSync(join(root, 'large.txt'), 'A'.repeat(25000) + 'TAIL_EVIDENCE');
+  let steps = 0; let reference = '';
+  const app = new Application(store, { publish() {}, async infer(_run, messages, _signal, tools) {
+    steps++;
+    if (steps === 1) return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'large-read', name: 'read_file', input: { path: 'large.txt' } }] };
+    if (steps === 2) {
+      const excerpt = JSON.parse(messages.at(-1)!.content); reference = excerpt.resultId;
+      expect(excerpt.compacted).toBe(true); expect(reference).toBeTruthy();
+      expect(messages.at(-1)!.content.length).toBeLessThan(5000);
+      expect(tools?.some(tool => tool.name === 'read_tool_result')).toBe(true);
+      return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'retrieve', name: 'read_tool_result', input: { resultId: reference, offset: 24000, length: 2048 } }] };
+    }
+    expect(messages.at(-1)!.content).toContain('TAIL_EVIDENCE');
+    return { content: 'Retrieved the end of the original result.', outcome: 'complete', usage: { inputTokens: 712, outputTokens: 15 } };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const { run } = await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'Read the large file.' }, 'start')) as { run: { id: string } };
+  await app.whenIdle();
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(steps).toBe(3);
+  expect(store.listMessages(session.id).find(m => m.id === reference)?.content).toContain('A'.repeat(25000));
+  const history = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { context: { compactedToolResults: number }; usage: { inputTokens: number }; failure: unknown };
+  expect(history.context.compactedToolResults).toBeGreaterThan(0); expect(history.usage.inputTokens).toBe(712); expect(history.failure).toBeNull();
+});
+
+test('an oversized prompt fails before inference and persists an actionable context report', async () => {
+  const { store } = fixture(); let invoked = false;
+  const app = new Application(store, { publish() {}, async infer() { invoked = true; return { content: '', outcome: 'complete' }; } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: '漢'.repeat(18000) }, 'start'));
+  await app.whenIdle();
+  expect(invoked).toBe(false);
+  const result = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { context: { estimatedInputTokens: number; inputBudgetTokens: number }; failure: { code: string; message: string } };
+  expect(result.failure.code).toBe('CONTEXT_LIMIT'); expect(result.failure.message).toContain('Model profiles');
+  expect(result.context.estimatedInputTokens).toBeGreaterThan(result.context.inputBudgetTokens);
+});
+
+test('result retrieval cannot cross conversation boundaries or rerun an operation', async () => {
+  const { store } = fixture(); let steps = 0;
+  const at = new Date().toISOString();
+  store.putSession({ id: 'private-session', projectId: 'p1', title: 'Private', createdAt: at, updatedAt: at });
+  store.appendMessage({ id: 'other-result', sessionId: 'private-session', role: 'tool', toolCallId: 'original', toolName: 'run_command', content: 'PRIVATE_OBSERVATION', createdAt: at });
+  const app = new Application(store, { publish() {}, async infer(_run, messages) {
+    if (++steps === 1) return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'attempt', name: 'read_tool_result', input: { resultId: 'other-result' } }] };
+    expect(messages.at(-1)?.content).toContain('NOT_FOUND'); expect(JSON.stringify(messages)).not.toContain('PRIVATE_OBSERVATION');
+    return { content: 'Result unavailable.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const { run } = await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'Retrieve' }, 'start')) as { run: { id: string } };
+  await app.whenIdle(); expect(steps).toBe(2); expect(store.getRun(run.id)?.status).toBe('completed');
+});
+
+test('cloud policy blocks network admission and persists no user prompt', async () => {
+  const { store } = fixture(); const saved = store.getProfile('profile1')!;
+  store.putProfile({ ...saved, endpoint: 'https://provider.example/v1', kind: 'openai-compatible', locality: 'external', revisionId: 'cloud-revision', revision: 2 });
+  let calls = 0; const app = new Application(store, { publish() {}, async infer() { calls++; return { content: 'bad', outcome: 'complete' }; } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  await expect(app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'private' }, 'start'))).rejects.toThrow('CLOUD_NOT_ALLOWED');
+  expect(calls).toBe(0); expect(store.listMessages(session.id)).toHaveLength(0);
+});
+
 test('project list exposes public DTOs and durable session creation replays once', async () => {
   const { app, store } = fixture();
   expect(JSON.stringify(await app.handle(request('project.list', {}, 'list')))).not.toContain('rootPath');
