@@ -145,6 +145,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
         const profileId = params.id;
         const previous = profileId ? StoredProfileSchema.parse(await engine.control({ method: 'profile.get', profileId })) : undefined;
         if (previous && previous.revision !== params.expectedRevision) throw new Error('REQUEST_CONFLICT');
+        if (previous?.secretRef && !params.secret && !params.clearCredential && (previous.endpoint !== endpoint.endpoint || previous.kind !== params.kind)) throw new Error('CREDENTIAL_UNAVAILABLE');
         let secretRef = params.clearCredential ? undefined : previous?.secretRef;
         if (params.secret) secretRef = await vault.saveStaged(params.secret);
         const now = new Date().toISOString();

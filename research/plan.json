@@ -1,0 +1,28 @@
+{
+  "topic": "MoonAliza provider usage and context accounting",
+  "depth": "quick",
+  "maxScrapes": 4,
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken",
+      "type": "P",
+      "why": "U-01: provider-specific token accounting limitations"
+    },
+    {
+      "url": "https://docs.ollama.com/api/chat",
+      "type": "P",
+      "why": "U-02: native usage response fields"
+    },
+    {
+      "url": "https://platform.openai.com/docs/api-reference/chat/object",
+      "type": "P",
+      "why": "U-02: compatible chat usage fields"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/openai/openai-node/master/src/resources/completions.ts",
+      "type": "P",
+      "why": "U-02: explicit CompletionUsage schema in official SDK"
+    }
+  ]
+}

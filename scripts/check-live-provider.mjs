@@ -28,6 +28,7 @@ try {
   await page.getByRole('button', { name: 'Trust and open' }).click();
   report.step = 'cloud-policy';
   await page.getByRole('button', { name: 'Allow cloud inference' }).click();
+  await page.getByRole('button', { name: 'Allow for this project' }).click();
   await page.getByRole('button', { name: 'Model profiles', exact: true }).click();
   report.step = 'profile-fields';
   await page.getByLabel('Profile name').fill('Hugging Face live smoke');

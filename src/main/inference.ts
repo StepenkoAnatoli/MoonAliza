@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, InferenceToolsSchema, InferenceToolCallsSchema } from '../engine/control';
 import { IdSchema, type ToolCall, type ToolSpec } from '../shared';
+import { TokenUsageSchema, type TokenUsage } from '../shared/context';
 
 export type ProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama';
 export interface InferenceProfile { kind: ProviderKind; endpoint: string; model: string; outputTokens: number; contextTokens?: number }
 export interface InferenceMessage { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; toolCalls?: ToolCall[]; toolCallId?: string; toolName?: string }
-export interface Completion { content: string; outcome: 'complete' | 'incomplete' | 'blocked' | 'tool_calls'; toolCalls?: ToolCall[] }
+export interface Completion { content: string; outcome: 'complete' | 'incomplete' | 'blocked' | 'tool_calls'; toolCalls?: ToolCall[]; usage?: TokenUsage }
 export type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 
 export function validateEndpoint(kind: ProviderKind, value: string): { endpoint: string; locality: 'local' | 'external' } {
@@ -109,22 +110,32 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
     method: 'POST', headers, signal, redirect: 'error',
     body: requestBody,
   });
-  if (!response.ok) { await response.body?.cancel(); throw new Error(`PROVIDER_HTTP_${response.status}`); }
+  if (!response.ok) {
+    if ([400, 413, 422].includes(response.status)) {
+      let code: unknown;
+      try { const error = await readBoundedJson(response, 65536) as { error?: { code?: unknown } }; code = error?.error?.code; } catch { /* Never expose provider error bodies. */ }
+      if (['context_length_exceeded', 'context_window_exceeded', 'prompt_too_long'].includes(String(code))) throw new Error('CONTEXT_LIMIT');
+    } else await response.body?.cancel();
+    throw new Error(`PROVIDER_HTTP_${response.status}`);
+  }
   const data = await readBoundedJson(response);
+  const observed = data as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown }; prompt_eval_count?: unknown; eval_count?: unknown } | null;
+  const counts = TokenUsageSchema.safeParse({ inputTokens: local ? observed?.prompt_eval_count : observed?.usage?.prompt_tokens, outputTokens: local ? observed?.eval_count : observed?.usage?.completion_tokens });
+  const usage = counts.success ? { usage: counts.data } : {};
   if (options.signal.aborted) throw new Error('RUN_CANCELLED');
   if (local) {
     const parsed = OllamaSchema.safeParse(data);
     if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
     const content = parsed.data.message.content;
-    if (!parsed.data.done || parsed.data.done_reason !== 'stop') return { content, outcome: 'incomplete' };
-    if (hasCalls(parsed.data.message.tool_calls)) return CompletionSchema.parse({ content, outcome: 'tool_calls', toolCalls: parseCalls(parsed.data.message.tool_calls, true, tools, history.usedIds) });
-    return { content, outcome: 'complete' };
+    if (!parsed.data.done || parsed.data.done_reason !== 'stop') return { ...usage, content, outcome: 'incomplete' };
+    if (hasCalls(parsed.data.message.tool_calls)) return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(parsed.data.message.tool_calls, true, tools, history.usedIds) });
+    return { ...usage, content, outcome: 'complete' };
   }
   const parsed = ChatSchema.safeParse(data);
   if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
   const choice = parsed.data.choices[0]!;
   const content = choice.message.content ?? choice.message.refusal ?? '';
-  if (choice.message.refusal || choice.finish_reason === 'content_filter') return { content, outcome: 'blocked' };
-  if (choice.finish_reason === 'tool_calls') return CompletionSchema.parse({ content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
-  return { content, outcome: choice.finish_reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
+  if (choice.message.refusal || choice.finish_reason === 'content_filter') return { ...usage, content, outcome: 'blocked' };
+  if (choice.finish_reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
+  return { ...usage, content, outcome: choice.finish_reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
 }

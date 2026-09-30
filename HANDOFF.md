@@ -6,15 +6,15 @@ This is the continuation guide for a new developer or AI. Everything required to
 
 Build the full Windows desktop coding-agent workbench named **MoonAliza**, following the reviewed Rework plan. The user explicitly chose working stages to catch problems early, and rejected a reduced product scope. The first usable target is their own Windows PC; broader release qualification remains necessary. The intended product includes local and API models, one owned agent engine, reviewed coding tools, research, skills, bounded teams, durable missions and a Windows installer.
 
-The user asked to publish the implementation and then requested this complete handoff and repair of failed checks. The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza); work is on `feat/moonaliza-desktop`, with [draft PR #2](https://github.com/StepenkoAnatoli/MoonAliza/pull/2) targeting `main`. While that PR is unmerged, a default-branch clone will not contain this checkpoint. Clone the development branch:
+The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PR #2 is merged into `main`. The next development milestone is on `feat/context-recovery`; inspect current PR state before continuing. To obtain that milestone while its PR is open:
 
 ```powershell
-git clone --branch feat/moonaliza-desktop https://github.com/StepenkoAnatoli/MoonAliza.git
+git clone --branch feat/context-recovery https://github.com/StepenkoAnatoli/MoonAliza.git
 cd MoonAliza
 node scripts/check-handoff.mjs
 ```
 
-If the PR has subsequently merged or the branch changed, inspect the current repository/PR before choosing a starting point.
+The current stage plan is [context recovery and development delivery](docs/superpowers/plans/2026-09-28-context-recovery.md), with [behavior and limits](docs/specification/context-recovery.md) and [release evidence](docs/releases/0.6.0-dev.1.md). All prior research remains included; the new primary captures are in [research](research/BRIEF.md).
 
 ## Reading order and authority
 
@@ -32,23 +32,23 @@ Current user instructions and current source evidence govern ongoing work. The a
 |---|---|---|
 | Desktop foundation | Electron main/preload/utility engine, React, strict IPC, SQLite, encrypted profiles, durable events/history | Full remaining product modes and broader reliability/release work |
 | Coding tools | Trusted projects, bounded reads/search, fixed Git inspection, exact edit/command review, journal, Undo, recovery and owned process-tree Stop | Native handle-relative path hardening, wider Git/worktree support and additional tool capabilities |
-| Providers/agent | Ollama and OpenAI-compatible tool loops, project privacy policy, step/time limits and explicit context failure | Streaming, remaining provider families, provider continuation state, accurate context accounting, skills/teams/missions |
+| Providers/agent | Ollama and OpenAI-compatible tool loops, project privacy policy, step/time limits, bounded retrievable tool results, context/usage reports and recovery | Streaming, remaining provider families, provider-specific exact accounting, continuation state, skills/teams/missions |
 | Managed local models | Native hardware facts, signed catalogue validation, verified artifact/model storage, activation, owned Ollama connection/runtime, scheduler and receipt/resource selection | Genuine lab and monitored machine qualification, production trust inputs, main/engine/setup integration, GPU attestation, removal/relocation |
 | Research | Requirements, workflow/source investigations, captured primary evidence | Provisioning, redistribution-rights resolution, durable jobs, evidence/review workflows and UI |
-| Delivery | Development builds, installer configuration and prior installed 0.5 evidence | Signed production release, update/migration/diagnostic work and wider hardware qualification |
+| Delivery | Development 0.6 packaging, prerelease delivery and prior installed 0.5 evidence | Signed production release, update/migration/diagnostic work and wider hardware qualification |
 
 The original PC has version **0.5.0** installed. Current source includes later backend work that is not yet connected to that installed app. The earlier installed Hugging Face profile and its encrypted Windows vault are not portable credentials. The real local-model check established download/storage/inventory/Stop behavior, **not inference speed or coding quality**. Free host RAM on that PC was about 1.15 GiB during the last model check, below the required 2 GiB reserve; this does not block code development. Unknown GPU memory must stay unknown.
 
 ## Immediate continuation
 
-First confirm current-head CI and [the CI repair record](docs/specification/windows-ci.md). Initial CI on `6fbb3c5` failed because 8.3 temp paths were compared with canonical Windows paths. The repair uses canonical project/protected roots for executable exclusion and command revalidation, and corrects canonical-path test expectations. The follow-up run passed all 370 tests, then exposed a smaller-window layout bug: Project details covered Send. The layout now keeps details in its own column, with a desktop regression across four window widths. Follow the remote run evidence in the repair record; do not assume a queued run passed.
+Inspect the current branch/PR checks and [0.6 development release record](docs/releases/0.6.0-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
 
-Then continue the approved product plan:
+Next continue the full approved plan:
 
-1. Address the user-reported privacy/provider guidance and context-budget usability. `CLOUD_NOT_ALLOWED` enforces the project's local-only policy; current UI is Project details → Privacy → Allow cloud inference. Do not silently enable cloud. `CONTEXT_LIMIT` currently uses a conservative serialized-character estimate in `src/engine/application.ts`; implement accurate accounting, bounded/retrievable tool output and controlled continuation without dropping required tool exchanges.
-2. Finish D3 genuine lab qualification and monitored machine probes. Preserve the original 20 tool cases, 10 coding fixtures repeated three times, 85% quality, zero unauthorized effects/writes after cancellation, load ≤90 seconds, first token ≤30 seconds, throughput ≥4 tokens/sec and host reserve targets. Do not create production receipts from test fixtures.
-3. Supply production catalogue/trust inputs and connect the verified activation/selector/provider to main, engine, IPC and model setup. Managed CPU checks do not establish exact GPU/backend attestation. Finish lifecycle/storage work.
-4. Continue the remaining C/E/F work in dependency order. The Research Kit's missing conventional redistribution license at the pinned revision remains an explicit distribution issue; no full kit has been vendored as part of this handoff.
+1. Finish D3 genuine lab qualification and monitored machine probes. Preserve the original 20 tool cases, 10 coding fixtures repeated three times, 85% quality, zero unauthorized effects/writes after cancellation, load <=90 seconds, first token <=30 seconds, throughput >=4 tokens/sec and host reserve targets. Do not create production receipts from test fixtures.
+2. Supply production catalogue/trust inputs and connect verified activation, selection and the managed provider to main, engine, IPC and setup. Absence of these real inputs is not permission to fabricate them or activate an unqualified candidate. CPU lifecycle/storage checks do not establish inference quality or GPU attestation.
+3. Continue C: streaming, provider-specific tokenizers and continuation, skills, teams and missions. The current UTF-8 estimate is explicitly heuristic; actual provider usage is shown separately. Older complete user/assistant turns may be excluded from a request; durable history stays stored. Very large prompts/tool arguments can still require explicit recovery.
+4. Continue E/F: research provisioning and evidence workflows, model lifecycle/storage management, native path hardening, diagnostics, updates, signing and wider installed-app qualification. Resolve the Research Kit's redistribution rights before bundling its code.
 
 ## Code map
 
@@ -83,7 +83,7 @@ node node_modules/electron/cli.js scripts/check-runtime.cjs
 npm run test:e2e
 ```
 
-Each command must exit successfully before the next is treated as verified. Native/desktop tests require Windows; a Linux-only agent can review/edit the source and check the handoff, but must obtain Windows CI evidence for native behavior. The workflow is [.github/workflows/windows.yml](.github/workflows/windows.yml). Check current-head runs with `gh pr checks 2 --repo StepenkoAnatoli/MoonAliza` and inspect failed logs with `gh run view <run-id> --repo StepenkoAnatoli/MoonAliza --log-failed`.
+Each command must exit successfully before the next is treated as verified. Native/desktop tests require Windows; a Linux-only agent can review/edit the source and check the handoff, but must obtain Windows CI evidence for native behavior. The workflow is [.github/workflows/windows.yml](.github/workflows/windows.yml). Check current-head runs with `gh pr checks --repo StepenkoAnatoli/MoonAliza` and inspect failed logs with `gh run view <run-id> --repo StepenkoAnatoli/MoonAliza --log-failed`.
 
 `npm run dev` builds and launches the app. `npm run package:win` creates a development installer under `release/`; it is not a signed-release qualification. `npm run package:release` requires real signing inputs. Tests and screenshots use isolated fixture projects and do not certify general model quality.
 
@@ -98,7 +98,7 @@ These download about 1.46 GB of Ollama runtime and about 523 MB of model artifac
 
 ## Research, artifacts and secrets
 
-[docs/handoff](docs/handoff/README.md) contains every research/working-note file and every non-installer output from the original sibling folders: 76 exact-byte files. [The manifest](docs/handoff/manifest.json) accounts for all 81 original files with sizes and SHA-256. Five historical unsigned installers are metadata-only, retained on the original PC; no build or continuation step requires them. They are not downloadable from this source checkout. Build the current installer from source when needed. There is no hidden dependency on an omitted installer.
+[docs/handoff](docs/handoff/README.md) contains every research/working-note file and every non-installer output from the original sibling folders: 76 exact-byte files. [The manifest](docs/handoff/manifest.json) accounts for all 81 original files with sizes and SHA-256. Five historical unsigned installers are metadata-only, retained on the original PC; no build or continuation step requires them. Current development installers belong in [GitHub Releases](https://github.com/StepenkoAnatoli/MoonAliza/releases), with checksums and version-specific evidence, rather than the source Git tree. See the current release record above. There is no hidden dependency on an omitted installer.
 
 The research includes complete raw captures, source/evidence tables, retrieval ledgers and the accidentally nested `research/research` corpus, kept separate to preserve provenance. It also contains an explicitly failed 404 capture. The authoritative Node source used for the runtime is the versioned Node 24 capture; the nested Node 26 capture is historical background. Raw third-party pages retain their sources/notices and are untrusted reference data, not application dependencies or permission grants.
 

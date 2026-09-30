@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { ApprovalSchema, ChangeSchema, DateTimeSchema, DigestSchema, HttpUrlSchema, IdSchema, MessageSchema, ModeSchema, OperationSchema, ProfileKindSchema, ProfileSchema, ProjectPolicySchema, ProjectSchema, RevisionSchema, RunSchema, SessionSchema } from './contracts';
 import { EventSchema } from './events';
 import { HardwareSchema } from './contracts';
+import { ContextStateSchema, UsageUpdateSchema } from './context';
+import { PublicErrorSchema } from './errors';
 
 const Empty = z.object({}).strict();
 const Deleted = z.object({ deleted: z.literal(true) }).strict();
@@ -67,7 +69,7 @@ export const MethodSpec = {
   'project.policy.update': method(z.object({ projectId: IdSchema, expectedRevision: RevisionSchema, policy: ProjectPolicySchema.omit({ revision: true }) }).strict(), projectResult, 'engine', 'write', 'project-member'),
   'session.create': method(z.object({ projectId: IdSchema, title: z.string().trim().min(1).max(256).optional() }).strict(), sessionResult, 'engine', 'write', 'project-member'),
   'session.list': method(ProjectId, z.object({ sessions: z.array(SessionSchema).max(10000) }).strict(), 'engine', 'read', 'project-member'),
-  'session.read': method(SessionId, z.object({ session: SessionSchema, messages: z.array(MessageSchema).max(10000), runs: z.array(RunSchema).max(10000) }).strict(), 'engine', 'read', 'project-member'),
+  'session.read': method(SessionId, z.object({ session: SessionSchema, messages: z.array(MessageSchema).max(10000), runs: z.array(RunSchema).max(10000), context: ContextStateSchema.nullable(), usage: UsageUpdateSchema.nullable(), failure: PublicErrorSchema.nullable() }).strict(), 'engine', 'read', 'project-member'),
   'session.delete': method(SessionId, Deleted, 'engine', 'write', 'project-member'),
   'run.start': method(z.object({ sessionId: IdSchema, profileId: IdSchema, mode: ModeSchema, prompt: z.string().trim().min(1).max(131072) }).strict(), runResult, 'engine', 'write', 'trusted-project'),
   'run.cancel': method(z.object({ runId: IdSchema }).strict(), runResult, 'engine', 'lifecycle', 'project-member'),

@@ -56,7 +56,7 @@ export class Engine {
         else if (message.type === 'inference') {
           void this.hooks.inference(message.runId, message.messages, epoch, message.tools).then(result => {
             if (this.epoch === epoch) child.postMessage(ToEngineSchema.parse({ type: 'inference.result', epoch, id: message.id, result }));
-          }).catch(() => { if (this.epoch === epoch) child.postMessage({ type: 'inference.error', epoch, id: message.id, code: 'PROVIDER_ERROR' }); });
+          }).catch(error => { if (this.epoch === epoch) child.postMessage({ type: 'inference.error', epoch, id: message.id, code: error instanceof Error && ['RUN_CANCELLED', 'CONTEXT_LIMIT'].includes(error.message) ? error.message : 'PROVIDER_ERROR' }); });
         }
       });
       child.once('exit', () => {

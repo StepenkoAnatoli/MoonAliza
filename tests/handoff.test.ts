@@ -10,7 +10,7 @@ const check = (root: string) => promisify(execFile)(process.execPath, [resolve('
 afterEach(async () => { for (const root of directories.splice(0)) { const child = relative(resolve(tmpdir()), root); if (!child || child.startsWith('..') || isAbsolute(child)) throw new Error('FIXTURE_PATH'); await rm(root, { recursive: true, force: true }); } });
 async function checkout() {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-handoff-')); directories.push(root);
-  for (const path of ['AGENTS.md', 'HANDOFF.md', 'README.md', 'docs', '.node-version', 'package.json', '.github']) await cp(resolve(path), join(root, path), { recursive: true });
+  for (const path of ['AGENTS.md', 'HANDOFF.md', 'README.md', 'docs', 'research', '.node-version', 'package.json', '.github']) await cp(resolve(path), join(root, path), { recursive: true });
   return root;
 }
 
