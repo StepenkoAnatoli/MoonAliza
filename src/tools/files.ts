@@ -23,6 +23,8 @@ export class FileJournal {
 
   private authority(runId: string, signal?: AbortSignal) {
     const run = this.store.getRun(runId); if (!run || terminal.has(run.status)) throw new Error('RUN_CANCELLED');
+    if (run.projectId === null) throw new Error('PROJECT_REQUIRED');
+    if (this.store.getSession(run.sessionId)?.policy.revision !== run.sessionPolicyRevision) throw new Error('RUN_CANCELLED');
     const project = this.store.getProject(run.projectId); if (!project) throw new Error('PROJECT_NOT_FOUND');
     assertToolPolicy(run.mode, 'write', project, signal);
     if (run.trustRevision !== project.trustRevision || run.policyRevision !== project.policy.revision) throw new Error('APPROVAL_STALE');

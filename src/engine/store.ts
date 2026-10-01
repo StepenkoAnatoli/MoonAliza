@@ -6,7 +6,7 @@ export interface StoreProject {
   policy: { revision: number; inference: 'local-only' | 'cloud-allowed'; research: 'off' | 'public-technical' | 'private-connected' };
   missing: boolean; createdAt: string;
 }
-export interface StoreSession { id: string; projectId: string; title: string; createdAt: string; updatedAt: string }
+export interface StoreSession { id: string; projectId: string | null; policy: { revision: number; inference: 'local-only' | 'cloud-allowed' }; title: string; createdAt: string; updatedAt: string }
 export interface StoreProfile {
   id: string; name: string; kind: 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama'; endpoint: string; model: string;
   contextTokens: number; outputTokens: number; locality: 'local' | 'external'; secretRef?: string;
@@ -14,7 +14,7 @@ export interface StoreProfile {
 }
 export type StoreRunStatus = 'queued' | 'running' | 'awaiting_approval' | 'awaiting_review' | 'cancelling' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
 export interface StoreRun {
-  id: string; sessionId: string; projectId: string; mode: 'ask' | 'plan' | 'research' | 'build' | 'mission';
+  id: string; sessionId: string; projectId: string | null; sessionPolicyRevision: number; mode: 'ask' | 'plan' | 'research' | 'build' | 'mission';
   status: StoreRunStatus; profileId: string; profileRevisionId: string; policyRevision: number; trustRevision: number;
   createdAt: string; finishedAt?: string;
 }
@@ -43,9 +43,9 @@ export interface AcceptedResult<T = unknown> { entityId: string; response: T; re
 type Row = Record<string, unknown>;
 type Column = readonly [property: string, column: string, encoding?: 'json' | 'boolean'];
 const projectColumns: Column[] = [['id','id'],['name','name'],['rootPath','root_path'],['pathLabel','path_label'],['trusted','trusted','boolean'],['trustRevision','trust_revision'],['policy','policy','json'],['missing','missing','boolean'],['createdAt','created_at']];
-const sessionColumns: Column[] = [['id','id'],['projectId','project_id'],['title','title'],['createdAt','created_at'],['updatedAt','updated_at']];
+const sessionColumns: Column[] = [['id','id'],['projectId','project_id'],['title','title'],['createdAt','created_at'],['updatedAt','updated_at'],['policy','policy','json']];
 const profileColumns: Column[] = [['id','id'],['name','name'],['kind','kind'],['endpoint','endpoint'],['model','model'],['contextTokens','context_tokens'],['outputTokens','output_tokens'],['locality','locality'],['secretRef','secret_ref'],['revision','revision'],['revisionId','revision_id'],['createdAt','created_at'],['updatedAt','updated_at']];
-const runColumns: Column[] = [['id','id'],['sessionId','session_id'],['projectId','project_id'],['mode','mode'],['status','status'],['profileId','profile_id'],['profileRevisionId','profile_revision_id'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['createdAt','created_at'],['finishedAt','finished_at']];
+const runColumns: Column[] = [['id','id'],['sessionId','session_id'],['projectId','project_id'],['mode','mode'],['status','status'],['profileId','profile_id'],['profileRevisionId','profile_revision_id'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['createdAt','created_at'],['finishedAt','finished_at'],['sessionPolicyRevision','session_policy_revision']];
 const messageColumns: Column[] = [['id','id'],['sessionId','session_id'],['runId','run_id'],['role','role'],['content','content'],['toolCallId','tool_call_id'],['toolName','tool_name'],['toolCalls','tool_calls','json'],['partial','partial','boolean'],['createdAt','created_at']];
 const operationColumns: Column[] = [['id','id'],['runId','run_id'],['projectId','project_id'],['kind','kind'],['inputHash','input_hash'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['status','status'],['input','input','json'],['result','result','json'],['beforeRef','before_ref'],['afterRef','after_ref'],['snapshotRef','snapshot_ref'],['createdAt','created_at'],['updatedAt','updated_at']];
 const approvalColumns: Column[] = [['id','id'],['operationId','operation_id'],['projectId','project_id'],['inputHash','input_hash'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['decision','decision'],['createdAt','created_at']];
@@ -63,6 +63,7 @@ function decode<T>(row: unknown, columns: Column[]): T | undefined {
   const result: Row = {};
   for (const [property, column, encoding] of columns) {
     const value = (row as Row)[column];
+    if (value === null && property === 'projectId') result[property] = null;
     if (value !== null && value !== undefined) result[property] = encoding === 'json' ? JSON.parse(value as string) : encoding === 'boolean' ? value === 1 : value;
   }
   return result as T;
@@ -113,9 +114,9 @@ export class Store {
   getProject(id: string): StoreProject | undefined { return this.one('projects', projectColumns, id); }
   listProjects(): StoreProject[] { return this.many('SELECT * FROM projects ORDER BY created_at,id', projectColumns); }
   deleteProject(id: string): void { this.transaction(() => { this.db.prepare('DELETE FROM projects WHERE id=?').run(id); }); }
-  putSession(session: StoreSession): void { this.write('sessions', sessionColumns, session, true); }
+  putSession(session: Omit<StoreSession, 'policy'> & Partial<Pick<StoreSession, 'policy'>>): void { this.write('sessions', sessionColumns, { ...session, policy: session.policy ?? { revision: 0, inference: session.projectId === null ? 'local-only' : 'cloud-allowed' } }, true); }
   getSession(id: string): StoreSession | undefined { return this.one('sessions', sessionColumns, id); }
-  listSessions(projectId: string): StoreSession[] { return this.many('SELECT * FROM sessions WHERE project_id=? ORDER BY updated_at DESC,id', sessionColumns, projectId); }
+  listSessions(projectId: string | null): StoreSession[] { return this.many('SELECT * FROM sessions WHERE project_id IS ? ORDER BY updated_at DESC,id', sessionColumns, projectId); }
   deleteSession(id: string): void { this.transaction(() => { this.db.prepare('DELETE FROM sessions WHERE id=?').run(id); }); }
 
   putProfile(profile: StoreProfile): void {
@@ -136,7 +137,7 @@ export class Store {
   listSecretRefs(): string[] { return (this.db.prepare('SELECT DISTINCT secret_ref FROM profile_revisions WHERE secret_ref IS NOT NULL').all() as { secret_ref: string }[]).map(row => row.secret_ref); }
   deleteProfile(id: string): void { this.db.prepare('DELETE FROM profiles WHERE id=?').run(id); }
 
-  putRun(run: StoreRun): void { this.write('runs', runColumns, run); }
+  putRun(run: Omit<StoreRun, 'sessionPolicyRevision'> & Partial<Pick<StoreRun, 'sessionPolicyRevision'>>): void { this.write('runs', runColumns, { ...run, sessionPolicyRevision: run.sessionPolicyRevision ?? 0 }); }
   getRun(id: string): StoreRun | undefined { return this.one('runs', runColumns, id); }
   listRuns(sessionId: string): StoreRun[] { return this.many('SELECT * FROM runs WHERE session_id=? ORDER BY created_at,id', runColumns, sessionId); }
   appendEvent(runId: string, type: string, payload: unknown, patch?: { status?: StoreRunStatus; finishedAt?: string }): StoreEvent {

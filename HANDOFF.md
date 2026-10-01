@@ -6,17 +6,17 @@ This is the continuation guide for a new developer or AI. Everything required to
 
 Build the full Windows desktop coding-agent workbench named **MoonAliza**, following the reviewed Rework plan. The user explicitly chose working stages to catch problems early, and rejected a reduced product scope. The first usable target is their own Windows PC; broader release qualification remains necessary. The intended product includes local and API models, one owned agent engine, reviewed coding tools, research, skills, bounded teams, durable missions and a Windows installer.
 
-New user requirement (September 30): [folder-free chat](docs/specification/folder-free-chat.md). Users must be able to discuss and plan without choosing a project, then attach or create a workspace when needed. This is not implemented yet. Recommended next user-facing phase: after offline Research Kit validation and before research jobs/review UI; preserve privacy and explicit project access when changing context.
+New user requirement (September 30): [folder-free chat](docs/specification/folder-free-chat.md). Users must be able to discuss and plan without choosing a project, then attach or create a workspace when needed. Implemented in the 0.7 development phase on `feat/folder-free-chat`; see the specification for explicit privacy and workspace-branch behavior. Research jobs/review UI remain separate.
 
-The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2–11 are merged into `main`; [PR #11](https://github.com/StepenkoAnatoli/MoonAliza/pull/11) merged at `2a3dd9e` on September 30. The current backend milestone is `feat/research-kit-offline`; the user reviews and merges its PR. Inspect current checks before continuing. To obtain this development branch:
+The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2-12 are merged into `main`; [PR #12](https://github.com/StepenkoAnatoli/MoonAliza/pull/12) merged at `f98cee3` on October 1. Both Windows checks passed on its source head `0475775`. Current folder-free chat development is on `feat/folder-free-chat`, based on that merge. The user merges each completed phase PR.
 
 ```powershell
-git -c core.longpaths=true clone --branch feat/research-kit-offline https://github.com/StepenkoAnatoli/MoonAliza.git
+git -c core.longpaths=true clone --branch feat/folder-free-chat https://github.com/StepenkoAnatoli/MoonAliza.git
 cd MoonAliza
 node scripts/check-handoff.mjs
 ```
 
-The current stage plan is [offline Research Kit validation](docs/superpowers/plans/2026-09-30-research-kit-offline.md), with [behavior and limits](docs/specification/research-kit-offline.md). The published installer remains the [0.6 development release](docs/releases/0.6.0-dev.1.md). All prior research remains included; the new primary captures are in [research](research/BRIEF.md).
+The current [stage plan](docs/superpowers/plans/2026-10-01-folder-free-chat.md) and [design](docs/superpowers/specs/2026-10-01-folder-free-chat-design.md) explain schema v2, conversation privacy and reviewed workspace branching. The [0.7 development release record](docs/releases/0.7.0-dev.1.md) identifies the new installer, validation and migration limits. Research and working history remain included.
 
 ## Reading order and authority
 
@@ -34,20 +34,20 @@ Current user instructions and current source evidence govern ongoing work. The a
 |---|---|---|
 | Desktop foundation | Electron main/preload/utility engine, React, strict IPC, SQLite, encrypted profiles, durable events/history | Full remaining product modes and broader reliability/release work |
 | Coding tools | Trusted projects, bounded reads/search, fixed Git inspection, exact edit/command review, journal, Undo, recovery and owned process-tree Stop | Native handle-relative path hardening, wider Git/worktree support and additional tool capabilities |
-| Providers/agent | Streamed Ollama and OpenAI-compatible tool loops with validated terminal usage, project privacy policy, step/time limits, bounded retrievable tool results, context/usage reports and recovery | Safe live text display, remaining provider families, provider-specific exact accounting, continuation state, skills/teams/missions |
+| Providers/agent | Folder-free saved chats, revisioned conversation privacy, reviewed workspace branching; streamed Ollama and OpenAI-compatible tool loops with validated terminal usage, project privacy policy, step/time limits, bounded retrievable tool results, context/usage reports and recovery | Safe live text display, remaining provider families, provider-specific exact accounting, continuation state, skills/teams/missions |
 | Managed local models | Native hardware facts, signed catalogue validation, verified artifact/model storage, activation, owned Ollama connection/runtime, scheduler and receipt/resource selection | Genuine lab and monitored machine qualification, production trust inputs, main/engine/setup integration, GPU attestation, removal/relocation |
 | Research | Pinned external offline validator, strict consumer contracts, real producer fixtures, guarded process execution and digest/revision-bound artifact reads | Main/engine job integration, durable jobs, evidence/review workflows, UI, Build admission and release provisioning |
-| Delivery | Development 0.6 packaging, prerelease delivery and prior installed 0.5 evidence | Signed production release, update/migration/diagnostic work and wider hardware qualification |
+| Delivery | Development 0.7 packaging, prerelease delivery and prior installed 0.5 evidence | Signed production release, update/migration/diagnostic work and wider hardware qualification |
 
 The original PC has version **0.5.0** installed. Current source includes later backend work that is not yet connected to that installed app. The earlier installed Hugging Face profile and its encrypted Windows vault are not portable credentials. The real local-model check established download/storage/inventory/Stop behavior, **not inference speed or coding quality**. Free host RAM on that PC was about 1.15 GiB during the last model check, below the required 2 GiB reserve; this does not block code development. Unknown GPU memory must stay unknown.
 
 ## Immediate continuation
 
-Inspect the current branch/PR checks and [0.6 development release record](docs/releases/0.6.0-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
+Inspect the current branch/PR checks and [0.7 development release record](docs/releases/0.7.0-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
 
 Next continue the full approved plan:
 
-First finish and merge this offline consumer phase after its current-head checks pass. Then implement [folder-free chat](docs/specification/folder-free-chat.md), the user's new requirement: general saved conversation before any project is chosen, followed by explicit attach/create/switch workspace behavior. Research jobs and review UI follow as a separate phase; do not let research become mandatory for ordinary chat or existing projects. The long-term work below remains open.
+Review the phase PR and current-head checks for [folder-free chat](docs/specification/folder-free-chat.md): general saved conversation before any project is chosen, followed by explicit attach/create/switch workspace behavior. Research jobs and review UI follow as a separate phase; do not let research become mandatory for ordinary chat or existing projects. The long-term work below remains open.
 
 1. Finish D3 genuine lab qualification and monitored machine probes. Preserve the original 20 tool cases, 10 coding fixtures repeated three times, 85% quality, zero unauthorized effects/writes after cancellation, load <=90 seconds, first token <=30 seconds, throughput >=4 tokens/sec and host reserve targets. Do not create production receipts from test fixtures.
 2. Supply production catalogue/trust inputs and connect verified activation, selection and the managed provider to main, engine, IPC and setup. Absence of these real inputs is not permission to fabricate them or activate an unqualified candidate. CPU lifecycle/storage checks do not establish inference quality or GPU attestation.

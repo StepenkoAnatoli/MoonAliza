@@ -1,12 +1,12 @@
 import { app, BrowserWindow, ipcMain, dialog, safeStorage, session, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
-import { MethodSpec, ProjectSchema, RunSchema, OperationSchema, ApprovalSchema, type Request, type Run, type ToolSpec } from '../shared';
+import { MethodSpec, SessionSchema, ProjectSchema, RunSchema, OperationSchema, ApprovalSchema, type Request, type Run, type ToolSpec } from '../shared';
 import { StoredProfileSchema } from '../engine/control';
-import { canonicalHash, assertInferencePolicy } from '../engine/policy';
+import { canonicalHash, assertConversationPolicy } from '../engine/policy';
 import { inspectProjectPath, spawnOwned } from '../tools/commands';
 import { CommandBroker } from './commands';
 import { Engine } from './engine';
@@ -38,8 +38,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
   const localSession = session.fromPartition('moonaliza-local');
   await localSession.setProxy({ mode: 'direct' });
   const providerSession = session.fromPartition('moonaliza-providers');
-  const contextSchema = z.object({ run: RunSchema, project: ProjectSchema, profile: StoredProfileSchema }).strict();
-  const commandContextSchema = z.object({ run: RunSchema, project: ProjectSchema.extend({ rootPath: z.string() }), operation: OperationSchema.omit({ createdAt: true, finishedAt: true }).extend({ input: z.unknown() }).optional(), approval: ApprovalSchema.optional() }).strict();
+  const contextSchema = z.object({ run: RunSchema, session: SessionSchema, project: ProjectSchema.nullable(), profile: StoredProfileSchema }).strict();
+  const commandContextSchema = z.object({ run: RunSchema.extend({ projectId: z.string().min(1) }), project: ProjectSchema.extend({ rootPath: z.string() }), operation: OperationSchema.omit({ createdAt: true, finishedAt: true }).extend({ input: z.unknown() }).optional(), approval: ApprovalSchema.optional() }).strict();
   const commands = new CommandBroker({
     environment: process.env, protectedRoots: [data],
     async context(runId, operationId) {
@@ -62,8 +62,9 @@ if (ownsInstance) void app.whenReady().then(async () => {
     const capability = active.get(runId);
     if (!capability || !engine || epoch !== engine.epoch) throw new Error('RUN_CANCELLED');
     const context = contextSchema.parse(await engine.control({ method: 'run.context', runId }));
-    if (context.run.status !== 'running' || context.run.profileRevisionId !== capability.run.profileRevisionId || context.run.projectId !== capability.run.projectId || context.project.trustRevision !== context.run.trustRevision || context.project.policy.revision !== context.run.policyRevision) throw new Error('RUN_CANCELLED');
-    assertInferencePolicy(context.project, context.profile.locality, capability.stop.signal);
+    if (context.run.status !== 'running' || context.run.profileRevisionId !== capability.run.profileRevisionId || context.run.projectId !== capability.run.projectId) throw new Error('RUN_CANCELLED');
+    assertConversationPolicy(context.session, context.project, context.profile.locality, capability.stop.signal, context.run);
+    if (context.run.projectId === null && tools?.length) throw new Error('PROJECT_REQUIRED');
     const inferred = validateEndpoint(context.profile.kind, context.profile.endpoint);
     if (inferred.locality !== context.profile.locality) throw new Error('INVALID_ENDPOINT');
     const fetcher = (url: string, init: RequestInit) => (context.profile.locality === 'local' ? localSession : providerSession).fetch(url, init);
@@ -111,6 +112,9 @@ if (ownsInstance) void app.whenReady().then(async () => {
       if (request.method === 'project.revokeTrust' || request.method === 'project.policy.update') {
         for (const [id, item] of active) if (item.run.projectId === request.params.projectId) { item.stop.abort(); vault.revokeContext(id); }
       }
+      if (request.method === 'session.policy.update') {
+        for (const [id, item] of active) if (item.run.sessionId === request.params.sessionId) { item.stop.abort(); vault.revokeContext(id); }
+      }
       const result = await engine.request(request);
       if (request.method === 'run.start') {
         const { run } = z.object({ run: RunSchema }).parse(result);
@@ -122,9 +126,19 @@ if (ownsInstance) void app.whenReady().then(async () => {
       case 'hardware.read': return { ...await probeHardware({ helperPath, runtimeIdentity: `unmanaged;moonaliza-${app.getVersion()}` }), checkedAt: new Date().toISOString() };
       case 'runtime.inspect': return inspectLocalRuntime((url, init) => localSession.fetch(url, init));
       case 'project.pick': {
-        const result = await dialog.showOpenDialog(window, { title: 'Open a project', properties: ['openDirectory'] });
-        if (result.canceled || !result.filePaths[0]) return { cancelled: true };
-        const ticket = await tickets.issue(result.filePaths[0], window.webContents.id);
+        let selected: string;
+        if (request.params.create) {
+          const result = await dialog.showSaveDialog(window, { title: 'Create a project folder', buttonLabel: 'Create folder', defaultPath: join(app.getPath('documents'), 'New project') });
+          if (result.canceled || !result.filePath) return { cancelled: true };
+          if (!(await inspect(dirname(result.filePath))).localFixed) throw new Error('PROJECT_VOLUME_UNSUPPORTED');
+          await mkdir(result.filePath).catch((error: NodeJS.ErrnoException) => { if (error.code === 'EEXIST') throw new Error('FILE_CONFLICT'); throw error; });
+          selected = result.filePath;
+        } else {
+          const result = await dialog.showOpenDialog(window, { title: 'Open a project', properties: ['openDirectory'] });
+          if (result.canceled || !result.filePaths[0]) return { cancelled: true };
+          selected = result.filePaths[0];
+        }
+        const ticket = await tickets.issue(selected, window.webContents.id);
         return { ticketId: ticket.ticket, name: ticket.name, pathLabel: ticket.pathLabel };
       }
       case 'project.trust': case 'project.relink': {

@@ -16,13 +16,14 @@ export const ProjectPolicySchema = z.object({ revision: RevisionSchema, inferenc
 export type ProjectPolicy = z.infer<typeof ProjectPolicySchema>;
 export const ProjectSchema = z.object({ id: IdSchema, name: z.string().min(1).max(256), pathLabel: z.string().min(1).max(1024), trusted: z.boolean(), trustRevision: RevisionSchema, policy: ProjectPolicySchema, missing: z.boolean(), createdAt: DateTimeSchema }).strict();
 export type Project = z.infer<typeof ProjectSchema>;
-export const SessionSchema = z.object({ id: IdSchema, projectId: IdSchema, title: z.string().min(1).max(256), createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict();
+export const SessionPolicySchema = z.object({ revision: RevisionSchema, inference: z.enum(['local-only', 'cloud-allowed']) }).strict();
+export const SessionSchema = z.object({ id: IdSchema, projectId: IdSchema.nullable(), policy: SessionPolicySchema, title: z.string().min(1).max(256), createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict();
 export type Session = z.infer<typeof SessionSchema>;
 export const ProfileKindSchema = z.enum(['openai-compatible', 'openai-responses', 'anthropic', 'ollama']);
 export type ProfileKind = z.infer<typeof ProfileKindSchema>;
 export const ProfileSchema = z.object({ id: IdSchema, name: z.string().min(1).max(128), kind: ProfileKindSchema, endpoint: HttpUrlSchema, model: z.string().min(1).max(256), contextTokens: z.number().int().min(512).max(2_000_000), outputTokens: z.number().int().min(1).max(200_000), locality: z.enum(['local', 'external']), hasCredential: z.boolean(), revision: RevisionSchema, revisionId: IdSchema, createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict().refine(value => value.outputTokens <= value.contextTokens, 'Output budget exceeds context budget');
 export type Profile = z.infer<typeof ProfileSchema>;
-export const RunSchema = z.object({ id: IdSchema, sessionId: IdSchema, projectId: IdSchema, mode: ModeSchema, status: RunStatusSchema, profileId: IdSchema, profileRevisionId: IdSchema, policyRevision: RevisionSchema, trustRevision: RevisionSchema, createdAt: DateTimeSchema, finishedAt: DateTimeSchema.optional() }).strict();
+export const RunSchema = z.object({ id: IdSchema, sessionId: IdSchema, projectId: IdSchema.nullable(), sessionPolicyRevision: RevisionSchema.default(0), mode: ModeSchema, status: RunStatusSchema, profileId: IdSchema, profileRevisionId: IdSchema, policyRevision: RevisionSchema, trustRevision: RevisionSchema, createdAt: DateTimeSchema, finishedAt: DateTimeSchema.optional() }).strict();
 export type Run = z.infer<typeof RunSchema>;
 export const ToolCallSchema = z.object({ id: IdSchema, name: z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/), input: z.json(), inputError: z.string().max(2048).optional() }).strict();
 export type ToolCall = z.infer<typeof ToolCallSchema>;

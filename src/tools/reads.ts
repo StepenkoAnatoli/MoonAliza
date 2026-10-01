@@ -64,6 +64,8 @@ export class FileReader {
     if (signal?.aborted) throw new Error('RUN_CANCELLED');
     const run = this.store.getRun(runId);
     if (!run || run.status !== 'running') throw new Error('RUN_NOT_ACTIVE');
+    if (run.projectId === null) throw new Error('PROJECT_REQUIRED');
+    if (this.store.getSession(run.sessionId)?.policy.revision !== run.sessionPolicyRevision) throw new Error('RUN_CANCELLED');
     const project = this.store.getProject(run.projectId);
     if (!project || project.missing) throw new Error('PROJECT_UNAVAILABLE');
     assertToolPolicy(run.mode, 'read', project, signal);

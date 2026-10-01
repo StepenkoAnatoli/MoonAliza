@@ -62,6 +62,7 @@ test('cloud preflight preserves the draft and requires explicit policy confirmat
     return bridge.invoke(method, params);
   } }} />);
   await screen.findByRole('heading', { name: project.name });
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
   fireEvent.change(screen.getByLabelText('Message MoonAliza'), { target: { value: 'Keep my draft' } });
   expect(screen.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(true);
   fireEvent.keyDown(screen.getByLabelText('Message MoonAliza'), { key: 'Enter', ctrlKey: true });
@@ -92,4 +93,96 @@ test('editing context creates a bound profile revision while keeping the saved c
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   await waitFor(() => expect(submitted).toMatchObject({ id: 'cloud', expectedRevision: 2, contextTokens: 16384 }));
   expect(submitted).not.toHaveProperty('secret'); expect(submitted).not.toHaveProperty('clearCredential');
+});
+
+test('general chat accepts a draft without a project and reviews cloud consent without sending', async () => {
+  const bridge = api(); const calls: string[] = [];
+  let session = { id: 'chat', projectId: null, title: 'New conversation', policy: { revision: 0, inference: 'local-only' }, createdAt: project.createdAt, updatedAt: project.createdAt };
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    calls.push(method);
+    if (method === 'profile.list') return { profiles: [cloudProfile] };
+    if (method === 'session.create') { expect(params?.projectId).toBeNull(); return { session }; }
+    if (method === 'session.read') return { session, messages: [], runs: [], context: null, usage: null, failure: null };
+    if (method === 'session.policy.update') { session = { ...session, policy: { revision: 1, inference: 'cloud-allowed' } }; return { session }; }
+    return bridge.invoke(method, params);
+  } }} />);
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
+  fireEvent.change(screen.getByLabelText('Message MoonAliza'), { target: { value: 'An idea without a folder' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Review cloud access' }));
+  expect((await screen.findByRole('dialog', { name: 'Allow cloud for this conversation?' })).textContent).toContain('provider.example');
+  fireEvent.click(screen.getByRole('button', { name: 'Allow for this conversation' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(false));
+  expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('An idea without a folder');
+  expect(calls).not.toContain('run.start'); expect(calls).not.toContain('project.trust');
+  expect(screen.getByRole('option', { name: 'Build' }).hasAttribute('disabled')).toBe(true);
+});
+
+test('navigating away from a project clears its unsent draft', async () => {
+  render(<App api={api([project])} />);
+  await screen.findByRole('heading', { name: project.name });
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
+  fireEvent.change(screen.getByLabelText('Message MoonAliza'), { target: { value: 'Private project draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'General chats' }));
+  await screen.findByRole('heading', { name: 'General chat' });
+  expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('');
+});
+
+test('composer waits for the selected scope and disables immediately when changing workspace', async () => {
+  const bridge = api([project]); let release: (() => void) | undefined;
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    if (method === 'session.list') return new Promise(resolve => { release = () => resolve({ sessions: [] }); });
+    return bridge.invoke(method, params);
+  } }} />);
+  await screen.findByRole('heading', { name: project.name });
+  expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(true);
+  await waitFor(() => expect(release).toBeDefined()); release!();
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
+  fireEvent.change(screen.getByLabelText('Message MoonAliza'), { target: { value: 'Private draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'General chats' }));
+  expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(true);
+  expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('');
+  release!();
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
+});
+
+test('rejected run admission preserves the draft when Send has to create a session first', async () => {
+  const allowed = { ...project, policy: { ...project.policy, inference: 'cloud-allowed' } };
+  const bridge = api([allowed]); let attempted = false;
+  const session = { id: 'created', projectId: project.id, policy: { revision: 0, inference: 'cloud-allowed' }, title: 'New conversation', createdAt: project.createdAt, updatedAt: project.createdAt };
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    if (method === 'profile.list') return { profiles: [cloudProfile] };
+    if (method === 'session.create') return { session };
+    if (method === 'session.read') return { session, messages: [], runs: [], context: null, usage: null, failure: null };
+    if (method === 'run.start') { attempted = true; throw new Error('Review interrupted operations first.'); }
+    return bridge.invoke(method, params);
+  } }} />);
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
+  fireEvent.change(screen.getByLabelText('Message MoonAliza'), { target: { value: 'Keep this request through admission failure' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+  await waitFor(() => expect(attempted).toBe(true));
+  await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
+  expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('Keep this request through admission failure');
+});
+
+test('context recovery carries the request with its conversation privacy restriction', async () => {
+  const allowed = { ...project, policy: { ...project.policy, inference: 'cloud-allowed' } };
+  const bridge = api([allowed]); const calls: string[] = [];
+  const original = { id: 'restricted', projectId: project.id, title: 'Restricted idea', policy: { revision: 2, inference: 'local-only' }, createdAt: project.createdAt, updatedAt: project.createdAt };
+  const branch = { ...original, id: 'fresh', title: 'From: Restricted idea', policy: { revision: 0, inference: 'local-only' } };
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    calls.push(method);
+    if (method === 'profile.list') return { profiles: [cloudProfile] };
+    if (method === 'session.list') return { sessions: [original] };
+    if (method === 'session.branch') { expect(params).toEqual({ sessionId: original.id, projectId: project.id, context: '' }); return { session: branch }; }
+    if (method === 'session.read') return params?.sessionId === original.id
+      ? { session: original, messages: [{ id: 'prompt', sessionId: original.id, role: 'user', content: 'Private original request', createdAt: project.createdAt }], runs: [], context: null, usage: null, failure: { code: 'CONTEXT_LIMIT', message: 'Context limit reached', retry: 'never' } }
+      : { session: branch, messages: [], runs: [], context: null, usage: null, failure: null };
+    return bridge.invoke(method, params);
+  } }} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Restricted idea' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Start fresh with this request' }));
+  await waitFor(() => expect(calls).toContain('session.branch'));
+  expect(calls).not.toContain('session.create'); expect(calls).not.toContain('run.start');
+  expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('Private original request');
+  expect(screen.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(true);
 });

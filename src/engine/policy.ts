@@ -58,3 +58,17 @@ export function canonicalHash(value: unknown): string {
   }
   return createHash('sha256').update(serialize(value)).digest('hex');
 }
+
+/** Session privacy and project privacy are independent, intersecting restrictions. */
+export function assertConversationPolicy(
+  session: { id: string; projectId: string | null; policy: { revision: number; inference: 'local-only' | 'cloud-allowed' } },
+  project: PolicyProject | null, locality: 'local' | 'external', signal?: AbortSignal,
+  run?: { sessionId: string; projectId: string | null; sessionPolicyRevision: number; policyRevision: number; trustRevision: number },
+): void {
+  if (signal?.aborted) throw new Error('RUN_CANCELLED');
+  if (session.projectId !== (project?.id ?? null)) throw new Error('PROJECT_NOT_FOUND');
+  if (run && (run.sessionId !== session.id || run.projectId !== session.projectId || run.sessionPolicyRevision !== session.policy.revision
+    || run.policyRevision !== (project?.policy.revision ?? 0) || run.trustRevision !== (project?.trustRevision ?? 0))) throw new Error('RUN_CANCELLED');
+  if (session.policy.inference === 'local-only' && locality === 'external') throw new Error('CLOUD_NOT_ALLOWED');
+  if (project) assertInferencePolicy(project, locality, signal);
+}

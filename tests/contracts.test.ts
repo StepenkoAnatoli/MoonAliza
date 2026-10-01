@@ -42,7 +42,7 @@ describe('public renderer contracts', () => {
   test('exposes every specified route with response and ownership validation', () => {
     const expected = [
       'project.pick', 'project.list', 'project.trust', 'project.revokeTrust', 'project.relink', 'project.forget', 'project.policy.update',
-      'session.create', 'session.list', 'session.read', 'session.delete', 'run.start', 'run.cancel', 'run.events',
+      'session.create', 'session.list', 'session.read', 'session.delete', 'session.branch', 'session.policy.update', 'run.start', 'run.cancel', 'run.events',
       'approval.decide', 'approval.list', 'approval.read', 'profile.list', 'profile.save', 'profile.test', 'profile.delete',
       'model.list', 'model.enable', 'model.cancel', 'model.import', 'model.remove', 'model.storage.change',
       'research.provision', 'research.start', 'research.read', 'research.cancel', 'research.review', 'research.purge',
