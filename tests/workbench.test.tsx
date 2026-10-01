@@ -162,6 +162,10 @@ test('rejected run admission preserves the draft when Send has to create a sessi
   await waitFor(() => expect(attempted).toBe(true));
   await waitFor(() => expect(screen.getByLabelText('Message MoonAliza').hasAttribute('disabled')).toBe(false));
   expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('Keep this request through admission failure');
+  expect((await screen.findByRole('alert')).textContent).toContain('Review interrupted operations first.');
+  fireEvent.click(screen.getByRole('button', { name: 'General chats' }));
+  await screen.findByRole('heading', { name: 'General chat' });
+  expect(screen.queryByRole('alert')).toBeNull();
 });
 
 test('context recovery carries the request with its conversation privacy restriction', async () => {

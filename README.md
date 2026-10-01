@@ -23,7 +23,7 @@ Start in **General chats**, add a model profile and send an ordinary question or
 
 Long tool results remain saved in the conversation. The model receives marked excerpts and can request more with `read_tool_result` without repeating a command. Expand **Context estimate** to inspect the estimated input budget, response reserve and last provider-reported token usage. If the request still cannot fit, use **Review context settings** or **Start fresh with this request**; the latter prepares a draft and never sends automatically. Previous edits remain applied and available for review/Undo. See [context behavior and limits](docs/specification/context-recovery.md).
 
-Development installers and their checksums are published as [GitHub prereleases](https://github.com/StepenkoAnatoli/MoonAliza/releases). Read the [0.8 development release record](docs/releases/0.8.0-dev.1.md) for validation and limits.
+Development installers and their checksums are published as [GitHub prereleases](https://github.com/StepenkoAnatoli/MoonAliza/releases). Read the [0.8 development release record](docs/releases/0.8.1-dev.1.md) for validation and limits.
 
 Open **Local models** to read this PC's physical RAM, current available RAM, CPU and graphics adapter details. Free GPU memory remains Unknown when the driver cannot supply a measurement that is matched to the adapter. The screen compares available RAM with the larger of a 2 GiB or 15% system reserve; it does not qualify a model by its download size. **Check Ollama** explicitly reads the existing default loopback service and lists installed model identities. This check never starts or stops that service or modifies its models. Hardware probe failure does not prevent use of model profiles.
 

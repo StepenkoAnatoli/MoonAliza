@@ -1,8 +1,10 @@
-# Development status - 2026-10-01 - folder-free chat
+# Development status - 2026-10-01 - public GitHub reading
 
 The full MoonAliza product remains the target. This is a working development checkpoint, not a completed agent or qualified release.
 
-## Public GitHub reading (0.8)
+## Public GitHub reading (0.8.1)
+
+PR #14 originally passed its PR and tag Windows runs at `1c5a472`, but the branch run exposed a recovery-banner race. A strengthened renderer test reproduced the absent alert after fast run refusal. Version 0.8.1 clears old errors in navigation/action handlers instead of the deferred session-loading effect, preserving the refusal and draft. The correction passed all 12 renderer tests, typecheck, lint, app build and three consecutive Electron recovery/restart workflows. The original 0.8.0 draft installer is superseded; use [the corrected release record](releases/0.8.1-dev.1.md) and inspect current-head checks.
 
 The [public GitHub reader](specification/github-url-reading.md) reads repositories explicitly supplied by the user through a strict main-process broker. It works in General chat without a workspace or token, records exact commit/source URLs and distinguishes GitHub errors. General chat still has no local tools. Local directory-root aliases and misleading blanket permission errors are also corrected. Live unauthenticated verification listed the actual MoonAliza repository and read its README at `146ba4e52a48baf7e843c6d197ce42c8ebb1c9c7`. Local typecheck and lint pass. The complete final suite passed 511 tests across 37 files in 279.10 seconds. The new Electron GitHub conversation/restart journey also passed. Full desktop/package validation and exact-head CI are recorded on this phase PR/release. Private GitHub authentication, general website browsing and cloning remain later capabilities.
 

@@ -28,3 +28,7 @@ Primary API evidence (accessed 2026-10-01):
 The token question does not authorize copying developer tokens into application settings. Public URL reading needs no token; a secure private-repository connection remains a separate feature.
 
 Local full-suite evidence: 511 tests / 37 files passed in 279.10 seconds; typecheck and lint pass. The standalone public MoonAliza read and the new Electron conversation/restart workflow passed. Final packaging/remote status are tracked in the phase PR and release record.
+
+## CI correction
+
+The branch run at 1c5a472 exposed a recovery-banner race despite passing PR/tag runs. Reproduce with an immediate rejected run after session creation, then move error clearing from the deferred session effect into navigation/action handlers. Ship the corrected installer as 0.8.1 / v0.8.1-dev.1, preserving the old tag. Recheck renderer tests, types/lint/build, repeated recovery desktop behavior, all packaged workflows and exact-head Windows CI before marking PR #14 ready.

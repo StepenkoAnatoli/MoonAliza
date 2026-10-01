@@ -18,7 +18,7 @@ node scripts/check-handoff.mjs
 
 The current [stage plan](docs/superpowers/plans/2026-10-01-folder-free-chat.md) and [design](docs/superpowers/specs/2026-10-01-folder-free-chat-design.md) explain schema v2, conversation privacy and reviewed workspace branching. The [0.7 development release record](docs/releases/0.7.0-dev.1.md) identifies the new installer, validation and migration limits. Research and working history remain included.
 
-The [0.8 release record](docs/releases/0.8.0-dev.1.md) identifies the installer that adds public GitHub reading.
+The [0.8 release record](docs/releases/0.8.1-dev.1.md) identifies the installer that adds public GitHub reading.
 
 ## Reading order and authority
 
@@ -49,11 +49,11 @@ The user installed 0.7 and pasted a public repository URL. Its model misused loc
 
 ## Immediate continuation
 
-Inspect the current branch/PR checks and [0.8 development release record](docs/releases/0.8.0-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
+Inspect the current branch/PR checks and [0.8 development release record](docs/releases/0.8.1-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
 
 Next continue the full approved plan:
 
-Review the phase PR and current-head checks for [folder-free chat](docs/specification/folder-free-chat.md): general saved conversation before any project is chosen, followed by explicit attach/create/switch workspace behavior. Research jobs and review UI follow as a separate phase; do not let research become mandatory for ordinary chat or existing projects. The long-term work below remains open.
+Review [PR #14](https://github.com/StepenkoAnatoli/MoonAliza/pull/14) and its exact-head Windows checks for public GitHub reading. Folder-free chat is already merged in PR #13. Research jobs and review UI follow as a separate phase; do not let research become mandatory for ordinary chat or existing projects. The long-term work below remains open.
 
 1. Finish D3 genuine lab qualification and monitored machine probes. Preserve the original 20 tool cases, 10 coding fixtures repeated three times, 85% quality, zero unauthorized effects/writes after cancellation, load <=90 seconds, first token <=30 seconds, throughput >=4 tokens/sec and host reserve targets. Do not create production receipts from test fixtures.
 2. Supply production catalogue/trust inputs and connect verified activation, selection and the managed provider to main, engine, IPC and setup. Absence of these real inputs is not permission to fabricate them or activate an unqualified candidate. CPU lifecycle/storage checks do not establish inference quality or GPU attestation.

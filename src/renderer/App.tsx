@@ -85,7 +85,8 @@ export function App({ api = window.moonaliza }: { api?: AppApi }) {
     return () => { alive = false; };
   }, [projectId, call, ready]);
   useEffect(() => {
-    setTelemetry(undefined); setError('');
+    // Session loading can follow a fast admission failure; never erase its message.
+    setTelemetry(undefined);
     if (!sessionId) return;
     let alive = true;
     let revision = 0;
@@ -166,13 +167,13 @@ export function App({ api = window.moonaliza }: { api?: AppApi }) {
   }
   function selectProject(id: string) {
     if (id === projectId) return;
-    setScopeLoading(true); setText(''); setMessages([]); setRuns([]); setTelemetry(undefined); setProjectId(id);
+    setError(''); setScopeLoading(true); setText(''); setMessages([]); setRuns([]); setTelemetry(undefined); setProjectId(id);
   }
-  function selectSession(id: string) { setText(''); setMessages([]); setRuns([]); setTelemetry(undefined); setSessionId(id); }
+  function selectSession(id: string) { setError(''); setText(''); setMessages([]); setRuns([]); setTelemetry(undefined); setSessionId(id); }
   async function freshRequest() {
     if (!sessionId) return;
     const prompt = [...messages].reverse().find(message => message.role === 'user')?.content ?? '';
-    setBusy(true);
+    setBusy(true); setError('');
     try {
       const result = await call('session.branch', { sessionId, projectId: projectId || null, context: '' });
       setSessions(current => [result.session, ...current]); setSessionId(result.session.id); setMessages([]); setRuns([]); setTelemetry(undefined); setText(prompt);
@@ -200,7 +201,7 @@ export function App({ api = window.moonaliza }: { api?: AppApi }) {
       <nav aria-label="Projects">{projects.map(p => <button key={p.id} className={p.id === projectId ? 'nav-item selected' : 'nav-item'} disabled={busy || !!activeRun} onClick={() => selectProject(p.id)}><span className="folder-icon" aria-hidden="true">▱</span><span>{p.name}</span>{!p.trusted && <span className="muted">Untrusted</span>}</button>)}</nav>
       <div className="sidebar-label conversation-label">Conversations<button aria-label="New conversation" disabled={busy || scopeLoading || !!activeRun} onClick={() => { setText(''); setBusy(true); void newSession().catch(report).finally(() => setBusy(false)); }}>+</button></div>
       <nav className="session-list" aria-label="Conversations">{sessions.map(s => <button className={s.id === sessionId ? 'nav-item selected' : 'nav-item'} key={s.id} disabled={busy || scopeLoading || !!activeRun} onClick={() => selectSession(s.id)}>{s.title}</button>)}{sessions.length === 0 && <p className="quiet-note">Your conversations will be saved here.</p>}</nav>
-      <div className="sidebar-bottom"><button onClick={() => setLocalModelsDialog(true)}>Local models</button><button onClick={() => setProfileDialog(true)}>Model profiles <span aria-hidden="true">⚙</span></button><span className="development-label">Development build · 0.8</span></div>
+      <div className="sidebar-bottom"><button onClick={() => setLocalModelsDialog(true)}>Local models</button><button onClick={() => setProfileDialog(true)}>Model profiles <span aria-hidden="true">⚙</span></button><span className="development-label">Development build · 0.8.1</span></div>
     </aside>
     <main id="conversation" className="main-pane">
       <header className="toolbar"><div><h1>{project?.name ?? 'General chat'}</h1><span className="muted">{project ? project.policy.inference === 'local-only' || chatLocalOnly ? 'Local inference only' : 'Cloud inference allowed' : chatLocalOnly ? 'Local inference only · No folder access' : 'Cloud inference allowed · No folder access'}</span></div><div className="toolbar-actions">{sessionId && <button disabled={busy || !!activeRun} onClick={reviewBranch}>{project ? 'Switch workspace' : 'Attach workspace'}</button>}<button className="quiet-button" aria-pressed={details} onClick={() => setDetails(!details)}>Project details</button></div></header>
