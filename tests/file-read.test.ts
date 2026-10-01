@@ -181,3 +181,17 @@ test('denies stale trust and policy revisions even when the project remains trus
   store.putProject({ ...store.getProject('p1')!, trustRevision: 1, policy: { revision: 2, inference: 'local-only', research: 'off' } });
   await expect(reader.execute('r1', 'list_files', {})).rejects.toThrow('POLICY_CHANGED');
 });
+
+
+test.each(['.', './', '.\\'])('directory root alias %s lists and searches the attached folder', async path => {
+  await writeFile(join(root, 'README.md'), 'MoonAliza local checkout');
+  const listed = JSON.parse(await reader.execute('r1', 'list_files', { path }));
+  expect(listed.entries).toEqual([{ path: 'README.md', type: 'file' }]);
+  const searched = JSON.parse(await reader.execute('r1', 'search_text', { path, query: 'local checkout' }));
+  expect(searched.matches).toEqual([{ path: 'README.md', line: 1, text: 'MoonAliza local checkout' }]);
+});
+
+test.each(['../', './..', '.\\..', './.env', 'src/../.env'])('root aliases do not admit unsafe or unnormalized path %s', async path => {
+  await writeFile(join(root, '.env'), 'do not reveal');
+  await expect(reader.execute('r1', 'list_files', { path })).rejects.toThrow();
+});

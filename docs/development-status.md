@@ -2,6 +2,10 @@
 
 The full MoonAliza product remains the target. This is a working development checkpoint, not a completed agent or qualified release.
 
+## Public GitHub reading (0.8)
+
+The [public GitHub reader](specification/github-url-reading.md) reads repositories explicitly supplied by the user through a strict main-process broker. It works in General chat without a workspace or token, records exact commit/source URLs and distinguishes GitHub errors. General chat still has no local tools. Local directory-root aliases and misleading blanket permission errors are also corrected. Live unauthenticated verification listed the actual MoonAliza repository and read its README at `146ba4e52a48baf7e843c6d197ce42c8ebb1c9c7`. Local typecheck and lint pass. The complete final suite passed 511 tests across 37 files in 279.10 seconds. The new Electron GitHub conversation/restart journey also passed. Full desktop/package validation and exact-head CI are recorded on this phase PR/release. Private GitHub authentication, general website browsing and cloning remain later capabilities.
+
 ## Folder-free chat milestone (0.7 development)
 
 Implemented on `feat/folder-free-chat` from merged PR #12 (`f98cee3`). [Behavior](specification/folder-free-chat.md), [design](superpowers/specs/2026-10-01-folder-free-chat-design.md) and [implementation plan](superpowers/plans/2026-10-01-folder-free-chat.md) are included. General chats persist without a project and share the existing inference engine. Explicit conversation privacy intersects with project policy. Workspace attachment/switching branches with only reviewed text; scope identity is immutable. Native project creation is followed by trust. No research provider or project tool is available in general chat.

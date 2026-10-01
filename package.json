@@ -1,7 +1,7 @@
 {
   "name": "moonaliza",
   "productName": "MoonAliza",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A durable Windows coding-agent workbench with interchangeable API and local models",
   "private": true,
   "type": "module",

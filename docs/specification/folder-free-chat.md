@@ -26,3 +26,6 @@ Schema v2 migrates existing histories transactionally. The [design](../superpowe
 ## Acceptance evidence for that phase
 
 Test first launch without a folder, saved/reopened chat, local and cloud policy enforcement, attaching and creating a workspace, project switching, absence of project tools before attachment, migration of existing saved conversations, and a real desktop journey from an idea to a reviewed file change. Clearly distinguish plain conversation from web research and tool capabilities that have not yet shipped.
+
+
+Version 0.8 extends this phase with [public GitHub URL reading](github-url-reading.md). General chats still expose no local file or command tools, but may use the main-owned public reader for repositories explicitly supplied by the user. Earlier no-web-tool statements describe the 0.7 baseline.

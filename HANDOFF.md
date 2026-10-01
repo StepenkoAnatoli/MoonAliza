@@ -8,15 +8,17 @@ Build the full Windows desktop coding-agent workbench named **MoonAliza**, follo
 
 New user requirement (September 30): [folder-free chat](docs/specification/folder-free-chat.md). Users must be able to discuss and plan without choosing a project, then attach or create a workspace when needed. Implemented in the 0.7 development phase on `feat/folder-free-chat`; see the specification for explicit privacy and workspace-branch behavior. Research jobs/review UI remain separate.
 
-The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2-12 are merged into `main`; [PR #12](https://github.com/StepenkoAnatoli/MoonAliza/pull/12) merged at `f98cee3` on October 1. Both Windows checks passed on its source head `0475775`. Current folder-free chat development is on `feat/folder-free-chat`, based on that merge. The user merges each completed phase PR.
+The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2-13 are merged into `main`; [PR #12](https://github.com/StepenkoAnatoli/MoonAliza/pull/12) merged at `f98cee3` on October 1. Both Windows checks passed on its source head `0475775`. PR #13 merged at `146ba4e`. Public GitHub reading is on `feat/public-github-reading`, based on that merge. The user merges each completed phase PR.
 
 ```powershell
-git -c core.longpaths=true clone --branch feat/folder-free-chat https://github.com/StepenkoAnatoli/MoonAliza.git
+git -c core.longpaths=true clone --branch feat/public-github-reading https://github.com/StepenkoAnatoli/MoonAliza.git
 cd MoonAliza
 node scripts/check-handoff.mjs
 ```
 
 The current [stage plan](docs/superpowers/plans/2026-10-01-folder-free-chat.md) and [design](docs/superpowers/specs/2026-10-01-folder-free-chat-design.md) explain schema v2, conversation privacy and reviewed workspace branching. The [0.7 development release record](docs/releases/0.7.0-dev.1.md) identifies the new installer, validation and migration limits. Research and working history remain included.
+
+The [0.8 release record](docs/releases/0.8.0-dev.1.md) identifies the installer that adds public GitHub reading.
 
 ## Reading order and authority
 
@@ -37,13 +39,17 @@ Current user instructions and current source evidence govern ongoing work. The a
 | Providers/agent | Folder-free saved chats, revisioned conversation privacy, reviewed workspace branching; streamed Ollama and OpenAI-compatible tool loops with validated terminal usage, project privacy policy, step/time limits, bounded retrievable tool results, context/usage reports and recovery | Safe live text display, remaining provider families, provider-specific exact accounting, continuation state, skills/teams/missions |
 | Managed local models | Native hardware facts, signed catalogue validation, verified artifact/model storage, activation, owned Ollama connection/runtime, scheduler and receipt/resource selection | Genuine lab and monitored machine qualification, production trust inputs, main/engine/setup integration, GPU attestation, removal/relocation |
 | Research | Pinned external offline validator, strict consumer contracts, real producer fixtures, guarded process execution and digest/revision-bound artifact reads | Main/engine job integration, durable jobs, evidence/review workflows, UI, Build admission and release provisioning |
-| Delivery | Development 0.7 packaging, prerelease delivery and prior installed 0.5 evidence | Signed production release, update/migration/diagnostic work and wider hardware qualification |
+| Delivery | Development 0.8 packaging, prerelease delivery and prior installed 0.5 evidence | Signed production release, update/migration/diagnostic work and wider hardware qualification |
 
-The original PC has version **0.5.0** installed. Current source includes later backend work that is not yet connected to that installed app. The earlier installed Hugging Face profile and its encrypted Windows vault are not portable credentials. The real local-model check established download/storage/inventory/Stop behavior, **not inference speed or coding quality**. Free host RAM on that PC was about 1.15 GiB during the last model check, below the required 2 GiB reserve; this does not block code development. Unknown GPU memory must stay unknown.
+The user reports installing version **0.7.0** on the original PC. Current source includes later backend work that is not yet connected to that installed app. The earlier installed Hugging Face profile and its encrypted Windows vault are not portable credentials. The real local-model check established download/storage/inventory/Stop behavior, **not inference speed or coding quality**. Free host RAM on that PC was about 1.15 GiB during the last model check, below the required 2 GiB reserve; this does not block code development. Unknown GPU memory must stay unknown.
+
+## Public GitHub reading (0.8)
+
+The user installed 0.7 and pasted a public repository URL. Its model misused local file search and described the resulting errors as GitHub access restrictions. The user explicitly requested URL reading and a PR. On `feat/public-github-reading`, version 0.8 implements [public GitHub reading](docs/specification/github-url-reading.md) in General and project chat, plus local directory-root/error corrections. The [stage plan](docs/superpowers/plans/2026-10-01-github-url-reading.md) captures scope and evidence. Paste a public repository URL, then ask to list/read its files; no token is needed. A secure private-repository connection and general website browsing remain unimplemented. Do not paste tokens into chat or Model profiles. PR #13 is merged at `146ba4e`; inspect this phase PR's exact-head checks before continuing.
 
 ## Immediate continuation
 
-Inspect the current branch/PR checks and [0.7 development release record](docs/releases/0.7.0-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
+Inspect the current branch/PR checks and [0.8 development release record](docs/releases/0.8.0-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
 
 Next continue the full approved plan:
 

@@ -198,3 +198,26 @@ test.each(['exited', 'unknown'] as const)('reviewed command records %s outcome b
   expect(store.getRun(run.id)?.status).toBe(status === 'unknown' ? 'failed' : 'completed');
   expect(store.listMessages(session.id).find(message => message.role === 'tool')?.content).toContain('CHECK FAILED');
 });
+
+
+test.each([
+  ['https://github.com/example/project', 'NOT_IMPLEMENTED'],
+  ['github.com/example/project', 'NOT_FOUND'],
+  ['absent-directory', 'NOT_FOUND'],
+  ['../outside', 'PATH_OUTSIDE_PROJECT'],
+  ['.env', 'FORBIDDEN'],
+])('local search reports the actual failure for %s to model and UI', async (path, expectedCode) => {
+  const { store } = fixture(); let step = 0;
+  const app = new Application(store, { publish() {}, async infer() {
+    if (++step === 1) return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'search-failure', name: 'search_text', input: { path, query: 'test' } }] };
+    return { content: 'Observed the tool result.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const { run } = await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'plan', prompt: 'Inspect this repository.' }, 'start')) as { run: { id: string } };
+  await app.whenIdle();
+  expect(store.getRun(run.id)?.status).toBe('completed');
+  const result = JSON.parse(store.listMessages(session.id).find(m => m.role === 'tool')!.content);
+  expect(result.error).toBe(expectedCode);
+  expect(store.latestRunEvent(session.id, 'tool.failed')).toMatchObject({ error: { code: expectedCode, message: result.message } });
+  expect(result.message).not.toContain(store.getProject('p1')!.rootPath);
+});

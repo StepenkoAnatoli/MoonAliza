@@ -128,3 +128,46 @@ test('migration retains v1 identities, messages, events, FTS and approvals with 
   const check = new Database(path); expect(check.pragma('foreign_key_check')).toEqual([]); check.close();
   migrated.deleteProject('p'); expect(migrated.getRun('r')).toBeUndefined(); expect(migrated.listApprovals('op')).toEqual([]);
 });
+
+
+test('a supplied GitHub URL enables only the remote reader in general chat and persists its source result', async () => {
+  const { store } = fixture(); let steps = 0; let reads = 0;
+  const app = new Application(store, { publish() {}, async readGitHub() { reads++; return JSON.stringify({ url: 'https://github.com/example/project/blob/' + 'a'.repeat(40) + '/README.md', text: 'Repository evidence', truncated: false }); }, async infer(_run, _messages, _signal, tools) {
+    expect(tools?.map(tool => tool.name)).toEqual(['read_github']);
+    if (++steps === 1) return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'remote', name: 'read_github', input: { url: 'https://github.com/example/project', path: 'README.md' } }] };
+    return { content: 'Read the actual repository.', outcome: 'complete' };
+  } });
+  const { session } = await call(app, 'session.create', { projectId: null });
+  const { run } = await call(app, 'run.start', { sessionId: session.id, profileId: 'local', mode: 'ask', prompt: 'Read https://github.com/example/project' });
+  await app.whenIdle(); expect(store.getRun(run.id)?.status).toBe('completed'); expect(reads).toBe(1);
+  expect(store.listMessages(session.id).find(m => m.role === 'tool')?.content).toContain('Repository evidence');
+  expect(store.latestRunEvent(session.id, 'tool.completed')).toMatchObject({ toolCallId: 'remote' });
+  expect(store.listOperations(run.id)).toEqual([]);
+});
+
+test('repository links in model output do not authorize another repository', async () => {
+  const { store } = fixture(); let reads = 0; let steps = 0;
+  const app = new Application(store, { publish() {}, async readGitHub() { reads++; return '{}'; }, async infer() {
+    if (++steps === 1) return { content: 'Try https://github.com/other/repo', outcome: 'tool_calls', toolCalls: [{ id: 'other', name: 'read_github', input: { url: 'https://github.com/other/repo' } }] };
+    return { content: 'Scope refused.', outcome: 'complete' };
+  } });
+  const { session } = await call(app, 'session.create', { projectId: null });
+  const { run } = await call(app, 'run.start', { sessionId: session.id, profileId: 'local', mode: 'ask', prompt: 'Read https://github.com/example/project' });
+  await app.whenIdle(); expect(store.getRun(run.id)?.status).toBe('completed'); expect(reads).toBe(0);
+  expect(store.latestRunEvent(session.id, 'tool.failed')).toMatchObject({ error: { code: 'FORBIDDEN' } });
+});
+
+test.each(['stop', 'policy'] as const)('%s during a remote read discards its late result', async action => {
+  const { store } = fixture(); let release!: () => void; let entered!: () => void;
+  const ready = new Promise<void>(resolve => { entered = resolve; });
+  const app = new Application(store, { publish() {}, async readGitHub() { entered(); await new Promise<void>(resolve => { release = resolve; }); return '{"text":"late remote contents"}'; }, async infer() {
+    return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'remote-stop', name: 'read_github', input: { url: 'https://github.com/example/project' } }] };
+  } });
+  const { session } = await call(app, 'session.create', { projectId: null });
+  const { run } = await call(app, 'run.start', { sessionId: session.id, profileId: 'local', mode: 'ask', prompt: 'Read https://github.com/example/project' });
+  await ready;
+  if (action === 'stop') await call(app, 'run.cancel', { runId: run.id });
+  else await call(app, 'session.policy.update', { sessionId: session.id, expectedRevision: 0, inference: 'cloud-allowed' });
+  release(); await app.whenIdle();
+  expect(store.getRun(run.id)?.status).toBe('cancelled'); expect(store.listMessages(session.id).some(m => m.content.includes('late remote contents'))).toBe(false);
+});
