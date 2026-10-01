@@ -1,3 +1,5 @@
+import { GitHubReader } from './github';
+import { type GitHubInput } from '../shared/github';
 import { app, BrowserWindow, ipcMain, dialog, safeStorage, session, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
@@ -25,7 +27,7 @@ if (!ownsInstance) app.quit();
 let window: BrowserWindow | undefined;
 let engine: Engine | undefined;
 let quitting = false;
-const active = new Map<string, { run: Run; stop: AbortController }>();
+const active = new Map<string, { run: Run; stop: AbortController; github: GitHubReader }>();
 const executingCommands = new Set<Promise<unknown>>();
 
 if (ownsInstance) void app.whenReady().then(async () => {
@@ -38,7 +40,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
   const localSession = session.fromPartition('moonaliza-local');
   await localSession.setProxy({ mode: 'direct' });
   const providerSession = session.fromPartition('moonaliza-providers');
-  const contextSchema = z.object({ run: RunSchema, session: SessionSchema, project: ProjectSchema.nullable(), profile: StoredProfileSchema }).strict();
+  const contextSchema = z.object({ run: RunSchema, session: SessionSchema, project: ProjectSchema.nullable(), profile: StoredProfileSchema, repositories: z.array(z.string().max(200)).max(20) }).strict();
   const commandContextSchema = z.object({ run: RunSchema.extend({ projectId: z.string().min(1) }), project: ProjectSchema.extend({ rootPath: z.string() }), operation: OperationSchema.omit({ createdAt: true, finishedAt: true }).extend({ input: z.unknown() }).optional(), approval: ApprovalSchema.optional() }).strict();
   const commands = new CommandBroker({
     environment: process.env, protectedRoots: [data],
@@ -64,7 +66,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
     const context = contextSchema.parse(await engine.control({ method: 'run.context', runId }));
     if (context.run.status !== 'running' || context.run.profileRevisionId !== capability.run.profileRevisionId || context.run.projectId !== capability.run.projectId) throw new Error('RUN_CANCELLED');
     assertConversationPolicy(context.session, context.project, context.profile.locality, capability.stop.signal, context.run);
-    if (context.run.projectId === null && tools?.length) throw new Error('PROJECT_REQUIRED');
+    if (context.run.projectId === null && tools?.some(tool => tool.name !== 'read_github' || !context.repositories.length)) throw new Error('PROJECT_REQUIRED');
     const inferred = validateEndpoint(context.profile.kind, context.profile.endpoint);
     if (inferred.locality !== context.profile.locality) throw new Error('INVALID_ENDPOINT');
     const fetcher = (url: string, init: RequestInit) => (context.profile.locality === 'local' ? localSession : providerSession).fetch(url, init);
@@ -82,12 +84,28 @@ if (ownsInstance) void app.whenReady().then(async () => {
     return { ...output, content: await vault.redact(output.content) };
   }
 
+  async function readGitHub(runId: string, input: GitHubInput, epoch: string) {
+    const capability = active.get(runId); const currentEngine = engine;
+    if (!capability || !currentEngine || currentEngine.epoch !== epoch) throw new Error('RUN_CANCELLED');
+    const validate = async () => {
+      const context = contextSchema.parse(await currentEngine.control({ method: 'run.context', runId }));
+      if (engine !== currentEngine || currentEngine.epoch !== epoch || active.get(runId) !== capability || capability.stop.signal.aborted || context.run.status !== 'running' || context.run.projectId !== capability.run.projectId || context.run.profileRevisionId !== capability.run.profileRevisionId) throw new Error('RUN_CANCELLED');
+      assertConversationPolicy(context.session, context.project, context.profile.locality, capability.stop.signal, context.run);
+      return context;
+    };
+    const context = await validate();
+    const result = await capability.github.read(input, context.repositories, capability.stop.signal);
+    await validate();
+    return vault.redact(result);
+  }
+
   engine = new Engine(join(__dirname, 'engine.cjs'), join(data, 'state.sqlite'), {
     event(event) {
       if (['run.completed', 'run.failed', 'run.cancelled'].includes(event.type)) { active.get(event.runId)?.stop.abort(); active.delete(event.runId); vault.revokeContext(event.runId); }
       if (window && !window.isDestroyed()) window.webContents.send('moonaliza:event', event);
     },
     inference: infer,
+    readGitHub,
     async prepareCommand(runId, input, epoch) { return commands.prepare(runId, input, commandSignal(runId, epoch)); },
     async executeCommand(runId, operationId, epoch) {
       const task = commands.execute(runId, operationId, commandSignal(runId, epoch));
@@ -118,7 +136,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
       const result = await engine.request(request);
       if (request.method === 'run.start') {
         const { run } = z.object({ run: RunSchema }).parse(result);
-        if (!active.has(run.id) && ['queued', 'running'].includes(run.status)) active.set(run.id, { run, stop: new AbortController() });
+        if (!active.has(run.id) && ['queued', 'running'].includes(run.status)) active.set(run.id, { run, stop: new AbortController(), github: new GitHubReader() });
       }
       return result;
     }

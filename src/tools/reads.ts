@@ -18,9 +18,9 @@ const searchInput = z.object({ query: z.string().min(1).max(200).refine(value =>
 type ToolName = 'read_file' | 'list_files' | 'search_text';
 
 export const READ_TOOL_SPECS: ToolSpec[] = [
-  { name: 'read_file', description: 'Read up to 200 lines from a permitted UTF-8 project file. Results include line numbers and whether content was omitted.', parameters: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', minLength: 1, maxLength: 2048 }, startLine: { type: 'integer', minimum: 1 }, lineCount: { type: 'integer', minimum: 1, maximum: 200 } }, required: ['path'] } },
-  { name: 'list_files', description: 'List permitted project text files and directories to a bounded depth. Sensitive files and filesystem links are excluded.', parameters: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', maxLength: 2048 }, depth: { type: 'integer', minimum: 1, maximum: 5 } }, required: [] } },
-  { name: 'search_text', description: 'Find literal text in permitted UTF-8 project files. Search is case-sensitive, bounded, and does not execute regular expressions.', parameters: { type: 'object', additionalProperties: false, properties: { query: { type: 'string', minLength: 1, maxLength: 200 }, path: { type: 'string', maxLength: 2048 } }, required: ['query'] } },
+  { name: 'read_file', description: 'Read up to 200 lines from a permitted UTF-8 file in the attached local folder. Paths are relative to that folder, never web URLs. Results include line numbers and whether content was omitted.', parameters: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', minLength: 1, maxLength: 2048 }, startLine: { type: 'integer', minimum: 1 }, lineCount: { type: 'integer', minimum: 1, maximum: 200 } }, required: ['path'] } },
+  { name: 'list_files', description: 'List permitted text files and directories in the attached local folder. Omit path or use . for its root. This does not open GitHub URLs or remote repositories. Sensitive files and filesystem links are excluded.', parameters: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', maxLength: 2048 }, depth: { type: 'integer', minimum: 1, maximum: 5 } }, required: [] } },
+  { name: 'search_text', description: 'Find literal text in permitted UTF-8 files in the attached local folder. Omit path or use . for its root; paths are local, not GitHub or web addresses. Search is case-sensitive, bounded, and does not execute regular expressions.', parameters: { type: 'object', additionalProperties: false, properties: { query: { type: 'string', minLength: 1, maxLength: 200 }, path: { type: 'string', maxLength: 2048 } }, required: ['query'] } },
 ];
 
 interface CheckedPath { absolute: string; relative: string; stats: BigIntStats }
@@ -212,7 +212,9 @@ export class FileReader {
     this.authorize(runId, signal);
     const parsed = name === 'read_file' ? readInput.safeParse(input) : name === 'list_files' ? listInput.safeParse(input) : name === 'search_text' ? searchInput.safeParse(input) : undefined;
     if (!parsed?.success) throw new Error('INVALID_TOOL_INPUT');
-    const requestedPath = normalize(parsed.data.path);
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(parsed.data.path)) throw new Error('REMOTE_URL_UNSUPPORTED');
+    const directoryRoot = name !== 'read_file' && ['.', './', '.\\'].includes(parsed.data.path);
+    const requestedPath = directoryRoot ? '' : normalize(parsed.data.path);
     let ctx: Context;
     try { ctx = await this.context(runId, signal); }
     catch (error) { if ((error as NodeJS.ErrnoException).code) throw new Error('PROJECT_UNAVAILABLE', { cause: error }); throw error; }
@@ -278,7 +280,10 @@ export class FileReader {
       return output;
     } catch (error) {
       this.assertContext(ctx);
-      if ((error as NodeJS.ErrnoException).code) throw new Error('FILE_UNAVAILABLE', { cause: error });
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') throw new Error('NOT_FOUND', { cause: error });
+      if (code === 'EACCES' || code === 'EPERM') throw new Error('FORBIDDEN', { cause: error });
+      if (code) throw new Error('FILE_UNAVAILABLE', { cause: error });
       throw error;
     }
   }

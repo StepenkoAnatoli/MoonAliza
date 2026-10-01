@@ -1,3 +1,4 @@
+import { GitHubInputSchema, GitHubErrorCodeSchema } from '../shared/github';
 import { z } from 'zod';
 import { RequestSchema, ProfileSchema, EventSchema, IdSchema, ToolCallSchema, ToolSpecSchema } from '../shared';
 import { CommandInputSchema, CommandPlanSchema, CommandResultSchema } from '../shared/commands';
@@ -55,6 +56,8 @@ export const CompletionSchema = z.object({ content: z.string().max(2_000_000), o
   .refine(result => result.outcome === 'tool_calls' ? result.toolCalls !== undefined : result.toolCalls === undefined, 'Only complete tool-call outcomes may contain executable calls');
 const identity = { epoch: id, id };
 export const ToEngineSchema = z.discriminatedUnion('type', [
+  z.object({ ...identity, type: z.literal('github.result'), result: z.string().max(262144) }).strict(),
+  z.object({ ...identity, type: z.literal('github.error'), code: GitHubErrorCodeSchema }).strict(),
   z.object({ ...identity, type: z.literal('request'), request: RequestSchema }).strict(),
   z.object({ ...identity, type: z.literal('control'), control: ControlSchema }).strict(),
   z.object({ ...identity, type: z.literal('inference.result'), result: CompletionSchema }).strict(),
@@ -64,6 +67,7 @@ export const ToEngineSchema = z.discriminatedUnion('type', [
   z.object({ ...identity, type: z.literal('command.error'), code: z.enum(['RUN_CANCELLED', 'COMMAND_UNAVAILABLE', 'COMMAND_CHANGED', 'APPROVAL_STALE', 'COMMAND_UNKNOWN', 'GIT_UNAVAILABLE', 'GIT_UNSAFE_REPOSITORY', 'GIT_INSPECTION_LIMIT']) }).strict(),
 ]);
 export const FromEngineSchema = z.discriminatedUnion('type', [
+  z.object({ ...identity, type: z.literal('github.read'), runId: id, input: GitHubInputSchema }).strict(),
   z.object({ epoch: id, type: z.literal('ready') }).strict(),
   z.object({ ...identity, type: z.literal('reply'), result: z.unknown() }).strict(),
   z.object({ ...identity, type: z.literal('failure'), code: z.string().max(128) }).strict(),

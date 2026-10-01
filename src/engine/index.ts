@@ -1,3 +1,4 @@
+import { githubRepositories } from '../shared/github';
 import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 import { Store } from './store';
@@ -26,7 +27,16 @@ function command<T extends CommandPlan | OwnedResult>(runId: string, payload: ob
     port.postMessage({ ...payload, epoch, id, runId });
   });
 }
+const github = new Map<string, { resolve: (value: string) => void; reject: (error: Error) => void; cleanup: () => void }>();
 const app = new Application(store, {
+  readGitHub: (runId, input, signal) => new Promise((resolve, reject) => {
+    const id = randomUUID();
+    const cancel = () => { github.delete(id); port.postMessage({ type: 'inference.cancel', epoch, runId }); reject(new Error('RUN_CANCELLED')); };
+    if (signal.aborted) { reject(new Error('RUN_CANCELLED')); return; }
+    signal.addEventListener('abort', cancel, { once: true });
+    github.set(id, { resolve, reject, cleanup: () => signal.removeEventListener('abort', cancel) });
+    port.postMessage({ type: 'github.read', epoch, id, runId, input });
+  }),
   inspectGit: (runId, name, input, signal) => command<OwnedResult>(runId, { type: 'git.inspect', name, input }, signal),
   prepareCommand: (runId, input, signal) => command<CommandPlan>(runId, { type: 'command.prepare', input: CommandInputSchema.parse(input) }, signal),
   executeCommand: (runId, operationId, signal) => command<OwnedResult>(runId, { type: 'command.execute', operationId }, signal),
@@ -56,7 +66,7 @@ async function control(command: Control): Promise<unknown> {
     case 'profile.revision': return store.getProfileRevision(command.revisionId) ?? null;
     case 'run.context': {
       const run = store.getRun(command.runId); if (!run) throw new Error('RUN_NOT_FOUND');
-      return { run, session: store.getSession(run.sessionId), project: run.projectId === null ? null : app.publicProject(run.projectId), profile: store.getProfileRevision(run.profileRevisionId) };
+      return { run, repositories: githubRepositories(store.listMessages(run.sessionId, { latest: true }).filter(message => message.role === 'user').map(message => message.content)), session: store.getSession(run.sessionId), project: run.projectId === null ? null : app.publicProject(run.projectId), profile: store.getProfileRevision(run.profileRevisionId) };
     }
     case 'command.context': {
       const run = store.getRun(command.runId); if (!run) throw new Error('RUN_NOT_FOUND');
@@ -79,6 +89,11 @@ port.on('message', async event => {
   const parsed = ToEngineSchema.safeParse(event.data);
   if (!parsed.success || parsed.data.epoch !== epoch) return;
   const message = parsed.data;
+  if (message.type === 'github.result' || message.type === 'github.error') {
+    const waiter = github.get(message.id); if (!waiter) return; github.delete(message.id); waiter.cleanup();
+    if (message.type === 'github.result') waiter.resolve(message.result); else waiter.reject(new Error(message.code));
+    return;
+  }
   if (message.type === 'command.prepared' || message.type === 'command.result' || message.type === 'command.error') {
     const waiter = commands.get(message.id); if (!waiter) return;
     commands.delete(message.id); waiter.cleanup();

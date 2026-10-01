@@ -1,3 +1,4 @@
+import { GitHubErrorCodeSchema, type GitHubInput } from '../shared/github';
 import { randomUUID } from 'node:crypto';
 import { utilityProcess, type UtilityProcess } from 'electron';
 import { FromEngineSchema, ToEngineSchema, type Control } from '../engine/control';
@@ -7,6 +8,7 @@ import type { CommandInput, CommandPlan } from '../shared/commands';
 import type { OwnedResult } from '../tools/commands';
 
 interface EngineHooks {
+  readGitHub(runId: string, input: GitHubInput, epoch: string): Promise<string>;
   event(event: RunEvent): void;
   inference(runId: string, messages: InferenceMessage[], epoch: string, tools?: ToolSpec[]): Promise<Completion>;
   cancel(runId: string): void;
@@ -42,6 +44,14 @@ export class Engine {
           clearTimeout(pending.timer); this.pending.delete(message.id);
           if (message.type === 'reply') pending.resolve(message.result); else pending.reject(new Error(message.code));
         } else if (message.type === 'event') this.hooks.event(message.event);
+        else if (message.type === 'github.read') {
+          void this.hooks.readGitHub(message.runId, message.input, epoch).then(result => {
+            if (this.epoch === epoch) child.postMessage(ToEngineSchema.parse({ type: 'github.result', epoch, id: message.id, result }));
+          }).catch(error => {
+            const parsed = GitHubErrorCodeSchema.safeParse(error instanceof Error ? error.message : '');
+            if (this.epoch === epoch) child.postMessage({ type: 'github.error', epoch, id: message.id, code: parsed.success ? parsed.data : 'GITHUB_UNAVAILABLE' });
+          });
+        }
         else if (message.type === 'inference.cancel') this.hooks.cancel(message.runId);
         else if (message.type === 'command.prepare' || message.type === 'command.execute' || message.type === 'git.inspect') {
           const task = message.type === 'command.prepare' ? this.hooks.prepareCommand(message.runId, message.input, epoch) : message.type === 'git.inspect' ? this.hooks.inspectGit(message.runId, message.name, message.input, epoch) : this.hooks.executeCommand(message.runId, message.operationId, epoch);
