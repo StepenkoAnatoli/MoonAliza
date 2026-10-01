@@ -1,0 +1,538 @@
+{
+  "validatorRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+  "legacyRevision": "1a0337b9cb1be34127f655671d72f752fe47210c",
+  "runtime": "v24.20.0",
+  "platform": "win32",
+  "identity": {
+    "clientRef": "moonaliza-fixture",
+    "repository": "moonaliza-fixtures/synthetic",
+    "ref": "fixture",
+    "commit": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+    "workflow": "fixture-generation",
+    "workflowRunId": 1,
+    "runAttempt": 1
+  },
+  "fixtures": [
+    {
+      "name": "approved",
+      "producerRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+      "recipe": "Upstream approvedProject: rewrite synthetic Finding; render real brief and answer TODOs; append agent reviewer declaration; real producer derives approval.",
+      "commands": [
+        [
+          "node",
+          "<producer>/bin/artifact.mjs",
+          "create",
+          "--root",
+          "<synthetic-input>",
+          "--output",
+          "approved.zip",
+          "--client-ref",
+          "moonaliza-fixture",
+          "--repository",
+          "moonaliza-fixtures/synthetic",
+          "--ref",
+          "fixture",
+          "--commit",
+          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "--workflow",
+          "fixture-generation",
+          "--run-id",
+          "1",
+          "--run-attempt",
+          "1"
+        ]
+      ],
+      "byteLength": 18274,
+      "sha256": "2648f7f8ea02c86ce6dced90017a0371fd55f182b3fc954c17e81d05b23866c6",
+      "expected": {
+        "exitCode": 0,
+        "report": {
+          "buildAuthorized": true,
+          "clientRef": "moonaliza-fixture",
+          "errors": [],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "PASS",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "collected",
+      "producerRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+      "recipe": "Upstream collectedProject, untouched synthetic collector-style Finding and unreviewed brief.",
+      "commands": [
+        [
+          "node",
+          "<producer>/bin/artifact.mjs",
+          "create",
+          "--root",
+          "<synthetic-input>",
+          "--output",
+          "collected.zip",
+          "--client-ref",
+          "moonaliza-fixture",
+          "--repository",
+          "moonaliza-fixtures/synthetic",
+          "--ref",
+          "fixture",
+          "--commit",
+          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "--workflow",
+          "fixture-generation",
+          "--run-id",
+          "1",
+          "--run-attempt",
+          "1"
+        ]
+      ],
+      "byteLength": 18127,
+      "sha256": "43c093f09c8bbc89907a3a6ff14f557ecf03b4fe55c6b27733df58d177d55152",
+      "expected": {
+        "exitCode": 0,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [],
+          "packageId": "RK-32DD984BF57D96FCD9A809679F",
+          "reviewedBy": "undeclared",
+          "state": "REVIEW_IN_PROGRESS",
+          "status": "PASS",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "failed",
+      "producerRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+      "recipe": "Empty synthetic input directory; producer derives collection failure.",
+      "commands": [
+        [
+          "node",
+          "<producer>/bin/artifact.mjs",
+          "create",
+          "--root",
+          "<synthetic-input>",
+          "--output",
+          "failed.zip",
+          "--client-ref",
+          "moonaliza-fixture",
+          "--repository",
+          "moonaliza-fixtures/synthetic",
+          "--ref",
+          "fixture",
+          "--commit",
+          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "--workflow",
+          "fixture-generation",
+          "--run-id",
+          "1",
+          "--run-attempt",
+          "1"
+        ]
+      ],
+      "byteLength": 5479,
+      "sha256": "d130c62ea596f11dbe420a87ee07bf424bc2e58d8cf40ba375b6c7e7fece85d7",
+      "expected": {
+        "exitCode": 0,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [],
+          "packageId": "RK-38D31E7675AA0B1EB1FD8B8E08",
+          "reviewedBy": "undeclared",
+          "state": "COLLECTION_FAILED",
+          "status": "PASS",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "legacy-review",
+      "producerRevision": "1a0337b9cb1be34127f655671d72f752fe47210c",
+      "recipe": "Legacy collectedProject with MAP COVERED changed to UNREVIEWED before actual legacy producer derives state.",
+      "commands": [
+        [
+          "node",
+          "<producer>/bin/artifact.mjs",
+          "create",
+          "--root",
+          "<synthetic-input>",
+          "--output",
+          "legacy-review.zip",
+          "--client-ref",
+          "moonaliza-fixture",
+          "--repository",
+          "moonaliza-fixtures/synthetic",
+          "--ref",
+          "fixture",
+          "--commit",
+          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "--workflow",
+          "fixture-generation",
+          "--run-id",
+          "1",
+          "--run-attempt",
+          "1"
+        ]
+      ],
+      "byteLength": 18449,
+      "sha256": "f7f87805002827bc17a96cabe708b6f3c7986bf617fd30554ff6a68172c48263",
+      "expected": {
+        "exitCode": 0,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [],
+          "packageId": "RK-C4E61C43FBE8601D22F893409C",
+          "reviewedBy": "undeclared",
+          "state": "REVIEW_REQUIRED",
+          "status": "PASS",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "unsupported",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: unsupported; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42215,
+      "sha256": "510002ab20e4892983883003c4320a6fe37925fe12cc019419597df6e60f655c",
+      "expected": {
+        "exitCode": 2,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "FORMAT-UNSUPPORTED",
+              "message": "this package declares format version 99.0.0; this validator reads majors 1 to 2",
+              "path": "manifest.json",
+              "remedy": "upgrade Research-Kit to a version that reads format 99.x"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "INCOMPLETE",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "mixed-era",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: mixed-era; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42214,
+      "sha256": "fe8d2f931d4ed1a1e006a0d6d482c7ea6d30a34f5cfcc98a1d59dca9f3bc3ad7",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "MANIFEST-SCHEMA",
+              "message": "review.by \"human\" was retired in format 2.0.0: the review is the agent's, and a 2.x package declares \"agent\" or \"undeclared\"",
+              "path": "manifest.json",
+              "remedy": "regenerate the artifact"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "human",
+          "state": "APPROVED_BRIEF",
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "contradictory",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: contradictory; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42215,
+      "sha256": "a5232ad12be5c7cd052df050257990d3531cbad2efb6bd807c044279b8edd94e",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "MANIFEST-SCHEMA",
+              "message": "$.gate.buildAuthorized: must equal true",
+              "path": "manifest.json",
+              "remedy": "regenerate the artifact"
+            },
+            {
+              "code": "AUTHORIZATION-INCONSISTENT",
+              "message": "gate.buildAuthorized is not true",
+              "path": "manifest.json",
+              "remedy": "do not build from this package; its authorization fields contradict its review and gate state"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "tampered",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: tampered; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 39831,
+      "sha256": "0f36be9e103163fdcf913191d6e6cfa830024ca4abe4028bc1b99e344ae1cb4b",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "FILE-SIZE-MISMATCH",
+              "message": "project/research/raw/2026-09-30-limits-example-a4e22bcd.md is 21 bytes; the manifest declares 2405",
+              "path": "project/research/raw/2026-09-30-limits-example-a4e22bcd.md",
+              "remedy": "download the artifact again or regenerate it from the original corpus"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "missing-capture",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: missing-capture; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 39618,
+      "sha256": "ab36b2a86b3e05aa34811f3799bcf95ae2ac4b9bb315f1d048b7fddb9fa987c0",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "FILE-MISSING",
+              "message": "project/research/raw/2026-09-30-limits-example-a4e22bcd.md is declared in the manifest but is not in the package",
+              "path": "project/research/raw/2026-09-30-limits-example-a4e22bcd.md",
+              "remedy": "the package is incomplete; regenerate it from the original corpus"
+            },
+            {
+              "code": "CAPTURE-MISSING",
+              "message": "E-01 names research/raw/2026-09-30-limits-example-a4e22bcd.md, which is not on disk",
+              "path": "project/research/",
+              "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
+            },
+            {
+              "code": "LEDGER-INVALID",
+              "message": "raw-missing: capture named by seq 1 is not on disk",
+              "path": "project/research/",
+              "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "broken-chain",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: broken-chain; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42214,
+      "sha256": "d3c0af08b414daa2a921e5c960d36866047440716db1f2116d64f0bc559006e9",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "LEDGER-INVALID",
+              "message": "entry-hash: entrySha256 does not recompute for seq 1",
+              "path": "project/research/",
+              "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "broken-citation",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: broken-citation; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42196,
+      "sha256": "1ecb15ae3fecac30e1a60fcac03fbce35ef60e70c5fa5b3de7274ba0397d89bd",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": "moonaliza-fixture",
+          "errors": [
+            {
+              "code": "CAPTURE-MISSING",
+              "message": "E-01 names research/raw/missing-citation.md, which is not on disk",
+              "path": "project/research/",
+              "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
+            }
+          ],
+          "packageId": "RK-50494616186CB769403C02DC22",
+          "reviewedBy": "agent",
+          "state": "APPROVED_BRIEF",
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": 1
+        }
+      }
+    },
+    {
+      "name": "traversal",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: traversal; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42315,
+      "sha256": "49da7d442913eb4dedb1c14340be36152548c9a1ff0a193fa5c838948dabe5f7",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": null,
+          "errors": [
+            {
+              "code": "ZIP-PATH",
+              "message": "entry \"../escape\" climbs out of the archive",
+              "path": "../escape",
+              "remedy": "this package is not safe to extract; regenerate it from the original corpus"
+            }
+          ],
+          "packageId": null,
+          "reviewedBy": "undeclared",
+          "state": null,
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": null
+        }
+      }
+    },
+    {
+      "name": "duplicate",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: duplicate; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42754,
+      "sha256": "0d2b033314fe93902db8402df9a70cf83db249d4d7aa658df0a09b983691e24f",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": null,
+          "errors": [
+            {
+              "code": "ZIP-DUPLICATE",
+              "message": "\"README-FIRST.md\" appears more than once; which one a reader gets is the extractor's choice, not the author's",
+              "path": "README-FIRST.md",
+              "remedy": "this package is not safe to extract; regenerate it from the original corpus"
+            }
+          ],
+          "packageId": null,
+          "reviewedBy": "undeclared",
+          "state": null,
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": null
+        }
+      }
+    },
+    {
+      "name": "symlink",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: symlink; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 42324,
+      "sha256": "3646d5c271ca188d22dec13b0102e63b74129aa12466a1dd121cd8fd3058a8c9",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": null,
+          "errors": [
+            {
+              "code": "ZIP-SPECIAL-ENTRY",
+              "message": "entry \"project/link\" is not a regular file (unix mode 0o120000) - symlinks and device nodes have no place in a research artifact",
+              "path": "project/link",
+              "remedy": "this package is not safe to extract; regenerate it from the original corpus"
+            }
+          ],
+          "packageId": null,
+          "reviewedBy": "undeclared",
+          "state": null,
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": null
+        }
+      }
+    },
+    {
+      "name": "bomb",
+      "producerRevision": null,
+      "recipe": "Negative mutation of approved.zip: bomb; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
+      "commands": [],
+      "byteLength": 44364,
+      "sha256": "e2859006167b574f07f90a74839ee0dc6b79746221cc9517f620dc58758a27b8",
+      "expected": {
+        "exitCode": 1,
+        "report": {
+          "buildAuthorized": false,
+          "clientRef": null,
+          "errors": [
+            {
+              "code": "ZIP-RATIO-LIMIT",
+              "message": "\"project/bomb\" expands 1024:1 (2049 to 2097152 bytes), over the 200:1 limit",
+              "path": "project/bomb",
+              "remedy": "this package is not safe to extract; regenerate it from the original corpus"
+            }
+          ],
+          "packageId": null,
+          "reviewedBy": "undeclared",
+          "state": null,
+          "status": "FAIL",
+          "warnings": [],
+          "workflowRunId": null
+        }
+      }
+    }
+  ]
+}

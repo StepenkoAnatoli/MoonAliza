@@ -1,8 +1,18 @@
-# Development status — 2026-09-30 · context recovery and development delivery
+# Development status — 2026-10-01 · offline Research Kit consumer
 
 The full MoonAliza product remains the target. This is a working development checkpoint, not a completed agent or qualified release.
 
-## Current 0.6 source milestone
+Upcoming requirement: [folder-free chat](specification/folder-free-chat.md), requested September 30. Current conversations still require a project. Add saved general conversation, explicit chat inference policy, and deliberate attach/create/switch-project behavior after the offline validator stage; do not mistake the existing no-project screen for this feature.
+
+## Current offline consumer milestone
+
+PR #11 is merged at `2a3dd9e`; `feat/research-kit-offline` starts from that commit. The [stage plan](superpowers/plans/2026-09-30-research-kit-offline.md) and [offline contract](specification/research-kit-offline.md) describe the main-owned backend. The consumer pins Research Kit at `5588ce3def50e7e3702e5f84251bfd3d445f3df0` through exact runtime-file digests and invokes its actual CLI through guarded Windows process ownership. Real current and legacy producer ZIPs and negative mutations are checked in with their provenance and expected actual reports. The runtime itself stays external.
+
+Archives, process output, execution time and retained storage are bounded. A receipt binds exact bytes, validator/runtime identity, project/job revisions and complete dispatch correlation. Validity and research readiness never grant MoonAliza tool permission. Imported instruction files remain inside inert ZIPs; retained reads rehash bytes into buffers. Restart requires revalidation. Durable research jobs, network dispatch, evidence/review UI, Build policy and shipping provisioning remain later stages. The published installer remains `v0.6.0-dev.1`; no backend-only installer release is claimed.
+
+On October 1 the complete suite passed **458 tests across 35 files** in **317.67 seconds**, with no failures, skipped tests or unhandled worker errors. The report is `.build/research-offline-verified-tests.json`. This includes 43 Research Kit tests over 15 exact-byte fixtures and seven guarded-process tests. Typecheck, lint, native compilation, application build, Electron/SQLite loading and all six desktop workflows also passed. The standalone verifier reported valid/ready for the approved producer fixture and valid/not-ready for the unreviewed fixture. No provider credentials were needed. Two earlier full attempts failed at UI worker startup; isolated forked UI workers resolved the reproduced full-run failure while retaining every test and assertion. See [runner evidence](specification/windows-ci.md). Current-head GitHub Windows checks are separate evidence and must be inspected on the phase PR; no earlier milestone or local pass substitutes for them.
+
+## Delivered 0.6 source milestone (PR #11)
 
 The new development branch is `feat/context-recovery`, reconciled with merged PRs #3–10 at `7f68fb2`. [The stage plan](superpowers/plans/2026-09-28-context-recovery.md), [behavior specification](specification/context-recovery.md), [new primary research](../research/BRIEF.md) and [release evidence](releases/0.6.0-dev.1.md) are portable parts of this checkout.
 

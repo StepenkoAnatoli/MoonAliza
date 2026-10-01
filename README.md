@@ -40,6 +40,7 @@ Git status, summary/per-file diff, and recent log use fixed arguments without ap
 ## Verify
 
 ```powershell
+node scripts/prepare-research-kit.mjs
 npm run typecheck
 npm run lint
 npm test
@@ -49,6 +50,8 @@ npm run test:e2e
 ```
 
 Tests include real SQLite persistence, Windows Job Object process cleanup, file journals and conflict-safe undo, bounded Windows hardware inspection, local-runtime response validation, and desktop journeys. Automated inference journeys use deterministic local HTTP fixtures; they are not real model quality benchmarks. The native helper must be built before running tests.
+
+Offline Research Kit tests use exact recorded producer ZIPs and the actual pinned external validator; preparation needs Git/network access but no provider credentials. See [offline validation and its limits](docs/specification/research-kit-offline.md). Research jobs, review UI and Build gating are later stages. [Folder-free chat](docs/specification/folder-free-chat.md) is the next recommended user-facing phase; current desktop conversations still require a project.
 
 An optional live Hugging Face verifier, `node scripts/check-live-provider.mjs <installed-executable> <HF-token-file> [model:provider]`, uses a generated project and isolated app data. It checks encrypted profile storage, connection, real file-read/edit proposals, exact approval, completion and Undo, then removes its temporary data. Running it explicitly sends synthetic content to the named cloud provider and may use inference credits. It is excluded from ordinary tests and never prints the token. Version 0.5 passed this smoke check with `Qwen/Qwen3-4B-Instruct-2507:nscale`; larger coding qualification remains outstanding.
 

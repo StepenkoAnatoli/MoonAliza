@@ -1,6 +1,6 @@
 # MoonAliza architecture and current decisions
 
-The full product architecture is defined in [reviewed decisions](specification/decisions.md) and the [implementation roadmap](superpowers/plans/2026-09-24-moonaliza.md). This document records the current context-recovery stage, not a replacement roadmap.
+The full product architecture is defined in [reviewed decisions](specification/decisions.md) and the [implementation roadmap](superpowers/plans/2026-09-24-moonaliza.md). This document records current context recovery and offline Research Kit boundaries, not a replacement roadmap.
 
 Electron main owns credentials, provider transport, native dialogs and the process broker. The utility-process engine owns durable SQLite state, project policy, operation approval, journaling and the agent loop. The renderer accesses only the validated preload bridge; its preflight guidance never grants tool or network authority.
 
@@ -9,6 +9,12 @@ Context assembly is a pure engine operation before every model step. It reserves
 Privacy changes require an explicit project-policy update. Profile edits bind to their revision; moving a credential-bearing profile to another endpoint or provider requires a new credential or explicit removal. Context recovery prepares a draft and never automatically repeats model calls, commands or edits. No schema migration or new dependency is needed.
 
 Provider streaming and later Research Kit integration must preserve these process boundaries. Research documents and imported artifacts are untrusted reference data, never instructions or permission grants. Genuine managed-model qualification, production trust inputs and signed delivery remain separate requirements.
+
+The offline Research Kit stage adds opt-in guarded execution to the existing process broker. Before launching a child, the native helper opens read-only file guards and ancestor directory guards, rejects reparse points and hardlinked leaves, and waits for the owner to verify bytes and admit execution. Guards last until owned process cleanup. Failed or cancelled admission launches no child, admission has a deadline, and callers may stop the owned tree on output overflow. Ordinary command execution retains its existing behavior.
+
+The [offline consumer](specification/research-kit-offline.md) uses independent strict boundary contracts, a reviewed inventory of 100 external runtime files and actual pinned producer/validator fixtures. It captures archive bytes once, checks bounded archive metadata and runs the pinned CLI with minimal environment and fixed arguments. Validity and research readiness stay separate from application permission. Successful imports retain content-addressed ZIPs outside project instruction discovery; each read verifies bytes against a process-local receipt bound to job/project revision and the complete dispatch identity. Restart requires fresh validation. There is no renderer path admission or durable job lifecycle in this backend phase; Stage 2 must supply authoritative jobs before wiring IPC.
+
+[Folder-free chat](specification/folder-free-chat.md) is an upcoming user requirement. Its design must reuse the engine and conversation store, establish an inference policy without a project, and make workspace attachment and context changes explicit. The current project-required session model has not yet changed.
 
 At each completed project step or phase, verify the work, push a branch and open a pull request. The user reviews and merges it. Do not merge on the user's behalf.
 

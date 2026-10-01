@@ -57,3 +57,9 @@ gh run view <run-id> --repo StepenkoAnatoli/MoonAliza --log-failed
 ```
 
 Use the run's exact head SHA when recording a result. Current local verification commands and platform requirements are in [HANDOFF.md](../../HANDOFF.md); the historical workspace snapshot remains unchanged.
+
+## Offline consumer test runner — October 1
+
+Two complete local runs of the Research Kit stage reached 449 and 453 passed tests respectively, then failed to start the workbench UI worker. Vitest reported `Timeout waiting for worker to respond` and an unexpected worker exit; these runs are failures, not full-suite passes. Both UI files passed together (7 tests), and a small mixed Node/UI run passed 11 tests. No application assertion explained the full-run worker failure.
+
+The runner configuration now separates Node and DOM tests into named projects. Node/native tests reuse one thread; UI files use isolated forked processes. Global file parallelism stays disabled for the first supported PC. All existing file patterns and assertions remain enabled; no timeout was raised and no test is retried or skipped. Typecheck and lint pass with that configuration. The final complete-suite result is recorded in development status; current-head GitHub Windows checks remain separate required evidence.

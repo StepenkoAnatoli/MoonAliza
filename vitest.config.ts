@@ -2,13 +2,16 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    environment: 'node',
     testTimeout: 15000,
-    // Reuse one worker per environment: isolated worker startup can stall on this 8 GiB host.
-    pool: 'threads',
+    // Bound memory on the first supported PC. Keep DOM workers separate from
+    // the long-running native/process test worker; full mixed runs twice stalled
+    // while starting the second DOM file even though both UI files passed alone.
     maxWorkers: 1,
-    isolate: false,
+    fileParallelism: false,
+    projects: [
+      { extends: true, test: { name: 'node', include: ['tests/**/*.test.ts'], environment: 'node', pool: 'threads', isolate: false } },
+      { extends: true, test: { name: 'ui', include: ['tests/**/*.test.tsx'], environment: 'jsdom', pool: 'forks', isolate: true } },
+    ],
     restoreMocks: true,
     clearMocks: true
   }

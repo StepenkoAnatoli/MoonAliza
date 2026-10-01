@@ -1,0 +1,23 @@
+{
+  "topic": "MoonAliza offline Research Kit consumer contract",
+  "depth": "quick",
+  "maxScrapes": 3,
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/StepenkoAnatoli/Research-Kit/5588ce3def50e7e3702e5f84251bfd3d445f3df0/research-kit/bin/artifact.mjs",
+      "type": "P",
+      "why": "U-03: actual supported flags and validation exits"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/StepenkoAnatoli/Research-Kit/5588ce3def50e7e3702e5f84251bfd3d445f3df0/research-kit/lib/artifact-validator.mjs",
+      "type": "P",
+      "why": "U-03 U-04: real report, consistency checks and identity limits"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/StepenkoAnatoli/Research-Kit/5588ce3def50e7e3702e5f84251bfd3d445f3df0/research-kit/lib/artifact.mjs",
+      "type": "P",
+      "why": "U-04 U-05: authorization derivation and actual artifact production"
+    }
+  ]
+}
