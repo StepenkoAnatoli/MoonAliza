@@ -35,7 +35,14 @@ export async function inspectProjectPath(path: string, options: { helperPath?: s
   return { rootPath: result.rootPath, localFixed: result.localFixed };
 }
 
-export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, options: { helperPath?: string; onStarted?: (identity: OwnedIdentity) => void } = {}): Promise<OwnedResult> {
+export interface OwnedOptions {
+  helperPath?: string;
+  onStarted?: (identity: OwnedIdentity) => void;
+  readLocks?: string[];
+  beforeStart?: () => Promise<void>;
+  stopOnOutputLimit?: boolean;
+}
+export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, options: OwnedOptions = {}): Promise<OwnedResult> {
   if (process.platform !== 'win32') throw new Error('WINDOWS_REQUIRED');
   if (signal?.aborted) throw new Error('RUN_CANCELLED');
   if (/\.(cmd|bat)$/i.test(request.executable)) throw new Error('BATCH_REQUIRES_EXPLICIT_SHELL');
@@ -47,38 +54,67 @@ export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, op
   }
   const timeout = Buffer.alloc(4); timeout.writeUInt32LE(request.timeoutMs);
   const environment = Object.entries(request.env).sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase())).map(([key, value]) => `${key}=${value}`).join('\0') + '\0';
-  const protocol = Buffer.concat([timeout, field(request.executable), field([request.executable, ...request.args].map(quoteWindowsArg).join(' ')), field(request.cwd), field(environment)]);
+  const guarded = options.readLocks !== undefined;
+  if (guarded !== (options.beforeStart !== undefined)) throw new Error('INVALID_GUARDS');
+  const guards: Buffer[] = [];
+  if (options.readLocks) {
+    if (!options.readLocks.length || options.readLocks.length > 2048) throw new Error('INVALID_GUARDS');
+    const count = Buffer.alloc(4); count.writeUInt32LE(options.readLocks.length); guards.push(count);
+    for (const path of options.readLocks) {
+      if (!/^[a-z]:\\/i.test(path) || path.includes('\0') || path.includes('/') || path.length > 32760 || path !== resolve(path)) throw new Error('INVALID_GUARDS');
+      guards.push(field(path));
+    }
+  }
+  const protocol = Buffer.concat([timeout, field(request.executable), field([request.executable, ...request.args].map(quoteWindowsArg).join(' ')), field(request.cwd), field(environment), ...guards]);
+  if (protocol.length > 2_097_152) throw new Error('COMMAND_TOO_LARGE');
   return new Promise((resolveResult, reject) => {
-    const child = spawn(helper(options.helperPath), options.onStarted ? ['--report-start'] : [], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: safeCommandEnvironment() });
-    const chunks: Buffer[] = []; let size = 0; let truncated = false; let metadata = ''; let metadataBytes = 0; let reportedStart = false; let invalidMetadata = false;
+    const child = spawn(helper(options.helperPath), [...(guarded ? ['--guarded'] : []), ...(options.onStarted ? ['--report-start'] : [])], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: safeCommandEnvironment() });
+    const chunks: Buffer[] = []; let size = 0; let truncated = false; let metadata = ''; let metadataBytes = 0; let reportedStart = false; let reportedLocks = false; let invalidMetadata = false; let closed = false; let admissionError: unknown; let admissionTimedOut = false;
     const cancel = () => { child.stdin.end(); };
+    // A stalled verifier must not hold file locks indefinitely, even before launch.
+    const admissionTimer = guarded ? setTimeout(() => { admissionTimedOut = true; cancel(); }, request.timeoutMs) : undefined;
     signal?.addEventListener('abort', cancel, { once: true });
     child.stdin.on('error', () => {});
     child.stdout.on('data', (chunk: Buffer) => {
       const keep = Math.min(chunk.length, request.maxOutputBytes - size);
       if (keep > 0) { chunks.push(chunk.subarray(0, keep)); size += keep; }
-      if (keep < chunk.length) truncated = true;
+      if (keep < chunk.length) { truncated = true; if (options.stopOnOutputLimit) cancel(); }
     });
     child.stderr.on('data', (bytes: Buffer) => {
       metadataBytes += bytes.length;
       if (metadataBytes > 8192) { invalidMetadata = true; cancel(); return; }
       metadata += bytes.toString('utf8');
-      if (options.onStarted && !reportedStart && metadata.includes('\n')) {
+      while (metadata.includes('\n')) {
         const newline = metadata.indexOf('\n');
         try {
           const first = JSON.parse(metadata.slice(0, newline));
+          if (first?.event === 'locked') {
+            if (!guarded || reportedLocks || Object.keys(first).length !== 1) throw new Error('INVALID_NATIVE_RESPONSE');
+            reportedLocks = true; metadata = metadata.slice(newline + 1);
+            void Promise.resolve().then(() => options.beforeStart!()).then(() => {
+              clearTimeout(admissionTimer);
+              if (!closed && !child.stdin.writableEnded && !signal?.aborted) child.stdin.write(Buffer.from([1]));
+            }).catch(error => { admissionError = error; cancel(); });
+            continue;
+          }
           if (first?.event === 'started') {
+            if (!options.onStarted || reportedStart || (guarded && !reportedLocks)) throw new Error('INVALID_NATIVE_RESPONSE');
             const { event: _event, ...identity } = first;
             const parsed = OwnedIdentitySchema.parse(identity); reportedStart = true; metadata = metadata.slice(newline + 1);
             options.onStarted(Object.freeze(parsed));
+            continue;
           }
+          if (first?.event) throw new Error('INVALID_NATIVE_RESPONSE');
         } catch { invalidMetadata = true; cancel(); }
+        break;
       }
     });
-    child.once('error', error => { signal?.removeEventListener('abort', cancel); reject(error); });
+    child.once('error', error => { closed = true; clearTimeout(admissionTimer); signal?.removeEventListener('abort', cancel); reject(error); });
     child.once('close', () => {
+      closed = true; clearTimeout(admissionTimer);
       signal?.removeEventListener('abort', cancel);
-      const base = { code: null, output: Buffer.concat(chunks).toString('utf8'), truncated, cancelled: signal?.aborted ?? false, timedOut: false };
+      if (admissionError !== undefined) { reject(admissionError); return; }
+      const base = { code: null, output: Buffer.concat(chunks).toString('utf8'), truncated, cancelled: signal?.aborted ?? false, timedOut: admissionTimedOut };
       try {
         if (invalidMetadata) throw new Error('INVALID_NATIVE_RESPONSE');
         const result: unknown = JSON.parse(metadata.trim());

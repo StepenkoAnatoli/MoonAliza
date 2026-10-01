@@ -7,6 +7,7 @@
 #include <atomic>
 #include <iostream>
 #include <cstdint>
+#include <map>
 #include "hardware.hpp"
 #include "connection.hpp"
 
@@ -50,16 +51,71 @@ static int inspect(const wchar_t* path) {
 }
 static int fail(const char* code) { std::cerr << "{\"status\":\"failed\",\"error\":\"" << code << "\"}" << std::endl; return 2; }
 
+// Guard both the leaf and each ancestor against replacement until this owned host exits.
+// A directory may still accept temporary files; it cannot be renamed or replaced by a junction.
+struct ReadGuards {
+  std::vector<HANDLE> handles;
+  std::map<std::wstring, bool> names;
+  ~ReadGuards() { for (HANDLE handle : handles) CloseHandle(handle); }
+  bool take(const std::wstring& path, bool directory) {
+    std::wstring key = path; CharLowerBuffW(key.data(), static_cast<DWORD>(key.size()));
+    if (names.count(key)) return names.at(key) == directory;
+    HANDLE handle = CreateFileW((L"\\\\?\\" + path).c_str(), directory ? FILE_READ_ATTRIBUTES : GENERIC_READ,
+      directory ? FILE_SHARE_READ | FILE_SHARE_WRITE : FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+      FILE_FLAG_OPEN_REPARSE_POINT | (directory ? FILE_FLAG_BACKUP_SEMANTICS : 0), nullptr);
+    if (handle == INVALID_HANDLE_VALUE) return false;
+    BY_HANDLE_FILE_INFORMATION info{};
+    if (!GetFileInformationByHandle(handle, &info) || (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+      || bool(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != directory || (!directory && info.nNumberOfLinks != 1)) {
+      CloseHandle(handle); return false;
+    }
+    handles.push_back(handle); names.emplace(key, directory); return true;
+  }
+  bool file(const std::wstring& value) {
+    // Only normalized local drive paths are admitted; no device paths or network shares.
+    if (value.size() < 4 || !((value[0] >= L'A' && value[0] <= L'Z') || (value[0] >= L'a' && value[0] <= L'z'))
+      || value[1] != L':' || value[2] != L'\\' || value.find(L'/') != std::wstring::npos || value.find(L'\0') != std::wstring::npos
+      || GetDriveTypeW(value.substr(0, 3).c_str()) != DRIVE_FIXED) return false;
+    if (!take(value.substr(0, 3), true)) return false;
+    size_t start = 3;
+    while (start < value.size()) {
+      const size_t slash = value.find(L'\\', start);
+      const std::wstring part = value.substr(start, slash == std::wstring::npos ? slash : slash - start);
+      if (part.empty() || part == L"." || part == L".." || part.back() == L'.' || part.back() == L' ' || part.find_first_of(L":*?\"<>|") != std::wstring::npos) return false;
+      if (slash == std::wstring::npos) return take(value, false);
+      if (!take(value.substr(0, slash), true)) return false;
+      start = slash + 1;
+    }
+    return false;
+  }
+};
+
 int wmain(int argc, wchar_t** argv) {
   if (argc == 2 && std::wstring(argv[1]) == L"--hardware") return inspectHardware();
   if (argc == 3 && std::wstring(argv[1]) == L"--inspect-path") return inspect(argv[2]);
   if (argc > 1 && std::wstring(argv[1]) == L"--inspect-connection") return inspectConnection(argc, argv);
-  const bool reportStart = argc == 2 && std::wstring(argv[1]) == L"--report-start";
-  if (argc != 1 && !reportStart) return fail("INVALID_MODE");
+  bool reportStart = false, guarded = false;
+  for (int i = 1; i < argc; ++i) {
+    if (std::wstring(argv[i]) == L"--report-start" && !reportStart) reportStart = true;
+    else if (std::wstring(argv[i]) == L"--guarded" && !guarded) guarded = true;
+    else return fail("INVALID_MODE");
+  }
   HANDLE owner = GetStdHandle(STD_INPUT_HANDLE);
   uint32_t timeout = 0; std::wstring executable, commandLine, cwd, environment;
   if (!readExact(owner, &timeout, 4) || !readString(owner, executable) || !readString(owner, commandLine) || !readString(owner, cwd) || !readString(owner, environment)) return fail("INVALID_PROTOCOL");
   if (timeout == 0 || timeout > 3600000 || executable.empty() || cwd.empty()) return fail("INVALID_REQUEST");
+  ReadGuards guards;
+  if (guarded) {
+    uint32_t count = 0;
+    if (!readExact(owner, &count, 4) || count == 0 || count > 2048) return fail("INVALID_GUARDS");
+    for (uint32_t i = 0; i < count; ++i) {
+      std::wstring path;
+      if (!readString(owner, path) || !guards.file(path)) return fail("GUARD_FAILED");
+    }
+    std::cerr << "{\"event\":\"locked\"}" << std::endl;
+    unsigned char admitted = 0;
+    if (!readExact(owner, &admitted, 1) || admitted != 1) return fail("ADMISSION_CANCELLED");
+  }
   HANDLE job = CreateJobObjectW(nullptr, nullptr);
   if (!job) return fail("JOB_CREATE_FAILED");
   JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{}; limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;

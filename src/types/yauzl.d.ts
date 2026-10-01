@@ -3,4 +3,5 @@ declare module 'yauzl' {
   export interface Entry { fileName: string; uncompressedSize: number; compressedSize: number; externalFileAttributes: number; generalPurposeBitFlag: number; crc32: number; isEncrypted(): boolean }
   export interface ZipFile { entryCount: number; eachEntry(): AsyncIterable<Entry>; openReadStreamPromise(entry: Entry): Promise<Readable>; close(): void }
   export function openPromise(path: string, options?: { lazyEntries?: boolean; autoClose?: boolean; decodeStrings?: boolean; validateEntrySizes?: boolean; strictFileNames?: boolean }): Promise<ZipFile>;
+  export function fromBufferPromise(buffer: Buffer, options?: { lazyEntries?: boolean; autoClose?: boolean; decodeStrings?: boolean; validateEntrySizes?: boolean; strictFileNames?: boolean }): Promise<ZipFile>;
 }

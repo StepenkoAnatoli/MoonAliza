@@ -20,6 +20,8 @@ jobs:
       - run: npm ci
       - run: node node_modules/electron/install.js
       - run: npm run native:build
+      - name: Prepare pinned external Research Kit validator
+        run: node scripts/prepare-research-kit.mjs
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
