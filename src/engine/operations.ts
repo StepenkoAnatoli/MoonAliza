@@ -40,6 +40,8 @@ export class Operations {
   }
   private async allowedPath(runId: string, path: string, signal: AbortSignal) {
     const run = this.store.getRun(runId); if (!run) throw new Error('RUN_NOT_FOUND');
+    if (run.projectId === null) throw new Error('PROJECT_REQUIRED');
+    if (this.store.getSession(run.sessionId)?.policy.revision !== run.sessionPolicyRevision) throw new Error('RUN_CANCELLED');
     const project = this.store.getProject(run.projectId); if (!project) throw new Error('PROJECT_NOT_FOUND');
     assertToolPolicy(run.mode, 'write', project, signal);
     const name = validateRelativePath(path);
@@ -61,6 +63,8 @@ export class Operations {
   }
   pending(runId: string) {
     const run = this.store.getRun(runId); if (!run) throw new Error('RUN_NOT_FOUND');
+    if (run.projectId === null) throw new Error('PROJECT_REQUIRED');
+    if (this.store.getSession(run.sessionId)?.policy.revision !== run.sessionPolicyRevision) throw new Error('RUN_CANCELLED');
     return { operations: this.store.listOperations(runId).filter(op => this.waiting.has(op.id) && op.status === 'prepared' && !this.store.listApprovals(op.id).length).map(publicOperation) };
   }
   async preview(projectId: string, operationId: string) {
@@ -92,6 +96,8 @@ export class Operations {
   async command(runId: string, call: ToolCall, signal: AbortSignal): Promise<string> {
     if (!this.commandHost || call.name !== 'run_command' || call.inputError) throw new Error('COMMAND_UNAVAILABLE');
     const run = this.store.getRun(runId); if (!run) throw new Error('RUN_NOT_FOUND');
+    if (run.projectId === null) throw new Error('PROJECT_REQUIRED');
+    if (this.store.getSession(run.sessionId)?.policy.revision !== run.sessionPolicyRevision) throw new Error('RUN_CANCELLED');
     const input = CommandPlanSchema.parse(await this.commandHost.prepareCommand(runId, call.input, signal));
     const now = new Date().toISOString();
     const op: StoreOperation = { id: randomUUID(), runId, projectId: run.projectId, kind: 'command', inputHash: canonicalHash(input), input, trustRevision: run.trustRevision, policyRevision: run.policyRevision, status: 'prepared', createdAt: now, updatedAt: now };

@@ -56,10 +56,12 @@ async function control(command: Control): Promise<unknown> {
     case 'profile.revision': return store.getProfileRevision(command.revisionId) ?? null;
     case 'run.context': {
       const run = store.getRun(command.runId); if (!run) throw new Error('RUN_NOT_FOUND');
-      return { run, project: app.publicProject(run.projectId), profile: store.getProfileRevision(run.profileRevisionId) };
+      return { run, session: store.getSession(run.sessionId), project: run.projectId === null ? null : app.publicProject(run.projectId), profile: store.getProfileRevision(run.profileRevisionId) };
     }
     case 'command.context': {
       const run = store.getRun(command.runId); if (!run) throw new Error('RUN_NOT_FOUND');
+      if (run.projectId === null) throw new Error('PROJECT_REQUIRED');
+      if (store.getSession(run.sessionId)?.policy.revision !== run.sessionPolicyRevision) throw new Error('RUN_CANCELLED');
       const project = store.getProject(run.projectId); if (!project) throw new Error('PROJECT_NOT_FOUND');
       const op = command.operationId ? store.getOperation(command.operationId) : undefined;
       if (op && op.runId !== run.id) throw new Error('APPROVAL_STALE');

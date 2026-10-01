@@ -9,13 +9,14 @@ export function isTrustedSender(sender: SenderIdentity, expected: FrameIdentity)
 
 /** Only explicitly mapped errors are allowed across IPC. Raw exceptions may contain credentials or paths. */
 const publicMessages: Record<string, string> = {
+  PROJECT_REQUIRED: 'Attach a workspace before using Build, files or commands.',
   PROJECT_TICKET_INVALID: 'The folder selection expired. Choose the folder again.',
   PROJECT_VOLUME_UNSUPPORTED: 'Choose a folder on a local fixed drive.',
   PROJECT_UNTRUSTED: 'Trust this project before running a task.',
   PROJECT_NOT_FOUND: 'This project is no longer available.',
   SESSION_NOT_FOUND: 'This conversation is no longer available.',
   PROFILE_NOT_FOUND: 'Choose an available model profile.',
-  CLOUD_NOT_ALLOWED: 'This project allows local inference only. Choose a local profile or use Review cloud access to explicitly allow this project’s content to reach the selected provider.',
+  CLOUD_NOT_ALLOWED: 'This conversation or project allows local inference only. Choose a local profile or use Review cloud access to explicitly allow this project’s content to reach the selected provider.',
   CREDENTIAL_UNAVAILABLE: 'A saved key cannot be reused at a different endpoint or provider type. Enter the key for the new destination, or create a separate profile.',
   RUN_CANCELLED: 'The run was stopped.',
   RUN_ACTIVE: 'Wait for the active run to finish, or stop it first.',

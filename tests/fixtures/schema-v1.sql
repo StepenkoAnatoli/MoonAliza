@@ -1,8 +1,6 @@
-import type Database from 'better-sqlite3';
+-- Exact initialSchema SQL from MoonAliza f98cee387c6b8d5788e73a66736c21d40262bc7b src/engine/migrations.ts.
+-- user_version=1 appended to model a database created by the pre-chat application.
 
-export const SCHEMA_VERSION = 2;
-
-const initialSchema = `
 CREATE TABLE projects (
   id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, root_path TEXT NOT NULL,
   path_label TEXT NOT NULL, trusted INTEGER NOT NULL CHECK(trusted IN (0,1)),
@@ -102,51 +100,5 @@ CREATE TRIGGER messages_fts_update AFTER UPDATE ON messages BEGIN
   INSERT INTO history_fts(history_fts,rowid,content) VALUES('delete',old.rowid,old.content);
   INSERT INTO history_fts(rowid,content) VALUES(new.rowid,new.content);
 END;
-`;
 
-/** Refuse unsupported databases before changing journal settings or schema. */
-export function assertSupportedSchema(db: Database.Database): number {
-  const version = db.pragma('user_version', { simple: true }) as number;
-  if (version > SCHEMA_VERSION) throw new Error(`Database uses newer schema ${version}; supported version is ${SCHEMA_VERSION}`);
-  return version;
-}
-
-// Preserve the v1 DDL above as the migration's stable source definition.
-function migrateChat(db: Database.Database): void {
-  const sessions = initialSchema.split('CREATE TABLE sessions (')[1]!.split(') STRICT;')[0]!;
-  const runs = initialSchema.split('CREATE TABLE runs (')[1]!.split(') STRICT;')[0]!;
-  db.exec(`CREATE TABLE new_sessions (${sessions.replace('project_id TEXT NOT NULL', 'project_id TEXT').replace('UNIQUE(id, project_id)', 'policy TEXT NOT NULL CHECK(json_valid(policy)), UNIQUE(id, project_id)')}) STRICT;
-    INSERT INTO new_sessions SELECT *, '{"revision":0,"inference":"cloud-allowed"}' FROM sessions;
-    DROP TABLE sessions;
-    ALTER TABLE new_sessions RENAME TO sessions;
-    CREATE INDEX sessions_project ON sessions(project_id, updated_at DESC);
-    CREATE TABLE new_runs (${runs.replace('project_id TEXT NOT NULL', 'project_id TEXT').replace('FOREIGN KEY(session_id,project_id)', 'session_policy_revision INTEGER NOT NULL DEFAULT 0 CHECK(session_policy_revision >= 0), FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE, FOREIGN KEY(session_id,project_id)')}) STRICT;
-    INSERT INTO new_runs SELECT *, 0 FROM runs;
-    DROP TABLE runs;
-    ALTER TABLE new_runs RENAME TO runs;
-    CREATE INDEX runs_session ON runs(session_id, created_at);
-    CREATE TRIGGER runs_scope_insert BEFORE INSERT ON runs
-      WHEN NOT EXISTS(SELECT 1 FROM sessions WHERE id=NEW.session_id AND project_id IS NEW.project_id)
-      BEGIN SELECT RAISE(ABORT, 'RUN_SCOPE_MISMATCH'); END;
-    CREATE TRIGGER runs_scope_update BEFORE UPDATE OF session_id,project_id ON runs
-      WHEN NOT EXISTS(SELECT 1 FROM sessions WHERE id=NEW.session_id AND project_id IS NEW.project_id)
-      BEGIN SELECT RAISE(ABORT, 'RUN_SCOPE_MISMATCH'); END;
-    CREATE TRIGGER sessions_scope_immutable BEFORE UPDATE OF project_id ON sessions
-      WHEN OLD.project_id IS NOT NEW.project_id
-      BEGIN SELECT RAISE(ABORT, 'SESSION_SCOPE_IMMUTABLE'); END;`);
-}
-
-export function migrate(db: Database.Database): void {
-  assertSupportedSchema(db);
-  // SQLite cannot toggle FK enforcement inside a transaction. Restore even on rollback.
-  db.pragma('foreign_keys = OFF');
-  try {
-    db.transaction(() => {
-      let version = assertSupportedSchema(db);
-      if (version === 0) { db.exec(initialSchema); version = 1; }
-      if (version === 1) migrateChat(db);
-      if ((db.pragma('foreign_key_check') as unknown[]).length) throw new Error('MIGRATION_FOREIGN_KEY_FAILURE');
-      db.pragma(`user_version = ${SCHEMA_VERSION}`);
-    }).immediate();
-  } finally { db.pragma('foreign_keys = ON'); }
-}
+PRAGMA user_version = 1;
