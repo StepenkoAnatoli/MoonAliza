@@ -152,9 +152,9 @@ MoonAliza is distinctive and already findable. Groundwork may instead name the r
 - Keep `app.setName` (the `%APPDATA%` data folder), the installer `appId` and the update feed, so existing installs keep their data and still get updates.
 - Run a trademark check before shipping an installer under the new name.
 
-## Reference patterns from awesome-llm-apps (read October 2)
+## Patterns adopted from awesome-llm-apps (approved October 2)
 
-The user asked what MoonAliza can take from [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) (Apache-2.0). It is a catalogue of standalone Python demos, mostly Streamlit UIs on Google ADK, OpenAI Agents SDK, CrewAI or LangGraph. Take patterns, not code: the demos have no vault, approvals or engine/main split, and several take API keys in UI text fields. Each pattern below was read from the example's README; re-read the example's code when its phase starts.
+The user asked what MoonAliza can take from [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) (Apache-2.0). It is a catalogue of standalone Python demos, mostly Streamlit UIs on Google ADK, OpenAI Agents SDK, CrewAI or LangGraph. Take patterns, not code: the demos have no vault, approvals or engine/main split, and several take API keys in UI text fields. Each pattern below was read from the example's README. The user approved adopting the first three, including the suggested first background task, on October 2. Re-read the example's code when its phase starts.
 
 - **Missions, `agent_skills/advisor-orchestrator-worker`:**
   - Workers get self-contained briefs, with inputs and acceptance criteria inline.
