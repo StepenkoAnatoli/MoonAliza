@@ -77,6 +77,29 @@ October 2, D4 re-pin (Task 3's first commit): the validator pin moved from `5588
   - `tests/research-kit.test.ts` gives 22 passed and 21 failed, all 21 on the Windows baseline.
 - Known unknown: the collect-remote and dispatch contract at `fcde0e6` has no captured evidence in `research/`. It was read from the kit's source, and Task 3's golden-payload freshness test is its day-one check.
 
+October 2, Task 3 part 1, the collector protocol: `src/adapters/research-kit/collector.ts` holds:
+- argv: one `--name=value` element per value, and a watch has no topic;
+- the minimal environment plus the token;
+- the CreateProcessW length check;
+- tables A and B. Per the October 2 artifact-download brief, NO_ARTIFACT past the 7-day retention means ARTIFACT_EXPIRED.
+
+How it was tested:
+- The classifiers run on 33 real outputs of the pinned kit, captured against `tests/fixtures/fake-github.ts`, a loopback proxy and a test CA. A freshness test re-runs the kit and requires the same bytes.
+- `tests/research-collector-protocol.test.ts` (44 tests) also checks:
+  - the one authenticated POST and its body;
+  - no token sent to the redirected artifact host;
+  - no request without a token;
+  - a TLS canary;
+  - the pinned kit's `parseFlags` reading exotic values back exactly.
+- The module was written before its tests, so five deliberate mutations stood in for a first red run; each turned the suite red:
+  - NO_RUN_ID as not dispatched;
+  - PATH and GITHUB_TOKEN inherited;
+  - `--topic` on a watch;
+  - kit text as a cause;
+  - a fresh approval accepted.
+- Full Linux gate, cwd `/home/user/moonaliza`: 506 passed and 75 failed, all 75 on the Windows baseline, with no leftover temp directories.
+- The October 2 briefs on run reconciliation and artifact download (PRs #22, #23) were checked against this design. Digest verification and a run search after a 204 are kit changes, recorded as Research-Kit work. A secondary-limit 403 parks the job as a credentials problem until a status field exists.
+
 ## Recorded for later (not in Task 2)
 
 - **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart; implement `research.collector.read/save`; re-pin Research-Kit to `bf60e21` or later for `--run-id`. Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
