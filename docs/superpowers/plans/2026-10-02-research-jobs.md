@@ -151,3 +151,30 @@ MoonAliza is distinctive and already findable. Groundwork may instead name the r
 - Change only what users see: product name, installer, window titles, docs.
 - Keep `app.setName` (the `%APPDATA%` data folder), the installer `appId` and the update feed, so existing installs keep their data and still get updates.
 - Run a trademark check before shipping an installer under the new name.
+
+## Reference patterns from awesome-llm-apps (read October 2)
+
+The user asked what MoonAliza can take from [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) (Apache-2.0). It is a catalogue of standalone Python demos, mostly Streamlit UIs on Google ADK, OpenAI Agents SDK, CrewAI or LangGraph. Take patterns, not code: the demos have no vault, approvals or engine/main split, and several take API keys in UI text fields. Each pattern below was read from the example's README; re-read the example's code when its phase starts.
+
+- **Missions, `agent_skills/advisor-orchestrator-worker`:**
+  - Workers get self-contained briefs, with inputs and acceptance criteria inline.
+  - Each result gets a verdict: PASS, FIX (re-dispatched with the failure details) or ESCALATE.
+  - An advisor reviews the plan before dispatch and the result before delivery. In MoonAliza the pre-dispatch review is where the user's approval goes.
+  - The budget is stated up front and never exceeded silently.
+  - Pair it with the hardware-aware planner: cheap workers, stronger judgment only where it changes a decision.
+- **Project memory, `agent_skills/self-improving-agent-skills`:**
+  - Analyse each failure for its root cause.
+  - Apply one surgical change per round.
+  - Re-run test scenarios that include the failed case.
+  - Keep the change only if the score improves, otherwise revert it, and keep a changelog.
+  - This is the mechanism for "does not repeat mistakes" and the repeated-failure lesson trigger.
+- **Background tasks, `always_on_agents/release_radar_agent`:**
+  - Outbound delivery needs both `dry_run=false` and a configured destination.
+  - It reports only impact (breaking, security, deprecation).
+  - A good first background task: watch a project's dependencies. MoonAliza must add what the demo lacks: state between runs, de-duplication and Stop.
+- **No change, `advanced_ai_agents/multi_agent_apps/trust_gated_agent_team`:** its SHA-256 hash-chained audit log matches Research-Kit's ledger and the `research_events` journal, and fixed agent trust scores are weaker than evidence and approval gates.
+- **Not yet read; check when the related work starts:**
+  - `rag_tutorials/corrective_rag`, for the Build-to-Research loop;
+  - `advanced_llm_apps/llm_optimization_tools/headroom_context_optimization`, for small local context windows;
+  - the external Openwork browser agent (`accomplish-ai/coworker`), for sandbox computer use;
+  - `advanced_ai_agents/multi_agent_apps/agent_teams/llm_panel_agent_team`, for judged panels.
