@@ -1,0 +1,46 @@
+{
+  "topic": "Reconciling a dispatched GitHub Actions run durably: finding the run a workflow_dispatch started, polling its status over the REST API, and how long its logs and artifacts stay available",
+  "notes": "Owning pages named directly after phase 0 (keyless, 3 searches); depth normal so the six pages fit.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 6,
+  "prefer": [
+    "docs.github.com",
+    "github.blog"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://github.blog/changelog/2026-02-19-workflow-dispatch-api-now-returns-run-ids/",
+      "type": "P",
+      "why": "U-01: the owner's changelog on the dispatch call returning the run id"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/actions/workflow-runs",
+      "type": "P",
+      "why": "U-01, U-02: listing runs by event and branch; the run object, status and conclusion values; required permissions"
+    },
+    {
+      "url": "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow",
+      "type": "P",
+      "why": "U-01: how a workflow_dispatch is triggered through the API"
+    },
+    {
+      "url": "https://docs.github.com/github/administering-a-repository/managing-repository-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-repository",
+      "type": "P",
+      "why": "U-03: default and configurable retention for logs and artifacts (the owner page phase 0 found; the first spelling was a 404)"
+    },
+    {
+      "url": "https://github.blog/changelog/2026-10-01-actions-retention-now-covers-checks-runs-and-statuses/",
+      "type": "P",
+      "why": "U-04: retention now deletes the run record too"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "type": "P",
+      "why": "U-05: primary and secondary rate limits for polling"
+    }
+  ]
+}
