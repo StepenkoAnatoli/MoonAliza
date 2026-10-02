@@ -1,9 +1,9 @@
 ---
 url: https://raw.githubusercontent.com/actions/upload-artifact/main/README.md
 retrieved: 2026-10-02
-command: http-keyless scrape https://raw.githubusercontent.com/actions/upload-artifact/main/README.md
+command: firecrawl scrape https://raw.githubusercontent.com/actions/upload-artifact/main/README.md --only-main-content --json
 statusCode: 200
-transport: http-keyless
+transport: firecrawl-cli
 completeness: full
 ---
 # `@actions/upload-artifact`
