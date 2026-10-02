@@ -97,4 +97,20 @@ Proposed design (local, not the hosted service, consistent with local-first priv
 - **Plan to Build handoff:** Plan mode saves a structured plan; Build mode follows it and marks steps done, so switching modes does not repeat or rewrite finished work.
 - **Lessons:** failed operations, failing checks and user corrections become lesson records surfaced before similar actions. This reduces repeated mistakes; it cannot guarantee a model never repeats one.
 - **Trust:** memory steers future runs, so entries derived from untrusted content (GitHub files, web or research captures) stay proposed until the user accepts them; imported text never becomes an instruction. The user can view, edit and delete every record. Project cloud policy applies whenever memory is sent to a cloud model.
-- **Order (recommendation, awaiting user confirmation):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
+- **Order (confirmed by the user, October 2):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
+
+## Decisions recorded October 2
+
+These are user decisions; later phases implement them.
+
+- **Phase order:** finish this research phase, then project memory, then missions.
+- **Completion is counted, never estimated.** Every plan step lists acceptance items written in advance. An item counts only when its evidence exists: a test that ran and passed, CI green on that exact commit, a merged PR. Build completion % = verified items / all items, and each number links to what is missing.
+- **Research readiness per plan step.** Each step lists its blocking unknowns. Research readiness % = unknowns closed with verified evidence / all blocking unknowns; an unreachable fact may be labelled a known unknown with a day-one check, never left silent. The plan shows both percentages.
+- **Build only where research is sufficient** (integration review Stage 3, research-aware Build admission): Build mode is admitted per plan step only when that step's research is ready (the kit's own gate plus a fresh MoonAliza validation). Steps with no blocking unknowns need no research, so research stays optional for ordinary work.
+- **Build to Research and back.** When Build hits something it cannot resolve from the code, it pauses that step, records the open question as an unknown in project memory and proposes a targeted research job with topic and queries prefilled from the error. The approval card shows exactly what becomes public; code is never placed in queries automatically. After review, facts land in project memory with sources and Build resumes at the same step; a mistake becomes a lesson.
+- **Quality checks.** Careful-coding discipline (read before changing, run the checks, re-read the diff, report mistakes plainly) is Build mode's default behaviour. Break-test (prove realistic build and test failures, then fix them minimally) is suggested at 25%, 50% and 75% build completion, when a change touches risky areas (migrations, process or credential code, installers) and after a repeated-failure lesson; it is required before a milestone is marked 100% or released. The user approves every break-test run, with its cost shown. In missions it becomes a preset (finder, verifier, fixer).
+- **GitHub, approved as four steps:**
+  1. One secure GitHub connection (a GitHub App or fine-grained token with least privilege per repository) in the encrypted vault, shared by research collection, private repository reading and the steps below; never entered in chat.
+  2. GitHub as completion evidence: CI runs on an exact commit and PR state tick acceptance items.
+  3. Checks and break-test runs on GitHub Actions runners, so heavy and Windows-only checks do not depend on the user's PC.
+  4. Optional per-project two-way sync of project memory tasks with GitHub Issues or a Project board, and finished work opened as draft PRs. Every write to GitHub needs the user's approval; issues are visible to repository readers, so private notes stay local unless the user opts in.
