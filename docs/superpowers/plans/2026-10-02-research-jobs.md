@@ -76,3 +76,10 @@ October 2, Task 2: `tests/research-jobs-state.test.ts` (29 tests) failed first b
 ## Next phase after research: missions
 
 User decision, October 2: finish this research phase first, then build missions (source-plan tasks C3/C4). MoonAliza may propose splitting a hard task into several agents, but it must **always ask for approval** first, showing the agent count, step budget, cloud or local profiles, and whether agents run in parallel. Local parallel agents need a warm runtime and concurrent scheduler leases (the scheduler is currently one-at-a-time and stops the runtime after each lease); cloud profiles can run in parallel.
+
+User direction, October 2: the mission should decide from the machine's resources which model each agent uses and how many agents run, as local model selection already does. Proposed design, following `selectLocal` (`src/models/select.ts`, [selection policy](../../specification/model-store-selection.md)):
+
+- **A pure mission planner** chooses per-agent profiles and concurrency from measured evidence only: qualified machine receipts, current free RAM/VRAM under the same reserve rule (`max(2 GiB, 15% of RAM)`), project cloud policy and the step budget. Hard subtasks may get a stronger profile, simple ones a smaller one; cloud only where the project allows it.
+- **Concurrency is measured, never guessed.** Today's receipts measure one model at a time. Running N agents on one loaded model needs receipts measured at each concurrency level (each extra agent adds its own context memory). Without such a receipt the planner runs agents sequentially, or offers a short monitored probe first.
+- **The planner fills the approval card; the user still approves** (agent count, model per agent, parallel or sequential, local or cloud, step budget). Resources are rechecked under the lease before each agent starts; if they drop, the mission falls back to sequential instead of failing.
+- On the current PC (about 1.15 GiB free, below the reserve) the planner must report that no local agent fits and offer only policy-permitted cloud agents.
