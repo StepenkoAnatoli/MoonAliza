@@ -41,6 +41,7 @@ const app = new Application(store, {
   prepareCommand: (runId, input, signal) => command<CommandPlan>(runId, { type: 'command.prepare', input: CommandInputSchema.parse(input) }, signal),
   executeCommand: (runId, operationId, signal) => command<OwnedResult>(runId, { type: 'command.execute', operationId }, signal),
   publish: event => port.postMessage({ type: 'event', epoch, event }),
+  publishResearch: research => port.postMessage({ type: 'research', epoch, research }),
   infer: (run, messages, signal, tools) => new Promise((resolve, reject) => {
     const id = randomUUID();
     const cancel = () => { pending.delete(id); port.postMessage({ type: 'inference.cancel', epoch, runId: run.id }); reject(new Error('RUN_CANCELLED')); };
@@ -79,6 +80,9 @@ async function control(command: Control): Promise<unknown> {
       const approval = storedApproval ? { operationId: storedApproval.operationId, projectId: storedApproval.projectId, inputHash: storedApproval.inputHash, policyRevision: storedApproval.policyRevision, trustRevision: storedApproval.trustRevision, decision: storedApproval.decision } : undefined;
       return { run, project, ...(op ? { operation: { id: op.id, runId: op.runId, projectId: op.projectId, kind: op.kind, status: op.status, inputHash: op.inputHash, trustRevision: op.trustRevision, policyRevision: op.policyRevision, input: op.input } } : {}), ...(approval ? { approval } : {}) };
     }
+    case 'research.context': return app.research.context(command.researchId);
+    case 'research.transition': return app.research.transition(command);
+    case 'research.recover': return app.research.recover(command.owned);
     case 'vault.references': return store.listSecretRefs();
     case 'request.lookup': return store.lookupAcceptedRequest({ method: command.requestMethod, clientRequestId: command.requestId, canonicalInputHash: command.inputHash }) ?? null;
     case 'shutdown': await app.shutdown(); store.close(); return { closed: true };

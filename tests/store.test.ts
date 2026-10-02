@@ -186,7 +186,8 @@ describe('durable SQLite store', () => {
   test('persists mission, research, settings and operation result records', () => {
     seed();
     store.putMission({ id: 'mission1', projectId: 'p1', title: 'Build', status: 'paused', revision: 1, state: { tasks: ['t1'] }, createdAt: at, updatedAt: at });
-    store.putResearch({ id: 'research1', projectId: 'p1', runId: 'r1', status: 'collecting', state: { clientRef: 'opaque' }, createdAt: at, updatedAt: at });
+    store.createResearch({ id: 'research1', projectId: 'p1', topic: 'Topic', inputs: { queries: [] }, clientRef: 'mz-research1', researchLevel: 'public-technical', policyRevision: 1, trustRevision: 1 }, { actor: 'user' });
+    store.transitionResearch({ researchId: 'research1', expectedRevision: 1, to: 'cancelled', actor: 'user', cause: 'CANCEL_REQUESTED' });
     store.setSettings({ theme: 'dark', modelStepLimit: 24 });
     store.putOperation({ id: 'op1', runId: 'r1', projectId: 'p1', kind: 'write', inputHash: 'hash', policyRevision: 1, trustRevision: 1, status: 'prepared', input: { path: 'a' }, beforeRef: 'sha-before', afterRef: 'sha-after', snapshotRef: 'snapshot1', createdAt: at, updatedAt: at });
     store.updateOperation('op1', { status: 'started' });
@@ -194,7 +195,7 @@ describe('durable SQLite store', () => {
     store.close();
     store = new Store(path);
     expect(store.listMissions('p1')[0]?.state).toEqual({ tasks: ['t1'] });
-    expect(store.listResearch('p1')[0]?.state).toEqual({ clientRef: 'opaque' });
+    expect(store.listResearch('p1')[0]).toMatchObject({ status: 'cancelled', revision: 2, inputs: { queries: [] } });
     expect(store.getSettings()).toEqual({ theme: 'dark', modelStepLimit: 24 });
     expect(store.getOperation('op1')).toMatchObject({ status: 'completed', result: { changed: true }, snapshotRef: 'snapshot1' });
     store.deleteProject('p1');
@@ -202,5 +203,6 @@ describe('durable SQLite store', () => {
     expect(store.listSessions('p1')).toEqual([]);
     expect(store.listMissions('p1')).toEqual([]);
     expect(store.listResearch('p1')).toEqual([]);
+    expect(store.researchEvents('research1').events).toEqual([]);
   });
 });

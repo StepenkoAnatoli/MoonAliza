@@ -104,6 +104,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
       if (['run.completed', 'run.failed', 'run.cancelled'].includes(event.type)) { active.get(event.runId)?.stop.abort(); active.delete(event.runId); vault.revokeContext(event.runId); }
       if (window && !window.isDestroyed()) window.webContents.send('moonaliza:event', event);
     },
+    research(research) { if (window && !window.isDestroyed()) window.webContents.send('moonaliza:research', research); },
     inference: infer,
     readGitHub,
     async prepareCommand(runId, input, epoch) { return commands.prepare(runId, input, commandSignal(runId, epoch)); },

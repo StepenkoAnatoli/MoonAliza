@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { assertSupportedSchema, migrate } from './migrations';
+import { ACTIVE_RESEARCH, assertResearchEdge } from './research-state';
 
 export interface StoreProject {
   id: string; name: string; rootPath: string; pathLabel: string; trusted: boolean; trustRevision: number;
@@ -36,7 +37,18 @@ export interface StoreApproval {
   decision: 'allow' | 'deny'; createdAt: string;
 }
 export interface StoreMission { id: string; projectId: string; title: string; status: string; revision: number; state: unknown; createdAt: string; updatedAt: string }
-export interface StoreResearch { id: string; projectId: string; runId?: string; status: string; state: unknown; createdAt: string; updatedAt: string }
+export type StoreResearchStatus = 'queued' | 'dispatching' | 'collecting' | 'collected' | 'reviewing' | 'approved' | 'not_ready' | 'failed' | 'cancelling' | 'cancelled';
+export type StoreResearchActor = 'user' | 'main' | 'recovery';
+export interface StoreResearch {
+  id: string; projectId: string; revision: number; status: StoreResearchStatus; topic: string; inputs: unknown; clientRef: string;
+  researchLevel: 'public-technical' | 'private-connected'; policyRevision: number; trustRevision: number;
+  collectorRevision?: number; repository?: string; workflow?: string; ref?: string; dispatchedAt?: string;
+  workflowRunId?: string; failure?: string; createdAt: string; updatedAt: string;
+}
+export interface StoreResearchTarget { collectorRevision: number; repository: string; workflow: string; ref: string }
+export interface StoreResearchPatch { target?: StoreResearchTarget; workflowRunId?: string; failure?: string }
+export interface StoreResearchStep { researchId: string; expectedRevision: number; to: StoreResearchStatus; actor: StoreResearchActor; cause: string; requestId?: string; patch?: StoreResearchPatch }
+export interface StoreResearchEvent { researchId: string; revision: number; from?: StoreResearchStatus; to: StoreResearchStatus; actor: StoreResearchActor; requestId?: string; cause: string; detail: StoreResearchPatch; engineEpoch: string; at: number }
 export interface AcceptedRequestKey { method: string; clientRequestId: string; canonicalInputHash: string }
 export interface AcceptedResult<T = unknown> { entityId: string; response: T; replayed: boolean }
 
@@ -50,7 +62,9 @@ const messageColumns: Column[] = [['id','id'],['sessionId','session_id'],['runId
 const operationColumns: Column[] = [['id','id'],['runId','run_id'],['projectId','project_id'],['kind','kind'],['inputHash','input_hash'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['status','status'],['input','input','json'],['result','result','json'],['beforeRef','before_ref'],['afterRef','after_ref'],['snapshotRef','snapshot_ref'],['createdAt','created_at'],['updatedAt','updated_at']];
 const approvalColumns: Column[] = [['id','id'],['operationId','operation_id'],['projectId','project_id'],['inputHash','input_hash'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['decision','decision'],['createdAt','created_at']];
 const missionColumns: Column[] = [['id','id'],['projectId','project_id'],['title','title'],['status','status'],['revision','revision'],['state','state','json'],['createdAt','created_at'],['updatedAt','updated_at']];
-const researchColumns: Column[] = [['id','id'],['projectId','project_id'],['runId','run_id'],['status','status'],['state','state','json'],['createdAt','created_at'],['updatedAt','updated_at']];
+const researchColumns: Column[] = [['id','id'],['projectId','project_id'],['revision','revision'],['status','status'],['topic','topic'],['inputs','inputs','json'],['clientRef','client_ref'],['researchLevel','research_level'],['policyRevision','policy_revision'],['trustRevision','trust_revision'],['collectorRevision','collector_revision'],['repository','repository'],['workflow','workflow'],['ref','ref'],['dispatchedAt','dispatched_at'],['workflowRunId','workflow_run_id'],['failure','failure'],['createdAt','created_at'],['updatedAt','updated_at']];
+const researchEventColumns: Column[] = [['researchId','research_id'],['revision','revision'],['from','from_status'],['to','to_status'],['actor','actor'],['requestId','request_id'],['cause','cause'],['detail','detail','json'],['engineEpoch','engine_epoch'],['at','at']];
+const activeResearch = ACTIVE_RESEARCH.map(status => `'${status}'`).join(',');
 
 function json(value: unknown): string {
   const encoded = JSON.stringify(value);
@@ -222,9 +236,51 @@ export class Store {
   putMission(mission: StoreMission): void { this.write('missions',missionColumns,mission,true); }
   getMission(id: string): StoreMission | undefined { return this.one('missions',missionColumns,id); }
   listMissions(projectId: string): StoreMission[] { return this.many('SELECT * FROM missions WHERE project_id=? ORDER BY updated_at DESC,id',missionColumns,projectId); }
-  putResearch(research: StoreResearch): void { this.write('research',researchColumns,research,true); }
+  /** Create a queued job and its first journal row. One project holds at most one active job. */
+  createResearch(job: Pick<StoreResearch,'id'|'projectId'|'topic'|'inputs'|'clientRef'|'researchLevel'|'policyRevision'|'trustRevision'>, journal: { actor: 'user'; requestId?: string; at?: number }): { research: StoreResearch; event: StoreResearchEvent } {
+    return this.transaction(() => {
+      if (this.hasActiveResearch(job.projectId)) throw new Error('RUN_ACTIVE');
+      const at = journal.at ?? Date.now(); const iso = new Date(at).toISOString();
+      this.write('research',researchColumns,{ ...job, revision: 1, status: 'queued', createdAt: iso, updatedAt: iso });
+      const event: StoreResearchEvent = { researchId: job.id, revision: 1, to: 'queued', actor: journal.actor, requestId: journal.requestId, cause: 'START', detail: {}, engineEpoch: this.engineEpoch, at };
+      this.write('research_events',researchEventColumns,event);
+      return { research: this.getResearch(job.id)!, event: this.researchEvents(job.id,0,1).events[0]! };
+    });
+  }
+  /** Journal the step, then compare-and-set the projection, in one transaction. Never upsert: identity is write-once. */
+  transitionResearch(step: StoreResearchStep, at = Date.now()): { research: StoreResearch; event: StoreResearchEvent } {
+    return this.transaction(() => {
+      const existing = this.getResearch(step.researchId);
+      if (!existing) throw new Error('NOT_FOUND');
+      if (existing.revision !== step.expectedRevision) throw new Error('STALE_REVISION');
+      const patch = step.patch ?? {};
+      assertResearchEdge(existing, step.to, step.actor, patch);
+      // Derive the step from the caller's expectation, so the journal trigger and the WHERE clause also refuse a stale caller.
+      const revision = step.expectedRevision + 1; const iso = new Date(at).toISOString();
+      const event: StoreResearchEvent = { researchId: existing.id, revision, from: existing.status, to: step.to, actor: step.actor, requestId: step.requestId, cause: step.cause, detail: patch, engineEpoch: this.engineEpoch, at };
+      this.write('research_events',researchEventColumns,event);
+      const target = patch.target;
+      const info = this.db.prepare(`UPDATE research SET revision=?,status=?,failure=COALESCE(?,failure),
+        collector_revision=COALESCE(?,collector_revision),repository=COALESCE(?,repository),workflow=COALESCE(?,workflow),ref=COALESCE(?,ref),
+        dispatched_at=COALESCE(?,dispatched_at),workflow_run_id=COALESCE(?,workflow_run_id),updated_at=? WHERE id=? AND revision=?`)
+        .run(revision,step.to,patch.failure ?? null,target?.collectorRevision ?? null,target?.repository ?? null,target?.workflow ?? null,target?.ref ?? null,
+          step.to === 'dispatching' ? iso : null,patch.workflowRunId ?? null,iso,existing.id,step.expectedRevision);
+      if (info.changes !== 1) throw new Error('STALE_REVISION');
+      return { research: this.getResearch(existing.id)!, event: this.researchEvents(existing.id,revision - 1,1).events[0]! };
+    });
+  }
   getResearch(id: string): StoreResearch | undefined { return this.one('research',researchColumns,id); }
-  listResearch(projectId: string): StoreResearch[] { return this.many('SELECT * FROM research WHERE project_id=? ORDER BY updated_at DESC,id',researchColumns,projectId); }
+  listResearch(projectId: string, limit = 1000): StoreResearch[] { return this.many('SELECT * FROM research WHERE project_id=? ORDER BY updated_at DESC,id LIMIT ?',researchColumns,projectId,pageLimit(limit)); }
+  listResearchByStatus(statuses: readonly StoreResearchStatus[]): StoreResearch[] {
+    if (!statuses.length) return [];
+    return this.many(`SELECT * FROM research WHERE status IN (${statuses.map(() => '?').join(',')}) ORDER BY created_at,id`,researchColumns,...statuses);
+  }
+  hasActiveResearch(projectId: string): boolean { return !!this.db.prepare(`SELECT 1 FROM research WHERE project_id=? AND status IN (${activeResearch}) LIMIT 1`).get(projectId); }
+  researchEvents(researchId: string, after = 0, limit = 100): { events: StoreResearchEvent[]; hasMore: boolean } {
+    if (!Number.isSafeInteger(after) || after < 0) throw new RangeError('Event cursor must be a nonnegative integer');
+    const rows = this.many<StoreResearchEvent>('SELECT * FROM research_events WHERE research_id=? AND revision>? ORDER BY revision LIMIT ?',researchEventColumns,researchId,after,pageLimit(limit)+1);
+    return { events: rows.slice(0,limit), hasMore: rows.length > limit };
+  }
   getSettings<T extends object = Record<string, unknown>>(): T {
     const row = this.db.prepare('SELECT value FROM settings WHERE id=1').get() as { value: string } | undefined;
     return (row ? JSON.parse(row.value) : {}) as T;
