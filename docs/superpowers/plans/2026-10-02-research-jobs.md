@@ -120,3 +120,17 @@ These are user decisions; later phases implement them.
   3. A finished task posts a short summary into the conversation (passed or failed and the key lines); the agent reads the full saved output on demand instead of loading it into context.
   4. Output streams to bounded files on disk. On app exit owned processes stop, and after restart those tasks show as interrupted and are never re-run silently; research jobs keep their resume-by-run-id behaviour.
   5. A concurrency limit applies, and local-model work still shares the one inference scheduler under the same RAM/VRAM rules as the mission planner.
+
+## Computer use, Operator mode (proposed, after missions)
+
+User request, October 2: MoonAliza should be able to control the PC, as GPT's agent does, with [Cua](https://github.com/trycua/cua) as the reference. Facts from Cua's README (read October 2): Cua Driver inspects and operates native apps and browsers on Windows, macOS and Linux through a CLI, MCP or typed SDKs, in the background where the app and platform allow; Cua also provides isolated local or cloud sandboxes. The core and the Driver are MIT; Spaces and cua-spacesd are FSL-1.1-MIT; the optional perception extension and cua-som carry AGPL obligations.
+
+Proposed design (safety first; the user still chooses the scope):
+
+1. **Sandbox first:** the agent works in an isolated Windows environment (Windows Sandbox or a Cua sandbox), never the real desktop, by default.
+2. **Real desktop only by explicit per-session opt-in,** with an always-visible control banner, an instant stop hotkey and an app allowlist.
+3. **Step approval for sensitive actions:** password or payment fields, sending messages or email, deleting, installing and purchases always pause for the user.
+4. **Screenshots are private content:** they reach a cloud model only where the project allows cloud inference; local vision models are chosen by the hardware-aware planner when the machine qualifies.
+5. **Cua stays an external, user-installed, version-pinned component** reached over MCP, like Research-Kit. MoonAliza never runs its piped install script and never bundles the AGPL or FSL parts.
+
+Order: research, project memory, missions (beginning with background tasks), then computer use, which reuses their approvals, background sessions, Stop and ownership. Open decision for the user: sandbox only at first (recommended), or the real desktop from the start with the safeguards above.
