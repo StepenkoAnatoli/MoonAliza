@@ -34,7 +34,11 @@ test('General chat reads a supplied GitHub URL through main and saves cited resu
         if (new Headers(init?.headers).has('Authorization')) throw new Error('UNEXPECTED_AUTH');
         const content = 'MoonAliza repository evidence';
         if (url === 'https://api.github.com/repos/example/project/commits/HEAD') return new Response(JSON.stringify({ sha }));
-        if (url === `https://api.github.com/repos/example/project/contents/README.md?ref=${sha}`) return new Response(JSON.stringify({ type: 'file', path: 'README.md', size: Buffer.byteLength(content), encoding: 'base64', content: Buffer.from(content).toString('base64') }));
+        if (url === `https://api.github.com/repos/example/project/contents/README.md?ref=${sha}`) {
+          // Exercise a valid read slower than Playwright's default five-second assertion.
+          await new Promise(resolve => setTimeout(resolve, 6000));
+          return new Response(JSON.stringify({ type: 'file', path: 'README.md', size: Buffer.byteLength(content), encoding: 'base64', content: Buffer.from(content).toString('base64') }));
+        }
         throw new Error('UNEXPECTED_GITHUB_ROUTE');
       };
     }, sha);
@@ -43,6 +47,19 @@ test('General chat reads a supplied GitHub URL through main and saves cited resu
     await page.getByLabel('Profile name').fill('GitHub fixture'); await page.getByLabel('Endpoint').fill(`http://127.0.0.1:${port}`);
     await page.getByLabel('Model name').fill('fixture'); await page.getByRole('button', { name: 'Save profile' }).click();
     await page.getByLabel('Message MoonAliza').fill('Read https://github.com/example/project'); await page.getByRole('button', { name: 'Send message' }).click();
+    // Wait for the durable outcome, not a five-second end-to-end timing assumption.
+    // A failed/cancelled run ends the wait too, and must fail the assertion below.
+    let outcome = '';
+    await expect.poll(async () => {
+      outcome = await page.evaluate(async () => {
+        const { sessions } = await window.moonaliza.invoke('session.list', { projectId: null }) as { sessions: { id: string }[] };
+        if (!sessions[0]) return 'queued';
+        const { runs } = await window.moonaliza.invoke('session.read', { sessionId: sessions[0].id }) as { runs: { status: string }[] };
+        return runs[0]?.status ?? 'queued';
+      });
+      return outcome;
+    }, { timeout: 30_000, message: 'GitHub read must reach a terminal run state' }).toMatch(/^(completed|failed|cancelled)$/);
+    expect(outcome).toBe('completed');
     await expect(page.getByText('I read the README:', { exact: false })).toBeVisible();
     expect(observedSource).toBe(`https://github.com/example/project/blob/${sha}/README.md`); expect(modelCalls).toBe(2);
     await expect(page.getByRole('heading', { name: 'General chat' })).toBeVisible();

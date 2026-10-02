@@ -1,6 +1,12 @@
-# Development status - 2026-10-01 - public GitHub reading
+# Development status - 2026-10-02 - public GitHub reading
 
 The full MoonAliza product remains the target. This is a working development checkpoint, not a completed agent or qualified release.
+
+## Desktop completion assertion correction
+
+PR #14 merged at `d3f3af5`; its final source had three green Windows runs, and the merged main push also passed. The subsequent empty reverse PR #15 failed in the GitHub desktop workflow at its default five-second answer assertion ([failed run](https://github.com/StepenkoAnatoli/MoonAliza/actions/runs/36926685473)). The trace showed an active run, without enough evidence to identify the delay source. A deterministic six-second fixture response reproduced the same timeout with valid content.
+
+The test now waits for a durable terminal state within thirty seconds, requires `completed`, and retains the answer, exact commit citation, two model calls and restart assertions. Failed/cancelled runs fail the completion assertion; a hung run fails the bounded wait. No automatic retries or relaxed content assertions. Production code and the 0.8.1 installer are unchanged. The delayed-read workflow passed three consecutive local runs (56.8 seconds total); typecheck, lint, build and all 102 handoff links passed. Check the correction PR for exact-head Windows verification.
 
 ## Public GitHub reading (0.8.1)
 

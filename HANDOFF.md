@@ -8,10 +8,10 @@ Build the full Windows desktop coding-agent workbench named **MoonAliza**, follo
 
 New user requirement (September 30): [folder-free chat](docs/specification/folder-free-chat.md). Users must be able to discuss and plan without choosing a project, then attach or create a workspace when needed. Implemented in the 0.7 development phase on `feat/folder-free-chat`; see the specification for explicit privacy and workspace-branch behavior. Research jobs/review UI remain separate.
 
-The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2-13 are merged into `main`; [PR #12](https://github.com/StepenkoAnatoli/MoonAliza/pull/12) merged at `f98cee3` on October 1. Both Windows checks passed on its source head `0475775`. PR #13 merged at `146ba4e`. Public GitHub reading is on `feat/public-github-reading`, based on that merge. The user merges each completed phase PR.
+The repository is [StepenkoAnatoli/MoonAliza](https://github.com/StepenkoAnatoli/MoonAliza). PRs #2-14 are merged into `main`; [PR #12](https://github.com/StepenkoAnatoli/MoonAliza/pull/12) merged at `f98cee3` on October 1. Both Windows checks passed on its source head `0475775`. PR #13 merged at `146ba4e`. Public GitHub reading merged in PR #14 at `d3f3af5`. The current desktop test correction is on `fix/github-desktop-completion`. The user merges each completed phase PR.
 
 ```powershell
-git -c core.longpaths=true clone --branch feat/public-github-reading https://github.com/StepenkoAnatoli/MoonAliza.git
+git -c core.longpaths=true clone --branch fix/github-desktop-completion https://github.com/StepenkoAnatoli/MoonAliza.git
 cd MoonAliza
 node scripts/check-handoff.mjs
 ```
@@ -46,6 +46,10 @@ The user reports installing version **0.7.0** on the original PC. Current source
 ## Public GitHub reading (0.8)
 
 The user installed 0.7 and pasted a public repository URL. Its model misused local file search and described the resulting errors as GitHub access restrictions. The user explicitly requested URL reading and a PR. On `feat/public-github-reading`, version 0.8 implements [public GitHub reading](docs/specification/github-url-reading.md) in General and project chat, plus local directory-root/error corrections. The [stage plan](docs/superpowers/plans/2026-10-01-github-url-reading.md) captures scope and evidence. Paste a public repository URL, then ask to list/read its files; no token is needed. A secure private-repository connection and general website browsing remain unimplemented. Do not paste tokens into chat or Model profiles. PR #13 is merged at `146ba4e`; inspect this phase PR's exact-head checks before continuing.
+
+## Desktop CI follow-up (October 2)
+
+After PR #14 merged, main passed Windows verification. The empty reverse PR #15 (main into the old feature branch) triggered another run that timed out waiting five seconds for the GitHub answer while the app was still working. The trace does not establish an app failure or its exact delay source. The corrected desktop test deliberately delays its fixture response by six seconds and waits up to thirty seconds for a durable terminal run state, then requires completed status, exact source, two model calls and restart persistence. No production code, request timeout or installer change is involved. See [development status](docs/development-status.md).
 
 ## Immediate continuation
 
