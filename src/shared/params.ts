@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApprovalSchema, ChangeSchema, DateTimeSchema, DigestSchema, HttpUrlSchema, IdSchema, MessageSchema, ModeSchema, OperationSchema, ProfileKindSchema, ProfileSchema, ProjectPolicySchema, ProjectSchema, RevisionSchema, RunSchema, SessionSchema } from './contracts';
+import { ApprovalSchema, ChangeSchema, DateTimeSchema, DigestSchema, HttpUrlSchema, IdSchema, MessageSchema, ModeSchema, OperationSchema, ProfileKindSchema, ProfileSchema, ProjectPolicySchema, ProjectSchema, ResearchStatusSchema, RevisionSchema, RunSchema, SessionSchema } from './contracts';
 import { EventSchema } from './events';
 import { HardwareSchema } from './contracts';
 import { ContextStateSchema, UsageUpdateSchema } from './context';
@@ -31,9 +31,24 @@ export const ProfileSaveParams = z.object({
 export const ModelSchema = z.object({ id: IdSchema, name: z.string().min(1).max(256), status: z.enum(['available', 'downloading', 'probing', 'enabled', 'unavailable', 'failed']), modelDigest: DigestSchema.optional(), sizeBytes: z.number().int().nonnegative().optional(), qualified: z.boolean(), progress: z.number().min(0).max(1).optional(), unavailableReason: z.string().max(2048).optional() }).strict();
 export type Model = z.infer<typeof ModelSchema>;
 const modelResult = z.object({ model: ModelSchema }).strict();
-export const ResearchSchema = z.object({ id: IdSchema, projectId: IdSchema, runId: IdSchema.optional(), brief: z.string().min(1).max(32768), status: z.enum(['queued', 'provisioning', 'collecting', 'awaiting_review', 'sufficient', 'insufficient', 'cancelling', 'cancel_pending', 'cancelled', 'failed']), clientRef: IdSchema, workflowRunId: z.string().regex(/^\d+$/).optional(), createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict();
+// Collector inputs become readable by anyone who can read the collector repository; one line each, as the kit joins them.
+// The kit's parser reads a separate argument starting with `--` as a new flag, so such values are refused here as well as passed as `--name=value`.
+const PublicLine = (max: number) => z.string().trim().min(1).max(max).refine(value => !/[\r\n]/.test(value), 'Must be a single line').refine(value => !value.startsWith('--'), 'Must not look like a flag');
+// preferDomains is joined with commas: a host, optionally with a path, never a comma.
+const PreferDomain = z.string().trim().min(1).max(253).regex(/^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?:\/[A-Za-z0-9._~/-]*)?$/);
+const ClientRefSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/);
+export const ResearchSchema = z.object({ id: IdSchema, projectId: IdSchema, revision: RevisionSchema, status: ResearchStatusSchema, topic: z.string().min(1).max(2048), clientRef: ClientRefSchema, workflowRunId: z.string().regex(/^\d{1,20}$/).optional(), packageDigest: DigestSchema.optional(), failure: z.string().min(1).max(128).optional(), createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict();
 export type Research = z.infer<typeof ResearchSchema>;
-export const ResearchSourceSchema = z.object({ id: IdSchema, url: HttpUrlSchema, title: z.string().max(1024), collectedAt: DateTimeSchema, contentDigest: DigestSchema, excerpt: z.string().max(16384) }).strict();
+export const ResearchStartParams = z.object({
+  projectId: IdSchema, topic: PublicLine(2048), queries: z.array(PublicLine(512)).max(16).default([]), urls: z.array(HttpUrlSchema).max(25).default([]),
+  preferDomains: z.array(PreferDomain).max(16).default([]), depth: z.enum(['probe', 'quick', 'normal']).default('quick'), maxPages: z.number().int().min(1).max(25).default(8),
+  acknowledgedPublic: z.literal(true),
+}).strict().refine(value => value.urls.length <= value.maxPages, 'Each known URL counts against the page budget');
+export const ResearchCollectorSchema = z.object({ revision: RevisionSchema, repository: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/), workflow: z.string().regex(/^[A-Za-z0-9_.-]{1,128}\.ya?ml$/), ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/).refine(value => !value.includes('..'), 'Invalid ref'), tokenConfigured: z.boolean() }).strict();
+export type ResearchCollector = z.infer<typeof ResearchCollectorSchema>;
+export const ResearchCollectorSaveParams = ResearchCollectorSchema.omit({ revision: true, tokenConfigured: true }).extend({
+  expectedRevision: RevisionSchema.optional(), token: z.string().min(1).max(16384).optional(), clearToken: z.boolean().optional(),
+}).strict().refine(value => !(value.token && value.clearToken), 'Cannot save and clear a token together');
 const researchResult = z.object({ research: ResearchSchema }).strict();
 export const MissionTaskSchema = z.object({ id: IdSchema, title: z.string().min(1).max(256), instructions: z.string().min(1).max(32768), dependencies: z.array(IdSchema).max(128), status: z.enum(['pending', 'running', 'produced', 'verifying', 'completed', 'failed', 'cancelled']), runId: IdSchema.optional(), outputManifestDigest: DigestSchema.optional(), verificationRunId: IdSchema.optional() }).strict();
 export const MissionSchema = z.object({ id: IdSchema, projectId: IdSchema, title: z.string().min(1).max(256), instructions: z.string().min(1).max(65536), status: z.enum(['queued', 'running', 'paused', 'verifying', 'completed', 'failed', 'cancelling', 'cancelled']), profileId: IdSchema, modelStepBudget: z.number().int().min(1).max(1000), maxAgents: z.number().int().min(1).max(5), tasks: z.array(MissionTaskSchema).max(128), createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict();
@@ -92,11 +107,13 @@ export const MethodSpec = {
   'model.import': method(Empty, z.union([modelResult, Cancelled]), 'main', 'native', 'native-selection'),
   'model.remove': method(ModelId, Deleted, 'engine', 'write', 'user-confirmed'),
   'model.storage.change': method(Empty, z.union([z.object({ operationId: IdSchema, pathLabel: z.string().min(1).max(1024) }).strict(), Cancelled]), 'main', 'native', 'native-selection'),
-  'research.provision': method(z.object({ projectId: IdSchema, owner: z.string().min(1).max(100).regex(/^[a-zA-Z0-9-]+$/), repository: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_.-]+$/), provisioningSecret: z.string().min(1).max(16384), runtimeSecret: z.string().min(1).max(16384) }).strict(), z.object({ provisionId: IdSchema, status: z.enum(['accepted', 'ready']) }).strict(), 'main', 'network', 'research-policy'),
-  'research.start': method(z.object({ projectId: IdSchema, runId: IdSchema.optional(), brief: z.string().trim().min(1).max(32768) }).strict(), researchResult, 'engine', 'network', 'research-policy'),
-  'research.read': method(ResearchId, z.object({ research: ResearchSchema, sources: z.array(ResearchSourceSchema).max(100), synthesis: z.string().max(262144).optional() }).strict(), 'engine', 'read', 'project-member'),
+  'research.collector.read': method(Empty, z.object({ collector: ResearchCollectorSchema.nullable() }).strict(), 'main', 'read', 'authenticated'),
+  'research.collector.save': method(ResearchCollectorSaveParams, z.object({ collector: ResearchCollectorSchema }).strict(), 'main', 'write', 'user-confirmed'),
+  'research.list': method(ProjectId, z.object({ research: z.array(ResearchSchema).max(1000) }).strict(), 'engine', 'read', 'project-member'),
+  'research.start': method(ResearchStartParams, researchResult, 'engine', 'network', 'research-policy'),
+  'research.read': method(ResearchId, researchResult, 'engine', 'read', 'project-member'),
   'research.cancel': method(ResearchId, researchResult, 'engine', 'lifecycle', 'project-member'),
-  'research.review': method(z.object({ researchId: IdSchema, evidenceDigest: DigestSchema, decision: z.enum(['sufficient', 'insufficient']), notes: z.string().max(16384) }).strict(), researchResult, 'engine', 'write', 'user-confirmed'),
+  'research.review.start': method(z.object({ researchId: IdSchema, profileId: IdSchema }).strict(), researchResult, 'engine', 'write', 'trusted-project'),
   'research.purge': method(ResearchId, Deleted, 'engine', 'write', 'project-member'),
   'skill.list': method(ProjectId, z.object({ skills: z.array(SkillSchema).max(1000) }).strict(), 'engine', 'read', 'project-member'),
   'mission.create': method(z.object({ projectId: IdSchema, profileId: IdSchema, title: z.string().trim().min(1).max(256), instructions: z.string().trim().min(1).max(65536), modelStepBudget: z.number().int().min(1).max(1000).default(120), maxAgents: z.number().int().min(1).max(5).default(5) }).strict(), missionResult, 'engine', 'write', 'trusted-project'),
