@@ -114,3 +114,9 @@ These are user decisions; later phases implement them.
   2. GitHub as completion evidence: CI runs on an exact commit and PR state tick acceptance items.
   3. Checks and break-test runs on GitHub Actions runners, so heavy and Windows-only checks do not depend on the user's PC.
   4. Optional per-project two-way sync of project memory tasks with GitHub Issues or a Project board, and finished work opened as draft PRs. Every write to GitHub needs the user's approval; issues are visible to repository readers, so private notes stay local unless the user opts in.
+- **Background tasks, approved as the first part of the missions phase** (the foundation mission agents run on):
+  1. A Tasks panel lists everything running in the background (test suites, builds, dev servers, research jobs, later mission agents) with status, elapsed time, the latest output and Stop.
+  2. Build mode can start an approved command in the background and keep working; running in the background never bypasses the existing exact command approval.
+  3. A finished task posts a short summary into the conversation (passed or failed and the key lines); the agent reads the full saved output on demand instead of loading it into context.
+  4. Output streams to bounded files on disk. On app exit owned processes stop, and after restart those tasks show as interrupted and are never re-run silently; research jobs keep their resume-by-run-id behaviour.
+  5. A concurrency limit applies, and local-model work still shares the one inference scheduler under the same RAM/VRAM rules as the mission planner.
