@@ -9,10 +9,13 @@ export async function ownedHttpFixture() {
   const stop = new AbortController(); let identity: OwnedIdentity | undefined;
   const result = spawnOwned({ executable: process.execPath, args: [resolve('tests/fixtures/processes/http-owner.mjs'), file, body], cwd: directory, env: safeCommandEnvironment(), timeoutMs: 15000, maxOutputBytes: 4096 }, stop.signal, { onStarted: value => { identity = value; } });
   void result.catch(() => {});
+  // The directory is deleted even when the owned process fails; that failure is still reported.
   const close = async () => {
-    stop.abort(); await result;
+    stop.abort(); let failure: unknown;
+    try { await result; } catch (error) { failure = error; }
     const child = relative(resolve(tmpdir()), directory); if (!child || child.startsWith('..') || isAbsolute(child)) throw new Error('FIXTURE_PATH');
-    await rm(directory, { recursive: true, force: true });
+    try { await rm(directory, { recursive: true, force: true }); } catch (error) { if (failure === undefined) throw error; }
+    if (failure !== undefined) throw failure;
   };
   try {
     for (let n = 0; n < 100; n++) {

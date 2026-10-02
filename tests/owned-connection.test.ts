@@ -10,10 +10,13 @@ async function fixture() {
   const directory = await mkdtemp(join(tmpdir(), 'moonaliza-owned-http-')); const file = join(directory, 'ready.json'); const body = join(directory, 'body');
   const stop = new AbortController(); let identity: OwnedIdentity | undefined;
   const result = spawnOwned({ executable: process.execPath, args: [resolve('tests/fixtures/processes/http-owner.mjs'), file, body], cwd: directory, env: safeCommandEnvironment(), timeoutMs: 10000, maxOutputBytes: 4096 }, stop.signal, { onStarted: value => { identity = value; } });
+  // The directory is deleted even when the owned process fails; that failure is still reported.
   const close = async () => {
-    stop.abort(); await result;
+    stop.abort(); let failure: unknown;
+    try { await result; } catch (error) { failure = error; }
     const child = relative(resolve(tmpdir()), directory); expect(child && !child.startsWith('..') && !isAbsolute(child)).toBeTruthy();
-    await rm(directory, { recursive: true, force: true });
+    try { await rm(directory, { recursive: true, force: true }); } catch (error) { if (failure === undefined) throw error; }
+    if (failure !== undefined) throw failure;
   };
   try {
     for (let n = 0; n < 100; n++) {

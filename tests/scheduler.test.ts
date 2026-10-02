@@ -197,6 +197,14 @@ test('a real native-owned child and grandchild exit before a queued holder start
     ownerStop.abort();
     if (running && (await running).status !== 'exited') throw new Error('OWNER_UNKNOWN');
   } });
+  // The directory is deleted even when the owned tree or shutdown fails; that failure is still reported.
+  const cleanup = async () => {
+    controller.abort(); ownerStop.abort(); let failure: unknown;
+    try { await running; await queue.shutdown(); } catch (error) { failure = error; }
+    const child = relative(resolve(tmpdir()), directory); expect(child && !child.startsWith('..') && !isAbsolute(child)).toBeTruthy();
+    try { await rm(directory, { recursive: true, force: true }); } catch (error) { if (failure === undefined) throw error; }
+    if (failure !== undefined) throw failure;
+  };
   const first = caught(queue.run(async lease => {
     lease.assertCurrent();
     running = spawnOwned({ executable: process.execPath, args: [resolve('tests/fixtures/processes/tree.mjs'), path], cwd: directory, env: safeCommandEnvironment(), timeoutMs: 10000, maxOutputBytes: 4096 }, AbortSignal.any([lease.signal, ownerStop.signal]));
@@ -214,9 +222,5 @@ test('a real native-owned child and grandchild exit before a queued holder start
     }));
     controller.abort(); expect((await first).error).toBe('INFERENCE_CANCELLED');
     expect((await next).value).toEqual([]); expect((await running)!.cancelled).toBe(true);
-  } finally {
-    controller.abort(); ownerStop.abort(); await running; await queue.shutdown();
-    const child = relative(resolve(tmpdir()), directory); expect(child && !child.startsWith('..') && !isAbsolute(child)).toBeTruthy();
-    await rm(directory, { recursive: true, force: true });
-  }
+  } finally { await cleanup(); }
 });
