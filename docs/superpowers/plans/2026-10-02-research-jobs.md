@@ -136,3 +136,18 @@ Proposed design (safety first; the user still chooses the scope):
 Order: research, project memory, missions (beginning with background tasks), then computer use, which reuses their approvals, background sessions, Stop and ownership.
 
 **Decision, October 2: sandbox only.** The first version operates only an isolated sandbox (Windows Sandbox or a Cua sandbox) and never the real desktop. Item 2 is deferred: real-desktop control is not built, offered or hidden behind a setting in this version. It is reconsidered only as a separate, later plan once sandbox mode has shipped, and only with the safeguards in item 2. Items 3, 4 and 5 apply inside the sandbox too, because a sandbox can still send email, pay or upload what it sees.
+
+## App name (decided October 2: keep MoonAliza)
+
+The user asked for a more fitting name, picked Groundwork, then chose to keep MoonAliza after a web check (October 2) found the candidates already in use by AI-agent or developer tools:
+
+- Groundwork: at least six agent and dev-tool projects (gates, project memory, cited research), plus several AI businesses.
+- Cairn: an agent-first IDE and a local-first AI notes app.
+- Plumbline, Keelson, Sightline, Provena and Firmground: each already an AI tool.
+- Surefoot was the only free candidate in the category (a ski-boot brand uses it).
+
+MoonAliza is distinctive and already findable. Groundwork may instead name the research phase inside the app; confirm that when the research UI is built. If a rename comes back, record it as its own task:
+
+- Change only what users see: product name, installer, window titles, docs.
+- Keep `app.setName` (the `%APPDATA%` data folder), the installer `appId` and the update feed, so existing installs keep their data and still get updates.
+- Run a trademark check before shipping an installer under the new name.
