@@ -77,9 +77,24 @@ October 2, Task 2: `tests/research-jobs-state.test.ts` (29 tests) failed first b
 
 User decision, October 2: finish this research phase first, then build missions (source-plan tasks C3/C4). MoonAliza may propose splitting a hard task into several agents, but it must **always ask for approval** first, showing the agent count, step budget, cloud or local profiles, and whether agents run in parallel. Local parallel agents need a warm runtime and concurrent scheduler leases (the scheduler is currently one-at-a-time and stops the runtime after each lease); cloud profiles can run in parallel.
 
-User direction, October 2: the mission should decide from the machine's resources which model each agent uses and how many agents run, as local model selection already does. Proposed design, following `selectLocal` (`src/models/select.ts`, [selection policy](../../specification/model-store-selection.md)):
+User direction, October 2: the mission should decide from the machine's resources which model each agent uses and how many agents run, as local model selection already does. The user approved this design on October 2. It follows `selectLocal` (`src/models/select.ts`, [selection policy](../../specification/model-store-selection.md)):
 
 - **A pure mission planner** chooses per-agent profiles and concurrency from measured evidence only: qualified machine receipts, current free RAM/VRAM under the same reserve rule (`max(2 GiB, 15% of RAM)`), project cloud policy and the step budget. Hard subtasks may get a stronger profile, simple ones a smaller one; cloud only where the project allows it.
 - **Concurrency is measured, never guessed.** Today's receipts measure one model at a time. Running N agents on one loaded model needs receipts measured at each concurrency level (each extra agent adds its own context memory). Without such a receipt the planner runs agents sequentially, or offers a short monitored probe first.
 - **The planner fills the approval card; the user still approves** (agent count, model per agent, parallel or sequential, local or cloud, step budget). Resources are rechecked under the lease before each agent starts; if they drop, the mission falls back to sequential instead of failing.
 - On the current PC (about 1.15 GiB free, below the reserve) the planner must report that no local agent fits and offer only policy-permitted cloud agents.
+
+## Project memory (proposed for after this phase, before missions)
+
+User request, October 2: sessions must be stored and the user must be able to switch modes freely without MoonAliza forgetting where work stopped, repeating mistakes or rewriting finished work. Reference: [ProjectBrain](https://www.projectbrain.tools/), a hosted, structured memory of tasks, decisions, facts and skills shared across sessions and agents.
+
+Current state (verified October 2): conversations, runs, messages and events persist in the engine database; the mode is chosen per message, so one conversation already spans Ask, Plan and Build. Forgetting comes from context assembly (`src/engine/context.ts`), which drops the oldest turns from the model request when the window fills (reported as omitted history), and there is no memory shared across conversations and no record of mistakes.
+
+Proposed design (local, not the hosted service, consistent with local-first privacy):
+
+- **Per-project memory records** in the engine database: tasks (todo, in progress, blocked, done), decisions with rationale, facts and constraints, and lessons (a mistake, its cause and the fix). Each record is revisioned and links to the conversation, run or operation that produced it.
+- **Every run reads it, in every mode:** a bounded "where we are" brief (open tasks, active decisions and constraints, recent lessons) is assembled before history, so trimming old turns never removes project state. A `recall` tool searches full history through the existing FTS index.
+- **Plan to Build handoff:** Plan mode saves a structured plan; Build mode follows it and marks steps done, so switching modes does not repeat or rewrite finished work.
+- **Lessons:** failed operations, failing checks and user corrections become lesson records surfaced before similar actions. This reduces repeated mistakes; it cannot guarantee a model never repeats one.
+- **Trust:** memory steers future runs, so entries derived from untrusted content (GitHub files, web or research captures) stay proposed until the user accepts them; imported text never becomes an instruction. The user can view, edit and delete every record. Project cloud policy applies whenever memory is sent to a cloud model.
+- **Order (recommendation, awaiting user confirmation):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
