@@ -1,5 +1,5 @@
 import { crc32, deflateRawSync } from 'node:zlib';
-export function zipFixture(entries: Array<{ name: string; content?: string; mode?: number; flags?: number; declaredSize?: number; badCrc?: boolean }>): Buffer {
+export function zipFixture(entries: Array<{ name: string; content?: string | Buffer; mode?: number; flags?: number; declaredSize?: number; badCrc?: boolean }>): Buffer {
   const local: Buffer[] = []; const central: Buffer[] = []; let offset = 0;
   for (const item of entries) {
     const name = Buffer.from(item.name); const content = Buffer.from(item.content ?? ''); const data = deflateRawSync(content); const crc = item.badCrc ? 0 : crc32(content);

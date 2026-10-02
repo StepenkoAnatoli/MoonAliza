@@ -19,8 +19,8 @@
 
 Read directly from Research-Kit `main` at `fcde0e6` on October 2.
 
-- `artifact-validator.mjs`, `artifact.mjs` and `artifact-manifest.schema.json` are byte-identical to the pinned `5588ce3`. The offline consumer's fixtures stay valid.
-- `bin/collect-remote.mjs` (present at the pin) dispatches `collect.yml` on GitHub Actions, prints the run id before waiting, downloads and validates the package. Exit codes: 0 valid, 1 invalid, 2 run failed/incomplete, 3 could not start, 4 still running. `--json` gives a machine-readable result, `--run-id` resumes an existing run, `--no-wait` dispatches only. `--client-ref` is public: it names the run and artifact.
+- `lib/artifact-validator.mjs`, `lib/artifact-zip.mjs`, `bin/artifact.mjs`, every schema, `test/artifact-fixtures.mjs` and `.github/workflows/collect.yml` are byte-identical to the earlier pin `5588ce3`. The producer `lib/artifact.mjs` changed (+24/-2: it now refuses FIFOs and folder cycles). The offline consumer's fixtures stay valid: all 15 recorded reports reproduce at `fcde0e6`. Corrected October 2; this line first said `artifact.mjs` was identical without naming which.
+- `bin/collect-remote.mjs` (present at the pin) dispatches `collect.yml` on GitHub Actions, downloads and validates the package. In text mode it prints the run id before waiting; under `--json` it prints one payload at exit, so Task 3 dispatches with `--no-wait --json` and then watches with `--run-id`. Exit codes: 0 valid, 1 invalid, 2 run failed/incomplete, 3 could not start, 4 still running. `--json` gives a machine-readable result, `--run-id` resumes an existing run, `--no-wait` dispatches only. `--client-ref` is public: it names the run and artifact.
 - The token comes only from `RESEARCH_KIT_GITHUB_TOKEN` or `GITHUB_TOKEN`; there is no token flag. It needs one permission, Actions read and write, on the collector repository. Firecrawl and SerpApi keys are repository secrets of the collector, so MoonAliza never holds them.
 - Since the pin, collection gained `--run-id` pickup of an already-dispatched run (`bf60e21`) and survives transient polling failures (`49d3b6e`), plus several dispatch error fixes. `--run-id` is absent at the pin, and restart-safe resume depends on it, so Stage 2 must re-pin to a revision that has these changes.
 - A freshly collected package is never `buildAuthorized`. Approval comes only from `artifact.mjs create --root <project>` after the kit's gate passes on a reviewed project: map classified, findings rewritten, brief TODOs answered and `Reviewed by: agent` declared.
@@ -65,6 +65,40 @@ Read directly from Research-Kit `main` at `fcde0e6` on October 2.
 October 2, Task 1: `tests/research-contracts.test.ts` failed first because the new methods did not exist, then passed (7 tests). The credential test starts from a valid input for each research method, so only the added field can cause a rejection. A deliberate mutation that let `research.read` accept extra fields made it fail. Typecheck, lint and `check-handoff` pass. Review of the diff found that the kit's flag parser would read a query such as `--runner=windows-latest` as a flag; the contract now refuses such values and comma-bearing domains, and Task 3 must pass `--name=value`. On Linux the full suite runs 518 tests in 38 files: 442 pass, and the same 76 native/validator tests fail with and without this change (identical failure lists). They need the Windows helper and the prepared kit, so exact-head Windows CI is the acceptance check.
 
 October 2, Task 2: `tests/research-jobs-state.test.ts` (29 tests) failed first because `src/engine/research` did not exist, then passed after implementation. The design came from a judged panel of three alternatives (explicit columns, a typed state document, a transition journal), synthesized into this one; it was rechecked against the files before coding. The v2 fixture `tests/fixtures/schema-v2.sql` was dumped from the unmodified code at `950479f` and reproduces all 48 schema objects. Eight deliberate mutations were each caught: dropping the v1->v2 version chain, the single-dispatch index, admission on dispatch or the research-off refusal; allowing `approved` through the control; publishing on replay; re-queueing an ambiguous dispatch; and removing the explicit stale-revision check. Under the last, a racing second dispatch is still refused by the edge check and nothing is written; only the error code differs. That check exposed that the store derived the next revision from the current row; it now derives it from the caller's expected revision, so the database refuses a stale writer too. Mistakes caught during the work: two test bugs (a duplicate client ref hit the one-active-job index first; a reused run id hit the run-id uniqueness) and one code bug (the DTO carried `undefined` optional keys). Typecheck, lint and `check-handoff` pass; cwd `/home/user/moonaliza`. On Linux the full suite runs 547 tests in 39 files: 471 pass, and the same 76 native/validator tests fail as before (identical failure lists). Exact-head Windows CI is the acceptance check.
+
+October 2, D4 re-pin (Task 3's first commit): the validator pin moved from `5588ce3` to `fcde0e6`, which descends from it by 64 commits and adds the collector's `--run-id` (`bf60e21`) and poll retries (`49d3b6e`).
+- Facts: 31 runtime files are modified and none added or removed. The fixture identity (`identity.commit = 5588ce3`) and every ZIP are unchanged.
+- Generator: `scripts/generate-research-fixtures.mjs` gained `--inventory-only`, parses its option before any write, and keeps the recorded identity in both partial modes. Without that, a re-pin wrote `identity.commit = fcde0e6` and failed the consumer-binds tests with IDENTITY_MISMATCH.
+- Checks on Linux, Node 24.21.0, cwd `/home/user/moonaliza`:
+  - a mistyped option writes nothing;
+  - a tampered expectation is refused, names `legacy-review` and writes nothing;
+  - a control run at `5588ce3` leaves both files byte-identical;
+  - the re-pin reproduces all 15 reports and changes only `validatorRevision` and the 31 inventory entries;
+  - `tests/research-kit.test.ts` gives 22 passed and 21 failed, all 21 on the Windows baseline.
+- Known unknown: the collect-remote and dispatch contract at `fcde0e6` has no captured evidence in `research/`. It was read from the kit's source, and Task 3's golden-payload freshness test is its day-one check.
+
+October 2, Task 3 part 1, the collector protocol: `src/adapters/research-kit/collector.ts` holds:
+- argv: one `--name=value` element per value, and a watch has no topic;
+- the minimal environment plus the token;
+- the CreateProcessW length check;
+- tables A and B. Per the October 2 artifact-download brief, NO_ARTIFACT past the 7-day retention means ARTIFACT_EXPIRED.
+
+How it was tested:
+- The classifiers run on 33 real outputs of the pinned kit, captured against `tests/fixtures/fake-github.ts`, a loopback proxy and a test CA. A freshness test re-runs the kit and requires the same bytes.
+- `tests/research-collector-protocol.test.ts` (44 tests) also checks:
+  - the one authenticated POST and its body;
+  - no token sent to the redirected artifact host;
+  - no request without a token;
+  - a TLS canary;
+  - the pinned kit's `parseFlags` reading exotic values back exactly.
+- The module was written before its tests, so five deliberate mutations stood in for a first red run; each turned the suite red:
+  - NO_RUN_ID as not dispatched;
+  - PATH and GITHUB_TOKEN inherited;
+  - `--topic` on a watch;
+  - kit text as a cause;
+  - a fresh approval accepted.
+- Full Linux gate, cwd `/home/user/moonaliza`: 506 passed and 75 failed, all 75 on the Windows baseline, with no leftover temp directories.
+- The October 2 briefs on run reconciliation and artifact download (PRs #22, #23) were checked against this design. Digest verification and a run search after a 204 are kit changes, recorded as Research-Kit work. A secondary-limit 403 parks the job as a credentials problem until a status field exists.
 
 ## Recorded for later (not in Task 2)
 
@@ -152,9 +186,9 @@ MoonAliza is distinctive and already findable. Groundwork may instead name the r
 - Keep `app.setName` (the `%APPDATA%` data folder), the installer `appId` and the update feed, so existing installs keep their data and still get updates.
 - Run a trademark check before shipping an installer under the new name.
 
-## Reference patterns from awesome-llm-apps (read October 2)
+## Patterns adopted from awesome-llm-apps (approved October 2)
 
-The user asked what MoonAliza can take from [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) (Apache-2.0). It is a catalogue of standalone Python demos, mostly Streamlit UIs on Google ADK, OpenAI Agents SDK, CrewAI or LangGraph. Take patterns, not code: the demos have no vault, approvals or engine/main split, and several take API keys in UI text fields. Each pattern below was read from the example's README; re-read the example's code when its phase starts.
+The user asked what MoonAliza can take from [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) (Apache-2.0). It is a catalogue of standalone Python demos, mostly Streamlit UIs on Google ADK, OpenAI Agents SDK, CrewAI or LangGraph. Take patterns, not code: the demos have no vault, approvals or engine/main split, and several take API keys in UI text fields. Each pattern below was read from the example's README. The user approved adopting the first three, including the suggested first background task, on October 2. Re-read the example's code when its phase starts.
 
 - **Missions, `agent_skills/advisor-orchestrator-worker`:**
   - Workers get self-contained briefs, with inputs and acceptance criteria inline.
@@ -178,3 +212,17 @@ The user asked what MoonAliza can take from [awesome-llm-apps](https://github.co
   - `advanced_llm_apps/llm_optimization_tools/headroom_context_optimization`, for small local context windows;
   - the external Openwork browser agent (`accomplish-ai/coworker`), for sandbox computer use;
   - `advanced_ai_agents/multi_agent_apps/agent_teams/llm_panel_agent_team`, for judged panels.
+
+## MCP tools from awesome-mcp-servers (proposed October 2, with missions)
+
+The user asked what MoonAliza can take from [awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers). It is a community-submitted, unvetted directory: only a 🎖️ badge marks an official implementation, and the README makes no security claim. The entries below were read from its README on October 2; check each one's own repository before use.
+
+- **MCP as the plug-in mechanism (proposed).** MoonAliza becomes an MCP client, so new tools are installed rather than built. Computer use already plans to reach Cua over MCP.
+  - Servers are user-added only, pinned by version and executable hash, like Research-Kit.
+  - Each runs as an owned process with a minimal environment, and receives credentials only through vault grants.
+  - Tool schemas are shown before the first use. Every call with an effect goes through approvals, and every call is journaled.
+  - Tool results are untrusted content.
+  - First candidates: GitHub's official MCP server, for the four GitHub integration steps; Cua's MCP server, for sandbox-only computer use.
+- **Provenance gating (proposed for missions), listed as `cgrtml/reasongate`:** a tool call whose arguments were derived from untrusted content (a fetched page, another tool's output) needs approval. This defends against prompt injection once agents browse and run tools.
+- **Decision tracking with testable predictions (proposed for project memory), listed as `mcp-server-decisions`:** each recorded decision carries a check that could prove it wrong, which feeds "does not repeat mistakes".
+- **Not taken:** installing directory servers freely, and cloud code-execution sandboxes as a default. MoonAliza stays local-first; Windows Sandbox comes first.

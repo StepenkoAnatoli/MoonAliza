@@ -3,26 +3,45 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { isDeepStrictEqual } from 'node:util';
 import { revision, legacyRevision, exportSource, inventory, sha256, json } from './research-kit-source.mjs';
+// Parsed before anything is exported or written, so a mistyped option changes no file.
+const options = process.argv.slice(2);
+if (options.length > 1 || (options.length === 1 && !['--mutations-only', '--inventory-only'].includes(options[0]))) throw new Error('Use no option, --mutations-only or --inventory-only');
+const mode = options[0] ?? 'full';
 const repo = resolve('.build/research-kit-pin');
 const output = resolve('tests/fixtures/research-kit'); mkdirSync(output, { recursive: true });
+const previous = mode === 'full' ? null : JSON.parse(readFileSync(join(output, 'provenance.json'), 'utf8'));
 const work = mkdtempSync(resolve('.build/rk-generation-'));
 const kit = exportSource(repo, revision, join(work, 'current'));
-const oldKit = exportSource(repo, legacyRevision, join(work, 'legacy'));
-const current = await import(pathToFileURL(join(kit, 'test/artifact-fixtures.mjs')).href);
-const legacy = await import(pathToFileURL(join(oldKit, 'test/artifact-fixtures.mjs')).href);
-const { openZip } = await import(pathToFileURL(join(kit, 'lib/artifact-zip.mjs')).href);
-json('src/adapters/research-kit/runtime-inventory.json', inventory(kit));
-const identity = { clientRef: 'moonaliza-fixture', repository: 'moonaliza-fixtures/synthetic', ref: 'fixture', commit: revision, workflow: 'fixture-generation', workflowRunId: 1, runAttempt: 1 };
-const mutationsOnly = process.argv[2] === '--mutations-only';
-if (process.argv.length > (mutationsOnly ? 3 : 2)) throw new Error('Only --mutations-only is supported');
-const previous = mutationsOnly ? JSON.parse(readFileSync(join(output, 'provenance.json'), 'utf8')) : null;
-const records = previous ? previous.fixtures.filter(f => f.producerRevision !== null) : [];
+// The dispatch identity the producer ZIPs carry. Only a full regeneration may change it; after a
+// re-pin, a new commit here would no longer match the bytes (IDENTITY_MISMATCH).
+const identity = previous?.identity ?? { clientRef: 'moonaliza-fixture', repository: 'moonaliza-fixtures/synthetic', ref: 'fixture', commit: revision, workflow: 'fixture-generation', workflowRunId: 1, runAttempt: 1 };
 function validate(file) {
   const run = spawnSync(process.execPath, [join(kit, 'bin/artifact.mjs'), 'validate', '--file', file, '--expect-client-ref', identity.clientRef, '--json'], { encoding: 'utf8', windowsHide: true, timeout: 60000 });
   if (run.error) throw run.error;
   return { exitCode: run.status, report: JSON.parse(run.stdout) };
 }
+if (mode === '--inventory-only') {
+  // Re-pin the validator without touching a golden ZIP: every recorded fixture must keep its exact
+  // bytes and draw the identical exit code and report from the new pin, or nothing is written.
+  const changed = previous.fixtures.filter(f => {
+    const bytes = readFileSync(join(output, f.name + '.zip'));
+    return bytes.length !== f.byteLength || sha256(bytes) !== f.sha256 || !isDeepStrictEqual(validate(join(output, f.name + '.zip')), f.expected);
+  }).map(f => f.name);
+  if (changed.length) throw new Error(`Validator ${revision} changes the recorded result for: ${changed.join(', ')}. Nothing was written.`);
+  json('src/adapters/research-kit/runtime-inventory.json', inventory(kit));
+  json(join(output, 'provenance.json'), { ...previous, validatorRevision: revision });
+  console.log(`Validator re-pinned to ${revision}; ${previous.fixtures.length} recorded reports reproduced.`);
+  process.exit(0);
+}
+const oldKit = exportSource(repo, legacyRevision, join(work, 'legacy'));
+const current = await import(pathToFileURL(join(kit, 'test/artifact-fixtures.mjs')).href);
+const legacy = await import(pathToFileURL(join(oldKit, 'test/artifact-fixtures.mjs')).href);
+const { openZip } = await import(pathToFileURL(join(kit, 'lib/artifact-zip.mjs')).href);
+json('src/adapters/research-kit/runtime-inventory.json', inventory(kit));
+const mutationsOnly = mode === '--mutations-only';
+const records = previous ? previous.fixtures.filter(f => f.producerRevision !== null) : [];
 function record(name, producerRevision, recipe, commands = []) {
   const file = join(output, name + '.zip'); const bytes = readFileSync(file);
   records.push({ name, producerRevision, recipe, commands, byteLength: bytes.length, sha256: sha256(bytes), expected: validate(file) });

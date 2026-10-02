@@ -42,9 +42,12 @@ export interface OwnedOptions {
   beforeStart?: () => Promise<void>;
   stopOnOutputLimit?: boolean;
 }
-export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, options: OwnedOptions = {}): Promise<OwnedResult> {
-  if (process.platform !== 'win32') throw new Error('WINDOWS_REQUIRED');
-  if (signal?.aborted) throw new Error('RUN_CANCELLED');
+/** The launcher's signature, so a caller can take a test runner on hosts without the native helper. */
+export type OwnedRunner = (request: OwnedCommand, signal?: AbortSignal, options?: OwnedOptions) => Promise<OwnedResult>;
+/** The exact command line the helper passes to CreateProcessW. */
+export function windowsCommandLine(executable: string, args: readonly string[]): string { return [executable, ...args].map(quoteWindowsArg).join(' '); }
+/** Request checks shared by spawnOwned and any substitute runner. */
+export function assertOwnedCommand(request: OwnedCommand): void {
   if (/\.(cmd|bat)$/i.test(request.executable)) throw new Error('BATCH_REQUIRES_EXPLICIT_SHELL');
   if (!isAbsolute(request.executable) || !isAbsolute(request.cwd) || request.executable.includes('\0') || request.cwd.includes('\0') || request.args.some(arg => arg.includes('\0')) || request.args.length > 1000) throw new Error('INVALID_COMMAND');
   if (!Number.isSafeInteger(request.timeoutMs) || request.timeoutMs < 1 || request.timeoutMs > 3_600_000 || !Number.isSafeInteger(request.maxOutputBytes) || request.maxOutputBytes < 0 || request.maxOutputBytes > 16_777_216) throw new Error('INVALID_COMMAND_LIMIT');
@@ -52,6 +55,11 @@ export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, op
     if (/^(NODE_OPTIONS|NODE_PATH|ELECTRON_RUN_AS_NODE|ELECTRON_EXTRA_LAUNCH_ARGS)$/i.test(key)) throw new Error('FORBIDDEN_COMMAND_ENV');
     if (!key || /[=\0]/.test(key) || value.includes('\0')) throw new Error('INVALID_COMMAND_ENV');
   }
+}
+export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, options: OwnedOptions = {}): Promise<OwnedResult> {
+  if (process.platform !== 'win32') throw new Error('WINDOWS_REQUIRED');
+  if (signal?.aborted) throw new Error('RUN_CANCELLED');
+  assertOwnedCommand(request);
   const timeout = Buffer.alloc(4); timeout.writeUInt32LE(request.timeoutMs);
   const environment = Object.entries(request.env).sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase())).map(([key, value]) => `${key}=${value}`).join('\0') + '\0';
   const guarded = options.readLocks !== undefined;
@@ -65,7 +73,7 @@ export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, op
       guards.push(field(path));
     }
   }
-  const protocol = Buffer.concat([timeout, field(request.executable), field([request.executable, ...request.args].map(quoteWindowsArg).join(' ')), field(request.cwd), field(environment), ...guards]);
+  const protocol = Buffer.concat([timeout, field(request.executable), field(windowsCommandLine(request.executable, request.args)), field(request.cwd), field(environment), ...guards]);
   if (protocol.length > 2_097_152) throw new Error('COMMAND_TOO_LARGE');
   return new Promise((resolveResult, reject) => {
     const child = spawn(helper(options.helperPath), [...(guarded ? ['--guarded'] : []), ...(options.onStarted ? ['--report-start'] : [])], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: safeCommandEnvironment() });

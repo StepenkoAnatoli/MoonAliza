@@ -1,0 +1,172 @@
+{
+  "kitRevision": "fcde0e6c4e9ba585454f81262d695609ef0af474",
+  "node": "v24.21.0",
+  "platform": "linux",
+  "goldens": [
+    {
+      "name": "dispatch-ok",
+      "exitCode": 0,
+      "output": "{\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"runUrl\":\"https://api.github.com/repos/o/r/actions/runs/1\",\"waited\":false,\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "dispatch-204",
+      "exitCode": 3,
+      "output": "{\"code\":\"NO_RUN_ID\",\"error\":\"NO_RUN_ID: the dispatch succeeded but returned 204 No Content, so the run it started cannot be identified\",\"remedy\":\"the server ignored BOTH routes to a run id: the pinned X-GitHub-Api-Version: 2026-03-10 and the return_run_details parameter. That is a server old enough to predate 2026-02-19, or a proxy stripping one and rejecting the other. Polling /actions/runs and correlating by created_at is the last resort and races other dispatches.\"}\n"
+    },
+    {
+      "name": "dispatch-reset",
+      "exitCode": 3,
+      "output": "{\"code\":\"NETWORK\",\"error\":\"NETWORK: could not reach https://api.github.com: fetch failed (other side closed)\",\"remedy\":\"check connectivity, then retry - a dispatch that never left is safe to repeat\"}\n"
+    },
+    {
+      "name": "dispatch-401",
+      "exitCode": 3,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: dispatch failed: HTTP 401. {\\\"message\\\":\\\"HTTP 401\\\"}\",\"remedy\":null}\n"
+    },
+    {
+      "name": "dispatch-403",
+      "exitCode": 3,
+      "output": "{\"code\":\"FORBIDDEN\",\"error\":\"FORBIDDEN: the token may not dispatch this workflow\",\"remedy\":\"the fine-grained token needs repository permission \\\"Actions\\\" set to read and write\"}\n"
+    },
+    {
+      "name": "dispatch-404",
+      "exitCode": 3,
+      "output": "{\"code\":\"NOT_FOUND\",\"error\":\"NOT_FOUND: no workflow collect.yml on o/r@main, or the token cannot see it\",\"remedy\":\"the workflow file must be on the DEFAULT branch, and the token needs Actions: read and write on this repository\"}\n"
+    },
+    {
+      "name": "dispatch-422",
+      "exitCode": 3,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: dispatch failed: HTTP 422. {\\\"message\\\":\\\"HTTP 422\\\"}\",\"remedy\":null}\n"
+    },
+    {
+      "name": "dispatch-429",
+      "exitCode": 3,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: dispatch failed: HTTP 429. {\\\"message\\\":\\\"HTTP 429\\\"}\",\"remedy\":null}\n"
+    },
+    {
+      "name": "dispatch-503",
+      "exitCode": 3,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: dispatch failed: HTTP 503. {\\\"message\\\":\\\"HTTP 503\\\"}\",\"remedy\":null}\n"
+    },
+    {
+      "name": "dispatch-no-token",
+      "exitCode": 3,
+      "output": "{\"error\":\"no GitHub token in the environment. Set one of: RESEARCH_KIT_GITHUB_TOKEN, GITHUB_TOKEN\",\"remedy\":\"create a fine-grained token with Actions: read and write on this repository only\"}\n"
+    },
+    {
+      "name": "dispatch-help",
+      "exitCode": 3,
+      "output": "unknown option --bogus\ncollect-remote - run the collector on GitHub Actions and bring the result back.\n\n  node research-kit/bin/collect-remote.mjs --repository OWNER/REPO --topic \"<what to research>\"\n  node research-kit/bin/collect-remote.mjs --repository OWNER/REPO --run-id <n>\n\n  --repository OWNER/REPO   required\n  --topic \"<text>\"          required. Visible to anyone who can read the repository.\n  --prefer <domains>        optional, comma-separated. Domains that OWN the fact; ranked\n                            above pages merely about it. On a shared host, name the path:\n                            github.com/actions/upload-artifact, not github.com.\n  --query \"<text>\"          optional, repeatable. The real search queries. Without one the\n                            topic is used verbatim, which returns the words and not the\n                            subject when the topic is made of common ones. Visible to\n                            anyone who can read the repository, like --topic.\n  --url \"<https://...>\"     optional, repeatable. A page you already know, fetched directly\n                            instead of searched. Each counts against --max-pages. With only\n                            --url and no --query, nothing is searched. Visible to anyone who\n                            can read the repository, like --topic: never a signed URL.\n  --prior \"<text>\"          optional. What you EXPECT to find, chained ahead of the first\n                            page. Only possible now; refused once collection starts.\n  --max-pages <1-25>        default 8. Each page costs at least one credit.\n  --search-transport <name> auto | serpapi | firecrawl-cli. Default auto: a SerpApi key\n                            wins, else the fetch provider. Pin one to compare them.\n  --depth probe|quick|normal  default quick\n  --client-ref <id>         optional. PUBLIC: it becomes the run and artifact name.\n  --runner ubuntu-latest|windows-latest   default ubuntu-latest\n  --workflow <file.yml>     default collect.yml\n  --ref <branch>            default main\n  --out <dir>               where to save the artifact (default .)\n  --timeout <seconds>       how long to wait (default 1800)\n  --no-wait                 dispatch and exit, printing the run id\n  --run-id <n>              pick up a run already dispatched - after --no-wait, a timeout\n                            (exit 4) or a lost connection - instead of dispatching another.\n                            Waits for it, then downloads and judges it. Takes no --topic.\n  --json                    machine-readable result\n\nThe token is read from the environment: RESEARCH_KIT_GITHUB_TOKEN or GITHUB_TOKEN.\nThere is no --token flag, on purpose.\n\nA fine-grained token needs exactly one permission: Actions -> Read and write, on this\nrepository only. Nothing else.\n\nExit: 0 valid, 1 invalid, 2 run failed/incomplete, 3 could not start, 4 still running.\nA 0 does not authorize building - read buildAuthorized.\n"
+    },
+    {
+      "name": "dispatch-echo-token",
+      "exitCode": 0,
+      "output": "{\"htmlUrl\":\"https://github.com/o/r/actions/runs/1?t=github_pat_test-only-0123456789abcdefghijklmnopqrstuvwxyz\",\"runUrl\":\"https://api.github.com/repos/o/r/actions/runs/1\",\"waited\":false,\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "dispatch-echo-plain-token",
+      "exitCode": 0,
+      "output": "{\"htmlUrl\":\"https://github.com/o/r/actions/runs/1?t=plain-test-token-ab12cd34ef56gh78\",\"runUrl\":\"https://api.github.com/repos/o/r/actions/runs/1\",\"waited\":false,\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "dispatch-422-echo-token",
+      "exitCode": 3,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: dispatch failed: HTTP 422. {\\\"message\\\":\\\"bad input near github_pat_test-only-0123456789abcdefghijklmnopqrstuvwxyz\\\"}\",\"remedy\":null}\n"
+    },
+    {
+      "name": "watch-collected",
+      "exitCode": 0,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-collected-wrapped",
+      "exitCode": 0,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-collected-redirect",
+      "exitCode": 0,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-legacy-review",
+      "exitCode": 0,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-C4E61C43FBE8601D22F893409C\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_REQUIRED\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-approved",
+      "exitCode": 0,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":true,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-50494616186CB769403C02DC22\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-failed-collection",
+      "exitCode": 0,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-38D31E7675AA0B1EB1FD8B8E08\",\"reviewedBy\":\"undeclared\",\"state\":\"COLLECTION_FAILED\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-tampered",
+      "exitCode": 1,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"FILE-SIZE-MISMATCH\",\"message\":\"project/research/raw/2026-09-30-limits-example-a4e22bcd.md is 21 bytes; the manifest declares 2405\",\"path\":\"project/research/raw/2026-09-30-limits-example-a4e22bcd.md\",\"remedy\":\"download the artifact again or regenerate it from the original corpus\"}],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-50494616186CB769403C02DC22\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-unsupported",
+      "exitCode": 2,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"FORMAT-UNSUPPORTED\",\"message\":\"this package declares format version 99.0.0; this validator reads majors 1 to 2\",\"path\":\"manifest.json\",\"remedy\":\"upgrade Research-Kit to a version that reads format 99.x\"}],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-50494616186CB769403C02DC22\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"INCOMPLETE\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-client-ref-mismatch",
+      "exitCode": 1,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"CLIENT-REF-MISMATCH\",\"message\":\"this package carries clientRef \\\"moonaliza-fixture\\\", not \\\"mz-0123456789abcdef0123456789abcdef\\\"\",\"path\":\"manifest.json\",\"remedy\":\"you are holding a different job's artifact; check source.workflowRunId against the run you dispatched\"}],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-run-failure",
+      "exitCode": 2,
+      "output": "{\"error\":\"the run finished failure\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"remedy\":\"open the run and read the first failing step; nothing was downloaded\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-run-cancelled",
+      "exitCode": 2,
+      "output": "{\"error\":\"the run finished cancelled\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"remedy\":\"open the run and read the first failing step; nothing was downloaded\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-timeout",
+      "exitCode": 4,
+      "output": "{\"code\":\"TIMEOUT\",\"error\":\"TIMEOUT: run 1 was still in_progress after 1s\",\"remedy\":\"the run is still going; check https://github.com/o/r/actions/runs/1, or pick it up again with --run-id 1 (and a longer --timeout)\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-no-artifact",
+      "exitCode": 2,
+      "output": "{\"code\":\"NO_ARTIFACT\",\"error\":\"NO_ARTIFACT: expected one corpus artifact on run 1, found 0\",\"remedy\":\"the run produced no package, or its artifact has expired; check the upload step, or re-collect\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-expired-410",
+      "exitCode": 2,
+      "output": "{\"code\":\"EXPIRED\",\"error\":\"EXPIRED: artifact 7 has expired\",\"remedy\":\"workflow artifacts are deleted after their retention period and with their run; re-collect, or keep the corpus somewhere that persists\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-run-401",
+      "exitCode": 2,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: could not read run 1: HTTP 401\",\"remedy\":\"the token was refused - it is expired or mistyped; create a new one\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-run-404",
+      "exitCode": 2,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: could not read run 1: HTTP 404\",\"remedy\":\"no run 1 on o/r, or the token cannot see it - check the number the dispatch printed\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-run-503",
+      "exitCode": 2,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: could not read run 1: HTTP 503\",\"remedy\":\"the run may be fine - pick it up again without dispatching another: --repository o/r --run-id 1\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-artifacts-403",
+      "exitCode": 2,
+      "output": "{\"code\":\"HTTP\",\"error\":\"HTTP: could not list artifacts for run 1: HTTP 403\",\"remedy\":\"the run may be fine - pick it up again without dispatching another: --repository o/r --run-id 1\",\"workflowRunId\":1}\n"
+    },
+    {
+      "name": "watch-no-token",
+      "exitCode": 3,
+      "output": "{\"error\":\"no GitHub token in the environment. Set one of: RESEARCH_KIT_GITHUB_TOKEN, GITHUB_TOKEN\",\"remedy\":\"create a fine-grained token with Actions: read and write on this repository only\"}\n"
+    }
+  ]
+}
