@@ -218,7 +218,9 @@ describe('store transitions', () => {
     const reachable: StoreResearchStatus[] = ['queued', 'dispatching', 'collecting', 'collected', 'cancelling', 'cancelled', 'failed'];
     const actors: StoreResearchActor[] = ['user', 'main', 'recovery'];
     const { store } = open(); let n = 0;
-    for (const from of reachable) for (const to of ResearchStatusSchema.options) for (const actor of actors) {
+    // One outer transaction: each refused attempt still rolls back only its own savepoint, and the 210 cases cost one
+    // durable commit instead of about 750 fsyncs, which took over 15 s on a Windows CI disk.
+    store.transaction(() => { for (const from of reachable) for (const to of ResearchStatusSchema.options) for (const actor of actors) {
       const projectId = `p${n}`; const id = `j${n++}`;
       project(store, 'public-technical', projectId);
       store.transaction(() => {
@@ -238,7 +240,7 @@ describe('store transitions', () => {
         expect(attempt, `${from}->${to} by ${actor}`).toThrow(/RESEARCH_TRANSITION_INVALID|RESEARCH_READINESS_RESERVED/);
         expect(store.getResearch(id)).toEqual(before);
       }
-    }
+    } });
   });
 
   test('patches must carry exactly what the edge needs', () => {
