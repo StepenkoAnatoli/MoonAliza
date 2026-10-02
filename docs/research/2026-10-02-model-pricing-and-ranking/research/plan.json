@@ -1,0 +1,111 @@
+{
+  "topic": "Which free and paid LLM models an agent app can use through an API or locally, what each costs per million tokens today, and how each ranks on coding and writing benchmarks",
+  "notes": "Phase 0 (three searches) named the OpenAI pricing page, LiveBench, the OpenRouter free-API comparison and Hemingway-bench; the vendor pricing pages, the Ollama library and the other leaderboards are named directly. Two searches close the licence and the coding-leaderboard gaps.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 2,
+  "maxScrapes": 16,
+  "prefer": [
+    "anthropic.com",
+    "openai.com",
+    "ai.google.dev",
+    "deepseek.com",
+    "mistral.ai",
+    "ollama.com",
+    "aider.chat",
+    "livebench.ai",
+    "eqbench.com",
+    "swebench.com"
+  ],
+  "queries": [
+    {
+      "q": "open-weight LLM licences compared Llama community license Qwen Apache 2.0 DeepSeek MIT Gemma terms commercial use",
+      "why": "U-05",
+      "prefer": [
+        "huggingface.co",
+        "github.com"
+      ]
+    },
+    {
+      "q": "SWE-bench verified leaderboard 2026 top models coding",
+      "why": "U-03",
+      "prefer": [
+        "swebench.com",
+        "github.com"
+      ]
+    }
+  ],
+  "urls": [
+    {
+      "url": "https://www.anthropic.com/pricing",
+      "type": "P",
+      "why": "U-01, U-07: Anthropic API prices per million tokens"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "type": "P",
+      "why": "U-01, U-07: OpenAI API prices"
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "type": "P",
+      "why": "U-01, U-02, U-07: Gemini prices and free tier"
+    },
+    {
+      "url": "https://api-docs.deepseek.com/quick_start/pricing",
+      "type": "P",
+      "why": "U-01: DeepSeek prices"
+    },
+    {
+      "url": "https://mistral.ai/pricing",
+      "type": "P",
+      "why": "U-01: Mistral prices"
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/rate-limits",
+      "type": "P",
+      "why": "U-06: Gemini rate limits per tier"
+    },
+    {
+      "url": "https://ollama.com/library",
+      "type": "P",
+      "why": "U-02, U-08: open-weight models runnable locally, with sizes"
+    },
+    {
+      "url": "https://openrouter.ai/blog/tutorials/free-llm-apis-compared/",
+      "type": "S",
+      "why": "U-02, U-06: free API tiers compared, with rate limits"
+    },
+    {
+      "url": "https://livebench.ai/",
+      "type": "P",
+      "why": "U-03: LiveBench, coding and other categories"
+    },
+    {
+      "url": "https://aider.chat/docs/leaderboards/",
+      "type": "P",
+      "why": "U-03: Aider polyglot coding leaderboard with cost per run"
+    },
+    {
+      "url": "https://surgehq.ai/blog/hemingway-bench-ai-writing-leaderboard",
+      "type": "S",
+      "why": "U-04: Hemingway-bench writing leaderboard"
+    },
+    {
+      "url": "https://eqbench.com/creative_writing.html",
+      "type": "P",
+      "why": "U-04: EQ-Bench creative writing leaderboard"
+    },
+    {
+      "url": "https://www.llama.com/llama3_1/license/",
+      "type": "P",
+      "why": "U-05: the Llama community licence"
+    },
+    {
+      "url": "https://github.com/ollama/ollama",
+      "type": "P",
+      "why": "U-08: Ollama's README states the memory a model size needs"
+    }
+  ]
+}
