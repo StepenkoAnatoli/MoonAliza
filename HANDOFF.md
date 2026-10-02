@@ -51,13 +51,30 @@ The user installed 0.7 and pasted a public repository URL. Its model misused loc
 
 After PR #14 merged, main passed Windows verification. The empty reverse PR #15 (main into the old feature branch) triggered another run that timed out waiting five seconds for the GitHub answer while the app was still working. The trace does not establish an app failure or its exact delay source. The corrected desktop test deliberately delays its fixture response by six seconds and waits up to thirty seconds for a durable terminal run state, then requires completed status, exact source, two model calls and restart persistence. No production code, request timeout or installer change is involved. See [development status](docs/development-status.md).
 
+## Break-test (October 2)
+
+A break-test of `main` at `2439040`, run on Linux, gave the same result in each of three baseline runs:
+
+- Typecheck, lint and build pass.
+- 462 tests pass and 75 fail. All 75 need Windows: the native helper, Job Objects or the Windows-only process tests.
+
+Fixed findings:
+
+- The managed-ollama, owned-HTTP and scheduler fixtures leaked temp directories whenever a test failed. The managed-ollama ones held a ~121 MB Node copy each, 1.3 GB per Linux run, enough to fill a shared disk.
+- `npm ci` ran better-sqlite3's implicit node-gyp rebuild although its prebuilds ship. That needs nodejs.org plus Python and a C++ toolchain. `package.json#allowScripts` now skips it.
+- `prepare-research-kit.mjs` failed on a stale pin clone or leftover export files.
+- A scheduler test failed under worker stalls of 70 ms or more.
+- A research-kit test passed only when an earlier test had run first.
+
+Windows CI must confirm that Electron loads the shipped better-sqlite3 prebuild (`check-runtime`). Not probed: the native build, Electron and e2e, which need Windows. A Linux gate must run `node scripts/prepare-research-kit.mjs` first, or the research-kit tests fail for want of the pinned export.
+
 ## Immediate continuation
 
 Inspect the current branch/PR checks and [0.8 development release record](docs/releases/0.8.1-dev.1.md). Do not substitute PR #2's successful historical checks for checks on a newer commit. The new source supports explicit cloud-policy review, editing existing profiles, bounded tool excerpts with saved-result retrieval, persisted context estimates and actual optional provider usage, and manual recovery from context failures. It does not claim a universal exact tokenizer or silently replay effects.
 
 Next continue the full approved plan:
 
-Public GitHub reading is merged (PR #14); folder-free chat is merged (PR #13). The desktop-test completion correction is merged (PR #16), and `main` passed both Windows runs at `b439ac4`. PR #15 merged `main` back into the old `feat/public-github-reading` branch; that branch carries no new work and is not a continuation point. Research jobs and review UI are the current phase, following [the research jobs plan](docs/superpowers/plans/2026-10-02-research-jobs.md). Task 1 (contracts) merged in PR #20; Task 2 (durable job state, schema v3) is on `main-axuse`, the user's chosen working branch for all continuing work. Missions (agent-proposed task splitting, always approved by the user) follow this phase; do not let research become mandatory for ordinary chat or existing projects. The long-term work below remains open.
+Public GitHub reading is merged (PR #14); folder-free chat is merged (PR #13). The desktop-test completion correction is merged (PR #16), and `main` passed both Windows runs at `b439ac4`. PR #15 merged `main` back into the old `feat/public-github-reading` branch; that branch carries no new work and is not a continuation point. Research jobs and review UI are the current phase, following [the research jobs plan](docs/superpowers/plans/2026-10-02-research-jobs.md). Task 1 (contracts) merged in PR #20 and Task 2 (durable job state, schema v3) in PR #21. Task 3 (the owned collection process) is next. `main-axuse` is the user's chosen working branch for all continuing work; after each merge it restarts from `main`. The phase order the user confirmed on October 2 is research, then project memory, then missions (beginning with background tasks, always approved by the user), then sandbox-only computer use. The plan records each decision. The app keeps the name MoonAliza. Do not let research become mandatory for ordinary chat or existing projects. The long-term work below remains open.
 
 1. Finish D3 genuine lab qualification and monitored machine probes. Preserve the original 20 tool cases, 10 coding fixtures repeated three times, 85% quality, zero unauthorized effects/writes after cancellation, load <=90 seconds, first token <=30 seconds, throughput >=4 tokens/sec and host reserve targets. Do not create production receipts from test fixtures.
 2. Supply production catalogue/trust inputs and connect verified activation, selection and the managed provider to main, engine, IPC and setup. Absence of these real inputs is not permission to fabricate them or activate an unqualified candidate. CPU lifecycle/storage checks do not establish inference quality or GPU attestation.
