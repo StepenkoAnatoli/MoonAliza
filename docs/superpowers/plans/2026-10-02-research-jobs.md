@@ -121,7 +121,7 @@ These are user decisions; later phases implement them.
   4. Output streams to bounded files on disk. On app exit owned processes stop, and after restart those tasks show as interrupted and are never re-run silently; research jobs keep their resume-by-run-id behaviour.
   5. A concurrency limit applies, and local-model work still shares the one inference scheduler under the same RAM/VRAM rules as the mission planner.
 
-## Computer use, Operator mode (proposed, after missions)
+## Computer use, Operator mode (approved: sandbox only, after missions)
 
 User request, October 2: MoonAliza should be able to control the PC, as GPT's agent does, with [Cua](https://github.com/trycua/cua) as the reference. Facts from Cua's README (read October 2): Cua Driver inspects and operates native apps and browsers on Windows, macOS and Linux through a CLI, MCP or typed SDKs, in the background where the app and platform allow; Cua also provides isolated local or cloud sandboxes. The core and the Driver are MIT; Spaces and cua-spacesd are FSL-1.1-MIT; the optional perception extension and cua-som carry AGPL obligations.
 
@@ -133,4 +133,6 @@ Proposed design (safety first; the user still chooses the scope):
 4. **Screenshots are private content:** they reach a cloud model only where the project allows cloud inference; local vision models are chosen by the hardware-aware planner when the machine qualifies.
 5. **Cua stays an external, user-installed, version-pinned component** reached over MCP, like Research-Kit. MoonAliza never runs its piped install script and never bundles the AGPL or FSL parts.
 
-Order: research, project memory, missions (beginning with background tasks), then computer use, which reuses their approvals, background sessions, Stop and ownership. Open decision for the user: sandbox only at first (recommended), or the real desktop from the start with the safeguards above.
+Order: research, project memory, missions (beginning with background tasks), then computer use, which reuses their approvals, background sessions, Stop and ownership.
+
+**Decision, October 2: sandbox only.** The first version operates only an isolated sandbox (Windows Sandbox or a Cua sandbox) and never the real desktop. Item 2 is deferred: real-desktop control is not built, offered or hidden behind a setting in this version. It is reconsidered only as a separate, later plan once sandbox mode has shipped, and only with the safeguards in item 2. Items 3, 4 and 5 apply inside the sandbox too, because a sandbox can still send email, pay or upload what it sees.
