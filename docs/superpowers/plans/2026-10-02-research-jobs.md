@@ -212,3 +212,17 @@ The user asked what MoonAliza can take from [awesome-llm-apps](https://github.co
   - `advanced_llm_apps/llm_optimization_tools/headroom_context_optimization`, for small local context windows;
   - the external Openwork browser agent (`accomplish-ai/coworker`), for sandbox computer use;
   - `advanced_ai_agents/multi_agent_apps/agent_teams/llm_panel_agent_team`, for judged panels.
+
+## MCP tools from awesome-mcp-servers (proposed October 2, with missions)
+
+The user asked what MoonAliza can take from [awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers). It is a community-submitted, unvetted directory: only a 🎖️ badge marks an official implementation, and the README makes no security claim. The entries below were read from its README on October 2; check each one's own repository before use.
+
+- **MCP as the plug-in mechanism (proposed).** MoonAliza becomes an MCP client, so new tools are installed rather than built. Computer use already plans to reach Cua over MCP.
+  - Servers are user-added only, pinned by version and executable hash, like Research-Kit.
+  - Each runs as an owned process with a minimal environment, and receives credentials only through vault grants.
+  - Tool schemas are shown before the first use. Every call with an effect goes through approvals, and every call is journaled.
+  - Tool results are untrusted content.
+  - First candidates: GitHub's official MCP server, for the four GitHub integration steps; Cua's MCP server, for sandbox-only computer use.
+- **Provenance gating (proposed for missions), listed as `cgrtml/reasongate`:** a tool call whose arguments were derived from untrusted content (a fetched page, another tool's output) needs approval. This defends against prompt injection once agents browse and run tools.
+- **Decision tracking with testable predictions (proposed for project memory), listed as `mcp-server-decisions`:** each recorded decision carries a check that could prove it wrong, which feeds "does not repeat mistakes".
+- **Not taken:** installing directory servers freely, and cloud code-execution sandboxes as a default. MoonAliza stays local-first; Windows Sandbox comes first.
