@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { hashFile } from '../src/models/artifact-files';
 import { ManagedOllamaRuntime } from '../src/models/managed-ollama';
 import { completeManagedOllama, ManagedOllamaProvider } from '../src/models/managed-provider';
@@ -16,6 +16,16 @@ function expectExited(pid: number) {
   expect(failure).toMatchObject({ code: 'ESRCH' });
 }
 
+// Fixtures whose test threw before reaching close(); afterEach stops and deletes them.
+const open = new Set<{ root: string; scheduler: InferenceScheduler }>();
+afterEach(async () => {
+  for (const item of open) {
+    open.delete(item);
+    await item.scheduler.shutdown().catch(() => {});
+    await rm(item.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => {});
+  }
+});
+
 async function fixture(mode = 'normal') {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-managed-')); const directory = join(root, 'runtime'); await mkdir(directory);
   await copyFile(process.execPath, join(directory, 'ollama.exe'));
@@ -25,13 +35,20 @@ async function fixture(mode = 'normal') {
   const installation = { directory, executable: 'ollama.exe', files, version: 'fixture-v1', homeDirectory: join(root, 'home'), modelsDirectory: join(root, 'models') };
   const owner = new ManagedOllamaRuntime(); const scheduler = new InferenceScheduler({ stopRuntime: async () => { await owner.stop(); } });
   const requests = async () => (await readFile(join(root, 'home', 'requests.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  const entry = { root, scheduler }; open.add(entry);
   return { root, installation, owner, scheduler, requests, close: async () => {
-    await scheduler.shutdown();
-    const observed = await requests().catch(error => { if (error.code === 'ENOENT') return []; throw error; });
-    for (const pid of new Set<number>(observed.map(item => item.pid))) expectExited(pid);
-    // Windows can briefly retain image/file handles after process exit. Retry only
-    // fixture deletion, after the independent exit assertions above have passed.
-    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    open.delete(entry);
+    // Each fixture holds a copy of the Node binary (~120 MB). Delete it even when shutdown or the
+    // exit assertions fail, so a failing run cannot fill the disk, but report the original failure first.
+    let failure: unknown;
+    try {
+      await scheduler.shutdown();
+      const observed = await requests().catch(error => { if (error.code === 'ENOENT') return []; throw error; });
+      for (const pid of new Set<number>(observed.map(item => item.pid))) expectExited(pid);
+    } catch (error) { failure = error; }
+    // Windows can briefly retain image/file handles after process exit, so retry the deletion.
+    try { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (error) { if (failure === undefined) throw error; }
+    if (failure !== undefined) throw failure;
   } };
 }
 const configuration = { model: 'fixture:local', digest: 'a'.repeat(64), contextTokens: 2048, outputTokens: 128, quantization: 'Q4_K_M', placement: 'cpu' as const };
