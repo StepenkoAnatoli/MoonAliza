@@ -1,0 +1,62 @@
+{
+  "topic": "Downloading a GitHub Actions run's artifacts over the REST API: listing a run's artifacts, the download redirect and how long its URL lives, the ZIP the bytes arrive in, the artifact's digest, size and expiry, and the limits on artifact size and count",
+  "notes": "Owning pages named directly after phase 0 (keyless, 4 of 6 searches answered; the one search of the first pass found the digest changelog, now named). Depth normal; nine pages, no search, maxScrapes nine.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 9,
+  "prefer": [
+    "docs.github.com",
+    "github.blog",
+    "raw.githubusercontent.com"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.github.com/en/rest/actions/artifacts",
+      "type": "P",
+      "why": "U-01, U-02, U-03, U-04, U-05: list run artifacts, get an artifact, download an artifact (redirect, archive format), the artifact object and required permissions"
+    },
+    {
+      "url": "https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts",
+      "type": "P",
+      "why": "U-02, U-05, U-06: what an artifact is, how it is stored and retained, and the limits the concept page states"
+    },
+    {
+      "url": "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts",
+      "type": "P",
+      "why": "U-02: how artifacts are downloaded (UI, CLI, API) and in what container"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/actions/upload-artifact/main/README.md",
+      "type": "P",
+      "why": "U-04, U-06: the upload action's digest output, zip packaging, per-artifact size and per-job count limits"
+    },
+    {
+      "url": "https://docs.github.com/en/actions/reference/limits",
+      "type": "P",
+      "why": "U-06: the Actions limits reference (artifact size and count, storage)"
+    },
+    {
+      "url": "https://docs.github.com/en/billing/managing-billing-for-your-products/about-billing-for-github-actions",
+      "type": "P",
+      "why": "U-06: artifact storage quota per plan"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "type": "P",
+      "why": "U-07: primary and secondary rate limits for the REST calls the reconciler makes"
+    },
+    {
+      "url": "https://github.blog/changelog/2026-09-24-expired-github-actions-artifacts-no-longer-shown-in-ui-and-api",
+      "type": "P",
+      "why": "U-05: the owner's announcement that expired artifacts are no longer listed by the UI or the API - what a late reconciler sees"
+    },
+    {
+      "url": "https://github.blog/changelog/2025-03-18-github-actions-now-supports-a-digest-for-validating-your-artifacts-at-runtime/",
+      "type": "P",
+      "why": "U-04: the owner's announcement of the artifact digest - what it is computed over and who checks it"
+    }
+  ]
+}
