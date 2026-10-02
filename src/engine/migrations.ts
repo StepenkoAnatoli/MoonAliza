@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const initialSchema = `
 CREATE TABLE projects (
@@ -136,6 +136,82 @@ function migrateChat(db: Database.Database): void {
       BEGIN SELECT RAISE(ABORT, 'SESSION_SCOPE_IMMUTABLE'); END;`);
 }
 
+const researchStatuses = `'queued','dispatching','collecting','collected','reviewing','approved','not_ready','failed','cancelling','cancelled'`;
+// v3 research DDL. Once released, keep it as this step's stable source definition, as initialSchema is for v1.
+// Research jobs are run-less: a journal row precedes every state change, identity is write-once, and readiness is unreachable here.
+const researchJobsSchema = `
+CREATE TABLE research (
+  id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  revision INTEGER NOT NULL CHECK(revision > 0),
+  status TEXT NOT NULL CHECK(status IN (${researchStatuses})),
+  topic TEXT NOT NULL CHECK(length(topic) BETWEEN 1 AND 2048),
+  inputs TEXT NOT NULL CHECK(json_valid(inputs) AND length(inputs) <= 131072),
+  client_ref TEXT NOT NULL UNIQUE CHECK(length(client_ref) BETWEEN 1 AND 64 AND client_ref GLOB '[A-Za-z0-9]*' AND client_ref NOT GLOB '*[^A-Za-z0-9._-]*'),
+  research_level TEXT NOT NULL CHECK(research_level IN ('public-technical','private-connected')),
+  policy_revision INTEGER NOT NULL CHECK(policy_revision >= 0), trust_revision INTEGER NOT NULL CHECK(trust_revision >= 0),
+  collector_revision INTEGER CHECK(collector_revision >= 0), repository TEXT CHECK(length(repository) BETWEEN 3 AND 140),
+  workflow TEXT CHECK(length(workflow) BETWEEN 5 AND 133), ref TEXT CHECK(length(ref) BETWEEN 1 AND 255), dispatched_at TEXT,
+  workflow_run_id TEXT UNIQUE CHECK(length(workflow_run_id) BETWEEN 1 AND 16 AND workflow_run_id NOT GLOB '*[^0-9]*' AND workflow_run_id NOT GLOB '0*'),
+  failure TEXT CHECK(length(failure) BETWEEN 2 AND 64 AND failure GLOB '[A-Z]*' AND failure NOT GLOB '*[^A-Z0-9_]*'),
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  CHECK((repository IS NULL) = (workflow IS NULL) AND (repository IS NULL) = (ref IS NULL) AND (repository IS NULL) = (collector_revision IS NULL) AND (repository IS NULL) = (dispatched_at IS NULL)),
+  CHECK(status <> 'queued' OR (repository IS NULL AND workflow_run_id IS NULL AND failure IS NULL)),
+  CHECK(status IN ('queued','failed','cancelled') OR repository IS NOT NULL),
+  CHECK(status <> 'dispatching' OR workflow_run_id IS NULL),
+  CHECK(status NOT IN ('collecting','collected','reviewing','approved','not_ready') OR workflow_run_id IS NOT NULL),
+  CHECK(workflow_run_id IS NULL OR repository IS NOT NULL),
+  CHECK(status <> 'failed' OR failure IS NOT NULL),
+  CHECK(failure IS NULL OR status IN ('failed','not_ready','cancelled'))
+) STRICT;
+CREATE INDEX research_project ON research(project_id,updated_at DESC);
+CREATE UNIQUE INDEX research_active ON research(project_id) WHERE status IN ('queued','dispatching','collecting','reviewing','cancelling');
+CREATE TABLE research_events (
+  research_id TEXT NOT NULL REFERENCES research(id) ON DELETE CASCADE, revision INTEGER NOT NULL CHECK(revision > 0),
+  from_status TEXT CHECK(from_status IN (${researchStatuses})), to_status TEXT NOT NULL CHECK(to_status IN (${researchStatuses})),
+  actor TEXT NOT NULL CHECK(actor IN ('user','main','recovery')), request_id TEXT CHECK(length(request_id) BETWEEN 1 AND 128),
+  cause TEXT NOT NULL CHECK(length(cause) BETWEEN 2 AND 64 AND cause GLOB '[A-Z]*' AND cause NOT GLOB '*[^A-Z0-9_]*'),
+  detail TEXT NOT NULL CHECK(json_valid(detail) AND length(detail) <= 4096), engine_epoch TEXT NOT NULL, at INTEGER NOT NULL CHECK(at >= 0),
+  PRIMARY KEY(research_id,revision),
+  CHECK((revision = 1) = (from_status IS NULL) AND (revision = 1) = (to_status = 'queued')),
+  CHECK(from_status IS NOT to_status)
+) STRICT;
+CREATE UNIQUE INDEX research_single_dispatch ON research_events(research_id) WHERE to_status = 'dispatching';
+CREATE TRIGGER research_insert_guard BEFORE INSERT ON research
+  WHEN NEW.status IS NOT 'queued' OR NEW.revision IS NOT 1
+  BEGIN SELECT RAISE(ABORT, 'RESEARCH_WRITE_INVALID'); END;
+CREATE TRIGGER research_update_journaled BEFORE UPDATE ON research
+  WHEN NEW.revision IS NOT OLD.revision + 1 OR NOT EXISTS(SELECT 1 FROM research_events WHERE research_id=NEW.id AND revision=NEW.revision AND from_status=OLD.status AND to_status=NEW.status)
+  BEGIN SELECT RAISE(ABORT, 'RESEARCH_TRANSITION_UNJOURNALED'); END;
+CREATE TRIGGER research_identity_immutable BEFORE UPDATE ON research
+  WHEN NEW.id IS NOT OLD.id OR NEW.project_id IS NOT OLD.project_id OR NEW.client_ref IS NOT OLD.client_ref OR NEW.topic IS NOT OLD.topic
+    OR NEW.inputs IS NOT OLD.inputs OR NEW.research_level IS NOT OLD.research_level OR NEW.policy_revision IS NOT OLD.policy_revision
+    OR NEW.trust_revision IS NOT OLD.trust_revision OR NEW.created_at IS NOT OLD.created_at
+    OR (OLD.repository IS NOT NULL AND (NEW.repository IS NOT OLD.repository OR NEW.workflow IS NOT OLD.workflow OR NEW.ref IS NOT OLD.ref
+      OR NEW.collector_revision IS NOT OLD.collector_revision OR NEW.dispatched_at IS NOT OLD.dispatched_at))
+    OR (OLD.workflow_run_id IS NOT NULL AND NEW.workflow_run_id IS NOT OLD.workflow_run_id)
+  BEGIN SELECT RAISE(ABORT, 'RESEARCH_IDENTITY_IMMUTABLE'); END;
+CREATE TRIGGER research_readiness_reserved BEFORE UPDATE OF status ON research
+  WHEN NEW.status = 'approved'
+  BEGIN SELECT RAISE(ABORT, 'RESEARCH_READINESS_RESERVED'); END;
+CREATE TRIGGER research_events_step BEFORE INSERT ON research_events
+  WHEN NOT EXISTS(SELECT 1 FROM research WHERE id=NEW.research_id AND ((NEW.revision=1 AND revision=1 AND status='queued') OR (NEW.revision>1 AND revision=NEW.revision-1 AND status=NEW.from_status)))
+  BEGIN SELECT RAISE(ABORT, 'STALE_REVISION'); END;
+CREATE TRIGGER research_events_append_only BEFORE UPDATE ON research_events
+  BEGIN SELECT RAISE(ABORT, 'RESEARCH_JOURNAL_APPEND_ONLY'); END;
+CREATE TRIGGER research_events_retained BEFORE DELETE ON research_events
+  WHEN EXISTS(SELECT 1 FROM research WHERE id=OLD.research_id)
+  BEGIN SELECT RAISE(ABORT, 'RESEARCH_JOURNAL_APPEND_ONLY'); END;`;
+
+// No released build wrote v2 research rows, and they carry no dispatch identity. Keep any that exist verbatim
+// under their v1/v2 definition rather than inventing a topic or client ref, or deleting them.
+function migrateResearchJobs(db: Database.Database): void {
+  const legacy = initialSchema.split('CREATE TABLE research (')[1]!.split(') STRICT;')[0]!;
+  db.exec(`CREATE TABLE research_legacy (${legacy}) STRICT;
+    INSERT INTO research_legacy (id,project_id,run_id,status,state,created_at,updated_at) SELECT id,project_id,run_id,status,state,created_at,updated_at FROM research;
+    DROP TABLE research;
+    ${researchJobsSchema}`);
+}
+
 export function migrate(db: Database.Database): void {
   assertSupportedSchema(db);
   // SQLite cannot toggle FK enforcement inside a transaction. Restore even on rollback.
@@ -144,7 +220,8 @@ export function migrate(db: Database.Database): void {
     db.transaction(() => {
       let version = assertSupportedSchema(db);
       if (version === 0) { db.exec(initialSchema); version = 1; }
-      if (version === 1) migrateChat(db);
+      if (version === 1) { migrateChat(db); version = 2; }
+      if (version === 2) migrateResearchJobs(db);
       if ((db.pragma('foreign_key_check') as unknown[]).length) throw new Error('MIGRATION_FOREIGN_KEY_FAILURE');
       db.pragma(`user_version = ${SCHEMA_VERSION}`);
     }).immediate();

@@ -1,7 +1,8 @@
 import { GITHUB_TOOL, GitHubInputSchema, githubRepositories, parseGitHubInput, githubFailure, type GitHubInput } from '../shared/github';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { parseRequest, parseResult, ProjectSchema, ProfileSchema, SettingsSchema, type Request, type Run, type RunEvent, type Profile, type Message, type Settings, type ToolSpec, type ToolCall, type PublicError } from '../shared';
+import { parseRequest, parseResult, ProjectSchema, ProfileSchema, SettingsSchema, type Request, type Research, type Run, type RunEvent, type Profile, type Message, type Settings, type ToolSpec, type ToolCall, type PublicError } from '../shared';
+import { ResearchJobs } from './research';
 import { Store, type StoreRunStatus } from './store';
 import { assertConversationPolicy, canonicalHash } from './policy';
 import type { Completion, InferenceMessage } from '../main/inference';
@@ -17,6 +18,7 @@ interface Host extends Partial<CommandHost> {
   inspectGit?(runId: string, name: string, input: unknown, signal: AbortSignal): Promise<OwnedResult>;
   infer(run: Run, messages: InferenceMessage[], signal: AbortSignal, tools?: ToolSpec[]): Promise<Completion>;
   publish(event: RunEvent): void;
+  publishResearch?(research: Research): void;
 }
 const terminal = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
 
@@ -46,7 +48,9 @@ export class Application {
   private readonly active = new Map<string, { stop: AbortController; task: Promise<void> }>();
   private readonly reader: FileReader;
   private readonly operations?: Operations;
+  readonly research: ResearchJobs;
   constructor(readonly store: Store, private readonly host: Host, options?: { dataDirectory: string }) {
+    this.research = new ResearchJobs(store, research => host.publishResearch?.(research));
     const protectedRoots = options ? [options.dataDirectory] : [];
     this.reader = new FileReader(store, protectedRoots);
     if (options) this.operations = new Operations(store, join(options.dataDirectory, 'snapshots'), protectedRoots, event => host.publish(event), host.prepareCommand && host.executeCommand ? { prepareCommand: host.prepareCommand, executeCommand: host.executeCommand } : undefined);
@@ -64,14 +68,16 @@ export class Application {
     const read = this.read(request);
     if (read !== undefined) return parseResult(request.method, read);
     const pendingEvents: RunEvent[] = [];
+    const pendingResearch: Research[] = [];
     let startRun: Run | undefined;
     const accepted = this.store.acceptRequest({ method: request.method, clientRequestId: request.clientRequestId, canonicalInputHash: canonicalHash(request.params) }, () => {
-      const result = this.mutate(request, pendingEvents);
+      const result = this.mutate(request, pendingEvents, pendingResearch);
       if (request.method === 'run.start') startRun = (result as { run: Run }).run;
       return { entityId: request.clientRequestId, response: parseResult(request.method, result) };
     });
     if (!accepted.replayed) {
       for (const event of pendingEvents) this.host.publish(event);
+      for (const research of pendingResearch) this.host.publishResearch?.(research);
       if (request.method === 'approval.decide') this.requireOperations().deliver(request.params.operationId);
       if (startRun) {
         const run = startRun;
@@ -111,6 +117,8 @@ export class Application {
         const failed = this.store.latestRunEvent(session.id, 'run.failed') as { error: unknown } | null;
         return { session, messages: this.store.listMessages(session.id), runs: this.store.listRuns(session.id), context: this.store.latestRunEvent(session.id, 'context.updated'), usage: this.store.latestRunEvent(session.id, 'usage.updated'), failure: failed?.error ?? null };
       }
+      case 'research.list': this.publicProject(request.params.projectId); return this.research.list(request.params.projectId);
+      case 'research.read': return this.research.read(request.params.researchId);
       case 'run.events': { const page = this.store.events(request.params.runId, request.params.after, request.params.limit); return { events: page.events, hasMore: page.hasMore }; }
       default: return undefined;
     }
@@ -120,7 +128,7 @@ export class Application {
     return SettingsSchema.parse({ revision: 0, theme: 'system', defaultMode: 'ask', modelStepBudget: 24, runDurationMinutes: 15, commandTimeoutSeconds: 120, autoSelectSkills: 3, reducedMotion: 'system', ...this.store.getSettings() });
   }
 
-  private mutate(request: Request, events: RunEvent[]): unknown {
+  private mutate(request: Request, events: RunEvent[], research: Research[] = []): unknown {
     const now = new Date().toISOString();
     switch (request.method) {
       case 'approval.decide': return this.requireOperations().decide(request.params);
@@ -135,6 +143,7 @@ export class Application {
         if (this.operations?.isBusy(request.params.projectId)) throw new Error('RUN_ACTIVE');
         if (this.operations?.requiresReview(request.params.projectId)) throw new Error('RECOVERY_REQUIRED');
         if (this.store.listSessions(request.params.projectId).some(session => this.store.listRuns(session.id).some(run => !terminal.has(run.status)))) throw new Error('RUN_ACTIVE');
+        this.research.assertIdle(request.params.projectId);
         this.store.deleteProject(request.params.projectId); return { deleted: true };
       }
       case 'session.create': {
@@ -205,6 +214,8 @@ export class Application {
         }
         return { run: this.store.getRun(run.id) };
       }
+      case 'research.start': return this.research.start(request.params, request.clientRequestId, research);
+      case 'research.cancel': return this.research.cancel(request.params.researchId, request.clientRequestId, research);
       default: throw new Error('NOT_IMPLEMENTED');
     }
   }

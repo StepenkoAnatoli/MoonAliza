@@ -2,7 +2,7 @@ import { GitHubErrorCodeSchema, type GitHubInput } from '../shared/github';
 import { randomUUID } from 'node:crypto';
 import { utilityProcess, type UtilityProcess } from 'electron';
 import { FromEngineSchema, ToEngineSchema, type Control } from '../engine/control';
-import type { Request, RunEvent, ToolSpec } from '../shared';
+import type { Request, Research, RunEvent, ToolSpec } from '../shared';
 import { inferenceErrorCode, type Completion, type InferenceMessage } from './inference';
 import type { CommandInput, CommandPlan } from '../shared/commands';
 import type { OwnedResult } from '../tools/commands';
@@ -10,6 +10,7 @@ import type { OwnedResult } from '../tools/commands';
 interface EngineHooks {
   readGitHub(runId: string, input: GitHubInput, epoch: string): Promise<string>;
   event(event: RunEvent): void;
+  research?(research: Research): void;
   inference(runId: string, messages: InferenceMessage[], epoch: string, tools?: ToolSpec[]): Promise<Completion>;
   cancel(runId: string): void;
   restarted(epoch: string): void;
@@ -44,6 +45,7 @@ export class Engine {
           clearTimeout(pending.timer); this.pending.delete(message.id);
           if (message.type === 'reply') pending.resolve(message.result); else pending.reject(new Error(message.code));
         } else if (message.type === 'event') this.hooks.event(message.event);
+        else if (message.type === 'research') this.hooks.research?.(message.research);
         else if (message.type === 'github.read') {
           void this.hooks.readGitHub(message.runId, message.input, epoch).then(result => {
             if (this.epoch === epoch) child.postMessage(ToEngineSchema.parse({ type: 'github.result', epoch, id: message.id, result }));

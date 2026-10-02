@@ -20,6 +20,7 @@ const publicMessages: Record<string, string> = {
   CREDENTIAL_UNAVAILABLE: 'A saved key cannot be reused at a different endpoint or provider type. Enter the key for the new destination, or create a separate profile.',
   RUN_CANCELLED: 'The run was stopped.',
   RUN_ACTIVE: 'Wait for the active run to finish, or stop it first.',
+  RESEARCH_NOT_ALLOWED: 'Research is off for this project. Allow research in the project policy first.',
   REQUEST_CONFLICT: 'This request identity was already used with different content.',
   ENGINE_UNAVAILABLE: 'The engine is restarting. Try again when it is ready.',
   NOT_IMPLEMENTED: 'This capability is not available in this development build.',

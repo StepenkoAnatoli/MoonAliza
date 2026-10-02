@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { parseRequest, ResponseSchema, EventSchema } from '../shared';
+import { parseRequest, ResponseSchema, EventSchema, ResearchSchema } from '../shared';
 
 contextBridge.exposeInMainWorld('moonaliza', {
   async invoke(method: string, params: unknown = {}) {
@@ -15,5 +15,12 @@ contextBridge.exposeInMainWorld('moonaliza', {
     };
     ipcRenderer.on('moonaliza:event', listener);
     return () => ipcRenderer.removeListener('moonaliza:event', listener);
+  },
+  onResearch(callback: (research: unknown) => void) {
+    const listener = (_event: Electron.IpcRendererEvent, raw: unknown) => {
+      const parsed = ResearchSchema.safeParse(raw); if (parsed.success) callback(parsed.data);
+    };
+    ipcRenderer.on('moonaliza:research', listener);
+    return () => ipcRenderer.removeListener('moonaliza:research', listener);
   },
 });

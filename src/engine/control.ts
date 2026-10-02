@@ -1,6 +1,7 @@
 import { GitHubInputSchema, GitHubErrorCodeSchema } from '../shared/github';
 import { z } from 'zod';
-import { RequestSchema, ProfileSchema, EventSchema, IdSchema, ToolCallSchema, ToolSpecSchema } from '../shared';
+import { RequestSchema, ProfileSchema, EventSchema, IdSchema, ResearchSchema, ToolCallSchema, ToolSpecSchema } from '../shared';
+import { ResearchCodeSchema, ResearchTargetSchema, WorkflowRunIdSchema } from './research';
 import { CommandInputSchema, CommandPlanSchema, CommandResultSchema } from '../shared/commands';
 import { TokenUsageSchema } from '../shared/context';
 
@@ -16,6 +17,12 @@ export const ControlSchema = z.discriminatedUnion('method', [
   z.object({ method: z.literal('command.context'), runId: id, operationId: id.optional() }).strict(),
   z.object({ method: z.literal('vault.references') }).strict(),
   z.object({ method: z.literal('request.lookup'), requestId: id, requestMethod: z.string(), inputHash: z.string() }).strict(),
+  z.object({ method: z.literal('research.context'), researchId: id }).strict(),
+  // Main records collector facts. Readiness, review and user cancellation are not reachable from here.
+  z.object({ method: z.literal('research.transition'), requestId: id, researchId: id, expectedRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    to: z.enum(['dispatching', 'collecting', 'collected', 'failed', 'cancelled']), cause: ResearchCodeSchema,
+    target: ResearchTargetSchema.optional(), workflowRunId: WorkflowRunIdSchema.optional(), failure: ResearchCodeSchema.optional() }).strict(),
+  z.object({ method: z.literal('research.recover'), owned: z.array(id).max(1000) }).strict(),
   z.object({ method: z.literal('shutdown') }).strict(),
 ]);
 export type Control = z.infer<typeof ControlSchema>;
@@ -72,6 +79,7 @@ export const FromEngineSchema = z.discriminatedUnion('type', [
   z.object({ ...identity, type: z.literal('reply'), result: z.unknown() }).strict(),
   z.object({ ...identity, type: z.literal('failure'), code: z.string().max(128) }).strict(),
   z.object({ epoch: id, type: z.literal('event'), event: EventSchema }).strict(),
+  z.object({ epoch: id, type: z.literal('research'), research: ResearchSchema }).strict(),
   z.object({ ...identity, type: z.literal('inference'), runId: id, messages: InferenceMessagesSchema, tools: InferenceToolsSchema.optional() }).strict(),
   z.object({ epoch: id, type: z.literal('inference.cancel'), runId: id }).strict(),
   z.object({ ...identity, type: z.literal('command.prepare'), runId: id, input: CommandInputSchema }).strict(),
