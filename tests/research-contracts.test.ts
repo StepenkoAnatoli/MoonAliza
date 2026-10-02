@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { EventSchema, MethodSpec, ResearchSchema, ResearchStatusSchema } from '../src/shared';
+import { EventSchema, MethodSpec, PublicErrorSchema, ResearchSchema, ResearchStatusSchema } from '../src/shared';
+import { safeError } from '../src/main/bridge';
 
 const start = MethodSpec['research.start'].params;
 const save = MethodSpec['research.collector.save'].params;
@@ -67,6 +68,26 @@ describe('research contracts', () => {
     expect(spec.result.safeParse({ collector }).success).toBe(true);
     expect(spec.result.safeParse({ collector: { ...collector, token: 'github_pat_x' } }).success).toBe(false);
     expect(MethodSpec['research.collector.read'].result.safeParse({ collector: { ...collector, token: 'x' } }).success).toBe(false);
+  });
+
+  test('a collector token is printable ASCII without whitespace, so the kit cannot trim it into another value', () => {
+    const base = { repository: 'owner/collector', workflow: 'collect.yml', ref: 'main' };
+    for (const token of ['github_pat_x', 'x', '~!@#$%^&*()_+{}|:"<>?']) expect(save.safeParse({ ...base, token }).success, token).toBe(true);
+    for (const token of [' github_pat_x', 'github_pat_x ', 'a b', 'a\nb', 'a\tb', 'a\0b', 'ünicode', '']) expect(save.safeParse({ ...base, token }).success, JSON.stringify(token)).toBe(false);
+    expect(save.safeParse({ ...base, clearToken: true }).success).toBe(true);
+  });
+
+  test('research start inputs are refused early when they cannot fit one collector command line', () => {
+    const long = (n: number) => 'q'.repeat(n);
+    expect(start.safeParse({ ...validStart, topic: long(2048), queries: Array(16).fill(long(500)), urls: [], preferDomains: [] }).success).toBe(true);
+    expect(start.safeParse({ ...validStart, topic: long(2048), queries: Array(16).fill(long(512)), urls: Array(8).fill(`https://example.com/${long(300)}`) }).success).toBe(false);
+  });
+
+  test('COLLECTOR_TOKEN_REQUIRED crosses the bridge as itself', () => {
+    const error = safeError(new Error('COLLECTOR_TOKEN_REQUIRED'));
+    expect(error.code).toBe('COLLECTOR_TOKEN_REQUIRED');
+    expect(PublicErrorSchema.safeParse(error).success).toBe(true);
+    expect(error.message).not.toMatch(/github_pat|token:/);
   });
 
   test('review is started for a job, never decided by a flag', () => {

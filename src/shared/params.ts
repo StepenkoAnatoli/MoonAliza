@@ -43,11 +43,14 @@ export const ResearchStartParams = z.object({
   projectId: IdSchema, topic: PublicLine(2048), queries: z.array(PublicLine(512)).max(16).default([]), urls: z.array(HttpUrlSchema).max(25).default([]),
   preferDomains: z.array(PreferDomain).max(16).default([]), depth: z.enum(['probe', 'quick', 'normal']).default('quick'), maxPages: z.number().int().min(1).max(25).default(8),
   acknowledgedPublic: z.literal(true),
-}).strict().refine(value => value.urls.length <= value.maxPages, 'Each known URL counts against the page budget');
+}).strict().refine(value => value.urls.length <= value.maxPages, 'Each known URL counts against the page budget')
+  // An early refusal only: main's exact Windows command-line check stays authoritative.
+  .refine(value => value.topic.length + [...value.queries, ...value.urls].reduce((total, item) => total + item.length, 0) + value.preferDomains.join(',').length <= 12_000, 'Research inputs are too long for one collection');
 export const ResearchCollectorSchema = z.object({ revision: RevisionSchema, repository: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/), workflow: z.string().regex(/^[A-Za-z0-9_.-]{1,128}\.ya?ml$/), ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/).refine(value => !value.includes('..'), 'Invalid ref'), tokenConfigured: z.boolean() }).strict();
 export type ResearchCollector = z.infer<typeof ResearchCollectorSchema>;
 export const ResearchCollectorSaveParams = ResearchCollectorSchema.omit({ revision: true, tokenConfigured: true }).extend({
-  expectedRevision: RevisionSchema.optional(), token: z.string().min(1).max(16384).optional(), clearToken: z.boolean().optional(),
+  // Printable ASCII without whitespace: the kit trims the token, and exact-value redaction needs the exact bytes.
+  expectedRevision: RevisionSchema.optional(), token: z.string().min(1).max(16384).regex(/^[\x21-\x7E]+$/).optional(), clearToken: z.boolean().optional(),
 }).strict().refine(value => !(value.token && value.clearToken), 'Cannot save and clear a token together');
 const researchResult = z.object({ research: ResearchSchema }).strict();
 export const MissionTaskSchema = z.object({ id: IdSchema, title: z.string().min(1).max(256), instructions: z.string().min(1).max(32768), dependencies: z.array(IdSchema).max(128), status: z.enum(['pending', 'running', 'produced', 'verifying', 'completed', 'failed', 'cancelled']), runId: IdSchema.optional(), outputManifestDigest: DigestSchema.optional(), verificationRunId: IdSchema.optional() }).strict();

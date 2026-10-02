@@ -34,6 +34,15 @@ afterEach(async () => {
 });
 
 describe('credential lifecycle', () => {
+  test('a research grant lives at most 30 seconds, as a provider test does', async () => {
+    const { vault } = await fixture();
+    const ref = await vault.saveStaged('collector-token'); await vault.commit(ref);
+    const binding = { epoch: 'epoch-1', purpose: 'research' as const, contextId: 'collector:j:1', secretRef: ref };
+    expect(() => vault.grant({ ...binding, expiresAt: Date.now() + 60_000 })).toThrow('CREDENTIAL_CAPABILITY_DENIED');
+    const capability = vault.grant({ ...binding, expiresAt: Date.now() + 30_000 });
+    expect(await vault.withSecret(capability, binding, value => value)).toBe('collector-token');
+  });
+
   test('stores encrypted bytes and grants access only to its live bound purpose', async () => {
     const { vault, directory } = await fixture();
     const ref = await vault.saveStaged('fixture-secret-123');
