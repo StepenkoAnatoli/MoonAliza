@@ -78,7 +78,8 @@ test('Stop and bounded input return sanitized failures and no receipt', async ()
   expect(await kit.validate(fixture('approved'), binding, controller.signal)).toMatchObject({ error: 'CANCELLED', receipt: null });
   const large = join(root, 'large.zip'); await writeFile(large, Buffer.alloc(32 * 1024 ** 2 + 1));
   expect(await kit.validate(large, binding)).toMatchObject({ error: 'INPUT_LIMIT', receipt: null });
-  expect(await readdir(join(config().storageRoot, 'work'))).toEqual([]);
+  // Neither early refusal creates work; an earlier test in the file may or may not have created the directory.
+  expect(await readdir(join(config().storageRoot, 'work')).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return []; throw error; })).toEqual([]);
 }, 60000);
 
 test('strict owned contracts reject extra caller authority and inherited credentials', () => {
