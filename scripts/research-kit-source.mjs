@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { resolve, join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 
-export const revision = '5588ce3def50e7e3702e5f84251bfd3d445f3df0';
+export const revision = 'fcde0e6c4e9ba585454f81262d695609ef0af474';
 export const legacyRevision = '1a0337b9cb1be34127f655671d72f752fe47210c';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export function exportSource(repo, pin, destination) {

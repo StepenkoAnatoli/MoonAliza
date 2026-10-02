@@ -1,5 +1,5 @@
 {
-  "revision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+  "revision": "fcde0e6c4e9ba585454f81262d695609ef0af474",
   "files": [
     {
       "path": "bin/artifact.mjs",
@@ -8,8 +8,8 @@
     },
     {
       "path": "bin/audit.mjs",
-      "size": 4676,
-      "sha256": "4b1d4d8bc7ce3a3fed13f12a2cf6f94c3ff764fc61f2474d3ef0f847ce6c00c5"
+      "size": 6795,
+      "sha256": "6a79d125d9ed53eec7227027cd385282f51cbf151efbd55c45e3159c69fb082d"
     },
     {
       "path": "bin/brief.mjs",
@@ -23,8 +23,8 @@
     },
     {
       "path": "bin/collect-remote.mjs",
-      "size": 12906,
-      "sha256": "f11a6e5036f38ed7879eddda8a931cfa4a733bcd171c532b8934b7919246e6bc"
+      "size": 14866,
+      "sha256": "8e00a69489ec9033a5a14342ba38a85c286da10b5065e3c8fd1133d5a70c01e9"
     },
     {
       "path": "bin/conformance_common.py",
@@ -33,8 +33,8 @@
     },
     {
       "path": "bin/decompose.mjs",
-      "size": 7335,
-      "sha256": "6922966b492032f291041132fd883d762c08694fb90253671de522717b234dda"
+      "size": 7430,
+      "sha256": "7d279e21f0a92c3ddf2e7d55d6ec68cf592d72d036b7eb837bd6ae20b5d82b0d"
     },
     {
       "path": "bin/disclosure.mjs",
@@ -43,13 +43,13 @@
     },
     {
       "path": "bin/doctor.mjs",
-      "size": 2629,
-      "sha256": "23db1baedc9ab0e06b63523d791f0e8d98458240554d486e4330697966fdeea6"
+      "size": 2661,
+      "sha256": "fc3ea57b8f3884835f844c2897f3dba3792cd44fa75a3eea92aad3f5324a545e"
     },
     {
       "path": "bin/evidence-context.mjs",
-      "size": 3240,
-      "sha256": "412ea12e672ece043e60b308ab15f9efb464c80ee510ed0d0eeaaff896bec7c1"
+      "size": 3264,
+      "sha256": "e3c81f6ab0ea2cffada6b1aaba3f2a5766fd8e07ff3b15ecf760fa4805d9a62b"
     },
     {
       "path": "bin/export-warc.mjs",
@@ -73,18 +73,18 @@
     },
     {
       "path": "bin/handoff.mjs",
-      "size": 2674,
-      "sha256": "648ddeaa3d903ffca0e952e5cbea460aaf1b6f37f847de8069cc7bb526baf11b"
+      "size": 2706,
+      "sha256": "6b7bf5dfb63128850aea2f62aa18d112b373be50ae6dec8e1bb1c67857434fa5"
     },
     {
       "path": "bin/install-hooks.mjs",
-      "size": 4560,
-      "sha256": "427181de475ac0300bc67f63605f8d8f18fa9572d072ad0f8ba3360e9bfec0f6"
+      "size": 4809,
+      "sha256": "b75fda0e917fac2ef9d9b07f81d7d7de84aa26153d849c70f38d2be7dad7ed2c"
     },
     {
       "path": "bin/install.mjs",
-      "size": 2997,
-      "sha256": "dc10f5ff0119f35f6fcb4011155ce9dbd8c67fda2dac70b3f6d9e7d3aa75f762"
+      "size": 3493,
+      "sha256": "0be4c086dd95cc85ef7985c25d8b64cead99b507420f90285fd25f6dfbfc30e4"
     },
     {
       "path": "bin/ledger_conformance.py",
@@ -98,8 +98,8 @@
     },
     {
       "path": "bin/mcp-server.mjs",
-      "size": 5557,
-      "sha256": "a389b30227d559d0679bdcca77f2dc5d90e9bb454d929d7d442c758a79457149"
+      "size": 6142,
+      "sha256": "be20488d8e4b5ead9f3482c35c997d7ebe5d88f0abefe7173e617eb40d57fb29"
     },
     {
       "path": "bin/measure.mjs",
@@ -118,13 +118,13 @@
     },
     {
       "path": "bin/preflight.mjs",
-      "size": 4189,
-      "sha256": "22b41b557c00facc2e2442c8d3bec6c943274c93e340484eb144f0ed960bc156"
+      "size": 4221,
+      "sha256": "515b9344450385edc3b8ec6a3aabb4a5032b17b5c13752cc3a688507e7780055"
     },
     {
       "path": "bin/prior.mjs",
-      "size": 3915,
-      "sha256": "4c3aedd5076d024f0093e4f00112e23371c1ba396309abd5be46a0a3e8d10c6d"
+      "size": 3921,
+      "sha256": "dd4d3eb4499603cad32e3ae6e2054972cc3ba841452a1d17a59acf2a292a8837"
     },
     {
       "path": "bin/property_vector_conformance.py",
@@ -143,18 +143,18 @@
     },
     {
       "path": "bin/research.mjs",
-      "size": 16008,
-      "sha256": "9206f571437d7361704771e9bb78748606366f736e247080b641aab237adc1d7"
+      "size": 16656,
+      "sha256": "6553a4e12f59abc34c1b0329454b14ca896cc37fbb9f781cdd417d5a09d64afe"
     },
     {
       "path": "bin/researcher-release.mjs",
-      "size": 5358,
-      "sha256": "f7fc547a7fe5fb55949ee479a77e4b56f6deb1470841cf746ff839eb037f8487"
+      "size": 5709,
+      "sha256": "e148caccf5d336b735bed29fb07a320badc9ee933c902606e1aa067091b13b0a"
     },
     {
       "path": "bin/selftest.mjs",
-      "size": 10130,
-      "sha256": "9e950367aaba1e3b42108325a4a1c07cc025e74ccc0a451aba1e6d19c95bf5e6"
+      "size": 11225,
+      "sha256": "18d8f1a7fd16b5943b7e9cc6650c267259a7253664c467f145f6a75855fd06c4"
     },
     {
       "path": "bin/timeline.mjs",
@@ -178,8 +178,8 @@
     },
     {
       "path": "lib/artifact.mjs",
-      "size": 30232,
-      "sha256": "5347eb3ea612f3867911511f77e234d9bcdfdfaf03b33924185e569c5a0a5840"
+      "size": 31602,
+      "sha256": "9e6f9b30c989dd0ec57712ab1ecef86ea54676ce089d422b8e24477e2bd94def"
     },
     {
       "path": "lib/audit.mjs",
@@ -208,8 +208,8 @@
     },
     {
       "path": "lib/collect.mjs",
-      "size": 11632,
-      "sha256": "a8ca5fda5fe96932a5dcabe578bf64deead5d45083ceb4ab1a23a8e1524fe232"
+      "size": 13547,
+      "sha256": "3ca01a88ad0190d019ad11b9ea17984b0853343bb5adac46048e1b90f18fed36"
     },
     {
       "path": "lib/config.mjs",
@@ -218,18 +218,18 @@
     },
     {
       "path": "lib/core.mjs",
-      "size": 36670,
-      "sha256": "2d053ca48245480640f39857e2004f129ba06cf09fdc603f460a79ac35f413d7"
+      "size": 40190,
+      "sha256": "64efaa51540b340519146c9cbca1ce4d7444e4ded98b722544193cceb060fd10"
     },
     {
       "path": "lib/corpus.mjs",
-      "size": 27254,
-      "sha256": "4df516de082e5927e3498b20c01bbfcf6a69d81010a85c8226093f0003b4c2b9"
+      "size": 27626,
+      "sha256": "783b0d092e6f0cc2ee492a5b73a299732a4a2a99683574a0c56cdb9d1c3adab0"
     },
     {
       "path": "lib/decompose.mjs",
-      "size": 30525,
-      "sha256": "d913c2216fdc77d8d417da63a1192159850a43f0f7ba979871ae6f2f93e0f33d"
+      "size": 31701,
+      "sha256": "2286b29e21dea4054950234998cd51d34ea19d81b42bd473569283796f91dfd2"
     },
     {
       "path": "lib/dimensions.mjs",
@@ -238,18 +238,18 @@
     },
     {
       "path": "lib/disclosure.mjs",
-      "size": 8646,
-      "sha256": "7a54c8cd3d09587a6d5d56d4d978049df6399a57f8e45efc34f8ee98934b9a51"
+      "size": 8829,
+      "sha256": "3aebd2f4aa81773d8e9e8f618ceed343dc341043382f8f3cf5cc75203c9b7107"
     },
     {
       "path": "lib/dispatch.mjs",
-      "size": 16945,
-      "sha256": "84806b4b296645ee96a2d9107044274b0e64d63dba9bd48f8e371e0bb53e0a23"
+      "size": 21896,
+      "sha256": "1ab19d5d1b5b077068d7ae8a4c13e3504189bf85b84c89106a66a46129729a81"
     },
     {
       "path": "lib/doctor.mjs",
-      "size": 24331,
-      "sha256": "f5952208e4b52a5a7c29726d6ac33afee6bf929d0f9851803ed5aac67dba515f"
+      "size": 24503,
+      "sha256": "84e977505dd8d87301591e7fa86587c898e1acd25b9e3eb96f2cdc2a5deb09fa"
     },
     {
       "path": "lib/evidence-context.mjs",
@@ -273,8 +273,8 @@
     },
     {
       "path": "lib/firecrawl.mjs",
-      "size": 22515,
-      "sha256": "6462c66af55d1b695166240591ffc9dddc2a22f2e275bd198b51cedb5b9b8b2f"
+      "size": 23710,
+      "sha256": "d64d959efc8d4250e3e30e2bd72b152045e2461b9eb44e9e05d73822e45d3f75"
     },
     {
       "path": "lib/gate.mjs",
@@ -293,13 +293,13 @@
     },
     {
       "path": "lib/http-transport.mjs",
-      "size": 20313,
-      "sha256": "ac2ec3205b97696e16b2b19277504e8dc42a74612b9c09bba4cf06bf9c73d096"
+      "size": 31000,
+      "sha256": "aae4c73103ef2e60f56e277bb2d090bda3dfb5efa8d2174411319351819be6ab"
     },
     {
       "path": "lib/installer.mjs",
-      "size": 19891,
-      "sha256": "2c4fe7eb012fa4fd2633de5f18e1d889896d6dc1b83bf9b50023c9e0f67e8e36"
+      "size": 24570,
+      "sha256": "5b7cd666bcdf543c30dd1b88277bce7a69f1a14279c85f6b6b21eb35f8099811"
     },
     {
       "path": "lib/ledger-conformance.mjs",
@@ -348,8 +348,8 @@
     },
     {
       "path": "lib/provenance.mjs",
-      "size": 22546,
-      "sha256": "80f6a8019595d9f20cd7014e13241f31a8c11ebe648f58e99f035d5d8c6c3da6"
+      "size": 22803,
+      "sha256": "d6c983cfe409402c735cbc4ef27f9bbebf6692c078a5f3ad23acab34ea000f49"
     },
     {
       "path": "lib/quotes.mjs",
@@ -393,13 +393,13 @@
     },
     {
       "path": "lib/research-run.mjs",
-      "size": 44407,
-      "sha256": "721c6f9d800e147c83bfcd4b23a750bd28c5af57e507c3dcf6d819aabc9da900"
+      "size": 46883,
+      "sha256": "f20005668a969cb2eac6f39ead07d9fe686455c51cac2e31e481675dba2dde06"
     },
     {
       "path": "lib/runtime.mjs",
-      "size": 17963,
-      "sha256": "1b61c9b87742284ae08a9c3052b8e7fcaca4097c9b08993115913b76e3a234a6"
+      "size": 18067,
+      "sha256": "5dd6c55cce9c960870270d182073c7ec870c6e3aa3307c323319d5ed945042d7"
     },
     {
       "path": "lib/scaffold.mjs",
@@ -408,8 +408,8 @@
     },
     {
       "path": "lib/searxng.mjs",
-      "size": 10637,
-      "sha256": "b8d5af78bc451ee0b92b7d4cac5ae0ff66e89b43b70bc65f599f29ce9ff655d1"
+      "size": 11480,
+      "sha256": "77bc8db39bb8d081ffacb6c1c8255110157d56db8684c3334310dd05a98a6393"
     },
     {
       "path": "lib/serpapi.mjs",
@@ -433,13 +433,13 @@
     },
     {
       "path": "lib/warc.mjs",
-      "size": 7899,
-      "sha256": "bf5761aab45b65614ae869a7655777ab48ee66bbe84efbb1abe6795a3b579446"
+      "size": 8467,
+      "sha256": "d32b51843ace8a57de9284cfa149e3c5ec18de5b91a492ba232809e0bb123fe9"
     },
     {
       "path": "lib/witness.mjs",
-      "size": 6210,
-      "sha256": "04d73a689f02c868268329081c93b49576b7f5370aeca3e53d2d3ed4d0adcfb5"
+      "size": 6279,
+      "sha256": "7ec56c1ec04253be4da2415e0b853e64853f45004e33b051c6e61284234321d8"
     },
     {
       "path": "schemas/artifact-manifest.schema.json",
