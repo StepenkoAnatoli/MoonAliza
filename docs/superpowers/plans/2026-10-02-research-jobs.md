@@ -97,4 +97,84 @@ Proposed design (local, not the hosted service, consistent with local-first priv
 - **Plan to Build handoff:** Plan mode saves a structured plan; Build mode follows it and marks steps done, so switching modes does not repeat or rewrite finished work.
 - **Lessons:** failed operations, failing checks and user corrections become lesson records surfaced before similar actions. This reduces repeated mistakes; it cannot guarantee a model never repeats one.
 - **Trust:** memory steers future runs, so entries derived from untrusted content (GitHub files, web or research captures) stay proposed until the user accepts them; imported text never becomes an instruction. The user can view, edit and delete every record. Project cloud policy applies whenever memory is sent to a cloud model.
-- **Order (recommendation, awaiting user confirmation):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
+- **Order (confirmed by the user, October 2):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
+
+## Decisions recorded October 2
+
+These are user decisions; later phases implement them.
+
+- **Phase order:** finish this research phase, then project memory, then missions.
+- **Completion is counted, never estimated.** Every plan step lists acceptance items written in advance. An item counts only when its evidence exists: a test that ran and passed, CI green on that exact commit, a merged PR. Build completion % = verified items / all items, and each number links to what is missing.
+- **Research readiness per plan step.** Each step lists its blocking unknowns. Research readiness % = unknowns closed with verified evidence / all blocking unknowns; an unreachable fact may be labelled a known unknown with a day-one check, never left silent. The plan shows both percentages.
+- **Build only where research is sufficient** (integration review Stage 3, research-aware Build admission): Build mode is admitted per plan step only when that step's research is ready (the kit's own gate plus a fresh MoonAliza validation). Steps with no blocking unknowns need no research, so research stays optional for ordinary work.
+- **Build to Research and back.** When Build hits something it cannot resolve from the code, it pauses that step, records the open question as an unknown in project memory and proposes a targeted research job with topic and queries prefilled from the error. The approval card shows exactly what becomes public; code is never placed in queries automatically. After review, facts land in project memory with sources and Build resumes at the same step; a mistake becomes a lesson.
+- **Quality checks.** Careful-coding discipline (read before changing, run the checks, re-read the diff, report mistakes plainly) is Build mode's default behaviour. Break-test (prove realistic build and test failures, then fix them minimally) is suggested at 25%, 50% and 75% build completion, when a change touches risky areas (migrations, process or credential code, installers) and after a repeated-failure lesson; it is required before a milestone is marked 100% or released. The user approves every break-test run, with its cost shown. In missions it becomes a preset (finder, verifier, fixer).
+- **GitHub, approved as four steps:**
+  1. One secure GitHub connection (a GitHub App or fine-grained token with least privilege per repository) in the encrypted vault, shared by research collection, private repository reading and the steps below; never entered in chat.
+  2. GitHub as completion evidence: CI runs on an exact commit and PR state tick acceptance items.
+  3. Checks and break-test runs on GitHub Actions runners, so heavy and Windows-only checks do not depend on the user's PC.
+  4. Optional per-project two-way sync of project memory tasks with GitHub Issues or a Project board, and finished work opened as draft PRs. Every write to GitHub needs the user's approval; issues are visible to repository readers, so private notes stay local unless the user opts in.
+- **Background tasks, approved as the first part of the missions phase** (the foundation mission agents run on):
+  1. A Tasks panel lists everything running in the background (test suites, builds, dev servers, research jobs, later mission agents) with status, elapsed time, the latest output and Stop.
+  2. Build mode can start an approved command in the background and keep working; running in the background never bypasses the existing exact command approval.
+  3. A finished task posts a short summary into the conversation (passed or failed and the key lines); the agent reads the full saved output on demand instead of loading it into context.
+  4. Output streams to bounded files on disk. On app exit owned processes stop, and after restart those tasks show as interrupted and are never re-run silently; research jobs keep their resume-by-run-id behaviour.
+  5. A concurrency limit applies, and local-model work still shares the one inference scheduler under the same RAM/VRAM rules as the mission planner.
+
+## Computer use, Operator mode (approved: sandbox only, after missions)
+
+User request, October 2: MoonAliza should be able to control the PC, as GPT's agent does, with [Cua](https://github.com/trycua/cua) as the reference. Facts from Cua's README (read October 2): Cua Driver inspects and operates native apps and browsers on Windows, macOS and Linux through a CLI, MCP or typed SDKs, in the background where the app and platform allow; Cua also provides isolated local or cloud sandboxes. The core and the Driver are MIT; Spaces and cua-spacesd are FSL-1.1-MIT; the optional perception extension and cua-som carry AGPL obligations.
+
+Proposed design (safety first; the user still chooses the scope):
+
+1. **Sandbox first:** the agent works in an isolated Windows environment (Windows Sandbox or a Cua sandbox), never the real desktop, by default.
+2. **Real desktop only by explicit per-session opt-in,** with an always-visible control banner, an instant stop hotkey and an app allowlist.
+3. **Step approval for sensitive actions:** password or payment fields, sending messages or email, deleting, installing and purchases always pause for the user.
+4. **Screenshots are private content:** they reach a cloud model only where the project allows cloud inference; local vision models are chosen by the hardware-aware planner when the machine qualifies.
+5. **Cua stays an external, user-installed, version-pinned component** reached over MCP, like Research-Kit. MoonAliza never runs its piped install script and never bundles the AGPL or FSL parts.
+
+Order: research, project memory, missions (beginning with background tasks), then computer use, which reuses their approvals, background sessions, Stop and ownership.
+
+**Decision, October 2: sandbox only.** The first version operates only an isolated sandbox (Windows Sandbox or a Cua sandbox) and never the real desktop. Item 2 is deferred: real-desktop control is not built, offered or hidden behind a setting in this version. It is reconsidered only as a separate, later plan once sandbox mode has shipped, and only with the safeguards in item 2. Items 3, 4 and 5 apply inside the sandbox too, because a sandbox can still send email, pay or upload what it sees.
+
+## App name (decided October 2: keep MoonAliza)
+
+The user asked for a more fitting name, picked Groundwork, then chose to keep MoonAliza after a web check (October 2) found the candidates already in use by AI-agent or developer tools:
+
+- Groundwork: at least six agent and dev-tool projects (gates, project memory, cited research), plus several AI businesses.
+- Cairn: an agent-first IDE and a local-first AI notes app.
+- Plumbline, Keelson, Sightline, Provena and Firmground: each already an AI tool.
+- Surefoot was the only free candidate in the category (a ski-boot brand uses it).
+
+MoonAliza is distinctive and already findable. Groundwork may instead name the research phase inside the app; confirm that when the research UI is built. If a rename comes back, record it as its own task:
+
+- Change only what users see: product name, installer, window titles, docs.
+- Keep `app.setName` (the `%APPDATA%` data folder), the installer `appId` and the update feed, so existing installs keep their data and still get updates.
+- Run a trademark check before shipping an installer under the new name.
+
+## Reference patterns from awesome-llm-apps (read October 2)
+
+The user asked what MoonAliza can take from [awesome-llm-apps](https://github.com/Shubhamsaboo/awesome-llm-apps) (Apache-2.0). It is a catalogue of standalone Python demos, mostly Streamlit UIs on Google ADK, OpenAI Agents SDK, CrewAI or LangGraph. Take patterns, not code: the demos have no vault, approvals or engine/main split, and several take API keys in UI text fields. Each pattern below was read from the example's README; re-read the example's code when its phase starts.
+
+- **Missions, `agent_skills/advisor-orchestrator-worker`:**
+  - Workers get self-contained briefs, with inputs and acceptance criteria inline.
+  - Each result gets a verdict: PASS, FIX (re-dispatched with the failure details) or ESCALATE.
+  - An advisor reviews the plan before dispatch and the result before delivery. In MoonAliza the pre-dispatch review is where the user's approval goes.
+  - The budget is stated up front and never exceeded silently.
+  - Pair it with the hardware-aware planner: cheap workers, stronger judgment only where it changes a decision.
+- **Project memory, `agent_skills/self-improving-agent-skills`:**
+  - Analyse each failure for its root cause.
+  - Apply one surgical change per round.
+  - Re-run test scenarios that include the failed case.
+  - Keep the change only if the score improves, otherwise revert it, and keep a changelog.
+  - This is the mechanism for "does not repeat mistakes" and the repeated-failure lesson trigger.
+- **Background tasks, `always_on_agents/release_radar_agent`:**
+  - Outbound delivery needs both `dry_run=false` and a configured destination.
+  - It reports only impact (breaking, security, deprecation).
+  - A good first background task: watch a project's dependencies. MoonAliza must add what the demo lacks: state between runs, de-duplication and Stop.
+- **No change, `advanced_ai_agents/multi_agent_apps/trust_gated_agent_team`:** its SHA-256 hash-chained audit log matches Research-Kit's ledger and the `research_events` journal, and fixed agent trust scores are weaker than evidence and approval gates.
+- **Not yet read; check when the related work starts:**
+  - `rag_tutorials/corrective_rag`, for the Build-to-Research loop;
+  - `advanced_llm_apps/llm_optimization_tools/headroom_context_optimization`, for small local context windows;
+  - the external Openwork browser agent (`accomplish-ai/coworker`), for sandbox computer use;
+  - `advanced_ai_agents/multi_agent_apps/agent_teams/llm_panel_agent_team`, for judged panels.
