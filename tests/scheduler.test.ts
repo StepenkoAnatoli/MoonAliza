@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { setTimeout as delay } from 'node:timers/promises';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -81,13 +81,20 @@ test.each([{ options: { leaseTimeoutMs: 35, heartbeatTimeoutMs: 1000 }, error: '
 });
 
 test('heartbeats renew liveness but cannot extend the hard lease deadline', async () => {
-  const queue = scheduler(); let beats = 0;
-  const result = await caught(queue.run(async lease => {
-    const timer = setInterval(() => { try { lease.heartbeat(); beats++; } catch { clearInterval(timer); } }, 10);
-    try { await new Promise<void>(done => lease.signal.addEventListener('abort', () => done(), { once: true })); }
-    finally { clearInterval(timer); }
-  }, { heartbeatTimeoutMs: 80, leaseTimeoutMs: 150 }));
-  expect(beats).toBeGreaterThan(0); expect(result.error).toBe('INFERENCE_DEADLINE');
+  // Virtual time: on the real clock, a worker stall of 70 ms or more between two 10 ms beats expires the heartbeat first.
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'performance'] });
+  try {
+    const queue = scheduler(); let beats = 0; let settled = false;
+    const pending = caught(queue.run(async lease => {
+      const timer = setInterval(() => { try { lease.heartbeat(); beats++; } catch { clearInterval(timer); } }, 10);
+      try { await new Promise<void>(done => lease.signal.addEventListener('abort', () => done(), { once: true })); }
+      finally { clearInterval(timer); }
+    }, { heartbeatTimeoutMs: 80, leaseTimeoutMs: 150 })).finally(() => { settled = true; });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(settled).toBe(true);
+    const result = await pending;
+    expect(beats).toBeGreaterThan(8); expect(result.error).toBe('INFERENCE_DEADLINE');
+  } finally { vi.useRealTimers(); }
 });
 
 test.each(['reject', 'timeout'] as const)('unconfirmed cleanup permanently fences the queue: %s', async failure => {
