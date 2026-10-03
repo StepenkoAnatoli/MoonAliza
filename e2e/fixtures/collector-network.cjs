@@ -3,7 +3,8 @@
 // with `-r`, before the app's own main code runs. MoonAliza gives a collector child a minimal environment
 // (collectorEnvironment), so the real pinned kit cannot be pointed at tests/fixtures/fake-github.ts by any setting.
 // This adds exactly two variables, HTTPS_PROXY (a loopback proxy) and NODE_EXTRA_CA_CERTS (the test CA), to the
-// environment block of a collect-remote.mjs launch on its way into the native helper. Production code has no hook
+// environment block of a collect-remote.mjs launch on its way into the native helper. It also refuses every request main itself sends
+// with fetch to a host other than loopback, so the test token can never reach the real GitHub. Production code has no hook
 // for this; a process that can load this file into main can already run any code there. See
 // docs/specification/research-journeys.md.
 const ENV = 'MOONALIZA_E2E_COLLECTOR_NETWORK';
@@ -24,9 +25,21 @@ function checkNetwork(network) {
  * Each collector launch's end is recorded in `outcomes`: the helper's exit code and, from the kit's last stdout line,
  * only `status`, `clientRef` and `state`, so a journey can tell which classification the supervisor received.
  */
-function install(childProcess, input) {
+function install(childProcess, input, scope = globalThis) {
   const network = checkNetwork(input);
-  const state = { collectors: 0, rewritten: 0, outcomes: [] };
+  const state = { collectors: 0, rewritten: 0, outcomes: [], refusedFetches: [] };
+  // Main's own requests (the verified import's GitHub run read) never leave the machine either: anything but loopback is
+  // refused before it is sent, and only its host name is recorded, never a header. The importer defers on a failed read.
+  const originalFetch = scope.fetch;
+  if (typeof originalFetch === 'function') {
+    scope.fetch = function fetch(resource, ...rest) {
+      let host = null;
+      try { host = new URL(typeof resource === 'string' ? resource : resource instanceof URL ? resource.href : resource.url).hostname; } catch { /* refused below */ }
+      if (host === '127.0.0.1' || host === 'localhost' || host === '[::1]') return originalFetch.call(this, resource, ...rest);
+      state.refusedFetches.push(host ?? 'unparseable');
+      return Promise.reject(new TypeError('E2E_NETWORK_REFUSED'));
+    };
+  }
   const read = (buffer, offset) => {
     if (offset + 4 > buffer.length) throw new Error('E2E_PROTOCOL');
     const end = offset + 4 + buffer.readUInt32LE(offset);

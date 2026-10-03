@@ -79,7 +79,7 @@ async function prepare(app: ElectronApplication, page: Page, project: string) {
 const read = async (page: Page, id: string) => (await invoke<{ research: Job }>(page, 'research.read', { researchId: id })).research;
 const count = (fake: FakeGitHub, method: string, path: string) => fake.seen.filter(request => request.method === method && request.path === path).length;
 type Outcome = { code: number | null; status: string | null; clientRef: string | null; state: string | null };
-type Harness = { collectors: number; rewritten: number; outcomes: Outcome[] };
+type Harness = { collectors: number; rewritten: number; outcomes: Outcome[]; refusedFetches: string[] };
 const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonalizaE2eCollectorNetwork?: Harness }).__moonalizaE2eCollectorNetwork ?? null);
 
 test('The harness is loaded into main before the app, and the product never sees its variable', async () => {
@@ -88,7 +88,7 @@ test('The harness is loaded into main before the app, and the product never sees
   try {
     app = await launch(); const page = await app.firstWindow();
     await expect(page.getByText('Your work starts here')).toBeVisible();
-    expect(await network(app)).toEqual({ collectors: 0, rewritten: 0, outcomes: [] });
+    expect(await network(app)).toEqual({ collectors: 0, rewritten: 0, outcomes: [], refusedFetches: [] });
     expect(await app.evaluate(() => process.env.MOONALIZA_E2E_COLLECTOR_NETWORK ?? null)).toBeNull();
   } finally { await app?.close(); await fake.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -128,8 +128,9 @@ test.describe('research journeys', () => {
       expect(made.status, made.stderr).toBe(0);
       fake.set({ zip: await readFile(zip), artifacts: [{ id: 7, name: `research-kit-corpus-v1-${started.clientRef}` }] });
       await expect.poll(() => count(fake, 'GET', `/repos/${FAKE_REPOSITORY}/actions/artifacts/7/zip`), { timeout: 60_000, message: 'the watch must download the package' }).toBe(1);
-      // Import (Task 4) is not wired: the job stays collecting and parked. A transient outcome would relaunch within
-      // 30 s and a failed validation would fail the job; neither may happen.
+      // The verified import's GitHub run read is refused by the harness before it leaves the machine (the fake does not
+      // serve the run yet), so the import defers and the job stays collecting and parked. A transient outcome would
+      // relaunch within 30 s and a failed validation would fail the job; neither may happen.
       const settled = fake.seen.length;
       await page.waitForTimeout(40_000);
       expect(fake.seen.length).toBe(settled);
@@ -144,6 +145,9 @@ test.describe('research journeys', () => {
       expect(harness?.outcomes.at(-1)).toEqual({ code: 0, status: 'PASS', clientRef: started.clientRef, state: expect.stringMatching(/^(REVIEW_REQUIRED|REVIEW_IN_PROGRESS|PREFLIGHT_BLOCKED)$/) });
       expect(count(fake, 'POST', DISPATCH)).toBe(1);
       expect(fake.seen.every(request => request.authorization === 'exact')).toBe(true);
+      // The import tried to read the run from GitHub and was refused there: the test token never left for a real host.
+      expect(harness?.refusedFetches.length).toBeGreaterThan(0);
+      expect(harness?.refusedFetches.every(host => host === 'api.github.com')).toBe(true);
       await app.close(); app = undefined;
       for (const file of await files(data)) expect((await readFile(file)).includes(TOKEN), file).toBe(false);
     } finally {

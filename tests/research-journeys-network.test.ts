@@ -10,11 +10,12 @@ import { spawnOwned } from '../src/tools/commands';
 const require = createRequire(import.meta.url);
 const childProcess = require('node:child_process') as { spawn: (...args: unknown[]) => unknown };
 type Outcome = { code: number | null; status: string | null; clientRef: string | null; state: string | null };
-const { install } = require('../e2e/fixtures/collector-network.cjs') as { install(module: unknown, network: unknown): { collectors: number; rewritten: number; outcomes: Outcome[] } };
+const { install } = require('../e2e/fixtures/collector-network.cjs') as { install(module: unknown, network: unknown, scope?: { fetch?: unknown }): { collectors: number; rewritten: number; outcomes: Outcome[]; refusedFetches: string[] } };
 const original = childProcess.spawn; const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
 const network = { HTTPS_PROXY: 'http://127.0.0.1:43123', NODE_EXTRA_CA_CERTS: '/fixtures/ca.pem' };
 const helperPath = '/helper/MoonAlizaHost.exe';
-afterEach(() => { childProcess.spawn = original; syncBuiltinESMExports(); Object.defineProperty(process, 'platform', platform); });
+const originalFetch = globalThis.fetch;
+afterEach(() => { childProcess.spawn = original; syncBuiltinESMExports(); Object.defineProperty(process, 'platform', platform); globalThis.fetch = originalFetch; });
 
 type Child = EventEmitter & { stdin: PassThrough; stdout: PassThrough; stderr: PassThrough };
 /** A stand-in helper: records its input, prints `output` as the child's stdout, and exits with `code`. */
@@ -49,7 +50,7 @@ async function run(script: string, writes: Buffer[], output = '', code = 0) {
 
 test('a collect-remote.mjs launch gains exactly the loopback proxy and the test CA, in spawnOwned order', async () => {
   const writes: Buffer[] = []; const state = await run('/kit/bin/collect-remote.mjs', writes);
-  expect(state).toEqual({ collectors: 1, rewritten: 1, outcomes: [{ code: 0, status: null, clientRef: null, state: null }] });
+  expect(state).toEqual({ collectors: 1, rewritten: 1, outcomes: [{ code: 0, status: null, clientRef: null, state: null }], refusedFetches: [] });
   const { fields, environment, tail } = decode(writes[0]!);
   expect(fields.slice(0, 3)).toEqual(['/kit/node.exe', '/kit/node.exe --max-old-space-size=256 /kit/bin/collect-remote.mjs --json', '/work']);
   expect(environment).toEqual(['HOME=/t', `HTTPS_PROXY=${network.HTTPS_PROXY}`, `NODE_EXTRA_CA_CERTS=${network.NODE_EXTRA_CA_CERTS}`, 'RESEARCH_KIT_GITHUB_TOKEN=test-token', 'TEMP=/t', 'TMP=/t']);
@@ -58,7 +59,7 @@ test('a collect-remote.mjs launch gains exactly the loopback proxy and the test 
 
 test('every other helper launch and the guard list pass byte for byte', async () => {
   const writes: Buffer[] = []; const state = await run('/kit/bin/artifact.mjs', writes);
-  expect(state).toEqual({ collectors: 0, rewritten: 0, outcomes: [] });
+  expect(state).toEqual({ collectors: 0, rewritten: 0, outcomes: [], refusedFetches: [] });
   expect(decode(writes[0]!).environment).toEqual(['HOME=/t', 'RESEARCH_KIT_GITHUB_TOKEN=test-token', 'TEMP=/t', 'TMP=/t']);
   // spawnOwned cannot encode a guard list off Windows (drive-letter paths), so the guarded form is the encoded
   // collector protocol plus a guard list, written to the wrapped helper directly.
@@ -96,4 +97,19 @@ test('a collector launch records its exit and only the status, client ref and st
   // A park the supervisor would not treat as a package (exit 3, no report) is told apart from it.
   const parked = await run('/kit/bin/collect-remote.mjs', [], '{"error":"refused","code":"KIT"}\n', 3);
   expect(parked.outcomes).toEqual([{ code: 3, status: null, clientRef: null, state: null }]);
+});
+
+test('main\'s own fetch reaches only loopback: a GitHub request is refused before it is sent, and only its host is recorded', async () => {
+  const sent: string[] = [];
+  const scope = { fetch: async (resource: string | URL | Request) => { sent.push(String(resource)); return new Response('{}'); } };
+  const harness = install(childProcess, network, scope);
+  const github = (scope.fetch as (r: string, i?: RequestInit) => Promise<Response>)('https://api.github.com/repos/o/r/actions/runs/1', { headers: { Authorization: 'Bearer github_pat_secret-0123' } });
+  await expect(github).rejects.toThrow('E2E_NETWORK_REFUSED');
+  await expect((scope.fetch as (r: URL) => Promise<Response>)(new URL('https://example.com/x'))).rejects.toThrow('E2E_NETWORK_REFUSED');
+  await expect((scope.fetch as (r: string) => Promise<Response>)('not a url')).rejects.toThrow('E2E_NETWORK_REFUSED');
+  expect(sent).toEqual([]);
+  const local = await (scope.fetch as (r: string) => Promise<Response>)('http://127.0.0.1:43123/repos/o/r/actions/runs/1');
+  expect(local.status).toBe(200); expect(sent).toEqual(['http://127.0.0.1:43123/repos/o/r/actions/runs/1']);
+  expect(harness.refusedFetches).toEqual(['api.github.com', 'example.com', 'unparseable']);
+  expect(JSON.stringify(harness)).not.toContain('github_pat');
 });
