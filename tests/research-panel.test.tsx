@@ -141,6 +141,8 @@ test.each([
   ['COLLECTION_EXPIRED', 'Collection timed out', /within 7 days/],
   ['REMOTE_STATE_UNKNOWN', 'Run state unknown', /no second run was started/],
   ['POLICY_CHANGED', 'Project policy changed', /Any policy change ends/],
+  ['RUN_IDENTITY_MISMATCH', 'Run did not match the request', /not the one it started/],
+  ['PACKAGE_IDENTITY_MISMATCH', 'Corpus from another run', /different run, attempt or commit/],
   ['TRUST_CHANGED', 'Project trust changed', /Start a new collection once the project is trusted/],
   ['NOT_A_LISTED_CODE', 'Collection failed', /\(NOT_A_LISTED_CODE\)/],
   ['<b>not a code</b>', 'Collection failed', /^The collection stopped\. Check/],

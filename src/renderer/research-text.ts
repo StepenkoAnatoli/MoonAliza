@@ -28,6 +28,8 @@ export const RESEARCH_FAILURES: Readonly<Record<string, { title: string; action:
   ARTIFACT_INVALID: { title: 'Corpus failed validation', action: 'The downloaded corpus failed the Research Kit\'s validation and was not used. Start a new collection; if this repeats, check the Research Kit version in the collector repository.' },
   ARTIFACT_INCOMPLETE: { title: 'Corpus incomplete', action: 'The Research Kit reported the downloaded corpus as incomplete or blocked, and it was not used. Start a new collection, for example with a larger page budget.' },
   COLLECTION_FAILED: { title: 'Nothing could be collected', action: 'The collector ran but reported that the collection failed. Check the search and scraping secrets and credits of the collector repository, then start again.' },
+  RUN_IDENTITY_MISMATCH: { title: 'Run did not match the request', action: 'The GitHub run MoonAliza found is not the one it started (a different run, repository, workflow, branch or trigger), so its corpus was not used. Check the Actions page of the collector repository, then start a new collection.' },
+  PACKAGE_IDENTITY_MISMATCH: { title: 'Corpus from another run', action: 'The downloaded corpus belongs to a different run, attempt or commit than the one this collection started, so it was not used. Start a new collection.' },
   COLLECTION_EXPIRED: { title: 'Collection timed out', action: 'The collection did not finish within 7 days of starting, so MoonAliza stopped following it. Start a new collection.' },
 };
 
