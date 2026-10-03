@@ -30,6 +30,7 @@ const publicMessages: Record<string, string> = {
   NOT_FOUND: 'This operation is no longer available.',
   APPROVAL_STALE: 'This approval is no longer valid. Review the current task again.',
   FILE_CONFLICT: 'The file changed since this edit was recorded. Your current file was preserved.',
+  HARDLINK_REVIEW_REQUIRED: 'This file now has more than one hard link, so it cannot be changed or inspected safely. No project files were changed.',
   UNDO_UNAVAILABLE: 'Undo is unavailable for this change or its original snapshot.',
   RECOVERY_REQUIRED: 'Review interrupted operations in Recovery before starting another Build task.',
   SNAPSHOT_QUOTA: 'The snapshot budget is full of protected edits. Finish the run or review interrupted operations before proposing more edits.',

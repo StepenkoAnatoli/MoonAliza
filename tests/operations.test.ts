@@ -1,11 +1,12 @@
 import { mkdtempSync, rmSync } from 'node:fs';
-import { readFile, writeFile, unlink } from 'node:fs/promises';
+import { link, readFile, writeFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
 import { Store } from '../src/engine/store';
 import { Operations } from '../src/engine/operations';
-import type { Approval, RunEvent } from '../src/shared';
+import { PublicErrorSchema, type Approval, type RunEvent } from '../src/shared';
+import { safeError } from '../src/main/bridge';
 
 const cleanup: Array<() => void> = [];
 afterEach(() => cleanup.splice(0).forEach(fn => fn()));
@@ -122,4 +123,20 @@ test('change listings report expired snapshots before offering undo', async () =
   expect((await f.operations.changes('p')).changes[0]?.snapshotAvailable).toBe(true);
   await unlink(join(f.directory, 'snapshots', op.afterRef!));
   expect((await f.operations.changes('p')).changes[0]?.snapshotAvailable).toBe(false);
+});
+
+test('undo of a file that gained a hard link refuses with a public code and leaves both names untouched', async () => {
+  const f = fixture(); const op = await f.operations.journal.prepareWrite('r', 'hello.txt', 'after');
+  await f.operations.journal.apply(op.id, { operationId: op.id, projectId: 'p', inputHash: op.inputHash, trustRevision: 1, policyRevision: 1, decision: 'allow' });
+  f.store.appendEvent('r', 'run.completed', {}, { status: 'completed' });
+  await link(join(f.directory, 'hello.txt'), join(f.directory, 'alias.txt'));
+  const change = (await f.operations.changes('p')).changes[0]!;
+  let thrown: unknown;
+  try { await f.operations.undo('p', change.id, change.afterHash, 'undo-linked'); } catch (error) { thrown = error; }
+  // changes.undo reaches the renderer through the bridge, which maps only public codes.
+  const error = safeError(thrown);
+  expect(error.code).toBe('HARDLINK_REVIEW_REQUIRED');
+  expect(PublicErrorSchema.safeParse(error).success).toBe(true);
+  expect(await readFile(join(f.directory, 'hello.txt'), 'utf8')).toBe('after');
+  expect(await readFile(join(f.directory, 'alias.txt'), 'utf8')).toBe('after');
 });
