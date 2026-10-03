@@ -113,6 +113,11 @@ test('table A: only an attempt that never ran is relaunchable; everything after 
   expect(classifyDispatch(started({ ...ok, code: 1, output: '', timedOut: true }))).toEqual({ kind: 'ambiguous', cause: 'OWNED_TIMEOUT' });
   expect(classifyDispatch(started({ ...ok, code: 1, output: 'TypeError: boom' }))).toEqual({ kind: 'ambiguous', cause: 'KIT_EXIT_1' });
   expect(classifyDispatch(started({ ...ok, code: 3, output: '' }))).toEqual({ kind: 'ambiguous', cause: 'KIT_EXIT_3' });
+  // A cause is a stored code: a negative exit code must still match ResearchCodeSchema.
+  expect(classifyDispatch(started({ ...ok, code: -1073741819, output: '' }))).toEqual({ kind: 'ambiguous', cause: 'KIT_EXIT_NEG1073741819' });
+  const watched = classifyWatch(started({ ...exited('watch-collected'), code: -2, output: 'TypeError: boom' }), fresh, 'present');
+  expect(watched).toEqual({ kind: 'transient', cause: 'KIT_EXIT_NEG2' });
+  expect(ResearchCodeSchema.safeParse(watched.kind === 'transient' && watched.cause).success).toBe(true);
   expect(classifyDispatch(started({ ...ok, code: 3, output: '{"surprise":true}' }))).toEqual({ kind: 'ambiguous', cause: 'KIT_OUTPUT_INVALID' });
   expect(classifyDispatch(started({ ...ok, code: 3, output: '{"code":"WHATEVER","error":"x"}' }))).toEqual({ kind: 'ambiguous', cause: 'KIT_OTHER' });
 });
