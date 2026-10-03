@@ -65,6 +65,11 @@ async function removeOwned(root: string, target: string) {
   await rm(target, { recursive: true, force: true });
 }
 const checkAbort = (signal?: AbortSignal) => { if (signal?.aborted) throw new Error('CANCELLED'); };
+const failureOf = (error: unknown) => { const failure = FailureSchema.safeParse((error as Error)?.message); return failure.success ? failure.data : undefined; };
+/** Reading the package's own content: an unclassified failure here (a corrupt ZIP, a manifest of the wrong shape) is the package's. */
+async function packageContent<T>(read: () => T | Promise<T>): Promise<T> {
+  try { return await read(); } catch (error) { throw failureOf(error) ? error : new Error('ARTIFACT_INVALID', { cause: error }); }
+}
 
 export class ResearchKit {
   private readonly config: ResearchConfig;
@@ -148,10 +153,10 @@ export class ResearchKit {
     return serialized(this.config.storageRoot, async () => {
       try {
         checkAbort(signal); const bytes = await capturedFile(file, MAX_ARCHIVE);
-        const manifestValue = await inspectArchive(bytes);
+        const manifestValue = await packageContent(() => inspectArchive(bytes));
         const report = await this.inspectOwned(bytes, binding.clientRef, signal);
         if (report.status !== 'PASS') return ResultSchema.parse({ status: report.status, state: null, researchReady: false, receipt: null, error: 'ARTIFACT_INVALID' });
-        const manifest = ManifestProjection.parse(manifestValue);
+        const manifest = await packageContent(() => ManifestProjection.parse(manifestValue));
         for (const key of ['repository', 'ref', 'commit', 'workflow', 'workflowRunId', 'runAttempt'] as const) if (manifest.source[key] !== binding[key]) throw new Error('IDENTITY_MISMATCH');
         if (manifest.clientRef !== binding.clientRef || report.clientRef !== binding.clientRef || report.workflowRunId !== binding.workflowRunId || report.packageId !== manifest.packageId) throw new Error('IDENTITY_MISMATCH');
         const state = StateSchema.parse(manifest.state === 'HUMAN_REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : manifest.state);
@@ -174,8 +179,8 @@ export class ResearchKit {
         this.receipts.set(receipt.id, structuredClone(receipt));
         return ResultSchema.parse({ status: 'PASS', state, researchReady, receipt, error: null });
       } catch (error) {
-        const failure = FailureSchema.safeParse((error as Error)?.message);
-        return ResultSchema.parse({ status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: signal?.aborted ? 'CANCELLED' : failure.success ? failure.data : 'ARTIFACT_INVALID' });
+        // Any other unclassified failure is this machine's (the helper, a spawn, the input file or the store), never the package's.
+        return ResultSchema.parse({ status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: signal?.aborted ? 'CANCELLED' : failureOf(error) ?? 'INSTALLATION_INVALID' });
       }
     });
   }

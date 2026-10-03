@@ -1,7 +1,8 @@
 import { afterEach, beforeAll, expect, test } from 'vitest';
 import { execFile } from 'node:child_process';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { crc32 } from 'node:zlib';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import goldenFile from './fixtures/research-kit/collector-golden/goldens.json';
@@ -14,6 +15,7 @@ import { CollectorSupervisor, type ImportOutcome, type PackageHandoff } from '..
 import { packageImporter } from '../src/main/research-import';
 import { packageFileName } from '../src/adapters/research-kit/collector';
 import { ResearchKit, VALIDATOR_REVISION } from '../src/adapters/research-kit/adapter';
+import type { Failure, Result } from '../src/adapters/research-kit/contracts';
 import type { CollectorConfig } from '../src/main/collector-settings';
 import type { OwnedCommand, OwnedResult, OwnedRunner } from '../src/tools/commands';
 
@@ -42,8 +44,10 @@ function fakeGitHub(answer: () => Response) {
 }
 const json = (value: object, status = 200) => () => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
 
+/** A validator stand-in a test can swap in or out between calls (a helper that fails, a forged report). */
+type Validator = { run?: (request: OwnedCommand) => Promise<OwnedResult> };
 /** Stands in for the helper: admission first, then the child. collect-remote.mjs replays the kit's goldens. */
-function runner(validations: OwnedCommand[], watch = 'collected'): OwnedRunner {
+function runner(validations: OwnedCommand[], watch = 'collected', validator: Validator = {}): OwnedRunner {
   return async (request, signal, options = {}) => {
     if (signal?.aborted) throw new Error('RUN_CANCELLED');
     await options.beforeStart?.();
@@ -54,12 +58,13 @@ function runner(validations: OwnedCommand[], watch = 'collected'): OwnedRunner {
       return replay('watch-collected');
     }
     validations.push(request);
+    if (validator.run) return validator.run(request);
     return new Promise(done => execFile(request.executable, request.args, { cwd: request.cwd, env: request.env, timeout: request.timeoutMs, maxBuffer: request.maxOutputBytes, encoding: 'utf8' },
       (error, stdout) => done({ status: 'exited', code: error ? (typeof error.code === 'number' ? error.code : null) : 0, output: stdout, truncated: false, cancelled: false, timedOut: false })));
   };
 }
 
-async function harness(answer: () => Response, options: { watch?: string } = {}) {
+async function harness(answer: () => Response, options: { watch?: string; validator?: Validator } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-import-')); roots.push(root);
   const store = new Store(join(root, 'state.sqlite')); closers.push(async () => store.close());
   const notices: unknown[] = []; const jobs = new ResearchJobs(store, research => notices.push(research));
@@ -84,7 +89,7 @@ async function harness(answer: () => Response, options: { watch?: string } = {})
     } catch (error) { throw new Error(engineFailureCode(error), { cause: error }); }
   };
   const validations: OwnedCommand[] = [];
-  const kit = new ResearchKit({ kitRoot, nodePath: process.execPath, nodeSha256, storageRoot: join(root, 'storage'), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner(validations, options.watch));
+  const kit = new ResearchKit({ kitRoot, nodePath: process.execPath, nodeSha256, storageRoot: join(root, 'storage'), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner(validations, options.watch, options.validator));
   const github = fakeGitHub(answer);
   const settings = { current: () => config };
   const importer = packageImporter({ epoch: () => 'epoch-1', vault, settings, kit, fetch: github.fetch, packageWorkflow: identity.workflow });
@@ -200,3 +205,72 @@ test('the importer rejects an approval or a failed collection, fails a tampered 
   expect(await packageImporter({ epoch: () => 'epoch-0', vault: h.vault, settings: h.settings, kit: h.kit, fetch: h.github.fetch })(await handoff('collected'))).toEqual({ kind: 'deferred' });
   expect(h.github.seen).toHaveLength(seen);
 }, 120000);
+
+/** A handoff of a package file the test writes, for direct importer calls. */
+async function handoffFor(h: Awaited<ReturnType<typeof harness>>, bytes: Buffer | null, signal = new AbortController().signal): Promise<PackageHandoff> {
+  const folder = join(h.root, 'packages'); await mkdir(folder, { recursive: true });
+  const file = join(folder, `${randomUUID()}.zip`); if (bytes) await writeFile(file, bytes);
+  return { researchId: randomUUID(), projectId: 'p', expectedRevision: 3, projectRevision: 1, clientRef: CLIENT_REF, workflowRunId: '1', file,
+    target: { collectorRevision: 1, repository: identity.repository, workflow: 'collect.yml', ref: identity.ref }, kit: { status: 'PASS', state: 'REVIEW_REQUIRED' }, signal };
+}
+/** A one-entry stored ZIP, so a test can hand the importer a well-formed archive whose manifest has the wrong shape. */
+function storedZip(name: string, content: string): Buffer {
+  const data = Buffer.from(content); const file = Buffer.from(name); const crc = crc32(data);
+  const local = Buffer.alloc(30); local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt32LE(crc, 14); local.writeUInt32LE(data.length, 18); local.writeUInt32LE(data.length, 22); local.writeUInt16LE(file.length, 26);
+  const central = Buffer.alloc(46); central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(20, 4); central.writeUInt16LE(20, 6); central.writeUInt32LE(crc, 16); central.writeUInt32LE(data.length, 20); central.writeUInt32LE(data.length, 24); central.writeUInt16LE(file.length, 28);
+  const offset = local.length + file.length + data.length; const size = central.length + file.length;
+  const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(1, 8); end.writeUInt16LE(1, 10); end.writeUInt32LE(size, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([local, file, data, central, file, end]);
+}
+
+test('a good package whose validation fails on this machine is deferred, never failed', async () => {
+  // The helper unavailable or answering badly, a spawn failure, the downloaded file gone: none is the package's fault.
+  const validator: Validator = {};
+  const h = await harness(json(RUN), { validator });
+  const collected = await readFile(resolve('tests/fixtures/research-kit/collected.zip'));
+  for (const message of ['INVALID_NATIVE_RESPONSE', 'WINDOWS_REQUIRED', 'spawn ENOENT']) {
+    validator.run = async () => { throw Object.assign(new Error(message), { code: 'ENOENT' }); };
+    expect(await h.importer(await handoffFor(h, collected))).toEqual({ kind: 'deferred' });
+  }
+  delete validator.run;
+  expect(await h.importer(await handoffFor(h, null))).toEqual({ kind: 'deferred' });
+  // The same package, once this machine can validate it, is verified.
+  expect(await h.importer(await handoffFor(h, collected))).toMatchObject({ kind: 'verified', verification: { artifactSha256: fixture('collected').sha256 } });
+  // End to end: the job is left collecting for the next import, not failed.
+  validator.run = async () => { throw new Error('INVALID_NATIVE_RESPONSE'); };
+  const job = await h.start();
+  await until(() => h.outcomes.length === 1);
+  expect(h.outcomes).toEqual([{ kind: 'deferred' }]);
+  expect(h.store.getResearch(job.id)!.status).toBe('collecting');
+}, 120000);
+
+test('a package whose own content is malformed is still rejected through the real kit', async () => {
+  const validator: Validator = {};
+  const h = await harness(json(RUN), { validator });
+  expect(await h.importer(await handoffFor(h, Buffer.from('not a zip archive at all')))).toEqual({ kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_ARTIFACT_INVALID' });
+  expect(await h.importer(await handoffFor(h, storedZip('manifest.json', '{"manifest":')))).toEqual({ kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_ARTIFACT_INVALID' });
+  // A validator PASS (here forged) over a manifest of the wrong shape: the projection failure is the package's.
+  validator.run = async () => ({ status: 'exited', code: 0, output: JSON.stringify(fixture('collected').expected.report), truncated: false, cancelled: false, timedOut: false });
+  expect(await h.importer(await handoffFor(h, storedZip('manifest.json', '{}')))).toEqual({ kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_ARTIFACT_INVALID' });
+  expect(h.validations).toHaveLength(1);
+}, 60000);
+
+test('every validator answer maps to a verified, rejected or deferred outcome', async () => {
+  const h = await harness(json(RUN));
+  const blocked: Record<Failure, ImportOutcome> = {
+    IDENTITY_MISMATCH: { kind: 'rejected', failure: 'PACKAGE_IDENTITY_MISMATCH', cause: 'IMPORT_IDENTITY_MISMATCH' },
+    ARTIFACT_INVALID: { kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_ARTIFACT_INVALID' },
+    INPUT_LIMIT: { kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_INPUT_LIMIT' },
+    INSTALLATION_INVALID: { kind: 'deferred' }, VALIDATOR_OUTPUT: { kind: 'deferred' }, CANCELLED: { kind: 'deferred' }, TIMEOUT: { kind: 'deferred' },
+    OUTPUT_LIMIT: { kind: 'deferred' }, STORAGE_LIMIT: { kind: 'deferred' }, STALE_VERIFICATION: { kind: 'deferred' },
+  };
+  const answers: Array<[Result, ImportOutcome]> = [
+    [{ status: 'FAIL', state: null, researchReady: false, receipt: null, error: 'ARTIFACT_INVALID' }, { kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_FAIL' }],
+    [{ status: 'INCOMPLETE', state: null, researchReady: false, receipt: null, error: 'ARTIFACT_INVALID' }, { kind: 'rejected', failure: 'ARTIFACT_INCOMPLETE', cause: 'IMPORT_INCOMPLETE' }],
+    ...Object.entries(blocked).map(([error, outcome]): [Result, ImportOutcome] => [{ status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: error as Failure }, outcome]),
+  ];
+  for (const [result, outcome] of answers) {
+    const importer = packageImporter({ epoch: () => 'epoch-1', vault: h.vault, settings: h.settings, kit: { validate: async () => result }, fetch: h.github.fetch, packageWorkflow: identity.workflow });
+    expect(await importer(await handoffFor(h, Buffer.from('unused')))).toEqual(outcome);
+  }
+}, 60000);
