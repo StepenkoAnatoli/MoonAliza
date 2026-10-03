@@ -39,13 +39,15 @@ const PreferDomain = z.string().trim().min(1).max(253).regex(/^[A-Za-z0-9](?:[A-
 const ClientRefSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/);
 export const ResearchSchema = z.object({ id: IdSchema, projectId: IdSchema, revision: RevisionSchema, status: ResearchStatusSchema, topic: z.string().min(1).max(2048), clientRef: ClientRefSchema, workflowRunId: z.string().regex(/^\d{1,20}$/).optional(), packageDigest: DigestSchema.optional(), failure: z.string().min(1).max(128).optional(), createdAt: DateTimeSchema, updatedAt: DateTimeSchema }).strict();
 export type Research = z.infer<typeof ResearchSchema>;
+/** Characters of topic, queries, URLs and joined preferred domains one research job may carry: an early refusal only. */
+export const RESEARCH_INPUT_BUDGET = 12_000;
 export const ResearchStartParams = z.object({
   projectId: IdSchema, topic: PublicLine(2048), queries: z.array(PublicLine(512)).max(16).default([]), urls: z.array(HttpUrlSchema).max(25).default([]),
   preferDomains: z.array(PreferDomain).max(16).default([]), depth: z.enum(['probe', 'quick', 'normal']).default('quick'), maxPages: z.number().int().min(1).max(25).default(8),
   acknowledgedPublic: z.literal(true),
 }).strict().refine(value => value.urls.length <= value.maxPages, 'Each known URL counts against the page budget')
   // An early refusal only: main's exact Windows command-line check stays authoritative.
-  .refine(value => value.topic.length + [...value.queries, ...value.urls].reduce((total, item) => total + item.length, 0) + value.preferDomains.join(',').length <= 12_000, 'Research inputs are too long for one collection');
+  .refine(value => value.topic.length + [...value.queries, ...value.urls].reduce((total, item) => total + item.length, 0) + value.preferDomains.join(',').length <= RESEARCH_INPUT_BUDGET, 'Research inputs are too long for one collection');
 export const ResearchCollectorSchema = z.object({ revision: RevisionSchema, repository: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/), workflow: z.string().regex(/^[A-Za-z0-9_.-]{1,128}\.ya?ml$/), ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/).refine(value => !value.includes('..'), 'Invalid ref'), tokenConfigured: z.boolean() }).strict();
 export type ResearchCollector = z.infer<typeof ResearchCollectorSchema>;
 export const ResearchCollectorSaveParams = ResearchCollectorSchema.omit({ revision: true, tokenConfigured: true }).extend({

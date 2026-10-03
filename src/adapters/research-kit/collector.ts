@@ -12,7 +12,7 @@ import { validatorEnvironment } from './adapter';
 export const COLLECTOR_LIMITS = {
   dispatchTimeoutMs: 120_000, dispatchOutputBytes: 65_536,
   watchKitSeconds: 1_500, watchMarginMs: 300_000, watchOutputBytes: 4_194_304,
-  admissionMs: 60_000, maxCommandLine: 32_766, startInputBudget: 12_000,
+  admissionMs: 60_000, maxCommandLine: 32_766,
   preStartAttempts: 3, backoffFirstMs: 30_000, backoffMaxMs: 900_000, stillRunningDelayMs: 5_000,
   watchDeadlineMs: 604_800_000, grantMs: 30_000, quitDrainMs: 15_000,
 } as const;

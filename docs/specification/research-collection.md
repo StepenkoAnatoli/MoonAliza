@@ -41,7 +41,7 @@ The check is raced against `admissionMs` (60 s); if it does not finish in time i
 
 ### Bounds
 
-All limits are in `COLLECTOR_LIMITS`.
+All limits are in `COLLECTOR_LIMITS`, except the start input budget, which is `RESEARCH_INPUT_BUDGET` in [`src/shared/params.ts`](../../src/shared/params.ts) because the `research.start` contract applies it.
 
 | Limit | Value |
 | --- | --- |
@@ -52,6 +52,7 @@ All limits are in `COLLECTOR_LIMITS`.
 | Watch output cap | 4 MiB (`watchOutputBytes`) |
 | Admission check | 60 s (`admissionMs`) |
 | Command line | at most 32,766 characters (`maxCommandLine`; `commandLineFits`) |
+| Start input budget | 12,000 characters of topic, queries, URLs and joined preferred domains (`RESEARCH_INPUT_BUDGET`). An early refusal only: at the budget, with every topic and query character escaped and the longest targets, the dispatch command line still fits; `commandLineFits` stays authoritative |
 | Not-started launches before giving up | 3 (`preStartAttempts`) |
 | Transient backoff | 30 s, doubling, capped at 15 min, no count cap |
 | Still-running re-watch | 5 s (`stillRunningDelayMs`) |
@@ -364,6 +365,5 @@ Transient and park causes use the same names but are not recorded; the job stays
 - The design does not list the supervisor's pre-admission refusals (`COLLECTOR_NOT_CONFIGURED`, `NO_COLLECTOR`, `NO_TOKEN`, `NO_INSTALLATION`, `COMMAND_LINE`) or the `NOT_OWNED_DISPATCH` cause.
 - A job held after a commit error leaves the owned map when its driver returns. The design keeps it held until the next app start; in the code an engine-only restart's recovery can also act on it.
 - A negative exit code is named `KIT_EXIT_NEG<n>`, because a minus sign is not valid in a code. Fixed after review: it used to form `KIT_EXIT_-<n>`, which failed the control schema and held the job.
-- `startInputBudget` is defined in `COLLECTOR_LIMITS` but not used by this code.
 - Any failure while node and the staged runtime are rehashed before the child starts (wrong hash, a grown, swapped or linked file) is `INSTALLATION_INVALID`, for the validator as well as the collector.
 - Wiring (`src/main/index.ts`, `src/main/engine.ts`): settings, installation, sweep, reconcile with the collector reference, `attach`, `observe` on notices and on start/cancel replies, `engineReady` on each engine `ready`, `hold` around trust and policy changes, `research.collector.read/save`, and the quit order supervisor → kit → engine. `importPackage` is `packageImporter` over the vault, the collector settings and the kit.
