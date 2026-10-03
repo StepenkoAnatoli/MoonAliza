@@ -18,6 +18,20 @@ Run `node scripts/check-handoff.mjs` to verify snapshot identities and the main 
 
 At the end of every completed project step or phase, verify the work, push its branch, and open a pull request. The user reviews and merges each PR; do not merge it on their behalf. Context recovery was delivered in merged PR #11. The attached integration proposal is reference material, reviewed in [the integration review](docs/specification/research-kit-integration-review.md); current backend behavior is in [offline validation](docs/specification/research-kit-offline.md).
 
+## Project skills
+
+The working methods this project uses live in `.claude/skills/`, copied verbatim from the user's skills on 2026-10-03. Any agent session in this repository loads them.
+
+| Skill | Use it for |
+|-------|-----------|
+| `lead-orchestrator` | Any multi-step task. Plan, research external facts through Research-Kit first (`references/research-kit.md`), freeze contracts, build in parallel, then review with independent spec, breaker, mutation and invariant roles. The facts below are its Phase 0 record. |
+| `careful-coding` | Every code change: read before changing, verify by running, report mistakes in its format. Its `references/self-review-checklist.md` was not available to copy. |
+| `break-test` | Hardening a build or test suite. Each failure is proven with a repro, and fixes go in as separate commits. |
+| `architecture-pass` | Restructuring a finished change without changing its behaviour. |
+| `four-dimension-audit` | Grading finished work on SPEC, DESIGN, CORRECTNESS and QUALITY, without changing it. |
+
+Next cycle (user instruction, 2026-10-03): run it with `lead-orchestrator` and `careful-coding`. Research the external facts through Research-Kit before designing anything, with 20 pages in total.
+
 ## Orchestrator facts
 _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`)._
 
