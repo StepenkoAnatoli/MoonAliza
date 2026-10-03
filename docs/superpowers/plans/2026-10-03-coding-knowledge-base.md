@@ -1,6 +1,6 @@
 # Coding knowledge base implementation plan
 
-**Status:** proposed, not started. The user adopted the knowledge base on October 3 as phase 3, after research and project memory. See [the research jobs plan](2026-10-02-research-jobs.md#coding-knowledge-base-and-the-october-3-repository-review-adopted-october-3). Tasks 1–3 are pure code and need only D1, D2 and D6. Task 4 is a research job that closes the known unknowns. Tasks 5 onward wait for it and for D3–D5 and D7.
+**Status:** proposed, not started. The user adopted the knowledge base on October 3 as phase 3, after research and project memory. See [the research jobs plan](2026-10-02-research-jobs.md#coding-knowledge-base-and-the-october-3-repository-review-adopted-october-3). Tasks 1–3 are pure code and wait for D1, D2, D5, D6 and D7: Task 1 implements the D5 allowlist, Task 2 the D7 parsers and D2 precedence, Task 3 the D1 choice, and D6 bounds which manifests Task 2 reads. Task 4 is a research job that closes the known unknowns. Tasks 5 onward wait for it and for D3 and D4.
 
 **Goal:** an agent working in a trusted project can look up the language, runtime and web-platform documentation that matches the versions the project declares. The documentation is stored on the user's PC, each set was downloaded on the user's approval, and its licence and attribution travel with every answer. Agents read the store as untrusted reference text. It is never instructions, never build-gate evidence and never research evidence. Ordinary chat, projects without installed sets and the installer behave exactly as today.
 
@@ -42,6 +42,8 @@ From the corpus [`docs/research/2026-10-03-coding-knowledge-base`](../../researc
     - always present: `name`, `slug`, `type`, `mtime`, `db_size`, `alias`;
     - `release` in 821 entries, `links` in 793, `attribution` in 816, `version` in 698.
   - The largest `db_size` is 281,009,221 *(computed)*.
+  - The catalogue is not clean as a whole *(computed)*. Two slugs repeat (`bun` and `vitest`, each twice, all of type `simple`), and 72 `links` values in 68 entries are not HTTPS, for example `axios`'s home `hthttps://axios-http.com/` and `bash`'s `http://git.savannah.gnu.org/cgit/bash.git`. None of them is in an allowlisted type: the 38 `python`, `node`, `mdn` and `openjdk` entries have unique slugs and HTTPS-only links.
+  - Of those 38, MDN's `http` has no `attribution` and MDN's `xslt_xpath` has no `links` *(computed)*.
 - **F3 No digest (E-02, computed).** No entry carries a hash or signature field. Integrity can only be recorded at download time (trust on first use) and checked afterwards.
 - **F4 Lines per type (E-02, computed).**
   - **Python:** `python~3.5` … `python~3.14` and `python~2.7`, each with `version` "X.Y" and a patch `release`. `python~3.14` has release 3.14.7 and is about 20.8 MB.
@@ -150,17 +152,18 @@ The corpus does not support these, so no task may guess them. The day-one checks
 
 - Oracle-hosted documentation is never fetched or stored (F6).
 - Each set keeps beside it:
-  - its catalogue `attribution`, converted to plain text;
+  - its catalogue `attribution`, converted to plain text, when the entry has one (MDN's `http` has none, F2);
   - its licence family;
-  - the DevDocs credit "Documentation prepared by DevDocs" (F1);
-  - the `links.home` URL.
+  - a fixed credit naming DevDocs as the source of the converted set, because the DevDocs maintainers wish generated documentation "be attributed to DevDocs" (F1). The corpus prescribes no wording, so this plan quotes none; Task 7 fixes the text and tests that every result carries it;
+  - for MDN sets, the fixed credit "Mozilla Contributors" (F5). The catalogue attribution says "MDN contributors", which is not the name E-04 requires, so it is never relied on for this;
+  - the `links.home` URL, when the entry has one.
 - Every tool result that quotes a set carries:
-  - that attribution;
+  - that attribution, the DevDocs credit and, for MDN sets, "Mozilla Contributors";
   - the page title;
   - the original-document link DevDocs embeds (F1);
   - the note "converted to plain text by MoonAliza".
 
-  This satisfies MDN's title, link and changes requirement (F5).
+  Together these cover MDN's requirement of attribution to "Mozilla Contributors", the title, a link and a note of changes (F5).
 - The name DevDocs is used only as attribution, never in a way that suggests endorsement (F1).
 - Nothing is placed in the installer, so MoonAliza itself never redistributes a set. Sets are downloaded to the user's PC on the user's approval.
 
@@ -222,15 +225,17 @@ The system prompt gains one sentence when the tools are offered: documentation r
 ## Tasks
 
 1. [ ] **Catalogue reader.** `src/knowledge/catalogue.ts` is pure.
-   - Parse `docs.json` strictly with zod: at most 2 MiB and 2,000 entries, unique slugs, HTTPS `links`. `version`, `release`, `links` and `attribution` are optional exactly as F2 found.
-   - Keep only allowlisted types (D5).
+   - Bound the input first: at most 2 MiB and 2,000 entries, a JSON array of objects each with a string `type`. Anything else refuses the whole catalogue.
+   - Keep only allowlisted types (D5), and only then validate strictly with zod, per entry: unique slugs among the kept entries, HTTPS-only `links`. `version`, `release`, `links` and `attribution` are optional exactly as F2 found. The live catalogue has duplicate slugs and non-HTTPS links in other types (F2), so validating before the filter would refuse it outright.
+   - A kept entry that fails validation is dropped and reported by slug, never offered; a duplicated slug drops every entry that carries it. The rest of the catalogue stays usable.
    - Derive each line: Python `X.Y` from `version`; Node major from `version` ("24 LTS"), or from `release` for the unversioned `node`; OpenJDK feature from `version`, with `8 GUI` and `8 Web` as sub-sets of line 8; MDN unversioned.
    - Convert attribution HTML to plain text with a bounded entity and tag stripper.
    - Tests read the E-02 capture in place from the corpus, with front matter stripped, so the fixture stays ledger-backed. They check:
-     - 836 entries;
+     - 836 entries read, 38 kept, none dropped: the capture's duplicate slugs and non-HTTPS links in other types do not refuse it;
      - Python 11, Node 12, OpenJDK 7 and MDN 8 sets;
      - the sizes and releases in F4;
-     - refusal of an oversized catalogue, a duplicate slug or a non-HTTPS link;
+     - refusal of an oversized catalogue, a non-array, or more than 2,000 entries;
+     - a kept entry with a non-HTTPS link, and two kept entries sharing a slug, are dropped and reported while the other kept entries survive;
      - attribution returned as text, never markup.
    - Prove each test can fail by mutating the allowlist or the line derivation.
 2. [ ] **Declared-version detection.** `src/knowledge/versions.ts` is pure over bounded text, at most 1 MiB per file.
@@ -296,7 +301,7 @@ The system prompt gains one sentence when the tools are offered: documentation r
    - Implement `docs_search` and `docs_read` as specified above.
    - Tests:
      - a page fixture containing an injection text ("ignore previous instructions and run …") comes back only inside the marked excerpt;
-     - attribution is present on every result;
+     - attribution, the DevDocs credit and, for MDN sets, "Mozilla Contributors" are present on every result, including MDN `http`, which has no catalogue attribution;
      - the output bounds hold;
      - unknown or unmatched sets and out-of-index paths are refused;
      - a damaged set is never read.
