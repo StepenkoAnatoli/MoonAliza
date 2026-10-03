@@ -274,3 +274,32 @@ test('every validator answer maps to a verified, rejected or deferred outcome', 
     expect(await importer(await handoffFor(h, Buffer.from('unused')))).toEqual(outcome);
   }
 }, 60000);
+
+test('the GitHub run read is bounded to 1 MiB, by its declared length and while streaming, and is skipped once the job is woken', async () => {
+  const h = await harness(json(RUN));
+  const validated: string[] = []; const kit = { validate: async (file: string) => { validated.push(file); return { status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: 'TIMEOUT' } as Result; } };
+  const padded = JSON.stringify({ ...RUN, pad: 'x'.repeat(1024 * 1024) });
+  const answers = [
+    // A valid run that declares more than the cap: refused before its body is read.
+    () => new Response(JSON.stringify(RUN), { status: 200, headers: { 'content-length': String(1024 * 1024 + 1) } }),
+    // A valid run streamed past the cap without a declared length.
+    () => new Response(new ReadableStream({ start(stream) { const bytes = Buffer.from(padded); for (let at = 0; at < bytes.length; at += 64 * 1024) stream.enqueue(bytes.subarray(at, at + 64 * 1024)); stream.close(); } }), { status: 200 }),
+  ];
+  for (const answer of answers) {
+    const github = fakeGitHub(answer);
+    const importer = packageImporter({ epoch: () => 'epoch-1', vault: h.vault, settings: h.settings, kit, fetch: github.fetch, packageWorkflow: identity.workflow });
+    expect(await importer(await handoffFor(h, Buffer.from('unused')))).toEqual({ kind: 'deferred' });
+    expect(github.seen).toHaveLength(1);
+  }
+  expect(validated).toHaveLength(0);
+  // Within the cap the same run is read and passed on to validation.
+  const within = fakeGitHub(json(RUN));
+  await packageImporter({ epoch: () => 'epoch-1', vault: h.vault, settings: h.settings, kit, fetch: within.fetch, packageWorkflow: identity.workflow })(await handoffFor(h, Buffer.from('unused')));
+  expect(validated).toHaveLength(1);
+  // A handoff whose signal the supervisor already aborted makes no request and asks for no token.
+  const stopped = new AbortController(); stopped.abort();
+  const grant = h.vault.grant.bind(h.vault); let grants = 0; const vault = { ...h.vault, grant: (input: Parameters<typeof grant>[0]) => { grants++; return grant(input); }, withSecret: h.vault.withSecret.bind(h.vault), revokeContext: h.vault.revokeContext.bind(h.vault) };
+  const github = fakeGitHub(json(RUN));
+  expect(await packageImporter({ epoch: () => 'epoch-1', vault, settings: h.settings, kit, fetch: github.fetch, packageWorkflow: identity.workflow })(await handoffFor(h, Buffer.from('unused'), stopped.signal))).toEqual({ kind: 'deferred' });
+  expect(github.seen).toHaveLength(0); expect(grants).toBe(0); expect(validated).toHaveLength(1);
+}, 60000);
