@@ -6,13 +6,16 @@ import { mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
-import { MethodSpec, SessionSchema, ProjectSchema, RunSchema, OperationSchema, ApprovalSchema, type Request, type Run, type ToolSpec } from '../shared';
+import { MethodSpec, SessionSchema, ProjectSchema, ResearchSchema, RunSchema, OperationSchema, ApprovalSchema, type Request, type Run, type ToolSpec } from '../shared';
 import { StoredProfileSchema } from '../engine/control';
 import { canonicalHash, assertConversationPolicy } from '../engine/policy';
 import { inspectProjectPath, spawnOwned } from '../tools/commands';
 import { CommandBroker } from './commands';
 import { Engine } from './engine';
 import { Vault } from './vault';
+import { CollectorSettings } from './collector-settings';
+import { CollectorSupervisor } from './collector';
+import { ResearchKit, readResearchInstallation } from '../adapters/research-kit/adapter';
 import { ProjectTickets } from './projects';
 import { createBridge } from './bridge';
 import { complete, validateEndpoint, type InferenceMessage } from './inference';
@@ -27,6 +30,8 @@ if (!ownsInstance) app.quit();
 let window: BrowserWindow | undefined;
 let engine: Engine | undefined;
 let quitting = false;
+let collector: CollectorSupervisor | undefined;
+let researchKit: ResearchKit | null = null;
 const active = new Map<string, { run: Run; stop: AbortController; github: GitHubReader }>();
 const executingCommands = new Set<Promise<unknown>>();
 
@@ -35,6 +40,14 @@ if (ownsInstance) void app.whenReady().then(async () => {
   const vault = new Vault(join(data, 'vault'), safeStorage);
   await vault.initialize('starting');
   const helperPath = app.isPackaged ? join(process.resourcesPath, 'native', 'MoonAlizaHost.exe') : join(app.getAppPath(), '.build', 'native', 'MoonAlizaHost.exe');
+  // Research collection: main owns the target, the token reference and every collector child; the engine owns the jobs.
+  const researchData = join(data, 'research-kit'); await mkdir(researchData, { recursive: true });
+  const collectorSettings = new CollectorSettings(join(researchData, 'collector.json'), vault);
+  await collectorSettings.open();
+  // No installation file means research is not installed; an invalid one is treated the same, and jobs refuse with RESEARCH_KIT_UNAVAILABLE.
+  const installation = await readResearchInstallation(join(researchData, 'installation.json')).catch(() => null);
+  researchKit = installation ? new ResearchKit({ ...installation, storageRoot: join(researchData, 'storage'), helperPath }) : null;
+  await researchKit?.sweep().catch(() => {});
   const inspect = (path: string) => inspectProjectPath(path, { helperPath });
   const tickets = new ProjectTickets(async path => (await inspect(path)).localFixed);
   const localSession = session.fromPartition('moonaliza-local');
@@ -99,12 +112,20 @@ if (ownsInstance) void app.whenReady().then(async () => {
     return vault.redact(result);
   }
 
+  const supervisor = new CollectorSupervisor({
+    control: control => { if (!engine) throw new Error('ENGINE_UNAVAILABLE'); return engine.control(control); },
+    epoch: () => engine?.epoch ?? '', vault, settings: collectorSettings, kit: researchKit, spoolDirectory: join(researchData, 'runs'),
+  });
+  collector = supervisor;
+  collectorSettings.attach({ busy: () => supervisor.busy(), credentialsChanged: () => supervisor.credentialsChanged(), configChanged: () => supervisor.configChanged() });
+
   engine = new Engine(join(__dirname, 'engine.cjs'), join(data, 'state.sqlite'), {
     event(event) {
       if (['run.completed', 'run.failed', 'run.cancelled'].includes(event.type)) { active.get(event.runId)?.stop.abort(); active.delete(event.runId); vault.revokeContext(event.runId); }
       if (window && !window.isDestroyed()) window.webContents.send('moonaliza:event', event);
     },
-    research(research) { if (window && !window.isDestroyed()) window.webContents.send('moonaliza:research', research); },
+    research(research) { supervisor.observe(research); if (window && !window.isDestroyed()) window.webContents.send('moonaliza:research', research); },
+    ready(epoch) { supervisor.engineReady(epoch); },
     inference: infer,
     readGitHub,
     async prepareCommand(runId, input, epoch) { return commands.prepare(runId, input, commandSignal(runId, epoch)); },
@@ -121,20 +142,28 @@ if (ownsInstance) void app.whenReady().then(async () => {
   });
   engine.start();
   const references = z.array(z.string()).parse(await engine.control({ method: 'vault.references' }));
-  await vault.reconcile(new Set(references));
+  // The collector token lives outside the engine database: its reference must survive the reconcile.
+  await vault.reconcile(new Set([...references, ...collectorSettings.references()]));
+  await collectorSettings.finishStartup();
+  void supervisor.attach();
 
   async function handle(request: Request): Promise<unknown> {
     if (!engine || !window) throw new Error('ENGINE_UNAVAILABLE');
     if (MethodSpec[request.method].owner === 'engine') {
       if (['run.start', 'changes.undo', 'recovery.inspect', 'recovery.acknowledge'].includes(request.method) && executingCommands.size) throw new Error('RUN_ACTIVE');
       if (request.method === 'run.cancel') { active.get(request.params.runId)?.stop.abort(); vault.revokeContext(request.params.runId); }
+      let release: (() => void) | undefined;
       if (request.method === 'project.revokeTrust' || request.method === 'project.policy.update') {
         for (const [id, item] of active) if (item.run.projectId === request.params.projectId) { item.stop.abort(); vault.revokeContext(id); }
+        // Collectors stop and launch nothing until the change is applied; on release each job re-reads its admission.
+        release = supervisor.hold(request.params.projectId);
       }
       if (request.method === 'session.policy.update') {
         for (const [id, item] of active) if (item.run.sessionId === request.params.sessionId) { item.stop.abort(); vault.revokeContext(id); }
       }
-      const result = await engine.request(request);
+      let result: unknown;
+      try { result = await engine.request(request); } finally { release?.(); }
+      if (request.method === 'research.start' || request.method === 'research.cancel') supervisor.observe(z.object({ research: ResearchSchema }).parse(result).research);
       if (request.method === 'run.start') {
         const { run } = z.object({ run: RunSchema }).parse(result);
         if (!active.has(run.id) && ['queued', 'running'].includes(run.status)) active.set(run.id, { run, stop: new AbortController(), github: new GitHubReader() });
@@ -205,6 +234,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
           return { profileId: profile.id, profileRevisionId: profile.revisionId, success: true, latencyMs: Date.now() - started, message: 'Connection succeeded' };
         } finally { clearTimeout(timeout); vault.revokeContext(request.clientRequestId); }
       }
+      case 'research.collector.read': return collectorSettings.read();
+      case 'research.collector.save': return collectorSettings.save(request.params, request.clientRequestId);
       case 'external.open': await shell.openExternal(request.params.url); return { opened: true };
       default: throw new Error('NOT_IMPLEMENTED');
     }
@@ -233,5 +264,11 @@ app.on('before-quit', event => {
   if (quitting || !engine) return;
   event.preventDefault(); quitting = true;
   for (const item of active.values()) item.stop.abort();
-  void engine.close().finally(() => app.quit());
+  // The supervisor first, while the engine can still take a started dispatcher's commit; then the kit's children, then the engine.
+  const currentEngine = engine;
+  void (async () => {
+    await collector?.close().catch(() => {});
+    await researchKit?.close().catch(() => {});
+    await currentEngine.close();
+  })().finally(() => app.quit());
 });
