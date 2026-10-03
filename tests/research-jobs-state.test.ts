@@ -386,6 +386,25 @@ describe('restart reconciliation and never dispatching twice', () => {
     }
   });
 
+  test('collected after a policy or trust change is refused in the same transaction, journaled as failed, and records no verification', () => {
+    for (const change of ['policy', 'trust', 'off'] as const) {
+      const { store } = open(); project(store); create(store);
+      const jobs = new ResearchJobs(store, () => {});
+      jobs.transition({ method: 'research.transition', requestId: 'd', researchId: 'j1', expectedRevision: 1, to: 'dispatching', cause: 'DISPATCH', target });
+      jobs.transition({ method: 'research.transition', requestId: 'c', researchId: 'j1', expectedRevision: 2, to: 'collecting', cause: 'KIT_DISPATCHED', workflowRunId: '5' });
+      const current = store.getProject('p')!;
+      if (change === 'policy') store.putProject({ ...current, policy: { ...current.policy, revision: 2 } });
+      if (change === 'trust') store.putProject({ ...current, trustRevision: 2 });
+      if (change === 'off') store.putProject({ ...current, policy: { ...current.policy, research: 'off' } });
+      // The verification itself is valid: it names the job's revision, admitted policy revision, run and client ref.
+      const reply = jobs.transition({ method: 'research.transition', requestId: `v-${change}`, researchId: 'j1', expectedRevision: 3, to: 'collected', cause: 'PACKAGE_VERIFIED', verification: verification() });
+      const failure = { policy: 'POLICY_CHANGED', trust: 'TRUST_CHANGED', off: 'RESEARCH_NOT_ALLOWED' }[change];
+      expect(reply).toMatchObject({ outcome: 'refused', research: { status: 'failed', failure, workflowRunId: '5' } });
+      expect(store.researchEvents('j1').events.at(-1)).toMatchObject({ from: 'collecting', to: 'failed', cause: 'ADMISSION_CHANGED' });
+      expect(store.researchEvents('j1').events.some(e => e.to === 'collected')).toBe(false);
+    }
+  });
+
   test('a fact transition is still recorded after a policy change', () => {
     const { store } = open(); project(store); create(store);
     const jobs = new ResearchJobs(store, () => {});

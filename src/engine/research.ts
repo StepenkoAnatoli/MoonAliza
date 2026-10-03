@@ -135,9 +135,11 @@ export class ResearchJobs {
       const job = this.store.getResearch(command.researchId); if (!job) throw new Error('NOT_FOUND');
       const patch = { target: command.target, workflowRunId: command.workflowRunId, failure: command.failure, verification: command.verification };
       for (const key of Object.keys(patch) as (keyof typeof patch)[]) if (patch[key] === undefined) delete patch[key];
-      const refusal = command.to === 'dispatching' && job.revision === command.expectedRevision ? researchAdmission(this.store.getProject(job.projectId), job) : undefined;
+      // Admission is re-checked in this transaction before each effect it gates: the dispatch, and accepting a package.
+      const gated = (command.to === 'dispatching' || command.to === 'collected') && job.revision === command.expectedRevision;
+      const refusal = gated ? researchAdmission(this.store.getProject(job.projectId), job) : undefined;
       const { research } = refusal
-        ? this.store.transitionResearch({ researchId: job.id, expectedRevision: command.expectedRevision, to: 'failed', actor: 'main', cause: 'ADMISSION_REFUSED', requestId, patch: { failure: refusal } })
+        ? this.store.transitionResearch({ researchId: job.id, expectedRevision: command.expectedRevision, to: 'failed', actor: 'main', cause: command.to === 'dispatching' ? 'ADMISSION_REFUSED' : 'ADMISSION_CHANGED', requestId, patch: { failure: refusal } })
         : this.store.transitionResearch({ researchId: job.id, expectedRevision: command.expectedRevision, to: command.to, actor: 'main', cause: command.cause, requestId, patch });
       return { entityId: job.id, response: { outcome: refusal ? 'refused' as const : 'applied' as const, research: researchDto(research) } };
     });
