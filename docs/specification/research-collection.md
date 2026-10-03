@@ -11,7 +11,7 @@ The work is split this way:
 - [`src/adapters/research-kit/collector.ts`](../../src/adapters/research-kit/collector.ts) is pure. It builds argv and the environment, reads the kit's last `--json` line (`parseKitLine`) and classifies a finished child (`classifyDispatch`, table A; `classifyWatch`, table B).
 - [`src/main/collector-plan.ts`](../../src/main/collector-plan.ts) is pure. `planStep` is the only place that turns a collector fact into a job transition.
 - [`src/main/collector-settings.ts`](../../src/main/collector-settings.ts) owns the collector target and the token reference (`CollectorSettings`).
-- [`src/main/collector.ts`](../../src/main/collector.ts) owns every collector child (`CollectorSupervisor`). It is work in progress; this document states its intended invariants as its doc comments give them.
+- [`src/main/collector.ts`](../../src/main/collector.ts) owns every collector child (`CollectorSupervisor`). It is wired into main by `src/main/index.ts`; this document states its invariants as the code and its tests implement them.
 - [`src/adapters/research-kit/adapter.ts`](../../src/adapters/research-kit/adapter.ts) stages the kit and launches it (`prepareCollector`).
 - [`src/main/research-import.ts`](../../src/main/research-import.ts) verifies a downloaded package (`packageImporter`); see [Verified import](#verified-import).
 - [`src/engine/research-state.ts`](../../src/engine/research-state.ts) owns the job states and the allowed edges (`RESEARCH_EDGES`).
@@ -347,7 +347,7 @@ Transient and park causes use the same names but are not recorded; the job stays
 - Retrying an import parked by a GitHub or validator failure before the next app start.
 - Keeping `COLLECTION_FAILED` diagnostic packages.
 - Task 5: review edges and review owners in the owned list.
-- Task 6: the settings panel, the failure vocabulary in the UI, and a "needs attention" signal for parked jobs. Its text for a `credentials` park must say both "no access" and "run deleted by retention".
+- Task 6 (the panel and its failure messages exist; still open): a "needs attention" signal for parked jobs, which needs a park-reason field on the job's DTO. Its text for a `credentials` park must say both "no access" and "run deleted by retention".
 - Task 7: desktop journeys, packaging, real-network smoke tests and Windows CI.
 - Cancelling the remote GitHub run, and reconciling `REMOTE_STATE_UNKNOWN` jobs by client ref.
 - Proxy and extra CA support.
