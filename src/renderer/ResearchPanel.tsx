@@ -27,7 +27,10 @@ export function ResearchPanel({ api, project }: { api: AppApi; project: Project 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [topic, setTopic] = useState(''); const [queries, setQueries] = useState(''); const [urls, setUrls] = useState(''); const [domains, setDomains] = useState('');
-  const [depth, setDepth] = useState<'probe' | 'quick' | 'normal'>('quick'); const [maxPages, setMaxPages] = useState('8'); const [acknowledged, setAcknowledged] = useState(false);
+  const [depth, setDepth] = useState<'probe' | 'quick' | 'normal'>('quick'); const [maxPages, setMaxPages] = useState('8');
+  // The acknowledgement holds the destination it was given for: saving a different collector repository withdraws it.
+  const [acknowledgedFor, setAcknowledgedFor] = useState<string | null>(null);
+  const acknowledged = !!collector && acknowledgedFor === collector.repository; const setAcknowledged = (value: boolean) => setAcknowledgedFor(value && collector ? collector.repository : null);
   const [repository, setRepository] = useState(''); const [workflow, setWorkflow] = useState('collect.yml'); const [ref, setRef] = useState('main');
   // Write-only: the token lives only in this uncontrolled input until it is sent, never in React state or a DOM attribute.
   const token = useRef<HTMLInputElement>(null);

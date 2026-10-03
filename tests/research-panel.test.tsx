@@ -161,3 +161,25 @@ test('research text is bounded plain text and no control can authorize or approv
   expect(screen.getByText('Ready: approved by the Research Kit gate')).toBeTruthy();
   for (const button of screen.getAllByRole('button')) expect(button.textContent).not.toMatch(/authori[sz]e|approve|review/i);
 });
+
+test('saving a different collector repository withdraws the acknowledgement of the old destination', async () => {
+  let saved = collector;
+  const { api, calls } = bridge({ routes: { 'research.collector.save': params => { saved = { ...saved, revision: saved.revision + 1, repository: String(params.repository) }; return { collector: saved }; }, 'research.start': () => ({ research: job() }) } });
+  render(<ResearchPanel api={api} project={project} />);
+  const disclosure = await screen.findByTestId('research-disclosure');
+  await waitFor(() => expect(disclosure.textContent).toContain('octo/collector'));
+  fill('Topic', 'Vector databases');
+  const acknowledgement = screen.getByLabelText(/these fields become public/) as HTMLInputElement;
+  fireEvent.click(acknowledgement); expect(acknowledgement.checked).toBe(true);
+  // Re-saving the same destination keeps it.
+  fireEvent.click(screen.getByRole('button', { name: 'Save collector' }));
+  expect(await screen.findByText('Collector settings saved.')).toBeTruthy();
+  expect(acknowledgement.checked).toBe(true);
+  fireEvent.change(screen.getByLabelText(/^Repository/), { target: { value: 'octo/public' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save collector' }));
+  await waitFor(() => expect(disclosure.textContent).toContain('octo/public'));
+  expect(acknowledgement.checked).toBe(false);
+  expect(screen.getByRole('button', { name: 'Start collection' }).hasAttribute('disabled')).toBe(true);
+  fireEvent.click(acknowledgement); fireEvent.click(screen.getByRole('button', { name: 'Start collection' }));
+  await waitFor(() => expect(calls.some(call => call.method === 'research.start')).toBe(true));
+});
