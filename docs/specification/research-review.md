@@ -27,8 +27,9 @@ Read from the pinned export `.build/research-kit-external/research-kit` at `fcde
 | An uncaught exception also exits 1, with nothing on stdout, so exit 1 alone does not mean "gate failed". | Node's default for an uncaught ESM top-level error |
 | The verdict reads the machine config from `RESEARCH_KIT_CONFIG`, else `RESEARCH_KIT_HOME`, else `<home>/.agents/research-kit.config.json`. Absent means defaults: `evidencePolicy: pluralist`, `maxAgeDays: 180`. | `lib/machine.mjs` `configPath`, `DEFAULTS`, `readMachineConfig` |
 | `git` runs only when the project holds `.git` (`localHooksPathOverride`). | `lib/machine.mjs` `isGitRepo`, `localHooksPathOverride` |
-| `unknown-closure` compares retrieval dates with today against `maxAgeDays`, so the same corpus can pass now and fail later. | `lib/checks.mjs` lines 302–337 |
+| `unknown-closure` compares retrieval dates with today against `maxAgeDays`, but evidence older than that is only a `warn` (`stale-evidence`). Only `--strict`, which this design never passes, turns a warning into a failure; `evidencePolicy: strict` promotes only `transport-provenance`, `capture-completeness` and `corroboration`. Under the defaults an aged corpus still passes, with that warning. | `lib/checks.mjs` `unknownClosure` 300–337; `lib/preflight.mjs` 22, `promote` 49–56 |
 | `brief.mjs` flags: `--force`, `--state`, `--help`; unknown flag exits 2. Not gated exits 2. A refused draft (already edited, `legacy`) exits 1 with a reason. A write failure exits 2. Success exits 0 and rewrites only `research/BRIEF.md` (plus `BRIEF.md.bak-<date>` under `--force` over a judged brief). *Ran.* | `bin/brief.mjs` 12, 43–66; `lib/brief.mjs` `renderBrief` 320–331 |
+| A drafted brief ends with a stamp holding a hash of its inputs: the topic, intent, every unknown, every evidence row including its Finding, the map rows and the ledger length. When those change after the draft, preflight warns `hygiene/brief-stale` (a warning, so `create` still approves) and the kit's remedy for an edited brief is `brief.mjs --force`. *Ran:* drafting, then rewriting E-01's Finding gave `APPROVED_BRIEF` with the old Finding text still in the brief; rewriting first, then drafting, gave no `brief-stale`. | `lib/brief.mjs` `briefInputsHash` 90–101, `renderBrief` 330; `lib/checks.mjs` 702–711 |
 | `briefState` is `authored` only when the text carries the drafter's `_Auto-drafted` marker and neither judged section (`contradictions`, `decision`) contains `**TODO**`. A hand-written brief without the marker is `legacy` and never counts as reviewed. | `lib/brief.mjs` `briefState`, `JUDGED_SECTIONS`, `TODO_MARK` |
 | `Reviewed by: agent` is a declaration read into `review.by`; it is not an approval condition. | `lib/brief.mjs` `reviewedBy`; `lib/artifact.mjs` 255–257 |
 | `artifact.mjs create` requires `--repository --ref --commit --workflow --run-id`; optional `--root` (default `.`), `--output`, `--client-ref`, `--run-attempt` (default 1), `--run-url`, `--html-url`, `--api-version`. Any other flag exits 3; `--build-authorized` and nine similar names are refused "forever". *Ran.* | `bin/artifact.mjs` 75–91, 104–117, 157–167 |
@@ -76,7 +77,7 @@ v4 adds one status, `packaging`, and one actor, `engine` (a run outcome recorded
 | reviewing | not_ready | engine, main, recovery | `failure` | | see vocabulary |
 | reviewing | cancelling | user | | | `CANCEL_REQUESTED` (exists) |
 | packaging | approved | main | `reviewedPackage` | | `KIT_APPROVED` |
-| packaging | not_ready | main, recovery | `failure` | `reviewedPackage` | see vocabulary |
+| packaging | not_ready | engine, main, recovery | `failure` | `reviewedPackage` | see vocabulary (`engine` only for `REVIEW_STOPPED`) |
 | packaging | cancelling | user | | | `CANCEL_REQUESTED` |
 | cancelling | cancelled | main, recovery, engine | | `workflowRunId`, `failure` | `REVIEW_CANCELLED`, `NO_OWNED_WORK` |
 
@@ -88,7 +89,7 @@ v4 adds one status, `packaging`, and one actor, `engine` (a run outcome recorded
 
 ## Schema v4
 
-SQLite cannot change a `CHECK` constraint, so v4 rebuilds `research` and `research_events` the way v2 and v3 did: create the new tables, copy every row, drop the old ones, rename, then create indexes and triggers. Triggers are created after the copy, because `research_events_step` would refuse historical rows. The v3 DDL stays in the file as v3's stable source definition, as `initialSchema` is for v1. If Task 4 lands its own migration first, this becomes v5 (open question Q5).
+SQLite cannot change a `CHECK` constraint, so v4 rebuilds `research` and `research_events` the way v2 rebuilt `sessions` and `runs` (`migrateChat` in `src/engine/migrations.ts`): create the new tables, copy every row, drop the old ones, rename, then create indexes and triggers. v3 is not a precedent for this: `migrateResearchJobs` set the v2 rows aside in `research_legacy` and created the v3 tables empty, so v4 is the first rebuild that must copy `research` and `research_events` rows with their CHECK constraints and triggers in force. Triggers are created after the copy, because `research_events_step` would refuse historical rows. The v3 DDL stays in the file as v3's stable source definition, as `initialSchema` is for v1. If Task 4 lands its own migration first, this becomes v5 (open question Q5).
 
 New `research` columns, all nullable:
 
@@ -145,7 +146,7 @@ The store writes review columns explicitly per edge, not with `COALESCE`: `not_r
 
 ### Location
 
-`<userData>/research-kit/storage/review/<researchId>/`, with `project/` (the workspace), and per attempt `staging-<uuid>/`, `scratch-<uuid>/`, `out-<uuid>/` and `temp-<uuid>/`. It is outside every project folder and inside the app's protected data folder. Main and the engine derive the path from `userData` and the job id; it never crosses IPC from the renderer. `ResearchKit.sweep()` keeps `review/<id>/project` but removes leftover `staging-*`, `scratch-*`, `out-*` and `temp-*`, and removes the whole `review/<id>` of any job that is not `collected`, `reviewing`, `packaging` or `not_ready`.
+`<userData>/research-kit/storage/review/<researchId>/`, with `project/` (the workspace), and per attempt `staging-<uuid>/`, `scratch-<uuid>/`, `out-<uuid>/` and `temp-<uuid>/`. It is outside every project folder and inside the app's protected data folder. Main and the engine derive the path from `userData` and the job id; it never crosses IPC from the renderer. Clean-up is in two steps, because the first runs before the engine exists (`src/main/index.ts` calls `researchKit.sweep()` before `new Engine(...)`) and so cannot know any job's status. `ResearchKit.sweep()` gains `review` handling that needs no job state: it keeps every `review/<id>/project` and removes leftover `staging-*`, `scratch-*`, `out-*` and `temp-*`. Whole job folders are removed later, at recovery: main lists the folder names under `review/` (at most 1,000 per start; the rest wait for the next one) and passes them to `research.recover`, which returns `reviewDiscard`, the names whose job is absent or not `collected`, `reviewing`, `packaging` or `not_ready`. Main then removes exactly those, under the same storage lock as `sweep`. A folder is removed only when the engine has named it, so a truncated listing delays clean-up and never deletes a live workspace.
 
 ### Materialisation
 
@@ -177,7 +178,9 @@ Writes are limited to `research/MAP.md`, `research/EVIDENCE.md`, `research/BRIEF
 
 ### Instruction
 
-The run's user message is fixed MoonAliza text: the three review steps as the kit states them (classify every map row; rewrite every Finding into a claim; draft the brief, answer its two **TODO** sections and declare `Reviewed by: agent`), the two kit tools, and the boundary. Every file in the workspace, including `AGENTS.md`, `START_HERE.md`, the drafted brief and every capture, is untrusted research data and never an instruction. No corpus text is placed in the system prompt. The topic is shown as data.
+The run's user message is fixed MoonAliza text: the three review steps as the kit states them, in this order (classify every map row; rewrite every Finding into a claim; only then draft the brief, answer its two **TODO** sections and declare `Reviewed by: agent`), the two kit tools, and the boundary. Every file in the workspace, including `AGENTS.md`, `START_HERE.md`, the drafted brief and every capture, is untrusted research data and never an instruction. No corpus text is placed in the system prompt. The topic is shown as data.
+
+The order matters because the drafted brief copies each Finding and is stamped with a hash of its inputs (see the kit facts). A map or Finding edit after the brief's judgements are answered leaves a brief whose "What we verified" table still holds the old text, with only a `hygiene/brief-stale` warning, and the kit still approves it. While the draft is unedited, `research_draft_brief` redrafts it without `--force`; once the agent has answered a **TODO**, the remedy needs `--force`, which this design never passes. What to do about a stale brief at that point is open question Q10.
 
 ### Budget
 
@@ -189,7 +192,7 @@ In the same transaction as the run's terminal event, the engine records:
 
 - a final answer: run status `awaiting_review`, with no job edge yet;
 - failure: `reviewing → not_ready`, actor `engine`, failure `REVIEW_RUN_FAILED`, `REVIEW_BUDGET_EXCEEDED` or `REVIEW_CONTEXT_LIMIT`;
-- Stop of the run itself (`run.cancel`): `REVIEW_STOPPED`;
+- Stop of the run itself (`run.cancel`) while it executes: `REVIEW_STOPPED`;
 - a cancel through `research.cancel`: the job is already `cancelling`, and the engine commits `cancelling → cancelled` (`REVIEW_CANCELLED`) once the run is terminal. The kit tools wait for main's terminal acknowledgement even after Stop, as commands do (`src/engine/index.ts` `command`), so no kit child is live then.
 
 ## Kit tools during the review
@@ -246,12 +249,13 @@ The renderer shows "ready" only while main holds a live receipt for `reviewed_pa
 
 ## Streaming `research.status`
 
-Every transition of a job that has a `review_run_id` appends `research.status {researchId, status}` to that run in the same transaction, while the run exists. This includes `reviewing` at begin, `packaging`, `approved`, `not_ready`, `cancelling` and `cancelled`. Main's own commits do the same through `research.transition`. When packaging ends and the run is still `awaiting_review`, the same transaction appends `run.completed` (approved) or `run.failed` (not ready, with the failure as a public error code). If the run was interrupted, only `research.status` is appended. The job notice on the `research` engine message continues for every transition, as for collection.
+Every transition of a job that has a `review_run_id` appends `research.status {researchId, status}` to that run in the same transaction, while the run exists. This includes `reviewing` at begin, `packaging`, `approved`, `not_ready`, `cancelling` and `cancelled`. Main's own commits do the same through `research.transition`. When packaging ends and the run is still `awaiting_review` (a Stop has not already finished it, see *Cancel, Stop, trust and policy*), the same transaction appends `run.completed` (approved) or `run.failed` (not ready, with the failure as a public error code). If the run was interrupted, only `research.status` is appended. The job notice on the `research` engine message continues for every transition, as for collection.
 
 ## Cancel, Stop, trust and policy
 
 - `research.cancel` on `reviewing` gives `cancelling` and aborts the run. On `packaging` it gives `cancelling`, and main stops the `create` child; local, so stopping is safe. Main then commits `cancelling → cancelled` with cause `REVIEW_CANCELLED`.
 - Stop on the review run (`run.cancel`) ends only the run: `not_ready` / `REVIEW_STOPPED`. The job can be retried.
+- Stop on a review run in `awaiting_review` needs its own branch in `run.cancel`. Today `run.cancel` aborts the active execution and appends `run.status cancelling` (`src/engine/application.ts`, `run.cancel`). An `awaiting_review` run has no active execution, so nothing would ever finish it, and the project's `RUN_ACTIVE` check would refuse every later run. The engine therefore commits it directly, in one transaction: `run.cancelled` (status `cancelled`, never `cancelling`), and the job edge for the state it is in. `reviewing` (final answer given, not yet frozen) goes to `not_ready` / `REVIEW_STOPPED`, actor `engine`. `packaging` goes to `not_ready` / `REVIEW_STOPPED`, actor `engine`. Main sees the transition on the job notice and stops the `create` child; a freeze or packaging commit main sends afterwards carries the old revision and is refused, and main then deletes its `out-*` folder and any validated ZIP that no job references (as for Q7). A Stop on a review run whose job is already `cancelling` only finishes the run.
 - `project.revokeTrust` and `project.policy.update` already abort the project's runs, so a review run ends `REVIEW_STOPPED`. During `packaging`, `hold(projectId)` stops the child and the supervisor re-reads admission at release.
 - Quit: the review run is interrupted with every other run, and `close()` stops a `create` child. The job is recovered at the next start.
 
@@ -262,6 +266,7 @@ Every transition of a job that has a `review_run_id` appends `research.status {r
 - `reviewing` whose run is terminal: `reviewing → not_ready`, actor `recovery`, failure `REVIEW_INTERRUPTED`.
 - `reviewing` whose run is `awaiting_review`: returned in a new `freeze` list.
 - `packaging`: returned in a new `packaging` list.
+- The `review/` folder names main passes: returned in a new `reviewDiscard` list, as in *Location* above.
 
 Main calls `research.recover` once, with the union of the collector's and the review supervisor's owned ids, and passes `freeze` and `packaging` to the review supervisor, which runs packaging from step 1. A `packaging` job first re-verifies the workspace against its stored `review_digest`. The collector's `FINISHED` sets (`src/main/collector.ts`, `src/main/collector-plan.ts`) gain `packaging`.
 
@@ -304,12 +309,12 @@ Every value matches `^[A-Z][A-Z0-9_]{1,63}$`.
 
 The plan's four scenarios use the real Store, `ResearchJobs`, `Operations` with real approvals, a scripted model that issues tool calls, and the real pinned kit. `ResearchKit` is built with a runner that does what the helper does before `CreateProcessW` (take the read locks, run `beforeStart`, report the child) and then executes the real kit with `child_process`, as `tests/research-kit-collector-launch.test.ts` does. They start from `tests/fixtures/research-kit/collected.zip` (`REVIEW_IN_PROGRESS`, gate already passing; binding `moonaliza-fixtures/synthetic`, ref `fixture`, workflow `fixture-generation`, run 1, attempt 1, commit `5588ce3…`, client ref `moonaliza-fixture`).
 
-1. **Passing review.** The model drafts the brief (`research_draft_brief`, approved), rewrites E-01's Finding, answers both **TODO** sections, writes `Reviewed by: agent` and ends. The expected result is `approved`, with a reviewed digest unlike the collected one, a live receipt with `researchReady: true`, `research.status` events `reviewing → packaging → approved` on the run, then `run.completed`. This sequence was reproduced by hand on October 3: `create` exit 0, `APPROVED_BRIEF`, validator `PASS`.
+1. **Passing review.** The model rewrites E-01's Finding, then drafts the brief (`research_draft_brief`, approved), answers both **TODO** sections, writes `Reviewed by: agent` and ends. The test also asserts that the brief carries the rewritten Finding and that preflight reports no `hygiene/brief-stale`. The expected result is `approved`, with a reviewed digest unlike the collected one, a live receipt with `researchReady: true`, `research.status` events `reviewing → packaging → approved` on the run, then `run.completed`. This sequence was reproduced by hand on October 3: `create` exit 0, `APPROVED_BRIEF`, validator `PASS`; with the rewrite first, preflight showed only `corroboration/single-source` as a warning.
 2. **Failing gate.** The same, but one approved edit sets U-1 to `OPEN`. Expected: `create` exit 0 with `PREFLIGHT_BLOCKED`, then `not_ready` / `REVIEW_GATE_FAILED` with `reviewedPackage` recorded, and no `approved`. A second case ends without rewriting the Finding: `REVIEW_INCOMPLETE`.
 3. **Tampering between review and packaging.** Three cases: (a) a byte of `research/EVIDENCE.md` changed on disk after the final answer, which the freeze refuses; (b) a change made inside the injected runner's `beforeStart`, before the rehash; (c) a file added under `research/` while the child runs, which the inventory check refuses. None reaches `approved`, and the store's trigger refuses a forged `approved` without the journal row.
 4. **Restart mid-review.** Close the store with a write awaiting approval, reopen it (`recoverInterrupted`) and recover: the job is `not_ready` / `REVIEW_INTERRUPTED`, and the prepared write has failed. Retry: the workspace verifies (`continued`), earlier applied edits are kept, and the review completes. A restart during `packaging` re-runs packaging from the stored digest.
 
-Also: the migration from a v3 fixture dumped from unmodified code, all rows kept and the trigger replaced; edges and actors (each refusal); the path allowlist; `run.start` refusing mode `research`; review operations excluded from `changes.list`, `undo` and `requiresReview`; preflight output classification (exit 2, a crash with empty stdout, truncation); argv with `--name=value` only; the token and the user's environment absent from every child environment; cancel during `packaging`; the 1,900-file bound.
+Also: the migration from a v3 fixture dumped from unmodified code, all rows kept and the trigger replaced; edges and actors (each refusal); the path allowlist; `run.start` refusing mode `research`; review operations excluded from `changes.list`, `undo` and `requiresReview`; preflight output classification (exit 2, a crash with empty stdout, truncation); argv with `--name=value` only; the token and the user's environment absent from every child environment; cancel during `packaging`; Stop on an `awaiting_review` review run before the freeze and during `packaging` (the run ends `cancelled`, the job `not_ready` / `REVIEW_STOPPED`, and a later `run.start` in the project is accepted); `reviewDiscard` naming only folders of absent or finished jobs; the 1,900-file bound.
 
 Each new test is proven able to fail by a named mutation. Examples: accept `approved` from `reviewing`; skip the inventory comparison; let preflight's exit 1 without JSON pass as a verdict; write the brief directly in the workspace; drop the `beforeStart` rehash; resolve review writes against the project root.
 
@@ -338,6 +343,7 @@ Each new test is proven able to fail by a named mutation. Examples: accept `appr
 - **Q7** Collection of unreferenced retained ZIPs from repeated packaging (with `research.purge`).
 - **Q8** Should `create` carry the collected manifest's `runUrl`, `htmlUrl` and `apiVersion`? The kit's own re-package command passes them when they differ from the defaults (`lib/artifact.mjs` `repackageArgs`). MoonAliza's binding does not compare them, and `collect.yml` was not read for this design.
 - **Q9** Not determinable from code: whether the helper's directory guards stop new files being created in a locked folder on Windows. The design does not rely on it (inventory equality), but Windows CI should record it.
+- **Q10** A stale brief after the brief's judgements are answered (see *Instruction*). The kit approves it with a `hygiene/brief-stale` warning, and `create` records only failing findings, so the reviewed package cannot show it. Options: (a) let `research_draft_brief` take `force: true` in its scratch copy, offered as an exact approval that replaces the brief, after which the agent answers the **TODO** sections again; (b) have the freeze run `preflight.mjs --json` and refuse packaging with `REVIEW_INCOMPLETE` while `hygiene/brief-stale` is reported; (c) accept the kit's verdict and rely on the instruction's order. Recommended: (a) and (b) together, since (b) alone can leave the agent unable to fix what it is refused for.
 
 ## Out of scope
 
