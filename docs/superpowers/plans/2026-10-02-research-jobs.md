@@ -150,7 +150,7 @@ October 3, the six spec-review items: five fixed in `src/main/collector.ts` (wit
   - Resolved: the helper's admission timer takes `admissionMs`, so the whole pre-start step is bounded at 60 s.
   - Resolved: a job held after a commit error stays in `ownedIds()` until the next app start, so recovery after an engine-only restart (or at attach, after a failed replay) cannot fail it and drop its spooled run id.
   - Kept: `STOPPED` waits without counting; it only follows the supervisor's own stop, and counting it would let user holds fail a job.
-- **Small follow-up:** `src/engine/policy.ts` throws `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema` (the contract code is `RESEARCH_NOT_ALLOWED`); research admission now uses the contract code, but the tool-policy path still surfaces as `INTERNAL_ERROR`.
+- **Small follow-up (done, October 3):** `src/engine/policy.ts` threw `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema`; the tool-policy path now throws the contract code `RESEARCH_NOT_ALLOWED`, as research admission does.
 
 ## Next phase after research: missions
 
