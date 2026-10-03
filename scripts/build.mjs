@@ -1,6 +1,8 @@
 import { build } from 'esbuild';
-import { mkdir, copyFile } from 'node:fs/promises';
+import { mkdir, copyFile, rm } from 'node:fs/promises';
 
+// Start from an empty dist/: a stale bundle would otherwise match electron-builder's dist/** glob.
+await rm('dist', { recursive: true, force: true });
 await mkdir('dist/renderer', { recursive: true });
 await build({
   entryPoints: { main: 'src/main/index.ts', preload: 'src/preload/index.ts', engine: 'src/engine/index.ts' },
