@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { ResearchVerificationSchema } from '../engine/research';
+import { shortResearchRef } from '../engine/research-state';
 import type { Binding, Result } from '../adapters/research-kit/contracts';
 import type { CollectorConfig } from './collector-settings';
 import type { ImportOutcome, PackageHandoff } from './collector';
@@ -29,8 +30,6 @@ const RunSchema = z.object({
 type Run = z.infer<typeof RunSchema>;
 const DEFERRED: ImportOutcome = { kind: 'deferred' };
 const reject = (failure: string, cause: string): ImportOutcome => ({ kind: 'rejected', failure, cause });
-/** A workflow_dispatch ref may be given in full; the run and the package carry its short name (GITHUB_REF_NAME). */
-const shortRef = (ref: string) => ref.replace(/^refs\/(?:heads|tags)\//, '');
 
 /**
  * One bounded, authenticated GET of the run. The token is used only in this request's Authorization header; a redirect
@@ -79,7 +78,7 @@ export function packageImporter(deps: ImportDeps): (handoff: PackageHandoff) => 
     } catch { return DEFERRED; } finally { deps.vault.revokeContext(binding.contextId); }
     const target = handoff.target;
     if (run.id !== Number(handoff.workflowRunId) || run.repository.full_name.toLowerCase() !== target.repository.toLowerCase() || run.event !== 'workflow_dispatch'
-      || run.path !== `.github/workflows/${target.workflow}` || run.head_branch !== shortRef(target.ref)) return reject('RUN_IDENTITY_MISMATCH', 'IMPORT_RUN_MISMATCH');
+      || run.path !== `.github/workflows/${target.workflow}` || run.head_branch !== shortResearchRef(target.ref)) return reject('RUN_IDENTITY_MISMATCH', 'IMPORT_RUN_MISMATCH');
     // A re-run in progress has a new attempt that has not packaged yet.
     if (run.status !== 'completed') return DEFERRED;
     const expected: Binding = {
@@ -94,7 +93,7 @@ export function packageImporter(deps: ImportDeps): (handoff: PackageHandoff) => 
       return { kind: 'verified', verification: ResearchVerificationSchema.parse({
         artifactSha256: receipt.artifactSha256, artifactBytes: receipt.artifactBytes, validatorRevision: receipt.validatorRevision, nodeSha256: receipt.nodeSha256, state: receipt.state,
         jobRevision: expected.jobRevision, projectRevision: expected.projectRevision, repository: expected.repository, ref: expected.ref, workflow: expected.workflow,
-        commit: expected.commit, runAttempt: expected.runAttempt, downloadDigest: 'unverified',
+        commit: expected.commit, runAttempt: expected.runAttempt, workflowRunId: handoff.workflowRunId, clientRef: expected.clientRef, downloadDigest: 'unverified',
       }) };
     }
     if (result.status === 'FAIL') return reject('ARTIFACT_INVALID', 'IMPORT_FAIL');

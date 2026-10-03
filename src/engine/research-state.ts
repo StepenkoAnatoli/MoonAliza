@@ -30,6 +30,9 @@ export const RESEARCH_EDGES: Readonly<Partial<Record<StoreResearchStatus, Partia
   cancelling: { cancelled: { actors: ['main', 'recovery'], allows: ['workflowRunId', 'failure'] } },
 };
 
+/** A workflow_dispatch ref may be given in full; the run and the package carry its short name (GITHUB_REF_NAME). */
+export const shortResearchRef = (ref: string) => ref.replace(/^refs\/(?:heads|tags)\//, '');
+
 export function assertResearchEdge(existing: StoreResearch, to: StoreResearchStatus, actor: StoreResearchActor, patch: StoreResearchPatch): void {
   const edge = RESEARCH_EDGES[existing.status]?.[to];
   if (!edge || !edge.actors.includes(actor)) throw new Error('RESEARCH_TRANSITION_INVALID');
@@ -38,5 +41,10 @@ export function assertResearchEdge(existing: StoreResearch, to: StoreResearchSta
   for (const [key, value] of Object.entries(patch)) if (value === undefined || !permitted.has(key as keyof StoreResearchPatch)) throw new Error('RESEARCH_TRANSITION_INVALID');
   if (patch.workflowRunId !== undefined && existing.workflowRunId !== undefined) throw new Error('RESEARCH_TRANSITION_INVALID');
   // A receipt is bound to the job revision it was validated at and to the admitted policy revision; any other is stale.
-  if (patch.verification && (patch.verification.jobRevision !== existing.revision || patch.verification.projectRevision !== existing.policyRevision)) throw new Error('RESEARCH_TRANSITION_INVALID');
+  // It must also name the job's own run, client ref and frozen target. The package's workflow is the kit's literal
+  // collect.yml, not the target's workflow file, so it is not compared here.
+  const verified = patch.verification;
+  if (verified && (verified.jobRevision !== existing.revision || verified.projectRevision !== existing.policyRevision || verified.workflowRunId !== existing.workflowRunId
+    || verified.clientRef !== existing.clientRef || existing.repository === undefined || verified.repository.toLowerCase() !== existing.repository.toLowerCase()
+    || existing.ref === undefined || verified.ref !== shortResearchRef(existing.ref))) throw new Error('RESEARCH_TRANSITION_INVALID');
 }

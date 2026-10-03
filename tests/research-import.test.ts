@@ -127,7 +127,8 @@ test('a collected package is verified against the GitHub run and its verificatio
   expect(step).toMatchObject({ revision: 4, from: 'collecting', to: 'collected', actor: 'main', cause: 'PACKAGE_VERIFIED' });
   expect(step.detail).toEqual({ verification: {
     artifactSha256: collected.sha256, artifactBytes: collected.byteLength, validatorRevision: VALIDATOR_REVISION, nodeSha256, state: 'REVIEW_IN_PROGRESS',
-    jobRevision: 3, projectRevision: 1, repository: identity.repository, ref: identity.ref, workflow: identity.workflow, commit: identity.commit, runAttempt: identity.runAttempt, downloadDigest: 'unverified',
+    jobRevision: 3, projectRevision: 1, repository: identity.repository, ref: identity.ref, workflow: identity.workflow, commit: identity.commit, runAttempt: identity.runAttempt,
+    workflowRunId: String(identity.workflowRunId), clientRef: CLIENT_REF, downloadDigest: 'unverified',
   } });
   // The exact bytes are retained, content-addressed, outside the collector's folder.
   expect(createHash('sha256').update(await readFile(join(h.root, 'storage', 'artifacts', `${collected.sha256}.zip`))).digest('hex')).toBe(collected.sha256);

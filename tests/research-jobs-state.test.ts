@@ -21,8 +21,8 @@ function project(store: Store, research: 'off' | 'public-technical' = 'public-te
 }
 const inputs = { queries: [], urls: [], preferDomains: [], depth: 'quick', maxPages: 8 };
 const target = { collectorRevision: 1, repository: 'owner/collector', workflow: 'collect.yml', ref: 'main' };
-const verification = (jobRevision = 3, projectRevision = 1) => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
-  jobRevision, projectRevision, repository: 'owner/collector', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, downloadDigest: 'unverified' as const });
+const verification = (jobRevision = 3, projectRevision = 1, workflowRunId = '5', clientRef = 'mz-j1') => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
+  jobRevision, projectRevision, repository: 'owner/collector', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, workflowRunId, clientRef, downloadDigest: 'unverified' as const });
 function create(store: Store, id = 'j1', projectId = 'p') {
   return store.createResearch({ id, projectId, topic: 'Ollama context limits', inputs, clientRef: `mz-${id}`, researchLevel: 'public-technical', policyRevision: 1, trustRevision: 1 }, { actor: 'user' });
 }
@@ -41,7 +41,7 @@ const EXPECTED: Array<[StoreResearchStatus, StoreResearchStatus, StoreResearchAc
   ['collecting', 'collected', ['main']], ['collecting', 'failed', ['main']], ['collecting', 'cancelling', ['user']],
   ['reviewing', 'cancelling', ['user']], ['cancelling', 'cancelled', ['main', 'recovery']],
 ];
-const minimalPatch = (to: StoreResearchStatus, n: number): StoreResearchPatch | undefined => to === 'dispatching' ? { target } : to === 'collecting' ? { workflowRunId: String(5000 + n) } : to === 'failed' ? { failure: 'TEST_FAILURE' } : to === 'collected' ? { verification: verification() } : undefined;
+const minimalPatch = (to: StoreResearchStatus, n: number): StoreResearchPatch | undefined => to === 'dispatching' ? { target } : to === 'collecting' ? { workflowRunId: String(5000 + n) } : to === 'failed' ? { failure: 'TEST_FAILURE' } : to === 'collected' ? { verification: verification(3, 1, String(1000 + n), `mz-j${n - 1}`) } : undefined;
 
 describe('schema v3 migration', () => {
   test('a v2 database upgrades to v3, keeps every row and quarantines legacy research rows verbatim', () => {
@@ -185,7 +185,7 @@ describe('store transitions', () => {
     expect(created.research).toMatchObject({ revision: 1, status: 'queued', clientRef: 'mz-j1' });
     step(store, 'j1', 'dispatching', 'main', { target });
     step(store, 'j1', 'collecting', 'main', { workflowRunId: '101' });
-    const done = step(store, 'j1', 'collected', 'main', { verification: verification() });
+    const done = step(store, 'j1', 'collected', 'main', { verification: verification(3, 1, '101') });
     expect(done.research).toMatchObject({ revision: 4, status: 'collected', workflowRunId: '101', repository: 'owner/collector' });
     const journal = store.researchEvents('j1').events;
     expect(journal.map(e => [e.revision, e.from ?? null, e.to])).toEqual([[1, null, 'queued'], [2, 'queued', 'dispatching'], [3, 'dispatching', 'collecting'], [4, 'collecting', 'collected']]);
@@ -232,7 +232,7 @@ describe('store transitions', () => {
       });
       const paths: Record<string, Array<[StoreResearchStatus, StoreResearchActor, StoreResearchPatch?]>> = {
         queued: [], dispatching: [['dispatching', 'main', { target }]], collecting: [['dispatching', 'main', { target }], ['collecting', 'main', { workflowRunId: String(1000 + n) }]],
-        collected: [['dispatching', 'main', { target }], ['collecting', 'main', { workflowRunId: String(1000 + n) }], ['collected', 'main', { verification: verification() }]],
+        collected: [['dispatching', 'main', { target }], ['collecting', 'main', { workflowRunId: String(1000 + n) }], ['collected', 'main', { verification: verification(3, 1, String(1000 + n), `mz-${id}`) }]],
         cancelling: [['dispatching', 'main', { target }], ['cancelling', 'user']], cancelled: [['cancelled', 'user']], failed: [['failed', 'main', { failure: 'TEST_FAILURE' }]],
       };
       for (const [next, by, patch] of paths[from]!) step(store, id, next, by, patch);
@@ -270,6 +270,18 @@ describe('store transitions', () => {
     expect(store.researchEvents('j1').events.at(-1)).toMatchObject({ revision: 4, to: 'collected', detail: { verification: verification() } });
   });
 
+  test('collected refuses a verification naming another run, client ref, repository or ref than the job\'s', () => {
+    const { store } = open(); project(store); create(store);
+    step(store, 'j1', 'dispatching', 'main', { target: { ...target, repository: 'Owner/Collector', ref: 'refs/heads/main' } });
+    step(store, 'j1', 'collecting', 'main', { workflowRunId: '5' });
+    for (const other of [{ workflowRunId: '6' }, { clientRef: 'mz-j2' }, { repository: 'owner/other' }, { repository: 'other/collector' }, { ref: 'refs/heads/main' }, { ref: 'release' }])
+      expect(() => step(store, 'j1', 'collected', 'main', { verification: { ...verification(), ...other } }), JSON.stringify(other)).toThrow('RESEARCH_TRANSITION_INVALID');
+    expect(store.getResearch('j1')).toMatchObject({ revision: 3, status: 'collecting' });
+    // GitHub's repository casing and the short ref name the run reports are the job's own target.
+    step(store, 'j1', 'collected', 'main', { verification: verification() });
+    expect(store.getResearch('j1')).toMatchObject({ status: 'collected' });
+  });
+
   test('a cancel that races the run-id print can still record the run id', () => {
     const { store } = open(); project(store); create(store);
     step(store, 'j1', 'dispatching', 'main', { target });
@@ -293,7 +305,7 @@ describe('restart reconciliation and never dispatching twice', () => {
     for (const state of states) { project(seed, 'public-technical', `p-${state}`); seed.createResearch({ id: state, projectId: `p-${state}`, topic: 't', inputs, clientRef: `mz-${state}`, researchLevel: 'public-technical', policyRevision: 1, trustRevision: 1 }, { actor: 'user' }); }
     const via: Record<string, Array<[StoreResearchStatus, StoreResearchActor, StoreResearchPatch?]>> = {
       dispatching: [['dispatching', 'main', { target }]], collecting: [['dispatching', 'main', { target }], ['collecting', 'main', { workflowRunId: '11' }]],
-      collected: [['dispatching', 'main', { target }], ['collecting', 'main', { workflowRunId: '12' }], ['collected', 'main', { verification: verification() }]],
+      collected: [['dispatching', 'main', { target }], ['collecting', 'main', { workflowRunId: '12' }], ['collected', 'main', { verification: verification(3, 1, '12', 'mz-collected') }]],
       cancelling: [['dispatching', 'main', { target }], ['cancelling', 'user']], cancelled: [['cancelled', 'user']], failed: [['failed', 'main', { failure: 'X_CODE' }]],
     };
     for (const [id, path2] of Object.entries(via)) for (const [next, by, patch] of path2) step(seed, id, next, by, patch);
@@ -457,7 +469,7 @@ describe('application and boundaries', () => {
     expect(ControlSchema.safeParse({ ...base, to: 'collecting', workflowRunId: '9007199254740993' }).success).toBe(false);
     expect(ControlSchema.safeParse({ ...base, to: 'failed', failure: 'free text' }).success).toBe(false);
     expect(ControlSchema.safeParse({ ...base, to: 'collected', verification: verification() }).success).toBe(true);
-    for (const bad of [{ token: 'ghp_x' }, { downloadDigest: 'verified' }, { state: 'APPROVED_BRIEF' }, { artifactSha256: 'A'.repeat(64) }, { commit: 'main' }, { jobRevision: 0 }])
+    for (const bad of [{ token: 'ghp_x' }, { downloadDigest: 'verified' }, { state: 'APPROVED_BRIEF' }, { artifactSha256: 'A'.repeat(64) }, { commit: 'main' }, { jobRevision: 0 }, { workflowRunId: '01' }, { clientRef: 'mz j1' }])
       expect(ControlSchema.safeParse({ ...base, to: 'collected', verification: { ...verification(), ...bad } }).success, JSON.stringify(bad)).toBe(false);
   });
 

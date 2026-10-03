@@ -245,17 +245,17 @@ test('a run past its seven-day deadline fails as COLLECTION_EXPIRED without anot
   expect(h.calls.filter(c => c.kind === 'watch')).toHaveLength(0);
 });
 
-const verification = (jobRevision: number) => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
-  jobRevision, projectRevision: 1, repository: 'o/r', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, downloadDigest: 'unverified' as const });
+const verification = (jobRevision: number, clientRef: string) => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
+  jobRevision, projectRevision: 1, repository: 'o/r', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, workflowRunId: '1', clientRef, downloadDigest: 'unverified' as const });
 
 test('a verified import commits collecting -> collected with its verification journaled; a rejected one fails the job', async () => {
-  const h = await harness(happy, { importPackage: async handoff => ({ kind: 'verified', verification: verification(handoff.expectedRevision) }) });
+  const h = await harness(happy, { importPackage: async handoff => ({ kind: 'verified', verification: verification(handoff.expectedRevision, handoff.clientRef) }) });
   await h.supervisor.attach();
   const job = h.create(); h.supervisor.observe(researchDto(job));
   await until(() => h.store.getResearch(job.id)!.status === 'collected');
   expect(h.handoffs[0]).toMatchObject({ expectedRevision: 3, projectRevision: 1 });
   const step = h.store.researchEvents(job.id).events.at(-1)!;
-  expect(step).toMatchObject({ from: 'collecting', to: 'collected', actor: 'main', cause: 'PACKAGE_VERIFIED', detail: { verification: verification(3) } });
+  expect(step).toMatchObject({ from: 'collecting', to: 'collected', actor: 'main', cause: 'PACKAGE_VERIFIED', detail: { verification: verification(3, job.clientRef) } });
   const rejected = await harness(happy, { importPackage: async () => ({ kind: 'rejected', failure: 'PACKAGE_IDENTITY_MISMATCH', cause: 'IMPORT_IDENTITY_MISMATCH' }) });
   await rejected.supervisor.attach();
   const other = rejected.create(); rejected.supervisor.observe(researchDto(other));
@@ -266,7 +266,7 @@ test('a verified import commits collecting -> collected with its verification jo
 
 test('a receipt bound to another job revision records nothing and the package is verified again', async () => {
   let imports = 0;
-  const h = await harness(happy, { importPackage: async handoff => (++imports === 1 ? { kind: 'verified', verification: verification(handoff.expectedRevision + 1) } : { kind: 'deferred' }) });
+  const h = await harness(happy, { importPackage: async handoff => (++imports === 1 ? { kind: 'verified', verification: verification(handoff.expectedRevision + 1, handoff.clientRef) } : { kind: 'deferred' }) });
   await h.supervisor.attach();
   const job = h.create(); h.supervisor.observe(researchDto(job));
   await until(() => imports === 2);

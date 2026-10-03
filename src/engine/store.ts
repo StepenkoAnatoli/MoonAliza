@@ -49,7 +49,7 @@ export interface StoreResearchTarget { collectorRevision: number; repository: st
 /** What main verified on collecting -> collected. Journaled only (the detail of that step); no column holds it. */
 export interface StoreResearchVerification {
   artifactSha256: string; artifactBytes: number; validatorRevision: string; nodeSha256: string; state: 'REVIEW_REQUIRED' | 'REVIEW_IN_PROGRESS' | 'PREFLIGHT_BLOCKED';
-  jobRevision: number; projectRevision: number; repository: string; ref: string; workflow: string; commit: string; runAttempt: number; downloadDigest: 'unverified';
+  jobRevision: number; projectRevision: number; repository: string; ref: string; workflow: string; commit: string; runAttempt: number; workflowRunId: string; clientRef: string; downloadDigest: 'unverified';
 }
 export interface StoreResearchPatch { target?: StoreResearchTarget; workflowRunId?: string; failure?: string; verification?: StoreResearchVerification }
 export interface StoreResearchStep { researchId: string; expectedRevision: number; to: StoreResearchStatus; actor: StoreResearchActor; cause: string; requestId?: string; patch?: StoreResearchPatch }

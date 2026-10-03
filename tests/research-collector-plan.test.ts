@@ -13,7 +13,7 @@ const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(s => s.close()); roots.splice(0).forEach(p => rmSync(p, { recursive: true, force: true })); });
 const target = { collectorRevision: 1, repository: 'owner/collector', workflow: 'collect.yml', ref: 'main' };
 const verification = (jobRevision: number) => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
-  jobRevision, projectRevision: 1, repository: 'owner/collector', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, downloadDigest: 'unverified' as const });
+  jobRevision, projectRevision: 1, repository: 'owner/collector', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, workflowRunId: '41', clientRef: 'mz-j', downloadDigest: 'unverified' as const });
 const policy = (revision: number, research: 'off' | 'public-technical' = 'public-technical') => ({ revision, inference: 'local-only' as const, research });
 
 type Start = 'queued' | 'dispatching' | 'collecting' | 'cancelling-before-run' | 'cancelling-with-run' | 'collected' | 'failed' | 'cancelled';
