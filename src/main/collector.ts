@@ -194,6 +194,7 @@ export class CollectorSupervisor {
   private wakeJob(job: Job) { job.wake.abort(); job.wake = new AbortController(); }
   private async pause(job: Job, ms: number) { await this.sleep(ms, job.wake.signal); }
   private held(projectId: string) { return (this.holds.get(projectId) ?? 0) > 0; }
+  private async tokenSaved() { const ref = this.deps.settings.current()?.secretRef; return !!ref && await this.deps.vault.has(ref); }
 
   // ---------------------------------------------------------------- engine access
 
@@ -318,7 +319,9 @@ export class CollectorSupervisor {
         switch (outcome.kind) {
           case 'notLaunched':
             if (outcome.refusal === 'INSTALLATION_INVALID') job.park = 'kit';
-            else if (outcome.refusal === 'CREDENTIAL_DENIED') job.park = 'credentials';
+            // Only a reference that is gone waits for a save at once. A refusal with it still saved (a grant under an epoch
+            // that just changed, encryption briefly unavailable) counts like any refusal, and parks the same way if it persists.
+            else if (outcome.refusal === 'CREDENTIAL_DENIED') { if (!(await this.tokenSaved()) || ++notStarted >= this.limits.preStartAttempts) job.park = 'credentials'; else await this.pause(job, this.retry); }
             else if (!waits(outcome.refusal) && ++notStarted >= this.limits.preStartAttempts) job.park = 'kit';
             else await this.pause(job, this.retry);
             break;

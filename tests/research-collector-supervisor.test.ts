@@ -29,7 +29,7 @@ function replay(name: string, clientRef?: string, signal?: AbortSignal): OwnedRe
 }
 const gate = () => { let open!: () => void; const promise = new Promise<void>(resolve => { open = resolve; }); return { promise, open }; };
 
-async function harness(script: Script, options: { fault?(control: Control): Promise<void> | void; root?: string; now?(): number; noToken?: boolean; importPackage?(handoff: PackageHandoff): Promise<ImportOutcome> } = {}) {
+async function harness(script: Script, options: { fault?(control: Control): Promise<void> | void; root?: string; now?(): number; noToken?: boolean; epoch?(): string; importPackage?(handoff: PackageHandoff): Promise<ImportOutcome> } = {}) {
   const root = options.root ?? await mkdtemp(join(tmpdir(), 'moonaliza-supervisor-')); if (!options.root) roots.push(root);
   const store = new Store(join(root, 'state.sqlite')); closers.push(async () => store.close());
   const notices: unknown[] = []; const jobs = new ResearchJobs(store, research => notices.push(research));
@@ -75,7 +75,7 @@ async function harness(script: Script, options: { fault?(control: Control): Prom
   };
   const handoffs: PackageHandoff[] = [];
   const supervisor = new CollectorSupervisor({
-    control, epoch: () => 'epoch-1', vault, settings: { current: () => config }, kit, spoolDirectory: join(root, 'runs'),
+    control, epoch: options.epoch ?? (() => 'epoch-1'), vault, settings: { current: () => config }, kit, spoolDirectory: join(root, 'runs'),
     importPackage: async handoff => { handoffs.push(handoff); return options.importPackage ? options.importPackage(handoff) : { kind: 'deferred' }; },
     limits: { backoffFirstMs: 5, stillRunningDelayMs: 5, quitDrainMs: 50 }, retryDelayMs: 10, ...(options.now ? { now: options.now } : {}),
   });
@@ -84,7 +84,7 @@ async function harness(script: Script, options: { fault?(control: Control): Prom
     const { research } = store.createResearch({ id, projectId: 'p', topic: 'Ollama context limits', inputs: { queries: ['ollama num_ctx'], urls: [], preferDomains: [], depth: 'quick', maxPages: 3 }, clientRef: `mz-${randomUUID().replaceAll('-', '')}`, researchLevel: 'public-technical', policyRevision: 1, trustRevision: 1 }, { actor: 'user' });
     return research;
   };
-  return { root, store, jobs, supervisor, controls, calls, handoffs, notices, create, config, prepared: () => prepared };
+  return { root, store, jobs, vault, supervisor, controls, calls, handoffs, notices, create, config, prepared: () => prepared };
 }
 async function until(check: () => boolean | Promise<boolean>, timeout = 5000) {
   const end = Date.now() + timeout;
@@ -309,4 +309,38 @@ test('a collecting job without a readable dispatchedAt is watched against a dead
   await until(() => late.store.getResearch(old.id)!.status === 'failed');
   expect(late.store.getResearch(old.id)).toMatchObject({ failure: 'COLLECTION_EXPIRED', workflowRunId: '1' });
   expect(late.calls.filter(c => c.kind === 'watch')).toHaveLength(0);
+});
+
+test('a watch the vault refuses while the reference is still saved retries, parks only after three refusals, and a save re-arms it', async () => {
+  // A grant under a stale epoch (the window of an engine-only restart) is refused although the token is saved.
+  let launches = 0; let stale: (n: number) => boolean = n => n === 2;
+  const h = await harness(happy, { epoch: () => stale(++launches) ? 'epoch-2' : 'epoch-1' });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.handoffs.length === 1);
+  expect(launches).toBe(3);
+  // Refused every time: counted like any other refusal, then parked for credentials.
+  const again = await harness(happy, { epoch: () => stale(++launches) ? 'epoch-2' : 'epoch-1' });
+  launches = 0; stale = n => n > 1;
+  await again.supervisor.attach();
+  const other = again.create(); again.supervisor.observe(researchDto(other));
+  await until(() => launches === 4);
+  await new Promise(r => setTimeout(r, 100));
+  expect(launches).toBe(4); expect(again.handoffs).toHaveLength(0); expect(again.store.getResearch(other.id)!.status).toBe('collecting');
+  stale = () => false; again.supervisor.configChanged();
+  await until(() => again.handoffs.length === 1);
+});
+
+test('a watch whose token is no longer in the vault parks for credentials at once, and a new token re-arms it', async () => {
+  // The token is removed while the dispatcher runs: it keeps its copy, and the watch's grant is refused.
+  const h = await harness(async call => { if (call.kind === 'dispatch') { await h.vault.tombstone(h.config.secretRef!); return replay('dispatch-ok'); } return happy(call); });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.store.getResearch(job.id)!.status === 'collecting');
+  await new Promise(r => setTimeout(r, 100));
+  // Preflight, the dispatcher and one refused watch staged the kit: no counted retries.
+  expect(h.prepared()).toBe(3); expect(h.calls.filter(c => c.kind === 'watch')).toHaveLength(0);
+  const replaced = await h.vault.saveStaged(TOKEN); await h.vault.commit(replaced);
+  h.config.secretRef = replaced; h.supervisor.configChanged();
+  await until(() => h.handoffs.length === 1);
 });

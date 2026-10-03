@@ -170,7 +170,7 @@ The supervisor handles each outcome this way:
 - `stillRunning` waits 5 s and resets the transient count.
 - `transient` waits with the backoff above.
 - `park` stops launching until re-armed. `credentials` is re-armed by a collector save (`configChanged`) or the next app start. `kit` and `import` are re-armed at the next app start. A parked job stays `collecting` and owned.
-- `notLaunched`: `INSTALLATION_INVALID` parks `kit`; `CREDENTIAL_DENIED` parks `credentials`; `HELD`, `ENGINE_UNAVAILABLE` and `STOPPED` wait; other refusals count, and after 3 the job parks `kit`.
+- `notLaunched`: `INSTALLATION_INVALID` parks `kit`; `HELD`, `ENGINE_UNAVAILABLE` and `STOPPED` wait; other refusals count, and after 3 the job parks `kit`. `CREDENTIAL_DENIED` parks `credentials` at once when the saved settings have no token reference or the vault no longer has it. With the reference still saved (for example a grant issued under an epoch that an engine-only restart has just replaced, or encryption briefly unavailable) it counts like any refusal and, after 3, parks `credentials`.
 
 A watch never fails a job on a transient result. When the deadline passes, the job fails `COLLECTION_EXPIRED` / `WATCH_DEADLINE`. The store always sets `dispatchedAt` with the run's target, so a `collecting` job without a readable one is a damaged row. It is still watched, against `createdAt` + 7 days: creation precedes dispatch, so that deadline is never later than the real one and the watch still never runs past the artifact's retention. Expiring such a job on sight (the earlier behaviour) would give up a run that may have succeeded; watching it from "now" would never end.
 
@@ -360,7 +360,7 @@ Transient and park causes use the same names but are not recorded; the job stays
 - `start` on `CollectorLaunch` takes a built environment, not a token; main builds it with `collectorEnvironment`. The launch exposes `temp` and has no `cwd` field.
 - The design bounds the whole pre-start step at 60 s. The code bounds only the `admit()` check at 60 s; the helper's own admission timer uses the launch's owned timeout.
 - In table A the supervisor also lets `STOPPED` wait without counting; the design lists only `HELD` and `ENGINE_UNAVAILABLE`.
-- In table B a watch `CREDENTIAL_DENIED` parks `credentials` without checking that the reference is no longer saved. In the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
+- In table B, in the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
 - The design does not list the supervisor's pre-admission refusals (`COLLECTOR_NOT_CONFIGURED`, `NO_COLLECTOR`, `NO_TOKEN`, `NO_INSTALLATION`, `COMMAND_LINE`) or the `NOT_OWNED_DISPATCH` cause.
 - A job held after a commit error leaves the owned map when its driver returns. The design keeps it held until the next app start; in the code an engine-only restart's recovery can also act on it.
 - A negative exit code is named `KIT_EXIT_NEG<n>`, because a minus sign is not valid in a code. Fixed after review: it used to form `KIT_EXIT_-<n>`, which failed the control schema and held the job.
