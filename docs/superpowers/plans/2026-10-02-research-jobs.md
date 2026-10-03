@@ -140,7 +140,7 @@ October 3, the six spec-review items: five fixed in `src/main/collector.ts` (wit
 
 October 3, Task 7 preparation, the research desktop journeys. The collector's minimal environment has no route to a fake GitHub, so the journeys load a test-only preload into main with Electron's `-r`; it adds the loopback proxy and the test CA to collector launches on their way into the native helper. No production code changed. Design, rejected alternatives and evidence: [research journeys](../../specification/research-journeys.md).
 - `e2e/research-journeys.spec.ts`: a harness check on every OS; start, restart mid-collection and park at import, and cancel mid-collection on Windows only (they need the helper).
-- `tests/research-journeys-network.test.ts` (3) runs the preload against the real `spawnOwned` encoder; four mutations each turned it red.
+- `tests/research-journeys-network.test.ts` (4) runs the preload against the real `spawnOwned` encoder, including its refusals and the collector outcomes journey 2 uses to tell the import park from a kit or credentials park.
 - On Linux under xvfb the harness check passed and the two journeys were skipped; they have not run yet. Exact-head Windows CI is their first run.
 
 ## Recorded for later (not in Task 2)

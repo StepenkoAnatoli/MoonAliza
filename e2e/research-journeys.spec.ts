@@ -66,7 +66,9 @@ async function prepare(app: ElectronApplication, page: Page, project: string) {
 }
 const read = async (page: Page, id: string) => (await invoke<{ research: Job }>(page, 'research.read', { researchId: id })).research;
 const count = (fake: FakeGitHub, method: string, path: string) => fake.seen.filter(request => request.method === method && request.path === path).length;
-const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonalizaE2eCollectorNetwork?: { collectors: number; rewritten: number } }).__moonalizaE2eCollectorNetwork ?? null);
+type Outcome = { code: number | null; status: string | null; clientRef: string | null; state: string | null };
+type Harness = { collectors: number; rewritten: number; outcomes: Outcome[] };
+const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonalizaE2eCollectorNetwork?: Harness }).__moonalizaE2eCollectorNetwork ?? null);
 
 test('The harness is loaded into main before the app, and the product never sees its variable', async () => {
   const { root, fake, launch } = await journey('journey-harness');
@@ -74,7 +76,7 @@ test('The harness is loaded into main before the app, and the product never sees
   try {
     app = await launch(); const page = await app.firstWindow();
     await expect(page.getByText('Your work starts here')).toBeVisible();
-    expect(await network(app)).toEqual({ collectors: 0, rewritten: 0 });
+    expect(await network(app)).toEqual({ collectors: 0, rewritten: 0, outcomes: [] });
     expect(await app.evaluate(() => process.env.MOONALIZA_E2E_COLLECTOR_NETWORK ?? null)).toBeNull();
   } finally { await app?.close(); await fake.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -123,6 +125,11 @@ test.describe('research journeys', () => {
       expect(await read(page, started.id)).not.toHaveProperty('failure');
       const harness = await network(app);
       expect(harness?.collectors).toBeGreaterThan(0); expect(harness?.rewritten).toBe(harness?.collectors);
+      // A kit or credentials park also leaves the job collecting and quiet. Only a watch that exited 0 with a PASS
+      // report for this client ref, a reviewable state and no failure on the job, is classified as a package, so the
+      // park is the import one. Every collector launch has ended, so nothing replaced that last watch.
+      expect(harness?.outcomes).toHaveLength(harness!.collectors);
+      expect(harness?.outcomes.at(-1)).toEqual({ code: 0, status: 'PASS', clientRef: started.clientRef, state: expect.stringMatching(/^(REVIEW_REQUIRED|REVIEW_IN_PROGRESS|PREFLIGHT_BLOCKED)$/) });
       expect(count(fake, 'POST', DISPATCH)).toBe(1);
       expect(fake.seen.every(request => request.authorization === 'exact')).toBe(true);
       await app.close(); app = undefined;

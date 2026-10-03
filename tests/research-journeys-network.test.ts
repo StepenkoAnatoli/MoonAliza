@@ -9,18 +9,26 @@ import { spawnOwned } from '../src/tools/commands';
 // on any OS instead of only in a Windows desktop run.
 const require = createRequire(import.meta.url);
 const childProcess = require('node:child_process') as { spawn: (...args: unknown[]) => unknown };
-const { install } = require('../e2e/fixtures/collector-network.cjs') as { install(module: unknown, network: unknown): { collectors: number; rewritten: number } };
+type Outcome = { code: number | null; status: string | null; clientRef: string | null; state: string | null };
+const { install } = require('../e2e/fixtures/collector-network.cjs') as { install(module: unknown, network: unknown): { collectors: number; rewritten: number; outcomes: Outcome[] } };
 const original = childProcess.spawn; const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
 const network = { HTTPS_PROXY: 'http://127.0.0.1:43123', NODE_EXTRA_CA_CERTS: '/fixtures/ca.pem' };
 const helperPath = '/helper/MoonAlizaHost.exe';
 afterEach(() => { childProcess.spawn = original; syncBuiltinESMExports(); Object.defineProperty(process, 'platform', platform); });
 
-function recordingHelper(writes: Buffer[]) {
+type Child = EventEmitter & { stdin: PassThrough; stdout: PassThrough; stderr: PassThrough };
+/** A stand-in helper: records its input, prints `output` as the child's stdout, and exits with `code`. */
+function recordingHelper(writes: Buffer[], children: Child[] = [], output = '', code = 0) {
   return (_command: unknown, _args: unknown) => {
-    const child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
+    const child: Child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
+    children.push(child);
     child.stdin.on('data', (chunk: Buffer) => {
       writes.push(chunk);
-      setImmediate(() => { child.stderr.write('{"status":"exited","code":0,"cancelled":false,"timedOut":false}\n'); child.emit('close'); });
+      setImmediate(() => {
+        if (output) child.stdout.write(output);
+        child.stderr.write(`{"status":"exited","code":${code},"cancelled":false,"timedOut":false}\n`);
+        setImmediate(() => child.emit('close'));
+      });
     });
     return child;
   };
@@ -30,8 +38,8 @@ function decode(protocol: Buffer) {
   for (let index = 0; index < 4; index++) { const end = offset + 4 + protocol.readUInt32LE(offset); fields.push(protocol.subarray(offset + 4, end).toString('utf16le')); offset = end; }
   return { fields, environment: fields[3]!.split('\0').filter(Boolean), tail: protocol.subarray(offset) };
 }
-async function run(script: string, writes: Buffer[]) {
-  childProcess.spawn = recordingHelper(writes);
+async function run(script: string, writes: Buffer[], output = '', code = 0) {
+  childProcess.spawn = recordingHelper(writes, [], output, code);
   const state = install(childProcess, network); syncBuiltinESMExports();
   Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
   const result = await spawnOwned({ executable: '/kit/node.exe', args: ['--max-old-space-size=256', script, '--json'], cwd: '/work', env: { TEMP: '/t', RESEARCH_KIT_GITHUB_TOKEN: 'test-token', HOME: '/t', TMP: '/t' }, timeoutMs: 1000, maxOutputBytes: 64 }, undefined, { helperPath });
@@ -41,7 +49,7 @@ async function run(script: string, writes: Buffer[]) {
 
 test('a collect-remote.mjs launch gains exactly the loopback proxy and the test CA, in spawnOwned order', async () => {
   const writes: Buffer[] = []; const state = await run('/kit/bin/collect-remote.mjs', writes);
-  expect(state).toEqual({ collectors: 1, rewritten: 1 });
+  expect(state).toEqual({ collectors: 1, rewritten: 1, outcomes: [{ code: 0, status: null, clientRef: null, state: null }] });
   const { fields, environment, tail } = decode(writes[0]!);
   expect(fields.slice(0, 3)).toEqual(['/kit/node.exe', '/kit/node.exe --max-old-space-size=256 /kit/bin/collect-remote.mjs --json', '/work']);
   expect(environment).toEqual(['HOME=/t', `HTTPS_PROXY=${network.HTTPS_PROXY}`, `NODE_EXTRA_CA_CERTS=${network.NODE_EXTRA_CA_CERTS}`, 'RESEARCH_KIT_GITHUB_TOKEN=test-token', 'TEMP=/t', 'TMP=/t']);
@@ -50,7 +58,7 @@ test('a collect-remote.mjs launch gains exactly the loopback proxy and the test 
 
 test('every other helper launch and the guard list pass byte for byte', async () => {
   const writes: Buffer[] = []; const state = await run('/kit/bin/artifact.mjs', writes);
-  expect(state).toEqual({ collectors: 0, rewritten: 0 });
+  expect(state).toEqual({ collectors: 0, rewritten: 0, outcomes: [] });
   expect(decode(writes[0]!).environment).toEqual(['HOME=/t', 'RESEARCH_KIT_GITHUB_TOKEN=test-token', 'TEMP=/t', 'TMP=/t']);
   // spawnOwned cannot encode a guard list off Windows (drive-letter paths), so the guarded form is the encoded
   // collector protocol plus a guard list, written to the wrapped helper directly.
@@ -70,8 +78,22 @@ test('the harness refuses a non-loopback proxy, extra keys, and an environment t
   expect(() => install({ spawn: original }, { ...network, HTTPS_PROXY: 'http://10.0.0.1:8080' })).toThrow('E2E_NETWORK_INVALID');
   expect(() => install({ spawn: original }, { ...network, NODE_OPTIONS: '--inspect' })).toThrow('E2E_NETWORK_INVALID');
   expect(() => install({ spawn: original }, { ...network, NODE_EXTRA_CA_CERTS: 'ca.pem' })).toThrow('E2E_NETWORK_INVALID');
-  const writes: Buffer[] = []; childProcess.spawn = recordingHelper(writes); install(childProcess, network); syncBuiltinESMExports();
-  Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
-  await expect(spawnOwned({ executable: '/kit/node.exe', args: ['/kit/bin/collect-remote.mjs'], cwd: '/work', env: { HTTPS_PROXY: 'http://127.0.0.1:1' }, timeoutMs: 1000, maxOutputBytes: 64 }, undefined, { helperPath })).rejects.toThrow('E2E_NETWORK_ALREADY_SET');
-  expect(writes).toEqual([]);
+  // Names compare case-insensitively, as Windows environment names do: a lowercase https_proxy is the same regression.
+  for (const name of ['HTTPS_PROXY', 'https_proxy', 'Node_Extra_CA_Certs']) {
+    const writes: Buffer[] = []; const children: Child[] = []; childProcess.spawn = recordingHelper(writes, children); const state = install(childProcess, network); syncBuiltinESMExports();
+    Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+    await expect(spawnOwned({ executable: '/kit/node.exe', args: ['/kit/bin/collect-remote.mjs'], cwd: '/work', env: { [name]: 'http://127.0.0.1:1' }, timeoutMs: 1000, maxOutputBytes: 64 }, undefined, { helperPath }), name).rejects.toThrow('E2E_NETWORK_ALREADY_SET');
+    // Nothing reached the helper, and its input is ended, so it launches nothing.
+    expect(writes).toEqual([]); expect(children).toHaveLength(1); expect(children[0]!.stdin.writableEnded, name).toBe(true);
+    expect(state.rewritten).toBe(0);
+  }
+});
+
+test('a collector launch records its exit and only the status, client ref and state of the kit report', async () => {
+  const report = JSON.stringify({ status: 'PASS', clientRef: 'mz-abc', state: 'REVIEW_REQUIRED', buildAuthorized: false, errors: [], file: '/out/x.zip' });
+  const state = await run('/kit/bin/collect-remote.mjs', [], `progress\n${report}\n`, 0);
+  expect(state.outcomes).toEqual([{ code: 0, status: 'PASS', clientRef: 'mz-abc', state: 'REVIEW_REQUIRED' }]);
+  // A park the supervisor would not treat as a package (exit 3, no report) is told apart from it.
+  const parked = await run('/kit/bin/collect-remote.mjs', [], '{"error":"refused","code":"KIT"}\n', 3);
+  expect(parked.outcomes).toEqual([{ code: 3, status: null, clientRef: null, state: null }]);
 });

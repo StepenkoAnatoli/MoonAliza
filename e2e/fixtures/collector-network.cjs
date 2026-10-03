@@ -21,10 +21,12 @@ function checkNetwork(network) {
  * Wraps `childProcess.spawn` so the first stdin write to the native helper (spawnOwned's protocol: a u32 timeout, then
  * u32-length UTF-16LE fields executable, command line, cwd, environment, then the guard list) gains the two variables
  * when its command line runs collect-remote.mjs. Every other launch, and the guard list, pass byte for byte.
+ * Each collector launch's end is recorded in `outcomes`: the helper's exit code and, from the kit's last stdout line,
+ * only `status`, `clientRef` and `state`, so a journey can tell which classification the supervisor received.
  */
 function install(childProcess, input) {
   const network = checkNetwork(input);
-  const state = { collectors: 0, rewritten: 0 };
+  const state = { collectors: 0, rewritten: 0, outcomes: [] };
   const read = (buffer, offset) => {
     if (offset + 4 > buffer.length) throw new Error('E2E_PROTOCOL');
     const end = offset + 4 + buffer.readUInt32LE(offset);
@@ -36,7 +38,7 @@ function install(childProcess, input) {
     const fields = []; let offset = 4;
     for (let index = 0; index < 4; index++) { const next = read(protocol, offset); fields.push(next.value); offset = next.end; }
     const [executable, commandLine, cwd, environment] = fields;
-    if (!commandLine.includes('collect-remote.mjs')) return protocol;
+    if (!commandLine.includes('collect-remote.mjs')) return null;
     state.collectors++;
     const entries = environment.split('\0').filter(Boolean);
     const key = entry => entry.slice(0, entry.indexOf('=')).toLowerCase();
@@ -48,6 +50,17 @@ function install(childProcess, input) {
     state.rewritten++;
     return Buffer.concat([protocol.subarray(0, 4), field(executable), field(commandLine), field(cwd), field(entries.join('\0') + '\0'), protocol.subarray(offset)]);
   };
+  const lastJson = text => { const line = text.split(/\r?\n/).map(value => value.trim()).filter(Boolean).at(-1); try { return JSON.parse(line); } catch { return null; } };
+  const record = child => {
+    let stdout = ''; let stderr = '';
+    child.stdout?.on('data', chunk => { if (stdout.length < 65536) stdout += chunk.toString('utf8'); });
+    child.stderr?.on('data', chunk => { if (stderr.length < 8192) stderr += chunk.toString('utf8'); });
+    child.once('close', () => {
+      const exit = lastJson(stderr); const kit = lastJson(stdout);
+      const report = kit && typeof kit === 'object' && typeof kit.status === 'string' ? kit : null;
+      state.outcomes.push({ code: exit?.status === 'exited' && typeof exit.code === 'number' ? exit.code : null, status: report?.status ?? null, clientRef: typeof report?.clientRef === 'string' ? report.clientRef : null, state: typeof report?.state === 'string' ? report.state : null });
+    });
+  };
   const original = childProcess.spawn;
   childProcess.spawn = function spawn(command, ...rest) {
     const child = original.call(this, command, ...rest);
@@ -57,7 +70,11 @@ function install(childProcess, input) {
       if (first) {
         first = false;
         // A refusal ends the helper's input, so it launches nothing, and fails the launch loudly.
-        try { if (!Buffer.isBuffer(chunk)) throw new Error('E2E_PROTOCOL'); chunk = rewrite(chunk); } catch (error) { child.stdin.end(); throw error; }
+        try {
+          if (!Buffer.isBuffer(chunk)) throw new Error('E2E_PROTOCOL');
+          const rewritten = rewrite(chunk);
+          if (rewritten) { chunk = rewritten; record(child); }
+        } catch (error) { child.stdin.end(); throw error; }
       }
       return write.call(this, chunk, ...more);
     };
