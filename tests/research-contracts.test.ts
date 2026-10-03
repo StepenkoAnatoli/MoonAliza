@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { EventSchema, MethodSpec, PublicErrorSchema, ResearchSchema, ResearchStatusSchema } from '../src/shared';
+import { EventSchema, MethodSpec, PublicErrorSchema, RESEARCH_INPUT_BUDGET, ResearchSchema, ResearchStatusSchema } from '../src/shared';
+import { commandLineFits, dispatchArgs } from '../src/adapters/research-kit/collector';
 import { safeError } from '../src/main/bridge';
 
 const start = MethodSpec['research.start'].params;
@@ -83,6 +84,19 @@ describe('research contracts', () => {
     expect(start.safeParse({ ...validStart, topic: long(2048), queries: Array(16).fill(long(512)), urls: Array(8).fill(`https://example.com/${long(300)}`) }).success).toBe(false);
   });
 
+  test('inputs at the budget fit one collector command line, even when every character of topic and queries needs escaping', () => {
+    // Quotes double under Windows quoting. URLs fill the rest of the budget exactly; targets and paths are at their longest.
+    const topic = '"'.repeat(2048); const queries = Array<string>(16).fill('"'.repeat(512));
+    const rest = RESEARCH_INPUT_BUDGET - topic.length - queries.length * 512; const prefix = 'https://example.com/';
+    const urls = Array.from({ length: 25 }, (_, i) => prefix + 'p'.repeat(Math.floor(rest / 25) + (i < rest % 25 ? 1 : 0) - prefix.length));
+    const params = start.parse({ ...validStart, topic, queries, urls, preferDomains: [], maxPages: 25 });
+    expect(start.safeParse({ ...validStart, topic, queries, urls: [...urls.slice(1), urls[0] + 'p'], preferDomains: [], maxPages: 25 }).success).toBe(false);
+    const path = 'C:\\' + 'd'.repeat(250) + '\\';
+    const target = { collectorRevision: 1, repository: 'o'.repeat(39) + '/' + 'r'.repeat(100), workflow: 'w'.repeat(128) + '.yml', ref: 'r'.repeat(255) };
+    const job = { topic: params.topic, clientRef: 'm'.repeat(64), inputs: { queries: params.queries, urls: params.urls, preferDomains: params.preferDomains, depth: params.depth, maxPages: params.maxPages } };
+    expect(commandLineFits(path + 'node.exe', dispatchArgs(path + 'collect-remote.mjs', job, target))).toBe(true);
+  });
+
   test('COLLECTOR_TOKEN_REQUIRED crosses the bridge as itself', () => {
     const error = safeError(new Error('COLLECTOR_TOKEN_REQUIRED'));
     expect(error.code).toBe('COLLECTOR_TOKEN_REQUIRED');
@@ -109,4 +123,8 @@ describe('research contracts', () => {
     expect(EventSchema.safeParse({ ...event, payload: { researchId: 'r1', status: 'approved' } }).success).toBe(true);
     expect(EventSchema.safeParse({ ...event, payload: { researchId: 'r1', status: 'awaiting_review' } }).success).toBe(false);
   });
+});
+
+test('the research start input budget is the 12,000 characters the collection spec states', () => {
+  expect(RESEARCH_INPUT_BUDGET).toBe(12_000);
 });

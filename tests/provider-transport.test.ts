@@ -1,7 +1,8 @@
 import { expect, test } from 'vitest';
 import { validateEndpoint, readBoundedJson, complete, inferenceErrorCode, type InferenceMessage } from '../src/main/inference';
 import { CompletionSchema, FromEngineSchema, ToEngineSchema } from '../src/engine/control';
-import type { ToolSpec } from '../src/shared';
+import { PublicErrorSchema, type ToolSpec } from '../src/shared';
+import { safeError } from '../src/main/bridge';
 
 test('credentials can only target explicit HTTPS providers or loopback local runtimes', () => {
   expect(validateEndpoint('openai-compatible', 'https://api.example.com/v1/')).toEqual({ endpoint: 'https://api.example.com/v1', locality: 'external' });
@@ -10,6 +11,18 @@ test('credentials can only target explicit HTTPS providers or loopback local run
     expect(() => validateEndpoint('openai-compatible', url)).toThrow('INVALID_ENDPOINT');
   }
   expect(() => validateEndpoint('ollama', 'http://192.168.1.2:11434')).toThrow('INVALID_ENDPOINT');
+});
+
+test('a refused endpoint crosses the bridge as INVALID_ENDPOINT, not INTERNAL_ERROR', () => {
+  // profile.save validates the renderer's endpoint in main; HttpUrlSchema alone admits all of these.
+  for (const [kind, url] of [['openai-compatible', 'http://api.example.com/v1'], ['openai-compatible', 'https://example.com/v1?key=x'], ['ollama', 'http://192.168.1.2:11434']] as const) {
+    let thrown: unknown;
+    try { validateEndpoint(kind, url); } catch (error) { thrown = error; }
+    const error = safeError(thrown);
+    expect(error.code).toBe('INVALID_ENDPOINT');
+    expect(PublicErrorSchema.safeParse(error).success).toBe(true);
+    expect(error.message).not.toContain(url);
+  }
 });
 
 test('response size is enforced while reading, without trusting content-length', async () => {

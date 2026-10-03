@@ -14,6 +14,22 @@ export const ResearchTargetSchema = z.object({ collectorRevision: RevisionSchema
 export const WorkflowRunIdSchema = z.string().regex(/^[1-9][0-9]{0,15}$/).refine(value => Number(value) <= Number.MAX_SAFE_INTEGER, 'Run id exceeds the safe integer range');
 /** Causes and failures are codes, never collector output or free text. */
 export const ResearchCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/);
+const ClientRefSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/);
+const digest = z.string().regex(/^[0-9a-f]{64}$/); const sha1 = z.string().regex(/^[0-9a-f]{40}$/);
+const positive = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+/**
+ * The verification main records on collecting -> collected: the retained bytes' digest, the validator identity, the
+ * job and project revisions the receipt was bound to, the dispatch identity taken from the GitHub run, and the run id and
+ * client ref that name the run and its artifact. The kit
+ * does not check the downloaded artifact's digest at this pin, so that is recorded as unverified.
+ */
+export const ResearchVerificationSchema = z.object({
+  artifactSha256: digest, artifactBytes: positive.max(32 * 1024 ** 2), validatorRevision: sha1, nodeSha256: digest,
+  state: z.enum(['REVIEW_REQUIRED', 'REVIEW_IN_PROGRESS', 'PREFLIGHT_BLOCKED']), jobRevision: positive, projectRevision: positive,
+  repository, ref, workflow: z.string().regex(/^[A-Za-z0-9_.-]{1,128}$/), commit: sha1, runAttempt: positive, workflowRunId: WorkflowRunIdSchema, clientRef: ClientRefSchema,
+  downloadDigest: z.literal('unverified'),
+}).strict();
+export type ResearchVerification = z.infer<typeof ResearchVerificationSchema>;
 
 /** Public, opaque and never derived from the topic, project name or path: it names the collector run and artifact. */
 export function newClientRef(): string { return `mz-${randomUUID().replaceAll('-', '')}`; }
@@ -44,7 +60,7 @@ const Revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 export const ResearchContextSchema = z.object({
   research: z.object({
     id: IdSchema, projectId: IdSchema, revision: RevisionSchema, status: ResearchStatusSchema, topic: z.string().min(1).max(2048), inputs: ResearchInputsSchema,
-    clientRef: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/), researchLevel: z.enum(['public-technical', 'private-connected']), policyRevision: Revision, trustRevision: Revision,
+    clientRef: ClientRefSchema, researchLevel: z.enum(['public-technical', 'private-connected']), policyRevision: Revision, trustRevision: Revision,
     collectorRevision: RevisionSchema.optional(), repository: repository.optional(), workflow: workflow.optional(), ref: ref.optional(), dispatchedAt: z.string().max(64).optional(),
     workflowRunId: WorkflowRunIdSchema.optional(), failure: ResearchCodeSchema.optional(), createdAt: z.string().max(64), updatedAt: z.string().max(64),
   }).strict(),
@@ -62,7 +78,7 @@ export const ResearchRecoverySchema = z.object({
 export interface ResearchTransitionCommand {
   method: 'research.transition'; requestId: string; researchId: string; expectedRevision: number;
   to: 'dispatching' | 'collecting' | 'collected' | 'failed' | 'cancelled'; cause: string;
-  target?: z.infer<typeof ResearchTargetSchema>; workflowRunId?: string; failure?: string;
+  target?: z.infer<typeof ResearchTargetSchema>; workflowRunId?: string; failure?: string; verification?: ResearchVerification;
 }
 export interface ResearchRecovery {
   failed: string[]; cancelled: string[]; resume: Array<{ researchId: string; revision: number; workflowRunId: string }>;
@@ -117,11 +133,13 @@ export class ResearchJobs {
     const { requestId, ...input } = command;
     const accepted = this.store.acceptRequest({ method: 'research.transition', clientRequestId: requestId, canonicalInputHash: canonicalHash(input) }, () => {
       const job = this.store.getResearch(command.researchId); if (!job) throw new Error('NOT_FOUND');
-      const patch = { target: command.target, workflowRunId: command.workflowRunId, failure: command.failure };
+      const patch = { target: command.target, workflowRunId: command.workflowRunId, failure: command.failure, verification: command.verification };
       for (const key of Object.keys(patch) as (keyof typeof patch)[]) if (patch[key] === undefined) delete patch[key];
-      const refusal = command.to === 'dispatching' && job.revision === command.expectedRevision ? researchAdmission(this.store.getProject(job.projectId), job) : undefined;
+      // Admission is re-checked in this transaction before each effect it gates: the dispatch, and accepting a package.
+      const gated = (command.to === 'dispatching' || command.to === 'collected') && job.revision === command.expectedRevision;
+      const refusal = gated ? researchAdmission(this.store.getProject(job.projectId), job) : undefined;
       const { research } = refusal
-        ? this.store.transitionResearch({ researchId: job.id, expectedRevision: command.expectedRevision, to: 'failed', actor: 'main', cause: 'ADMISSION_REFUSED', requestId, patch: { failure: refusal } })
+        ? this.store.transitionResearch({ researchId: job.id, expectedRevision: command.expectedRevision, to: 'failed', actor: 'main', cause: command.to === 'dispatching' ? 'ADMISSION_REFUSED' : 'ADMISSION_CHANGED', requestId, patch: { failure: refusal } })
         : this.store.transitionResearch({ researchId: job.id, expectedRevision: command.expectedRevision, to: command.to, actor: 'main', cause: command.cause, requestId, patch });
       return { entityId: job.id, response: { outcome: refusal ? 'refused' as const : 'applied' as const, research: researchDto(research) } };
     });

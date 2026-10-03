@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, open, writeFile, readdir, rm } from 'node:fs/promises';
+import { lstat, open, rename, writeFile, readdir, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { boundedJson, privateDirectory, serialized, missing } from '../../models/artifact-files';
@@ -25,7 +25,7 @@ export async function readResearchInstallation(file: string): Promise<z.infer<ty
 /** One collector child: a staged, hash-checked kit and its own private folders. Main owns the token and the bounds. */
 export interface CollectorLaunch {
   readonly node: string; readonly script: string; readonly out: string;
-  start(args: readonly string[], env: Record<string, string>, options: { timeoutMs: number; maxOutputBytes: number; signal: AbortSignal; admit(): Promise<void>; onStarted(identity: OwnedIdentity): void }): Promise<OwnedResult>;
+  start(args: readonly string[], env: Record<string, string>, options: { timeoutMs: number; admissionTimeoutMs: number; maxOutputBytes: number; signal: AbortSignal; admit(): Promise<void>; onStarted(identity: OwnedIdentity): void }): Promise<OwnedResult>;
   /** The private temporary folder the child's environment must point at. */
   readonly temp: string;
   dispose(): Promise<void>;
@@ -65,6 +65,11 @@ async function removeOwned(root: string, target: string) {
   await rm(target, { recursive: true, force: true });
 }
 const checkAbort = (signal?: AbortSignal) => { if (signal?.aborted) throw new Error('CANCELLED'); };
+const failureOf = (error: unknown) => { const failure = FailureSchema.safeParse((error as Error)?.message); return failure.success ? failure.data : undefined; };
+/** Reading the package's own content: an unclassified failure here (a corrupt ZIP, a manifest of the wrong shape) is the package's. */
+async function packageContent<T>(read: () => T | Promise<T>): Promise<T> {
+  try { return await read(); } catch (error) { throw failureOf(error) ? error : new Error('ARTIFACT_INVALID', { cause: error }); }
+}
 
 export class ResearchKit {
   private readonly config: ResearchConfig;
@@ -101,10 +106,10 @@ export class ResearchKit {
    * held and before the child starts, then the caller's own admission check. The validator and the collector differ
    * only in argv, environment, bounds and whether hitting the output limit stops the child.
    */
-  private guardedRun(runtime: string, args: string[], cwd: string, env: Record<string, string>, bounds: { timeoutMs: number; maxOutputBytes: number; stopOnOutputLimit: boolean }, extra: { locks: string[]; check(): Promise<void> }, signal?: AbortSignal, onStarted?: (identity: OwnedIdentity) => void): Promise<OwnedResult> {
+  private guardedRun(runtime: string, args: string[], cwd: string, env: Record<string, string>, bounds: { timeoutMs: number; admissionTimeoutMs?: number; maxOutputBytes: number; stopOnOutputLimit: boolean }, extra: { locks: string[]; check(): Promise<void> }, signal?: AbortSignal, onStarted?: (identity: OwnedIdentity) => void): Promise<OwnedResult> {
     const files = inventory.files.map(file => join(runtime, file.path)); const node = this.config.nodePath;
     const task = this.run({ executable: node, args, cwd, env, timeoutMs: bounds.timeoutMs, maxOutputBytes: bounds.maxOutputBytes }, signal, {
-      readLocks: [node, ...extra.locks, ...files], stopOnOutputLimit: bounds.stopOnOutputLimit, ...(onStarted ? { onStarted } : {}),
+      readLocks: [node, ...extra.locks, ...files], stopOnOutputLimit: bounds.stopOnOutputLimit, ...(onStarted ? { onStarted } : {}), ...(bounds.admissionTimeoutMs === undefined ? {} : { admissionTimeoutMs: bounds.admissionTimeoutMs }),
       beforeStart: async () => {
         checkAbort(signal);
         // Node and the staged runtime are the installation: a file that grew, was swapped or was linked is not an input error.
@@ -148,10 +153,10 @@ export class ResearchKit {
     return serialized(this.config.storageRoot, async () => {
       try {
         checkAbort(signal); const bytes = await capturedFile(file, MAX_ARCHIVE);
-        const manifestValue = await inspectArchive(bytes);
+        const manifestValue = await packageContent(() => inspectArchive(bytes));
         const report = await this.inspectOwned(bytes, binding.clientRef, signal);
         if (report.status !== 'PASS') return ResultSchema.parse({ status: report.status, state: null, researchReady: false, receipt: null, error: 'ARTIFACT_INVALID' });
-        const manifest = ManifestProjection.parse(manifestValue);
+        const manifest = await packageContent(() => ManifestProjection.parse(manifestValue));
         for (const key of ['repository', 'ref', 'commit', 'workflow', 'workflowRunId', 'runAttempt'] as const) if (manifest.source[key] !== binding[key]) throw new Error('IDENTITY_MISMATCH');
         if (manifest.clientRef !== binding.clientRef || report.clientRef !== binding.clientRef || report.workflowRunId !== binding.workflowRunId || report.packageId !== manifest.packageId) throw new Error('IDENTITY_MISMATCH');
         const state = StateSchema.parse(manifest.state === 'HUMAN_REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : manifest.state);
@@ -161,21 +166,33 @@ export class ResearchKit {
         checkAbort(signal);
         const artifactSha256 = hash(bytes); const store = await privateDirectory(join(this.config.storageRoot, 'artifacts'));
         const destination = join(store, artifactSha256 + '.zip');
-        try { if (hash(await capturedFile(destination, MAX_ARCHIVE)) !== artifactSha256) throw new Error('STALE_VERIFICATION'); }
-        catch (error) {
-          if (!missing(error)) throw error;
+        // The name is the digest of bytes just verified, so a file under it with other bytes (torn by a crash mid-write,
+        // or altered) is replaced, never trusted. Anything else wrong in the store is this machine's fault and defers.
+        let intact = false;
+        try { intact = hash(await capturedFile(destination, MAX_ARCHIVE)) === artifactSha256; }
+        catch (error) { if (!missing(error) && !(error instanceof Error && error.message === 'INPUT_LIMIT')) throw new Error('INSTALLATION_INVALID', { cause: error }); }
+        if (!intact) {
           let total = 0;
-          for (const name of await readdir(store)) { const info = await lstat(join(store, name)); if (!info.isFile() || info.isSymbolicLink()) throw new Error('ARTIFACT_INVALID', { cause: error }); total += info.size; }
-          if (total + bytes.length > 128 * 1024 ** 2) throw new Error('STORAGE_LIMIT', { cause: error });
-          await writeFile(destination, bytes, { flag: 'wx' });
+          for (const name of await readdir(store)) {
+            const info = await lstat(join(store, name)); if (!info.isFile() || info.isSymbolicLink()) throw new Error('INSTALLATION_INVALID');
+            if (name !== artifactSha256 + '.zip') total += info.size;
+          }
+          if (total + bytes.length > 128 * 1024 ** 2) throw new Error('STORAGE_LIMIT');
+          // Written in full and synced under work/ (swept at start), then renamed into place: the store never holds a partial file.
+          const temporary = join(await privateDirectory(join(this.config.storageRoot, 'work')), randomUUID() + '.zip');
+          try {
+            const handle = await open(temporary, 'wx');
+            try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
+            await rename(temporary, destination);
+          } finally { await rm(temporary, { force: true }); }
         }
         checkAbort(signal);
         const receipt = ReceiptSchema.parse({ id: randomUUID(), artifactSha256, artifactBytes: bytes.length, validatorRevision: VALIDATOR_REVISION, nodeSha256: this.config.nodeSha256, binding, state, researchReady });
         this.receipts.set(receipt.id, structuredClone(receipt));
         return ResultSchema.parse({ status: 'PASS', state, researchReady, receipt, error: null });
       } catch (error) {
-        const failure = FailureSchema.safeParse((error as Error)?.message);
-        return ResultSchema.parse({ status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: signal?.aborted ? 'CANCELLED' : failure.success ? failure.data : 'ARTIFACT_INVALID' });
+        // Any other unclassified failure is this machine's (the helper, a spawn, the input file or the store), never the package's.
+        return ResultSchema.parse({ status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: signal?.aborted ? 'CANCELLED' : failureOf(error) ?? 'INSTALLATION_INVALID' });
       }
     });
   }
@@ -201,7 +218,7 @@ export class ResearchKit {
     const temp = await privateDirectory(join(folder, 'temp')); const out = await privateDirectory(join(folder, 'out'));
     return {
       node: this.config.nodePath, script: join(runtime, 'bin/collect-remote.mjs'), out, temp,
-      start: (args, env, options) => this.guardedRun(runtime, [...args], folder, env, { timeoutMs: options.timeoutMs, maxOutputBytes: options.maxOutputBytes, stopOnOutputLimit: false }, { locks: [], check: options.admit }, options.signal, options.onStarted),
+      start: (args, env, options) => this.guardedRun(runtime, [...args], folder, env, { timeoutMs: options.timeoutMs, admissionTimeoutMs: options.admissionTimeoutMs, maxOutputBytes: options.maxOutputBytes, stopOnOutputLimit: false }, { locks: [], check: options.admit }, options.signal, options.onStarted),
       dispose: () => removeOwned(this.config.storageRoot, folder),
     };
   }

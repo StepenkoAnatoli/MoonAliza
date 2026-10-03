@@ -1,5 +1,7 @@
 import { expect, test } from 'vitest';
 import { assertToolPolicy, assertInferencePolicy, approvalMatches, canonicalHash } from '../src/engine/policy';
+import { safeError } from '../src/main/bridge';
+import { PublicErrorSchema } from '../src/shared';
 
 const project = { id: 'p1', trusted: true, trustRevision: 2,
   policy: { revision: 3, inference: 'local-only' as const, research: 'off' as const } };
@@ -10,8 +12,16 @@ test.each(['ask', 'plan', 'research'] as const)('%s cannot execute mutations or 
 });
 
 test('research needs a separate project permission even in Build mode', () => {
-  expect(() => assertToolPolicy('build', 'research', project)).toThrow('RESEARCH_DISABLED');
+  expect(() => assertToolPolicy('build', 'research', project)).toThrow('RESEARCH_NOT_ALLOWED');
   expect(() => assertToolPolicy('build', 'research', { ...project, policy: { ...project.policy, research: 'public-technical' } })).not.toThrow();
+});
+
+test('a research refusal crosses the bridge as the contract code, not INTERNAL_ERROR', () => {
+  let thrown: unknown;
+  try { assertToolPolicy('build', 'research', project); } catch (error) { thrown = error; }
+  const error = safeError(thrown);
+  expect(error.code).toBe('RESEARCH_NOT_ALLOWED');
+  expect(PublicErrorSchema.safeParse(error).success).toBe(true);
 });
 
 test('revoked trust prevents reads as well as writes', () => {

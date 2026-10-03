@@ -40,6 +40,8 @@ export interface OwnedOptions {
   onStarted?: (identity: OwnedIdentity) => void;
   readLocks?: string[];
   beforeStart?: () => Promise<void>;
+  /** Bounds the guarded pre-start step (locks, beforeStart) on its own; at most, and by default, the command timeout. */
+  admissionTimeoutMs?: number;
   stopOnOutputLimit?: boolean;
 }
 /** The launcher's signature, so a caller can take a test runner on hosts without the native helper. */
@@ -64,6 +66,8 @@ export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, op
   const environment = Object.entries(request.env).sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase())).map(([key, value]) => `${key}=${value}`).join('\0') + '\0';
   const guarded = options.readLocks !== undefined;
   if (guarded !== (options.beforeStart !== undefined)) throw new Error('INVALID_GUARDS');
+  const admissionMs = options.admissionTimeoutMs ?? request.timeoutMs;
+  if (!Number.isSafeInteger(admissionMs) || admissionMs < 1) throw new Error('INVALID_COMMAND_LIMIT');
   const guards: Buffer[] = [];
   if (options.readLocks) {
     if (!options.readLocks.length || options.readLocks.length > 2048) throw new Error('INVALID_GUARDS');
@@ -80,7 +84,7 @@ export async function spawnOwned(request: OwnedCommand, signal?: AbortSignal, op
     const chunks: Buffer[] = []; let size = 0; let truncated = false; let metadata = ''; let metadataBytes = 0; let reportedStart = false; let reportedLocks = false; let invalidMetadata = false; let closed = false; let admissionError: unknown; let admissionTimedOut = false;
     const cancel = () => { child.stdin.end(); };
     // A stalled verifier must not hold file locks indefinitely, even before launch.
-    const admissionTimer = guarded ? setTimeout(() => { admissionTimedOut = true; cancel(); }, request.timeoutMs) : undefined;
+    const admissionTimer = guarded ? setTimeout(() => { admissionTimedOut = true; cancel(); }, Math.min(admissionMs, request.timeoutMs)) : undefined;
     signal?.addEventListener('abort', cancel, { once: true });
     child.stdin.on('error', () => {});
     child.stdout.on('data', (chunk: Buffer) => {

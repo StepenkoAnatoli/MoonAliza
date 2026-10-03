@@ -1,7 +1,7 @@
 import { GitHubInputSchema, GitHubErrorCodeSchema } from '../shared/github';
 import { z } from 'zod';
 import { RequestSchema, ProfileSchema, EventSchema, IdSchema, ResearchSchema, ToolCallSchema, ToolSpecSchema } from '../shared';
-import { ResearchCodeSchema, ResearchTargetSchema, WorkflowRunIdSchema } from './research';
+import { ResearchCodeSchema, ResearchTargetSchema, ResearchVerificationSchema, WorkflowRunIdSchema } from './research';
 import { CommandInputSchema, CommandPlanSchema, CommandResultSchema } from '../shared/commands';
 import { TokenUsageSchema } from '../shared/context';
 
@@ -21,7 +21,7 @@ export const ControlSchema = z.discriminatedUnion('method', [
   // Main records collector facts. Readiness, review and user cancellation are not reachable from here.
   z.object({ method: z.literal('research.transition'), requestId: id, researchId: id, expectedRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
     to: z.enum(['dispatching', 'collecting', 'collected', 'failed', 'cancelled']), cause: ResearchCodeSchema,
-    target: ResearchTargetSchema.optional(), workflowRunId: WorkflowRunIdSchema.optional(), failure: ResearchCodeSchema.optional() }).strict(),
+    target: ResearchTargetSchema.optional(), workflowRunId: WorkflowRunIdSchema.optional(), failure: ResearchCodeSchema.optional(), verification: ResearchVerificationSchema.optional() }).strict(),
   z.object({ method: z.literal('research.recover'), owned: z.array(id).max(1000) }).strict(),
   z.object({ method: z.literal('shutdown') }).strict(),
 ]);

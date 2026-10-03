@@ -14,17 +14,22 @@ import type { CollectorConfig } from './collector-settings';
 import type { Vault } from './vault';
 
 export interface CollectorKit { prepareCollector(signal?: AbortSignal): Promise<CollectorLaunch> }
-/** What Task 4's verified import receives. The run id is the engine's, never the kit's; the file is recomputed by main. */
+/**
+ * What the verified import receives. The run id, revisions and target are the engine's, never the kit's; the file is
+ * recomputed by main. `projectRevision` is the policy revision the job was admitted under.
+ */
 export interface PackageHandoff {
-  researchId: string; projectId: string; expectedRevision: number; clientRef: string; target: CollectorTarget; workflowRunId: string;
+  researchId: string; projectId: string; expectedRevision: number; projectRevision: number; clientRef: string; target: CollectorTarget; workflowRunId: string;
   file: string; kit: { status: 'PASS'; state: 'REVIEW_REQUIRED' | 'REVIEW_IN_PROGRESS' | 'PREFLIGHT_BLOCKED' }; signal: AbortSignal;
 }
+/** `deferred`: nothing is known about the package (no kit, no token, GitHub or the validator unavailable, stopped). */
+export type ImportOutcome = Extract<Outcome, { kind: 'verified' | 'rejected' }> | { kind: 'deferred' };
 export interface CollectorDeps {
   control(control: Control): Promise<unknown>; epoch(): string;
   vault: Pick<Vault, 'grant' | 'withSecret' | 'revokeContext' | 'has'>;
   settings: { current(): CollectorConfig | null };
   kit: CollectorKit | null; spoolDirectory: string;
-  importPackage?(handoff: PackageHandoff): Promise<'imported' | 'deferred'>;
+  importPackage?(handoff: PackageHandoff): Promise<ImportOutcome>;
   limits?: Partial<CollectorLimits>; now?(): number; sleep?(ms: number, signal: AbortSignal): Promise<void>;
   /** Pause before re-checking a refused or held launch (default 1 s). */
   retryDelayMs?: number;
@@ -82,6 +87,8 @@ async function packageCheck(out: string, clientRef: string): Promise<PackageChec
 export class CollectorSupervisor {
   private readonly jobs = new Map<string, Job>();
   private readonly drivers = new Map<string, Promise<void>>();
+  /** Jobs whose driver stopped on a commit error: still owned, so no recovery acts on them, until the next app start. */
+  private readonly heldIds = new Set<string>();
   private readonly holds = new Map<string, number>();
   private readonly limits: CollectorLimits;
   private readonly now: () => number;
@@ -98,15 +105,16 @@ export class CollectorSupervisor {
     this.now = deps.now ?? Date.now; this.sleep = deps.sleep ?? defaultSleep; this.retry = deps.retryDelayMs ?? 1000;
   }
 
-  ownedIds(): string[] { return [...this.jobs.keys()]; }
-  busy(): boolean { return this.jobs.size > 0; }
+  ownedIds(): string[] { return [...this.jobs.keys(), ...this.heldIds]; }
+  busy(): boolean { return this.jobs.size > 0 || this.heldIds.size > 0; }
 
   /** At app start, once: replay learned run ids, recover what nobody owns, then adopt what can continue. */
   async attach(): Promise<void> {
     try {
       await mkdir(this.deps.spoolDirectory, { recursive: true });
       for (const name of await readdir(this.deps.spoolDirectory)) await this.replay(join(this.deps.spoolDirectory, name));
-      const recovery = ResearchRecoverySchema.parse(await this.engine(() => this.deps.control({ method: 'research.recover', owned: [] })));
+      // Empty unless a replayed run id could not be committed: that job waits, spool and all, for the next start.
+      const recovery = ResearchRecoverySchema.parse(await this.engine(() => this.deps.control({ method: 'research.recover', owned: this.ownedIds() })));
       await this.adopt(recovery);
     } finally { this.attachedDone = true; this.resolveAttached(); }
   }
@@ -115,7 +123,7 @@ export class CollectorSupervisor {
   observe(research: Research): void {
     void this.attached.then(() => {
       const job = this.jobs.get(research.id);
-      if (research.status === 'queued' && !job && !this.closing) this.own(research.id, research.projectId, research.clientRef);
+      if (research.status === 'queued' && !job && !this.heldIds.has(research.id) && !this.closing) this.own(research.id, research.projectId, research.clientRef);
       if (research.status === 'cancelling' && job) this.stop(job, 'cancel');
     });
   }
@@ -169,13 +177,13 @@ export class CollectorSupervisor {
     const existing = this.jobs.get(id); if (existing) return existing;
     const job: Job = { id, projectId, clientRef, mayDispatch: false, started: false, wake: new AbortController(), held: false, ...seed };
     this.jobs.set(id, job);
-    const driver = this.drive(job).catch(() => {}).finally(() => { this.jobs.delete(id); this.drivers.delete(id); });
+    const driver = this.drive(job).catch(() => {}).finally(() => { if (job.held) this.heldIds.add(id); this.jobs.delete(id); this.drivers.delete(id); });
     this.drivers.set(id, driver);
     return job;
   }
   private async adopt(recovery: z.infer<typeof ResearchRecoverySchema>) {
     for (const entry of [...recovery.dispatchable, ...recovery.resume]) {
-      if (this.jobs.has(entry.researchId) || this.closing) continue;
+      if (this.jobs.has(entry.researchId) || this.heldIds.has(entry.researchId) || this.closing) continue;
       const ctx = await this.read(entry.researchId); if (!ctx) continue;
       this.own(ctx.research.id, ctx.research.projectId, ctx.research.clientRef);
     }
@@ -189,6 +197,7 @@ export class CollectorSupervisor {
   private wakeJob(job: Job) { job.wake.abort(); job.wake = new AbortController(); }
   private async pause(job: Job, ms: number) { await this.sleep(ms, job.wake.signal); }
   private held(projectId: string) { return (this.holds.get(projectId) ?? 0) > 0; }
+  private async tokenSaved() { const ref = this.deps.settings.current()?.secretRef; return !!ref && await this.deps.vault.has(ref); }
 
   // ---------------------------------------------------------------- engine access
 
@@ -257,13 +266,14 @@ export class CollectorSupervisor {
     if (!ctx || FINISHED.has(ctx.research.status) || ctx.research.workflowRunId === spool.workflowRunId) { await unlink(file).catch(() => {}); return; }
     // Re-planned against the current state: a cancel that won the race still records the run on its own edge.
     const job: Job = { id: spool.researchId, projectId: ctx.research.projectId, clientRef: spool.clientRef, mayDispatch: false, started: true, learnedRunId: spool.workflowRunId, wake: new AbortController(), held: false };
-    await this.commit(job, ctx.research.status === 'dispatching' ? { kind: 'dispatched', workflowRunId: spool.workflowRunId } : { kind: 'continue' });
+    if (!(await this.commit(job, ctx.research.status === 'dispatching' ? { kind: 'dispatched', workflowRunId: spool.workflowRunId } : { kind: 'continue' }))) this.heldIds.add(job.id);
   }
 
   // ---------------------------------------------------------------- the driver
 
   private async drive(job: Job): Promise<void> {
-    let notStarted = 0; let transient = 0;
+    // notStarted counts the dispatch's refusals; refused counts watches refused in a row, so one that ran or a park restarts it.
+    let notStarted = 0; let refused = 0; let transient = 0;
     for (;;) {
       if (job.held) return;
       const ctx = await this.read(job.id); if (!ctx) return;
@@ -296,8 +306,10 @@ export class CollectorSupervisor {
       }
       // collecting
       if (ctx.admission !== null) { if (!(await this.commit(job, { kind: 'continue' }))) return; continue; }
-      const deadline = Date.parse(ctx.research.dispatchedAt ?? '') + this.limits.watchDeadlineMs;
-      const left = (Number.isFinite(deadline) ? deadline : this.now()) - this.now();
+      // The store always sets dispatchedAt on a collecting job. Should it not read, creation (which precedes dispatch)
+      // bounds the watch no later than the real deadline, so the run is still watched and never past retention.
+      const anchor = [ctx.research.dispatchedAt, ctx.research.createdAt].map(at => Date.parse(at ?? '')).find(Number.isFinite);
+      const left = (anchor === undefined ? this.now() : anchor + this.limits.watchDeadlineMs) - this.now();
       if (left <= 0) { if (!(await this.commit(job, { kind: 'expired' }))) return; continue; }
       if (job.park) { await this.pause(job, left); continue; }
       if (this.held(job.projectId)) { await this.pause(job, this.retry * 60); continue; }
@@ -308,19 +320,26 @@ export class CollectorSupervisor {
         const pkg = launch ? await packageCheck(launch.out, ctx.research.clientRef).catch(() => 'unexpected' as const) : 'absent';
         // Never past retention here: the deadline (7 days from dispatch) ends no later than the artifact's 7 days from upload.
         const outcome = classifyWatch(attempt, { clientRef: ctx.research.clientRef, pastRetention: false }, pkg);
+        if (outcome.kind !== 'notLaunched') refused = 0;
         switch (outcome.kind) {
           case 'notLaunched':
             if (outcome.refusal === 'INSTALLATION_INVALID') job.park = 'kit';
-            else if (outcome.refusal === 'CREDENTIAL_DENIED') job.park = 'credentials';
-            else if (!waits(outcome.refusal) && ++notStarted >= this.limits.preStartAttempts) job.park = 'kit';
-            else await this.pause(job, this.retry);
+            // Only a reference that is gone waits for a save at once. A refusal with it still saved (a grant under an epoch
+            // that just changed, encryption briefly unavailable) counts like any refusal, and parks the same way if it persists.
+            else if (outcome.refusal === 'CREDENTIAL_DENIED' && !(await this.tokenSaved())) job.park = 'credentials';
+            else if (waits(outcome.refusal) || ++refused < this.limits.preStartAttempts) await this.pause(job, this.retry);
+            else job.park = outcome.refusal === 'CREDENTIAL_DENIED' ? 'credentials' : 'kit';
+            if (job.park) refused = 0;
             break;
           case 'package': {
-            const handoff: PackageHandoff = { researchId: job.id, projectId: job.projectId, expectedRevision: ctx.research.revision, clientRef: ctx.research.clientRef,
+            const handoff: PackageHandoff = { researchId: job.id, projectId: job.projectId, expectedRevision: ctx.research.revision, projectRevision: ctx.research.policyRevision, clientRef: ctx.research.clientRef,
               target: { collectorRevision: ctx.research.collectorRevision!, repository: ctx.research.repository!, workflow: ctx.research.workflow!, ref: ctx.research.ref! },
               workflowRunId: ctx.research.workflowRunId!, file: join(launch!.out, packageFileName(ctx.research.clientRef)), kit: { status: 'PASS', state: outcome.state }, signal: job.wake.signal };
-            const imported = this.deps.importPackage ? await this.deps.importPackage(handoff).catch(() => 'deferred' as const) : 'deferred';
-            if (imported === 'deferred') job.park = 'import';
+            const deferred: ImportOutcome = { kind: 'deferred' };
+            const imported = this.deps.importPackage ? await this.deps.importPackage(handoff).catch(() => deferred) : deferred;
+            // A deferral caused by this supervisor's own wake (cancel, hold, engine restart) re-reads instead of parking.
+            if (imported.kind === 'deferred') { if (!handoff.signal.aborted) job.park = 'import'; break; }
+            if (!(await this.commit(job, imported))) return;
             break;
           }
           case 'runFailed': if (!(await this.commit(job, outcome))) return; break;
@@ -350,7 +369,8 @@ export class CollectorSupervisor {
   /**
    * One launch attempt. The grant covers exactly this launch; the token is decrypted inside withSecret, put into the
    * child's environment block and revoked once the launch is handed over. admit() runs after the kit's read locks
-   * are held and before the child exists: a refusal there means no child ran.
+   * are held and before the child exists: a refusal there means no child ran. The helper bounds that whole pre-start
+   * step (locks, rehash, admit) by admissionMs; on expiry it ends without a child and the launch is not started.
    */
   private async launch(job: Job, ctx: ResearchContext, kind: 'dispatch' | 'watch', msLeft = 0): Promise<{ attempt: CollectorAttempt & { reason?: StopReason }; launch?: CollectorLaunch }> {
     const config = this.deps.settings.current(); const kit = this.deps.kit;
@@ -374,7 +394,7 @@ export class CollectorSupervisor {
       const grant = this.deps.vault.grant({ ...binding, expiresAt: this.now() + this.limits.grantMs });
       running = await this.deps.vault.withSecret(grant, binding, token => ({
         done: launch.start(args, collectorEnvironment(launch.temp, token), {
-          timeoutMs: bounds.ownedTimeoutMs, maxOutputBytes: kind === 'dispatch' ? this.limits.dispatchOutputBytes : this.limits.watchOutputBytes, signal: state.stop.signal,
+          timeoutMs: bounds.ownedTimeoutMs, admissionTimeoutMs: this.limits.admissionMs, maxOutputBytes: kind === 'dispatch' ? this.limits.dispatchOutputBytes : this.limits.watchOutputBytes, signal: state.stop.signal,
           admit: () => this.admit(job, state, ctx, kind, config),
           onStarted: () => { state.started = true; if (kind === 'dispatch') job.started = true; },
         }),

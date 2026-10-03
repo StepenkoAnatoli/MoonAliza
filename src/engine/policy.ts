@@ -17,7 +17,7 @@ function assertActive(project: PolicyProject, signal?: AbortSignal) {
 export function assertToolPolicy(mode: RunMode, kind: ToolKind, project: PolicyProject, signal?: AbortSignal): void {
   assertActive(project, signal);
   if ((kind === 'write' || kind === 'command') && mode !== 'build' && mode !== 'mission') throw new Error('MODE_RESTRICTED');
-  if (kind === 'research' && project.policy.research === 'off') throw new Error('RESEARCH_DISABLED');
+  if (kind === 'research' && project.policy.research === 'off') throw new Error('RESEARCH_NOT_ALLOWED');
 }
 
 export function assertInferencePolicy(project: PolicyProject, locality: 'local' | 'external', signal?: AbortSignal): void {

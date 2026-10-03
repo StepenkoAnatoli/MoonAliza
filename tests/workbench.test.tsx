@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
 import { App } from '../src/renderer/App';
 
@@ -189,4 +189,20 @@ test('context recovery carries the request with its conversation privacy restric
   expect(calls).not.toContain('session.create'); expect(calls).not.toContain('run.start');
   expect((screen.getByLabelText('Message MoonAliza') as HTMLTextAreaElement).value).toBe('Private original request');
   expect(screen.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(true);
+});
+
+test('research opens per project from the details pane and is not requested before', async () => {
+  const bridge = api([{ ...project, policy: { ...project.policy, research: 'public-technical' } }]); const calls: string[] = [];
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    calls.push(method);
+    if (method === 'research.list') { expect(params).toEqual({ projectId: project.id }); return { research: [] }; }
+    if (method === 'research.collector.read') return { collector: null };
+    return bridge.invoke(method, params);
+  } }} />);
+  await screen.findByRole('heading', { name: project.name });
+  expect(calls.some(call => call.startsWith('research.'))).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Open research' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Research' });
+  expect(await within(dialog).findByText('Set up the collector below before starting research.')).toBeTruthy();
+  expect(calls).toContain('research.list');
 });

@@ -1,6 +1,6 @@
 # Research jobs and review implementation plan
 
-**Status:** in progress. The user said "start" on October 2; Task 1 follows the D2 and D3 recommendations. D1 and D4 are not needed until Tasks 3 and 4. This is Stage 2 of the [integration review](../../specification/research-kit-integration-review.md), building on the [offline consumer](../../specification/research-kit-offline.md). Decisions D1–D4 below need the user's answer before Task 1 begins.
+**Status:** in progress. The user said "start" on October 2; Task 1 follows the D2 and D3 recommendations. D1 and D4 are not needed until Tasks 3 and 4. This is Stage 2 of the [integration review](../../specification/research-kit-integration-review.md), building on the [offline consumer](../../specification/research-kit-offline.md). Decisions D1–D4 below were answered on October 2 (see "Decisions recorded October 2").
 
 **Goal:** a project can start a Research Kit collection, follow it durably through restarts, read its evidence and brief, have the corpus reviewed, and end with a verified package whose readiness MoonAliza can show. Ordinary chat and existing projects behave exactly as today when research is off.
 
@@ -47,10 +47,10 @@ Read directly from Research-Kit `main` at `fcde0e6` on October 2.
 
 1. [x] **Revise contracts.** Removed `research.provision` and `research.review`. `research.start` now takes the collector's public inputs and requires `acknowledgedPublic: true`; it enforces single-line inputs that cannot look like flags, comma-free preferred domains, the 1–25 page budget and URLs counting against it. Collector repository and ref must start with a letter or digit. Added `research.list`, `research.review.start` (job and profile only, no decision field), and main-owned `research.collector.read/save`, whose results carry `tokenConfigured` and never the token. Job state and the `research.status` event share one `ResearchStatusSchema`. No handler exists yet, so every research method still answers `NOT_IMPLEMENTED`.
 2. [x] **Durable job state.** Schema v3 replaces `research` with run-less jobs: constrained columns (status CHECK, unique `client_ref` and `workflow_run_id`, one active job per project) and an append-only `research_events` journal keyed by revision. SQL triggers refuse any state change without its journal row, any stale step, identity changes, a second dispatch and `approved`. v2 rows move verbatim to `research_legacy`. `src/engine/research-state.ts` holds the only edge table; `src/engine/research.ts` holds admission (strict policy and trust revision binding), `research.start/list/read/cancel`, and the main-facing controls `research.context/transition/recover`. A dispatch whose binding is stale is journaled as `failed` and returned as `refused`. Recovery never re-queues an ambiguous dispatch; it fails it as `REMOTE_STATE_UNKNOWN`. Job notices travel as a separate `research` engine message and `moonaliza:research` channel; `EventSchema` is unchanged.
-3. [ ] **Owned collection process.** Main runs the pinned `collect-remote.mjs` with fixed arguments, every value passed as `--name=value` (the kit's parser reads a separate value starting with `--` as a new flag), the token as its only credential and bounded output. **Correction:** under `--json` the kit does not print the run id before waiting, so dispatch with `--no-wait --json --client-ref=<clientRef>`, commit `dispatching -> collecting {workflowRunId}`, then watch with `--run-id=<id> --json`, which is safe to repeat. Commit `queued -> dispatching` through `research.transition` and spawn only on an `applied` reply. Exit 3 is not always "nothing dispatched": `NO_RUN_ID` and a network failure after sending are ambiguous and must fail as `REMOTE_STATE_UNKNOWN`, never re-dispatch. Exit 0 under `--no-wait` means dispatched, and a valid package can still be a `COLLECTION_FAILED` diagnostic; store the kit's `code`, not just the exit code. Call `research.recover` at app start and after an engine-only restart. Use `--run-id` for resume after restart or timeout (workflow artifacts expire after 7 days). Test dispatch, resume, Stop mid-wait, timeout, invalid package, failed run, missing token and redaction of tokens in output. Tests use a local fake GitHub API at the network boundary, not a fake collector.
-4. [ ] **Verified import.** Pass downloaded packages through the existing adapter with the recorded binding (clientRef, repository, ref, commit, workflow, run id, attempt). Store the digest, validator identity and job revision on the job, and reject packages from a different run.
-5. [ ] **Review (per D3).** Under (a): materialise the verified corpus into a private research workspace and run an agent review with exact edit approvals. Then run the kit's preflight and `artifact.mjs create`, and validate the new package as above. Readiness is shown only from that validation. Test a passing review, a failing gate, tampering between review and packaging, and restart mid-review.
-6. [ ] **Renderer.** A research panel per project: start form showing what becomes public, live status, evidence and brief reader (bounded, rendered as untrusted text), review progress and actionable failures (missing kit, missing token, collection failed, review required, invalid evidence, stale, ready). No "authorize" control.
+3. [x] **Owned collection process.** Main runs the pinned `collect-remote.mjs` with fixed arguments, every value passed as `--name=value` (the kit's parser reads a separate value starting with `--` as a new flag), the token as its only credential and bounded output. **Correction:** under `--json` the kit does not print the run id before waiting, so dispatch with `--no-wait --json --client-ref=<clientRef>`, commit `dispatching -> collecting {workflowRunId}`, then watch with `--run-id=<id> --json`, which is safe to repeat. Commit `queued -> dispatching` through `research.transition` and spawn only on an `applied` reply. Exit 3 is not always "nothing dispatched": `NO_RUN_ID` and a network failure after sending are ambiguous and must fail as `REMOTE_STATE_UNKNOWN`, never re-dispatch. Exit 0 under `--no-wait` means dispatched, and a valid package can still be a `COLLECTION_FAILED` diagnostic; store the kit's `code`, not just the exit code. Call `research.recover` at app start and after an engine-only restart. Use `--run-id` for resume after restart or timeout (workflow artifacts expire after 7 days). Test dispatch, resume, Stop mid-wait, timeout, invalid package, failed run, missing token and redaction of tokens in output. Tests use a local fake GitHub API at the network boundary, not a fake collector.
+4. [ ] **Verified import.** Pass downloaded packages through the existing adapter with the recorded binding (clientRef, repository, ref, commit, workflow, run id, attempt). Record the digest, validator identity and bound revisions with the job (decided: in the `collecting → collected` journal detail, not a column; the DTO's `packageDigest` stays unset until Task 5's v4 migration), and reject packages from a different run. Part 1 (the import) is done, see Progress; `research.purge` is open.
+5. [ ] **Review (per D3).** Under (a): materialise the verified corpus into a private research workspace and run an agent review with exact edit approvals. Then run the kit's preflight and `artifact.mjs create`, and validate the new package as above. Readiness is shown only from that validation. Test a passing review, a failing gate, tampering between review and packaging, and restart mid-review. Specified in [research review](../../specification/research-review.md) (design only; its open questions Q1-Q9 need answers first).
+6. [ ] **Renderer.** (Collection part done October 3, see Progress; evidence and brief reading and review progress wait for Tasks 4-5.) A research panel per project: start form showing what becomes public, live status, evidence and brief reader (bounded, rendered as untrusted text), review progress and actionable failures (missing kit, missing token, collection failed, review required, invalid evidence, stale, ready). No "authorize" control.
 7. [ ] **Delivery.** Typecheck, lint, full tests, build/runtime and desktop journeys (start, restart mid-collection, cancel, review to ready). Package the Windows app, update the handoff, development status and release record, scan for secrets, push and open the phase PR, and verify exact-head Windows CI. The user merges.
 
 ## Acceptance
@@ -100,7 +100,7 @@ How it was tested:
 - Full Linux gate, cwd `/home/user/moonaliza`: 506 passed and 75 failed, all 75 on the Windows baseline, with no leftover temp directories.
 - The October 2 briefs on run reconciliation and artifact download (PRs #22, #23) were checked against this design. Digest verification and a run search after a 204 are kit changes, recorded as Research-Kit work. A secondary-limit 403 parks the job as a credentials problem until a status field exists.
 
-October 3, Task 3 part 2a, the supervisor and the guarded launch (committed; main wiring is next). The behaviour is specified in [research collection](../../specification/research-collection.md).
+October 3, Task 3 part 2a, the supervisor and the guarded launch (committed; the main wiring followed in `3176fa7`, merged in PR #28). The behaviour is specified in [research collection](../../specification/research-collection.md).
 - `src/main/collector.ts` (`CollectorSupervisor`), with `planStep` and `CollectorSettings` from the earlier commit. `ResearchKit.prepareCollector` shares the validator's `guardedRun`.
 - Tests:
   - `tests/research-collector-supervisor.test.ts` (11): the real Store, ResearchJobs, ControlSchema and an AES vault, with a scripted kit replaying the real kit's goldens.
@@ -118,19 +118,85 @@ October 3, Task 3 part 2a, the supervisor and the guarded launch (committed; mai
   - the Research Kit scripts run from the repository root;
   - `exportSource` fetches a missing pin by SHA and uses `--git-dir`.
 
+October 3, Task 4 part 1, verified import. The behaviour is specified in [research collection, Verified import](../../specification/research-collection.md#verified-import).
+- `src/main/research-import.ts` (`packageImporter`) reads the GitHub run once, with the token in the `Authorization` header from a 30-second grant and no redirect followed. It checks the run is the dispatched one, binds the run's commit and attempt, never the package's, and validates with `ResearchKit.validate`. The supervisor commits the answer through `planStep`. `src/main/index.ts` wires it.
+- Decisions on the "Recorded for later" items:
+  - The binding's workflow is the literal `collect.yml` and its ref the run's `head_branch`, checked against the job's ref without `refs/heads/` or `refs/tags/`.
+  - `projectRevision` is the job's admitted policy revision. The trust revision is covered by admission, which `planStep` re-checks at the commit.
+  - The bound job revision is the `collecting` revision. The engine refuses a verification bound to any other job or policy revision.
+  - The verification goes on `collecting → collected` in that step's journal detail. There is no column and no v4 migration: the edge requires it, the journal is append-only, and Task 5's v4 migration can add a column if a SQL rule needs one.
+- Tests:
+  - `tests/research-import.test.ts` (5): the real Store, ResearchJobs, ControlSchema, supervisor and ResearchKit staging the pinned kit, with a runner that runs the validator with node and replays the kit's goldens for the collector, plus a fake GitHub at the fetch boundary. It covers a verified package, packages from another attempt or commit, five run mismatches, four deferrals, and the importer's approval, failed-collection, tampered and deferral cases.
+  - The supervisor (3), plan (4) and jobs-state (1 test and stricter control checks) suites gained cases.
+  - Eleven mutations each turned a suite red. One first survived because the deferral test waited a fixed 150 ms; it now waits for the importer's answer.
+- Linux gate, cwd the team worktree, Node 24.21.0: typecheck and lint clean. Full suite 652 tests: 577 pass, and the 75 failures are exactly the Windows baseline.
+- Found in passing, not changed here: the supervisor never disposes a dispatch launch's folder (`storage/collect/<uuid>`), so it stays until the next start's sweep.
+
+October 3, the six spec-review items: five fixed in `src/main/collector.ts` (with `src/tools/commands.ts` and the adapter for the admission bound, `src/shared/params.ts` for the budget), one kept and justified, each its own commit.
+- Each fix has a test that failed first, except the budget refactor (no behaviour change), whose test was shown to fail under mutation instead. Every new test was also turned red by at least one deliberate mutation.
+- The stale-epoch test reproduces a real gap: a watch launched between an engine-only restart and the vault's new epoch was refused although the token was saved, and waited for a user's save.
+- Linux gate, cwd the team worktree: typecheck and lint clean; full suite 644 tests, 569 passed and the 75 failures are exactly the Windows baseline; `tests/research-collector-supervisor.test.ts` (15) passed 20 times in 20 runs.
+- Not verifiable on Linux: the helper's admission timer itself (`spawnOwned`); exact-head Windows CI is its check.
+
+October 3, Task 7 preparation, the research desktop journeys. The collector's minimal environment has no route to a fake GitHub, so the journeys load a test-only preload into main with Electron's `-r`; it adds the loopback proxy and the test CA to collector launches on their way into the native helper. No production code changed. Design, rejected alternatives and evidence: [research journeys](../../specification/research-journeys.md).
+- `e2e/research-journeys.spec.ts`: a harness check on every OS; start, restart mid-collection and park at import (the import's GitHub run read is refused by the harness, so it defers; a journey ending `collected` needs the fake to serve the run, Task 7), and cancel mid-collection on Windows only (they need the helper). Unpackaged app only: a packaged executable ignores `-r`, so the file skips under `MOONALIZA_TEST_EXECUTABLE`, and every launch fails closed when the harness is missing.
+- `tests/research-journeys-network.test.ts` (4) runs the preload against the real `spawnOwned` encoder, including its refusals and the collector outcomes journey 2 uses to tell the import park from a kit or credentials park.
+- On Linux under xvfb the harness check passed and the two journeys were skipped; they have not run yet. Exact-head Windows CI is their first run.
+
+October 3, Task 6, collection part: `src/renderer/ResearchPanel.tsx` with `src/renderer/research-text.ts`, opened per project.
+- It has a start form that names exactly which fields become public on GitHub, with the acknowledgement bound to the collector repository.
+- Collector settings have a write-only token field: `tokenConfigured` is shown, never the token, and the token can be cleared.
+- Live status comes from `onResearch` notices; there is a cancel action, and every job failure in the collection spec has its own message.
+- `tests/research-panel.test.tsx` (28 tests) runs in the `ui` project. The panel has not been run in Electron or on Windows; the desktop journeys cover the backend only.
+
+October 3, integration of the five build teams (import, collector items, small fixes, renderer, e2e journeys) and three docs teams onto `main-axuse`, under the lead-orchestrator process.
+- Twenty-seven team commits were cherry-picked in plan order. Each code commit gained an ARCHITECTURE.md sentence, now required by the Research-Kit commit gate.
+- One integration defect: the panel had no message for the import's two new failures (`a781265`).
+- Phase 4 review by four independent roles (spec, breaker, mutation, invariant):
+  - fixed: the e2e test token reaching the real GitHub (S1), admission not re-checked on `collected`, a torn retained package, a store fault failing a good package (S2), and stale docs (S3);
+  - the invariant auditor found all six invariants holding;
+  - 60 mutations: 45 detected at first, 7 more after new tests, and the rest recorded below.
+- Linux gate at `8c60521`, cwd `/home/user/moonaliza`, Node 24.21.0: typecheck, lint and build clean. 696 tests: 622 passed and 74 failed, all in the Windows baseline. `research-kit.test.ts` "changed runtime and missing installation fail closed" now passes on Linux, because the missing helper maps to `INSTALLATION_INVALID`; it still tests the hash check on Windows.
+
 ## Recorded for later (not in Task 2)
 
-- **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart; implement `research.collector.read/save`; re-pin Research-Kit to `bf60e21` or later for `--run-id`. Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
-- **Task 4:** the package manifest's `workflow` is always the literal `collect.yml` and its `ref` is the short `GITHUB_REF_NAME`, so they will not equal a configured `refs/heads/main` or another workflow file name; commit and run attempt are not returned by dispatch or `--json` and must come from the GitHub run (never from the package being validated); choose which project revision feeds the adapter's single `projectRevision`; record the job revision a receipt was bound to, because every transition bumps it. Implement `research.purge` with retained-byte deletion. Required verification fields go on `collecting -> collected`.
+- **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart (done: it does, and recovery skips owned jobs); implement `research.collector.read/save` (done); re-pin Research-Kit to `bf60e21` or later for `--run-id` (done: `fcde0e6`). Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
+- **Task 4 (part 1 resolved October 3; purge open):** the package manifest's `workflow` is always the literal `collect.yml` and its `ref` is the short `GITHUB_REF_NAME`, so they will not equal a configured `refs/heads/main` or another workflow file name; commit and run attempt are not returned by dispatch or `--json` and must come from the GitHub run (never from the package being validated); choose which project revision feeds the adapter's single `projectRevision`; record the job revision a receipt was bound to, because every transition bumps it. Implement `research.purge` with retained-byte deletion. Required verification fields go on `collecting -> collected`.
 - **Task 5:** add review edges (and retry edges such as `not_ready -> reviewing`), replace the `research_readiness_reserved` trigger with a digest-gated rule in a v4 migration, and stream `research.status` on the review run.
-- **Task 3, open from the spec review (October 3).** Decide each one; none can dispatch twice.
-  - `STOPPED` waits without counting toward the three pre-start attempts. The design counts it.
-  - A watch's `CREDENTIAL_DENIED` parks the job for credentials without checking whether the reference is still saved.
-  - A job held after a commit error leaves the owned map, so recovery after an engine-only restart may fail it. The design waits for the next app start, and a spooled run id is then dropped.
-  - A `collecting` job without `dispatchedAt` is treated as expired.
-  - The admission bound covers only `admit()`; the helper's own admission timer uses the launch timeout.
-  - `startInputBudget` in `COLLECTOR_LIMITS` is unused (`params.ts` has its own 12,000).
-- **Small follow-up:** `src/engine/policy.ts` throws `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema` (the contract code is `RESEARCH_NOT_ALLOWED`); research admission now uses the contract code, but the tool-policy path still surfaces as `INTERNAL_ERROR`.
+- **Task 3, from the spec review (October 3): decided.** None can dispatch twice. The [collection spec](../../specification/research-collection.md) describes each resolved behaviour, and its "Differences from the design" keeps the one kept item.
+  - Resolved: a `collecting` job without a readable `dispatchedAt` is watched against `createdAt` + 7 days instead of expiring at once.
+  - Resolved: a watch's `CREDENTIAL_DENIED` parks for credentials at once only when the reference is gone from the settings or the vault; with it still saved the refusal counts, and parks after three in a row (a watch that started, or a park, restarts the watch count; dispatch refusals do not carry into it).
+  - Resolved: the start input budget is `RESEARCH_INPUT_BUDGET` in `src/shared/params.ts`; `COLLECTOR_LIMITS.startInputBudget` is removed.
+  - Resolved: the helper's admission timer takes `admissionMs`, so the whole pre-start step is bounded at 60 s.
+  - Resolved: a job held after a commit error stays in `ownedIds()` until the next app start, so recovery after an engine-only restart (or at attach, after a failed replay) cannot fail it and drop its spooled run id.
+  - Kept: `STOPPED` waits without counting; it only follows the supervisor's own stop, and counting it would let user holds fail a job.
+- **Open after the October 3 integration (owner: the next research cycle unless the user decides otherwise).**
+  - Decisions for the user:
+    - `research.purge` semantics. The contract deletes the job; the source plan keeps the metadata. The import team recommends keeping the job and its journal and deleting only the retained ZIP, for finished jobs whose digest no other verification references.
+    - How research is turned on: nothing in the app changes `policy.research` from `off`. The renderer team recommends a confirmation like "Allow cloud inference" that offers only `public-technical`.
+    - Whether an inference-only policy edit should still end research jobs. Today every policy revision does.
+    - Whether `research.start` should carry the acknowledged repository, so that main refuses a stale acknowledgement.
+  - Product work:
+    - a park-reason field on the job DTO, so the panel can say why a collecting job waits;
+    - research-specific public messages for collector save conflicts;
+    - a bounded retry of a deferred import inside the watch deadline, instead of waiting for the next start;
+    - deleting verified-but-rejected packages;
+    - disposing a dispatch launch's `storage/collect/<uuid>` folder at once, not only at the next sweep;
+    - the profile dialog's API key held in a controlled input.
+  - Task 7: route the importer's run read to the e2e fake so a journey ends `collected`, and decide whether packaged runs cover the research journeys.
+  - Tests the mutation audit asked for, not yet written:
+    - waiting watch refusals never park (C19);
+    - a tag ref `refs/tags/v1` end to end (S08);
+    - an `APPROVED_BRIEF` receipt without `researchReady` is rejected (I17);
+    - invalid UTF-8 in the run body (I08);
+    - `INPUT_LIMIT` from archive inspection is not turned into `ARTIFACT_INVALID` (A06);
+    - the e2e preload deletes its variable (N05);
+    - `projectRevision` checked against the policy revision with different policy and trust revisions (S09);
+    - Windows tests of `spawnOwned`'s `admissionTimeoutMs` validation and clamp (K01-K04).
+  - Not testable cheaply: the retained-package write is temp plus rename. A crash mid-write cannot be produced in a test, so replacing it with an in-place write is not detected; the recovery of a torn file is tested.
+  - Research spec open questions: Task 5 review Q1-Q10 (`docs/specification/research-review.md`), project memory (`docs/specification/project-memory.md`), and knowledge base decisions D1-D7 (`docs/superpowers/plans/2026-10-03-coding-knowledge-base.md`).
+- **Next cycle (user instruction, October 3):** run it with the lead-orchestrator and careful-coding skills. Research the external facts through Research-Kit before designing anything: one nested project per topic under `docs/research/<date>-<topic>/`, the corpus committed with its ledger, and 20 pages in total.
+- **Small follow-up (done, October 3):** `src/engine/policy.ts` threw `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema`; the tool-policy path now throws the contract code `RESEARCH_NOT_ALLOWED`, as research admission does.
 
 ## Next phase after research: missions
 
@@ -157,6 +223,8 @@ Proposed design (local, not the hosted service, consistent with local-first priv
 - **Lessons:** failed operations, failing checks and user corrections become lesson records surfaced before similar actions. This reduces repeated mistakes; it cannot guarantee a model never repeats one.
 - **Trust:** memory steers future runs, so entries derived from untrusted content (GitHub files, web or research captures) stay proposed until the user accepts them; imported text never becomes an instruction. The user can view, edit and delete every record. Project cloud policy applies whenever memory is sent to a cloud model.
 - **Order (confirmed by the user, October 2):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
+
+**Specification (October 3):** [project memory](../../specification/project-memory.md) turns this proposal into an implementation-ready design: the data model, the schema step, IPC methods, how runs read the brief, privacy and retention, acceptance tests, nine commit-sized tasks, rejected alternatives and seven open product questions with recommendations. Nothing is implemented yet.
 
 ## Decisions recorded October 2
 
@@ -271,6 +339,7 @@ Both questions were answered through Research-Kit corpora with a ledger and a pa
   - Defaults: nothing ships in the installer. Java docs are offered only for Java projects, because the OpenJDK set is about 103 MB. If a project declares no version, the user is asked rather than a version guessed.
   - First build step: a `docs.json` reader that maps a project's declared Node, Python and Java versions to DevDocs releases, tested over the captured index.
   - Day-one check: read the OpenJDK package's `debian/copyright` before offering Java docs.
+  - Implementation plan: [coding knowledge base](2026-10-03-coding-knowledge-base.md), written October 3. It refines the matching rule to match by version line, lists the known unknowns with their day-one checks and lists the decisions for the user.
 - **Repository review (adopted)**, from `docs/research/2026-10-03-agent-repo-review/research/BRIEF.md`. Patterns only, no code:
   - **Missions: a reviewer loop** (from gpt-pilot, which is FSL-1.1-MIT and unmaintained). Each mission step goes to a reviewer agent, which accepts it or sends it back with the reason, before the user approves. It reuses the adopted PASS/FIX/ESCALATE verdicts. First step: write it into the mission plan contract (step, then review verdict, then user approval).
   - **Prompt-injection tests: bait MCP tools** (from beelzebub, GPL-3.0). The test harness registers decoy tools no legitimate task needs. A call to one after reading untrusted content fails the test. It detects some attempts, not all, and complements provenance gating.

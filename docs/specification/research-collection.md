@@ -4,15 +4,16 @@ This is the behaviour contract of the collection process that MoonAliza owns (pl
 
 ## Purpose and scope
 
-A research job collects a corpus on GitHub. MoonAliza does not call GitHub itself. It runs the pinned Research Kit collector (`bin/collect-remote.mjs`) as a child process, once to dispatch a workflow run and then repeatedly to watch that run and download its package. The pinned kit and its trust model are described in [Offline Research Kit consumer](research-kit-offline.md).
+A research job collects a corpus on GitHub. MoonAliza does not dispatch or download through its own GitHub calls: it runs the pinned Research Kit collector (`bin/collect-remote.mjs`) as a child process, once to dispatch a workflow run and then repeatedly to watch that run and download its package. Its only GitHub request is the verified import's read of the run (below). The pinned kit and its trust model are described in [Offline Research Kit consumer](research-kit-offline.md).
 
 The work is split this way:
 
 - [`src/adapters/research-kit/collector.ts`](../../src/adapters/research-kit/collector.ts) is pure. It builds argv and the environment, reads the kit's last `--json` line (`parseKitLine`) and classifies a finished child (`classifyDispatch`, table A; `classifyWatch`, table B).
 - [`src/main/collector-plan.ts`](../../src/main/collector-plan.ts) is pure. `planStep` is the only place that turns a collector fact into a job transition.
 - [`src/main/collector-settings.ts`](../../src/main/collector-settings.ts) owns the collector target and the token reference (`CollectorSettings`).
-- [`src/main/collector.ts`](../../src/main/collector.ts) owns every collector child (`CollectorSupervisor`). It is work in progress; this document states its intended invariants as its doc comments give them.
+- [`src/main/collector.ts`](../../src/main/collector.ts) owns every collector child (`CollectorSupervisor`). It is wired into main by `src/main/index.ts`; this document states its invariants as the code and its tests implement them.
 - [`src/adapters/research-kit/adapter.ts`](../../src/adapters/research-kit/adapter.ts) stages the kit and launches it (`prepareCollector`).
+- [`src/main/research-import.ts`](../../src/main/research-import.ts) verifies a downloaded package (`packageImporter`); see [Verified import](#verified-import).
 - [`src/engine/research-state.ts`](../../src/engine/research-state.ts) owns the job states and the allowed edges (`RESEARCH_EDGES`).
 
 The engine owns job state. Main owns the children, the token and the collector settings. The kit's free text never leaves the classifier.
@@ -34,13 +35,13 @@ Every launch goes through the guarded run that the validator also uses. The nati
 - the saved settings changed repository or token reference (and, for a dispatch, workflow or ref) (`COLLECTOR_CHANGED`);
 - the vault no longer has the token (`CREDENTIAL_DENIED`).
 
-The check is raced against `admissionMs` (60 s); if it does not finish in time it fails with `ADMISSION_REFUSED`.
+The check is raced against `admissionMs` (60 s); if it does not finish in time it fails with `ADMISSION_REFUSED`. The whole pre-start step (taking the locks, the rehash and `admit()`) is also bounded by `admissionMs`: the launch passes it as `admissionTimeoutMs`, and the helper's admission timer uses it (never more than the owned timeout) instead of the owned timeout. On expiry main closes the helper's input before sending the go byte; the helper ends with `ADMISSION_CANCELLED` and no child, which classifies as `notLaunched` (`LAUNCH_FAILED`, counted). So stalled admission never holds the kit's read locks for a watch's owned timeout of up to an hour.
 
 `sweep()` runs at start, before any launch, and removes `runtime`, `work` and `collect` left by a crash. It throws `KIT_BUSY` if a runtime is staged or a launch is live. `close()` waits for every launched child before it deletes the staged runtime.
 
 ### Bounds
 
-All limits are in `COLLECTOR_LIMITS`.
+All limits are in `COLLECTOR_LIMITS`, except the start input budget, which is `RESEARCH_INPUT_BUDGET` in [`src/shared/params.ts`](../../src/shared/params.ts) because the `research.start` contract applies it.
 
 | Limit | Value |
 | --- | --- |
@@ -49,12 +50,13 @@ All limits are in `COLLECTOR_LIMITS`.
 | Watch kit `--timeout` | `min(1500, whole seconds left before the deadline)`, at least 1 (`watchBounds`) |
 | Watch owned timeout | kit seconds × 1000 + 300 s, at most 3,600 s |
 | Watch output cap | 4 MiB (`watchOutputBytes`) |
-| Admission check | 60 s (`admissionMs`) |
+| Admission check, and the whole pre-start step | 60 s each (`admissionMs`) |
 | Command line | at most 32,766 characters (`maxCommandLine`; `commandLineFits`) |
+| Start input budget | 12,000 characters of topic, queries, URLs and joined preferred domains (`RESEARCH_INPUT_BUDGET`). An early refusal only: at the budget, with every topic and query character escaped and the longest targets, the dispatch command line still fits; `commandLineFits` stays authoritative |
 | Not-started launches before giving up | 3 (`preStartAttempts`) |
 | Transient backoff | 30 s, doubling, capped at 15 min, no count cap |
 | Still-running re-watch | 5 s (`stillRunningDelayMs`) |
-| Watch deadline | `dispatchedAt` + 7 days (`watchDeadlineMs`) |
+| Watch deadline | `dispatchedAt` + 7 days (`watchDeadlineMs`); `createdAt` + 7 days if `dispatchedAt` does not read; passed if neither reads |
 | Vault grant lifetime | 30 s (`grantMs`) |
 | Quit drain | 15 s (`quitDrainMs`) |
 
@@ -165,13 +167,13 @@ An attempt that the supervisor itself stopped (cancel, hold, new credentials, qu
 The supervisor handles each outcome this way:
 
 - `runFailed` fails the job (collecting → failed).
-- `package` calls the import seam with a `PackageHandoff`. The run id comes from the engine and the file path is recomputed by main. If there is no import seam, it throws, or it answers `deferred`, the job parks as `import`.
+- `package` calls the import seam with a `PackageHandoff`. The run id, revisions and target come from the engine and the file path is recomputed by main. `verified` and `rejected` are committed through `planStep`. If there is no import seam, it throws, or it answers `deferred`, the job parks as `import`, unless the supervisor's own wake (cancel, hold, engine restart, quit) stopped it: then the driver re-reads, and a still-`collecting` job is watched again.
 - `stillRunning` waits 5 s and resets the transient count.
 - `transient` waits with the backoff above.
 - `park` stops launching until re-armed. `credentials` is re-armed by a collector save (`configChanged`) or the next app start. `kit` and `import` are re-armed at the next app start. A parked job stays `collecting` and owned.
-- `notLaunched`: `INSTALLATION_INVALID` parks `kit`; `CREDENTIAL_DENIED` parks `credentials`; `HELD`, `ENGINE_UNAVAILABLE` and `STOPPED` wait; other refusals count, and after 3 the job parks `kit`.
+- `notLaunched`: `INSTALLATION_INVALID` parks `kit`; `HELD`, `ENGINE_UNAVAILABLE` and `STOPPED` wait; other refusals count, and after 3 in a row the job parks `kit`. `CREDENTIAL_DENIED` parks `credentials` at once when the saved settings have no token reference or the vault no longer has it. With the reference still saved (for example a grant issued under an epoch that an engine-only restart has just replaced, or encryption briefly unavailable) it counts like any refusal and, after 3 in a row, parks `credentials`. The watch count is its own: the dispatch's refusals do not carry into it, a watch that started restarts it, and so does a park, so a re-armed job again has 3 tries.
 
-A watch never fails a job on a transient result. When the deadline passes, the job fails `COLLECTION_EXPIRED` / `WATCH_DEADLINE`.
+A watch never fails a job on a transient result. When the deadline passes, the job fails `COLLECTION_EXPIRED` / `WATCH_DEADLINE`. The store always sets `dispatchedAt` with the run's target, so a `collecting` job without a readable one is a damaged row. It is still watched, against `createdAt` + 7 days: creation precedes dispatch, so that deadline is never later than the real one and the watch still never runs past the artifact's retention. Expiring such a job on sight (the earlier behaviour) would give up a run that may have succeeded; watching it from "now" would never end.
 
 ## Job planning
 
@@ -191,7 +193,9 @@ A watch never fails a job on a transient result. When the deadline passes, the j
 | dispatching | ambiguous (c) | dispatching → failed, failure `REMOTE_STATE_UNKNOWN`, cause c, with a learned run id |
 | dispatching | other | continue |
 | collecting | admission not null | collecting → failed, failure = admission, cause `ADMISSION_CHANGED` |
-| collecting | runFailed (f, c) | collecting → failed, failure f, cause c |
+| collecting | runFailed (f, c) or rejected (f, c) | collecting → failed, failure f, cause c |
+| collecting | verified, bound to the job's current revision | collecting → collected with the verification, cause `PACKAGE_VERIFIED` |
+| collecting | verified, bound to another revision | continue (nothing recorded; the next watch verifies again) |
 | collecting | expired | collecting → failed, failure `COLLECTION_EXPIRED`, cause `WATCH_DEADLINE` |
 | collecting | other | continue |
 
@@ -199,7 +203,7 @@ Before admitting a queued job, the supervisor refuses what cannot work: no setti
 
 The engine allows only the edges in `RESEARCH_EDGES`. `queued` is the only source of `dispatching`, nothing returns to `queued`, and a run id can be written once. `cancelling → cancelled` accepts a run id and a failure, because a cancel can race the collector printing its run id.
 
-Commits use one random request id per planned command, kept until the engine answers, so a reply lost to an engine restart replays instead of applying twice. Every command is checked with `ControlSchema` before it is sent. `STALE_REVISION` or `RESEARCH_TRANSITION_INVALID` drops the command and re-plans from a fresh read, at most 5 times. `ENGINE_UNAVAILABLE` waits for the engine's ready signal or backs off (1 s doubling, at most 60 s) and resends the same command. Any other error holds the job: its driver stops and the next app start recovers it.
+Commits use one random request id per planned command, kept until the engine answers, so a reply lost to an engine restart replays instead of applying twice. Every command is checked with `ControlSchema` before it is sent. `STALE_REVISION` or `RESEARCH_TRANSITION_INVALID` drops the command and re-plans from a fresh read, at most 5 times. `ENGINE_UNAVAILABLE` waits for the engine's ready signal or backs off (1 s doubling, at most 60 s) and resends the same command. Any other error holds the job: its driver stops, but the job stays in `ownedIds()` (and `busy()`) until the next app start, so no recovery in this process acts on it, nothing relaunches it and a notice cannot re-admit it. The next app start recovers it, and replays its spooled run id if it has one.
 
 ## Credentials
 
@@ -238,6 +242,18 @@ A started dispatcher keeps the token copy in its environment. Watches restart wi
 
 `open()` tombstones a `retiredSecretRef` left by an interrupted save. `references()` gives the startup reconcile the reference to keep. `finishStartup()` then clears `retiredSecretRef`. A crash after staging leaves an unreferenced staged token for the reconcile to delete; after the write, the staged token is referenced and the reconcile commits it; after the commit, the retired token is removed at the next start.
 
+## Verified import
+
+`packageImporter` (`src/main/research-import.ts`) turns a `PackageHandoff` into `verified`, `rejected` or `deferred`. It never writes job state; the supervisor commits its answer through `planStep`, which re-checks admission and the bound revision.
+
+1. Without a kit, a saved token reference, or settings for the job's repository, it defers.
+2. It reads the run once: `GET https://api.github.com/repos/<owner>/<repo>/actions/runs/<run id>`. The token comes from a 30-second vault grant (purpose `research`, context `import:<researchId>:<uuid>`, revoked afterwards) and travels only in that request's `Authorization` header. A redirect is refused rather than followed, the response is bounded to 1 MiB and 20 s, and only `id`, `run_attempt`, `head_sha`, `head_branch`, `path`, `event`, `status` and `repository.full_name` are read. Any failure defers; nothing from the response is kept as text.
+3. The run must be the one the job dispatched: the same id, the repository (case-insensitive), `path` = `.github/workflows/<job workflow>`, `head_branch` = the job's ref without `refs/heads/` or `refs/tags/`, and event `workflow_dispatch`. Otherwise `RUN_IDENTITY_MISMATCH` / `IMPORT_RUN_MISMATCH`, before any validation. A run whose status is not `completed` (a re-run in progress) defers.
+4. The binding: project id; project revision = the job's admitted policy revision; job id and its current revision (the `collecting` revision, so a receipt is bound to the revision the job leaves); client ref; repository = `repository.full_name`; ref = `head_branch` (the short `GITHUB_REF_NAME` the package records); workflow = the literal `collect.yml`, which the kit's workflow always records whatever its file is called; commit = `head_sha`; run id; run attempt = `run_attempt`. Commit and attempt come only from the run, never from the package.
+5. `ResearchKit.validate` checks the package under that binding and retains the exact bytes. PASS in `REVIEW_REQUIRED`, `REVIEW_IN_PROGRESS` or `PREFLIGHT_BLOCKED` is `verified`; an approval is `ARTIFACT_INVALID` / `IMPORT_UNEXPECTED_APPROVAL`; `COLLECTION_FAILED` is `COLLECTION_FAILED` / `IMPORT_COLLECTION_FAILED`. FAIL is `ARTIFACT_INVALID` / `IMPORT_FAIL`, INCOMPLETE is `ARTIFACT_INCOMPLETE` / `IMPORT_INCOMPLETE`. A binding mismatch (a package from another run, attempt or commit) is `PACKAGE_IDENTITY_MISMATCH` / `IMPORT_IDENTITY_MISMATCH`; `ARTIFACT_INVALID` and `INPUT_LIMIT` are `ARTIFACT_INVALID` with `IMPORT_ARTIFACT_INVALID` / `IMPORT_INPUT_LIMIT`. Every other validator error (installation, validator output or bounds, storage limit, a stop) defers. Inside `validate`, only a failure while reading the package's own content (the ZIP, the manifest's shape) is `ARTIFACT_INVALID`; any other unclassified failure (the native helper unavailable or answering badly, a spawn failure, the downloaded file gone, the store) is `INSTALLATION_INVALID`, so a good package is never failed for this machine's fault. Retained bytes are written in full and synced under `storage/work` (swept at start), then renamed to `storage/artifacts/<sha256>.zip`. A file already under that name whose bytes do not hash to it (torn by a crash, or altered) is replaced by the verified bytes instead of blocking every later validation, and a store entry that is not a regular file is `INSTALLATION_INVALID`.
+
+`collecting → collected` requires the verification, and the engine re-checks admission in the same transaction, as it does for the dispatch: after a trust, policy or research-off change the step is refused and journaled as `collecting → failed` with the admission code and cause `ADMISSION_CHANGED`, so a package is never accepted under a withdrawn admission even when the change lands between the supervisor's re-read and its commit. The engine refuses one whose `jobRevision` is not the job's revision, whose `projectRevision` is not its policy revision, whose `workflowRunId` or `clientRef` is not the job's, whose `repository` differs from the frozen target's (ignoring case), or whose `ref` is not the short name of the target's ref. `workflow` is not compared, because it is the kit's literal `collect.yml`, not the target's workflow file. It holds `artifactSha256`, `artifactBytes`, `validatorRevision`, `nodeSha256`, `state`, `jobRevision`, `projectRevision`, `repository`, `ref`, `workflow`, `commit`, `runAttempt`, `workflowRunId`, `clientRef` and `downloadDigest: 'unverified'` (the pinned kit does not check the artifact's digest). It is stored only in that step's journal detail; no column holds it. The receipt itself stays process-local; with the journaled binding, a later stage can validate the retained bytes again after a restart.
+
 ## Lifecycle
 
 ### App start
@@ -245,7 +261,7 @@ A started dispatcher keeps the token copy in its environment. Watches restart wi
 `attach()` runs once and resolves `attached`. `observe()` waits for it, so nothing is admitted before recovery has run.
 
 1. Spool replay. Each spool file is parsed; an invalid one is deleted. If the job is gone, finished, or already has that run id, the file is deleted. Otherwise the fact is re-planned against the current state: a `dispatching` job commits `dispatched`, which gives `collecting` (or failed with the admission); a `cancelling` job records the run id on `cancelling → cancelled`. The file is deleted once a commit that carried the run id, or that finished the job, is acknowledged.
-2. `research.recover` with an empty owned list. The engine fails every `dispatching` job as `REMOTE_STATE_UNKNOWN` (cause `RECOVERED`) and cancels every `cancelling` job (cause `NO_OWNED_WORK`). It never re-queues.
+2. `research.recover` with an owned list that is empty unless a replay commit in step 1 failed: such a job is held, kept out of recovery, and replayed again at the following start. The engine fails every `dispatching` job as `REMOTE_STATE_UNKNOWN` (cause `RECOVERED`) and cancels every `cancelling` job (cause `NO_OWNED_WORK`). It never re-queues.
 3. Adopt: each `dispatchable` (queued) and `resume` (collecting) entry is owned and driven. `reviewing` and `unreadable` are left alone.
 
 ### Cancel
@@ -285,6 +301,7 @@ Every value matches `^[A-Z][A-Z0-9_]{1,63}$`. Names written with `<...>`, the `R
 - Dispatch refused: `COLLECTOR_REFUSED`, `COLLECTOR_NOT_FOUND`, `COLLECTOR_FORBIDDEN`, `COLLECTOR_TOKEN_REJECTED`, `COLLECTOR_REJECTED`.
 - Ambiguous dispatch: `REMOTE_STATE_UNKNOWN`.
 - Watch: `RUN_FAILED`, `ARTIFACT_MISSING`, `ARTIFACT_EXPIRED`, `ARTIFACT_INVALID`, `ARTIFACT_INCOMPLETE`, `COLLECTION_FAILED`, `COLLECTION_EXPIRED`.
+- Import: `RUN_IDENTITY_MISMATCH`, `PACKAGE_IDENTITY_MISMATCH`, and `ARTIFACT_INVALID`, `ARTIFACT_INCOMPLETE`, `COLLECTION_FAILED` as above.
 
 ### Causes (stored on the transition)
 
@@ -295,6 +312,7 @@ Every value matches `^[A-Z][A-Z0-9_]{1,63}$`. Names written with `<...>`, the `R
 - Kit output: `KIT_OUTPUT_LIMIT`, `KIT_OUTPUT_INVALID`, `KIT_EXIT_<n>`, `KIT_EXIT_NEG<n>`, `KIT_EXIT_NONE`, `KIT_REFUSED`, `KIT_NO_TOKEN`.
 - Kit codes: `KIT_<CODE>` for each of `KIT_CODES` (`REPOSITORY`, `TOKEN`, `NETWORK`, `NO_RUN_ID`, `NOT_FOUND`, `FORBIDDEN`, `HTTP`, `UNKNOWN`, `TIMEOUT`, `BAD_BODY`, `NO_ARTIFACT`, `EXPIRED`, `ARTIFACT_NAME`, `OUT_DIR`), plus `KIT_OTHER` for an unlisted code, and `KIT_HTTP_<status>`.
 - Package report: `KIT_<first error code>` (for example `KIT_CLIENT_REF_MISMATCH`), `KIT_FAIL`, `KIT_INCOMPLETE`, `KIT_BLOCKED`, `KIT_UNEXPECTED_APPROVAL`, `IDENTITY_MISMATCH`, `KIT_COLLECTION_FAILED`, `KIT_STATE_UNKNOWN`, `PACKAGE_NAME_UNEXPECTED`.
+- Import: `PACKAGE_VERIFIED`, `IMPORT_RUN_MISMATCH`, `IMPORT_IDENTITY_MISMATCH`, `IMPORT_FAIL`, `IMPORT_INCOMPLETE`, `IMPORT_ARTIFACT_INVALID`, `IMPORT_INPUT_LIMIT`, `IMPORT_UNEXPECTED_APPROVAL`, `IMPORT_COLLECTION_FAILED`.
 - Run conclusion: `RUN_FAILURE`, `RUN_CANCELLED`, `RUN_TIMED_OUT`, `RUN_ACTION_REQUIRED`, `RUN_NEUTRAL`, `RUN_SKIPPED`, `RUN_STALE`, `RUN_STARTUP_FAILURE`, `RUN_CONCLUDED`.
 
 Transient and park causes use the same names but are not recorded; the job stays `collecting`.
@@ -325,10 +343,11 @@ Transient and park causes use the same names but are not recorded; the job stays
 
 ## Out of scope
 
-- Task 4: verified import. It replaces the `deferred` import seam, fetches the commit and run attempt from GitHub, validates with the full binding and commits `collecting → collected`. Until then a successful watch parks as `import`.
+- `research.purge` and deleting retained bytes (plan Task 4, second part). Rejected packages that passed the validator (an approval or a failed collection) are retained until then too.
+- Retrying an import parked by a GitHub or validator failure before the next app start.
 - Keeping `COLLECTION_FAILED` diagnostic packages.
 - Task 5: review edges and review owners in the owned list.
-- Task 6: the settings panel, the failure vocabulary in the UI, and a "needs attention" signal for parked jobs. Its text for a `credentials` park must say both "no access" and "run deleted by retention".
+- Task 6 (the panel and its failure messages exist; still open): a "needs attention" signal for parked jobs, which needs a park-reason field on the job's DTO. Its text for a `credentials` park must say both "no access" and "run deleted by retention".
 - Task 7: desktop journeys, packaging, real-network smoke tests and Windows CI.
 - Cancelling the remote GitHub run, and reconciling `REMOTE_STATE_UNKNOWN` jobs by client ref.
 - Proxy and extra CA support.
@@ -340,13 +359,9 @@ Transient and park causes use the same names but are not recorded; the job stays
 
 - `classifyWatch` takes `job.pastRetention`, as the October 2 adjustment asks: `NO_ARTIFACT` past retention is `ARTIFACT_EXPIRED`. The supervisor passes `false`. The watch deadline is 7 days from dispatch, and the artifact's retention is 7 days from its upload, which comes after dispatch. So a watch can never see an expired artifact, and in the driver `NO_ARTIFACT` gives `ARTIFACT_MISSING`. A longer deadline would have to compute this.
 - `start` on `CollectorLaunch` takes a built environment, not a token; main builds it with `collectorEnvironment`. The launch exposes `temp` and has no `cwd` field.
-- The design bounds the whole pre-start step at 60 s. The code bounds only the `admit()` check at 60 s; the helper's own admission timer uses the launch's owned timeout.
-- In table A the supervisor also lets `STOPPED` wait without counting; the design lists only `HELD` and `ENGINE_UNAVAILABLE`.
-- In table B a watch `CREDENTIAL_DENIED` parks `credentials` without checking that the reference is no longer saved. In the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
+- In table A the supervisor also lets `STOPPED` wait without counting; the design lists only `HELD` and `ENGINE_UNAVAILABLE`. Kept deliberately (October 3): `STOPPED` arises only when this supervisor aborted an unstarted attempt itself (cancel, hold, quit), and the next pass always resolves that state (a cancel commits `cancelling → cancelled`, a hold refuses with `HELD`, quit returns), so it cannot loop. Counting it would let three holds of the project, which are user actions, fail a job as `DISPATCH_NOT_STARTED` although no launch ever failed.
+- In table B, in the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
 - The design does not list the supervisor's pre-admission refusals (`COLLECTOR_NOT_CONFIGURED`, `NO_COLLECTOR`, `NO_TOKEN`, `NO_INSTALLATION`, `COMMAND_LINE`) or the `NOT_OWNED_DISPATCH` cause.
-- A job held after a commit error leaves the owned map when its driver returns. The design keeps it held until the next app start; in the code an engine-only restart's recovery can also act on it.
-- If a `collecting` job has no `dispatchedAt`, the driver treats the deadline as passed and fails it `COLLECTION_EXPIRED`.
 - A negative exit code is named `KIT_EXIT_NEG<n>`, because a minus sign is not valid in a code. Fixed after review: it used to form `KIT_EXIT_-<n>`, which failed the control schema and held the job.
-- `startInputBudget` is defined in `COLLECTOR_LIMITS` but not used by this code.
 - Any failure while node and the staged runtime are rehashed before the child starts (wrong hash, a grown, swapped or linked file) is `INSTALLATION_INVALID`, for the validator as well as the collector.
-- Wiring (`src/main/index.ts`, `src/main/engine.ts`): settings, installation, sweep, reconcile with the collector reference, `attach`, `observe` on notices and on start/cancel replies, `engineReady` on each engine `ready`, `hold` around trust and policy changes, `research.collector.read/save`, and the quit order supervisor → kit → engine. `importPackage` is not wired until Task 4, so a collected package parks as `import`.
+- Wiring (`src/main/index.ts`, `src/main/engine.ts`): settings, installation, sweep, reconcile with the collector reference, `attach`, `observe` on notices and on start/cancel replies, `engineReady` on each engine `ready`, `hold` around trust and policy changes, `research.collector.read/save`, and the quit order supervisor → kit → engine. `importPackage` is `packageImporter` over the vault, the collector settings and the kit.

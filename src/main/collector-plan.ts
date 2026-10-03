@@ -1,4 +1,4 @@
-import type { ResearchContext } from '../engine/research';
+import type { ResearchContext, ResearchVerification } from '../engine/research';
 import type { CollectorTarget } from '../adapters/research-kit/collector';
 
 /** What main learned, in collector terms. The kit's own text never reaches here. */
@@ -10,12 +10,16 @@ export type Outcome =
   | { kind: 'ambiguous'; cause: string }
   | { kind: 'runFailed'; failure: string; cause: string }
   | { kind: 'expired' }
+  /** Verified import (Task 4): the package passed the validator under the binding taken from the GitHub run. */
+  | { kind: 'verified'; verification: ResearchVerification }
+  /** The package or its run failed verification: never retried. */
+  | { kind: 'rejected'; failure: string; cause: string }
   /** Nothing to record: still running, a transient failure, a parked job, or a stop with no new facts. */
   | { kind: 'continue' };
 
 export interface Transition {
-  to: 'dispatching' | 'collecting' | 'failed' | 'cancelled'; expectedRevision: number; cause: string;
-  target?: CollectorTarget; workflowRunId?: string; failure?: string;
+  to: 'dispatching' | 'collecting' | 'collected' | 'failed' | 'cancelled'; expectedRevision: number; cause: string;
+  target?: CollectorTarget; workflowRunId?: string; failure?: string; verification?: ResearchVerification;
 }
 export type Plan = { kind: 'release' } | { kind: 'continue' } | { kind: 'transition'; transition: Transition };
 
@@ -54,7 +58,9 @@ export function planStep(ctx: ResearchContext, outcome: Outcome, learnedRunId?: 
   }
   // collecting
   if (ctx.admission !== null) return step(ctx, { to: 'failed', cause: 'ADMISSION_CHANGED', failure: ctx.admission });
-  if (outcome.kind === 'runFailed') return step(ctx, { to: 'failed', cause: outcome.cause, failure: outcome.failure });
+  if (outcome.kind === 'runFailed' || outcome.kind === 'rejected') return step(ctx, { to: 'failed', cause: outcome.cause, failure: outcome.failure });
+  // A receipt bound to another revision is stale: nothing is recorded, and the next watch verifies again.
+  if (outcome.kind === 'verified') return outcome.verification.jobRevision === job.revision ? step(ctx, { to: 'collected', cause: 'PACKAGE_VERIFIED', verification: outcome.verification }) : { kind: 'continue' };
   if (outcome.kind === 'expired') return step(ctx, { to: 'failed', cause: 'WATCH_DEADLINE', failure: 'COLLECTION_EXPIRED' });
   return { kind: 'continue' };
 }
