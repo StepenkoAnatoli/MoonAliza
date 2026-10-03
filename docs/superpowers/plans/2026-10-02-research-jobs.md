@@ -298,6 +298,7 @@ Both questions were answered through Research-Kit corpora with a ledger and a pa
   - Defaults: nothing ships in the installer. Java docs are offered only for Java projects, because the OpenJDK set is about 103 MB. If a project declares no version, the user is asked rather than a version guessed.
   - First build step: a `docs.json` reader that maps a project's declared Node, Python and Java versions to DevDocs releases, tested over the captured index.
   - Day-one check: read the OpenJDK package's `debian/copyright` before offering Java docs.
+  - Implementation plan: [coding knowledge base](2026-10-03-coding-knowledge-base.md), written October 3. It refines the matching rule to match by version line, lists the known unknowns with their day-one checks and lists the decisions for the user.
 - **Repository review (adopted)**, from `docs/research/2026-10-03-agent-repo-review/research/BRIEF.md`. Patterns only, no code:
   - **Missions: a reviewer loop** (from gpt-pilot, which is FSL-1.1-MIT and unmaintained). Each mission step goes to a reviewer agent, which accepts it or sends it back with the reason, before the user approves. It reuses the adopted PASS/FIX/ESCALATE verdicts. First step: write it into the mission plan contract (step, then review verdict, then user approval).
   - **Prompt-injection tests: bait MCP tools** (from beelzebub, GPL-3.0). The test harness registers decoy tools no legitimate task needs. A call to one after reading untrusted content fails the test. It detects some attempts, not all, and complements provenance gating.
