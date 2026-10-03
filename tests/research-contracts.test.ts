@@ -124,3 +124,7 @@ describe('research contracts', () => {
     expect(EventSchema.safeParse({ ...event, payload: { researchId: 'r1', status: 'awaiting_review' } }).success).toBe(false);
   });
 });
+
+test('the research start input budget is the 12,000 characters the collection spec states', () => {
+  expect(RESEARCH_INPUT_BUDGET).toBe(12_000);
+});

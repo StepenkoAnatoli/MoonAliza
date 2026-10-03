@@ -488,7 +488,7 @@ describe('application and boundaries', () => {
     expect(ControlSchema.safeParse({ ...base, to: 'collecting', workflowRunId: '9007199254740993' }).success).toBe(false);
     expect(ControlSchema.safeParse({ ...base, to: 'failed', failure: 'free text' }).success).toBe(false);
     expect(ControlSchema.safeParse({ ...base, to: 'collected', verification: verification() }).success).toBe(true);
-    for (const bad of [{ token: 'ghp_x' }, { downloadDigest: 'verified' }, { state: 'APPROVED_BRIEF' }, { artifactSha256: 'A'.repeat(64) }, { commit: 'main' }, { jobRevision: 0 }, { workflowRunId: '01' }, { clientRef: 'mz j1' }])
+    for (const bad of [{ token: 'ghp_x' }, { downloadDigest: 'verified' }, { state: 'APPROVED_BRIEF' }, { artifactSha256: 'A'.repeat(64) }, { commit: 'main' }, { jobRevision: 0 }, { workflowRunId: '01' }, { clientRef: 'mz j1' }, { artifactBytes: 32 * 1024 ** 2 + 1 }])
       expect(ControlSchema.safeParse({ ...base, to: 'collected', verification: { ...verification(), ...bad } }).success, JSON.stringify(bad)).toBe(false);
   });
 

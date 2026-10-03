@@ -167,7 +167,7 @@ test('a run that is not the one the job dispatched fails as RUN_IDENTITY_MISMATC
 }, 60000);
 
 test('an unreadable, redirected or still-running GitHub run parks the job for import without validating or failing it', async () => {
-  const answers = [json({ message: 'Server Error' }, 503), () => new Response(null, { status: 302, headers: { location: 'https://elsewhere.invalid/run' } }), json({ ...RUN, head_sha: 'not-a-sha' }), json({ ...RUN, status: 'in_progress' })];
+  const answers = [json({ message: 'Server Error' }, 503), () => new Response(null, { status: 302, headers: { location: 'https://elsewhere.invalid/run' } }), json({ ...RUN, head_sha: 'not-a-sha' }), json({ ...RUN, status: 'in_progress' }), json(RUN, 404)];
   for (const answer of answers) {
     const h = await harness(answer);
     const job = await h.start();
@@ -303,4 +303,23 @@ test('the GitHub run read is bounded to 1 MiB, by its declared length and while 
   const github = fakeGitHub(json(RUN));
   expect(await packageImporter({ epoch: () => 'epoch-1', vault, settings: h.settings, kit, fetch: github.fetch, packageWorkflow: identity.workflow })(await handoffFor(h, Buffer.from('unused'), stopped.signal))).toEqual({ kind: 'deferred' });
   expect(github.seen).toHaveLength(0); expect(grants).toBe(0); expect(validated).toHaveLength(1);
+}, 60000);
+
+test('every GitHub run read revokes its grant: afterwards the grant no longer unlocks the token, after a good read or a failed one', async () => {
+  const h = await harness(json(RUN));
+  const issued: Array<{ capability: string; input: Parameters<Vault['grant']>[0] }> = [];
+  const vault = { ...h.vault, grant: (input: Parameters<Vault['grant']>[0]) => { const capability = h.vault.grant(input); issued.push({ capability, input }); return capability; },
+    withSecret: h.vault.withSecret.bind(h.vault), revokeContext: h.vault.revokeContext.bind(h.vault) };
+  const kit = { validate: async () => ({ status: 'BLOCKED', state: null, researchReady: false, receipt: null, error: 'TIMEOUT' }) as Result };
+  for (const answer of [json(RUN), json({ message: 'unavailable' }, 503)]) {
+    const github = fakeGitHub(answer);
+    expect(await packageImporter({ epoch: () => 'epoch-1', vault, settings: h.settings, kit, fetch: github.fetch, packageWorkflow: identity.workflow })(await handoffFor(h, Buffer.from('unused')))).toEqual({ kind: 'deferred' });
+    expect(github.seen).toHaveLength(1);
+  }
+  expect(issued).toHaveLength(2);
+  for (const { capability, input } of issued) {
+    expect(input.contextId).toMatch(/^import:/);
+    const { expiresAt: _expiresAt, ...binding } = input;
+    await expect(h.vault.withSecret(capability, binding, () => 'used')).rejects.toThrow('CREDENTIAL_CAPABILITY_DENIED');
+  }
 }, 60000);

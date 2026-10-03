@@ -372,6 +372,7 @@ test('a job held after a commit error stays owned until the next app start, so n
   await until(() => h.controls.filter(c => c.method === 'research.recover').length === 2);
   expect(h.controls.filter(c => c.method === 'research.recover').at(-1)).toEqual({ method: 'research.recover', owned: [job.id] });
   expect(h.store.getResearch(job.id)!.status).toBe('dispatching');
+  expect(h.supervisor.busy()).toBe(true);
   await h.supervisor.close(50);
   // A start whose replay commit fails too keeps the job out of its own recovery.
   const second = await harness(happy, { root: h.root, fault: refuse });
@@ -399,4 +400,6 @@ test('a notice for a job held after a commit error does not re-admit it before t
   await new Promise(r => setTimeout(r, 150));
   expect(h.calls).toHaveLength(0); expect(h.store.getResearch(job.id)!.status).toBe('queued');
   expect(h.supervisor.ownedIds()).toEqual([job.id]);
+  // Still busy: a collector save may not retarget the repository under a job that resumes with its frozen target.
+  expect(h.supervisor.busy()).toBe(true);
 });

@@ -72,6 +72,7 @@ test('the collector token is write-only: never in an attribute, cleared after sa
   await waitFor(() => expect((screen.getByLabelText(/^Repository/) as HTMLInputElement).value).toBe('octo/collector'));
   expect(screen.getByTestId('token-state').textContent).toBe('No token is saved.');
   const field = screen.getByLabelText(/^Token/) as HTMLInputElement;
+  expect(field.type).toBe('password'); expect(field.getAttribute('autocomplete')).toBe('new-password');
   fireEvent.change(field, { target: { value: ` ${TOKEN} ` } });
   expect(field.getAttribute('value')).toBeNull(); expect(container.innerHTML).not.toContain(TOKEN);
   fireEvent.click(screen.getByRole('button', { name: 'Save collector' }));
@@ -80,6 +81,8 @@ test('the collector token is write-only: never in an attribute, cleared after sa
   expect((screen.getByLabelText(/^Replace token/) as HTMLInputElement).value).toBe('');
   expect(container.innerHTML).not.toContain(TOKEN); expect(container.textContent).not.toContain(TOKEN);
   expect(screen.getByTestId('token-state').textContent).toContain('A token is saved');
+  // Text typed into the field is not sent with a removal: the contract refuses a token and clearToken together.
+  fireEvent.change(screen.getByLabelText(/^Replace token/), { target: { value: 'typed-then-removed' } });
   fireEvent.click(screen.getByRole('button', { name: 'Remove saved token' }));
   expect(await screen.findByText('The saved token was removed.')).toBeTruthy();
   expect(calls.filter(call => call.method === 'research.collector.save')[1]!.params).toEqual({ repository: 'octo/collector', workflow: 'collect.yml', ref: 'main', expectedRevision: 2, clearToken: true });
