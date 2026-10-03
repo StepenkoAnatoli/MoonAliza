@@ -183,3 +183,38 @@ test('saving a different collector repository withdraws the acknowledgement of t
   fireEvent.click(acknowledgement); fireEvent.click(screen.getByRole('button', { name: 'Start collection' }));
   await waitFor(() => expect(calls.some(call => call.method === 'research.start')).toBe(true));
 });
+
+test.each(['queued', 'dispatching', 'collecting', 'reviewing'] as const)('a %s job can be cancelled and hides the start form', async status => {
+  render(<ResearchPanel api={bridge({ jobs: [job({ status, revision: 2 })] }).api} project={project} />);
+  expect(await screen.findByRole('button', { name: 'Cancel collection' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Start collection' })).toBeNull();
+});
+
+test('a job that is stopping offers neither cancel nor a new start', async () => {
+  render(<ResearchPanel api={bridge({ jobs: [job({ status: 'cancelling', revision: 2 })] }).api} project={project} />);
+  await waitFor(() => expect(screen.getByTestId('research-status').textContent).toContain('Stopping'));
+  expect(screen.queryByRole('button', { name: 'Cancel collection' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Start collection' })).toBeNull();
+});
+
+test('earlier research is bounded plain text, at most 20 entries', async () => {
+  const older = Array.from({ length: 25 }, (_, index) => job({ id: `old${index}`, status: 'failed', failure: 'RUN_FAILED', topic: `‮${index}:${'y'.repeat(300)}`, createdAt: new Date(Date.parse('2026-09-01T00:00:00Z') + index * 1000).toISOString() }));
+  render(<ResearchPanel api={bridge({ jobs: [job({ status: 'collecting', revision: 2 }), ...older] }).api} project={project} />);
+  const history = (await screen.findByText(/^Earlier research/)).closest('details')!;
+  expect(history.querySelector('summary')!.textContent).toBe('Earlier research · 20');
+  const items = [...history.querySelectorAll('li > span:first-child')];
+  expect(items).toHaveLength(20);
+  for (const item of items) { expect(item.textContent).not.toContain('‮'); expect(item.textContent!.length).toBe(121); expect(item.textContent!.endsWith('…')).toBe(true); }
+});
+
+test('removing the saved token keeps the saved destination, not unsaved edits', async () => {
+  const { api, calls } = bridge({ routes: { 'research.collector.save': () => ({ collector: { ...collector, revision: 2, tokenConfigured: false } }) } });
+  render(<ResearchPanel api={api} project={project} />);
+  await waitFor(() => expect((screen.getByLabelText(/^Repository/) as HTMLInputElement).value).toBe('octo/collector'));
+  fireEvent.change(screen.getByLabelText(/^Repository/), { target: { value: 'someone/else' } });
+  fireEvent.change(screen.getByLabelText(/^Workflow file/), { target: { value: 'other.yml' } });
+  fireEvent.change(screen.getByLabelText(/^Branch or tag/), { target: { value: 'dev' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Remove saved token' }));
+  expect(await screen.findByText('The saved token was removed.')).toBeTruthy();
+  expect(calls.find(call => call.method === 'research.collector.save')!.params).toEqual({ repository: 'octo/collector', workflow: 'collect.yml', ref: 'main', expectedRevision: 1, clearToken: true });
+});
