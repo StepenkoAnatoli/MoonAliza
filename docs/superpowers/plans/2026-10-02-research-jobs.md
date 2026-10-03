@@ -149,6 +149,15 @@ October 3, Task 6, collection part: `src/renderer/ResearchPanel.tsx` with `src/r
 - Live status comes from `onResearch` notices; there is a cancel action, and every job failure in the collection spec has its own message.
 - `tests/research-panel.test.tsx` (28 tests) runs in the `ui` project. The panel has not been run in Electron or on Windows; the desktop journeys cover the backend only.
 
+October 3, integration of the five build teams (import, collector items, small fixes, renderer, e2e journeys) and three docs teams onto `main-axuse`, under the lead-orchestrator process.
+- Twenty-seven team commits were cherry-picked in plan order. Each code commit gained an ARCHITECTURE.md sentence, now required by the Research-Kit commit gate.
+- One integration defect: the panel had no message for the import's two new failures (`a781265`).
+- Phase 4 review by four independent roles (spec, breaker, mutation, invariant):
+  - fixed: the e2e test token reaching the real GitHub (S1), admission not re-checked on `collected`, a torn retained package, a store fault failing a good package (S2), and stale docs (S3);
+  - the invariant auditor found all six invariants holding;
+  - 60 mutations: 45 detected at first, 7 more after new tests, and the rest recorded below.
+- Linux gate at `8c60521`, cwd `/home/user/moonaliza`, Node 24.21.0: typecheck, lint and build clean. 696 tests: 622 passed and 74 failed, all in the Windows baseline. `research-kit.test.ts` "changed runtime and missing installation fail closed" now passes on Linux, because the missing helper maps to `INSTALLATION_INVALID`; it still tests the hash check on Windows.
+
 ## Recorded for later (not in Task 2)
 
 - **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart (done: it does, and recovery skips owned jobs); implement `research.collector.read/save` (done); re-pin Research-Kit to `bf60e21` or later for `--run-id` (done: `fcde0e6`). Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
@@ -161,6 +170,32 @@ October 3, Task 6, collection part: `src/renderer/ResearchPanel.tsx` with `src/r
   - Resolved: the helper's admission timer takes `admissionMs`, so the whole pre-start step is bounded at 60 s.
   - Resolved: a job held after a commit error stays in `ownedIds()` until the next app start, so recovery after an engine-only restart (or at attach, after a failed replay) cannot fail it and drop its spooled run id.
   - Kept: `STOPPED` waits without counting; it only follows the supervisor's own stop, and counting it would let user holds fail a job.
+- **Open after the October 3 integration (owner: the next research cycle unless the user decides otherwise).**
+  - Decisions for the user:
+    - `research.purge` semantics. The contract deletes the job; the source plan keeps the metadata. The import team recommends keeping the job and its journal and deleting only the retained ZIP, for finished jobs whose digest no other verification references.
+    - How research is turned on: nothing in the app changes `policy.research` from `off`. The renderer team recommends a confirmation like "Allow cloud inference" that offers only `public-technical`.
+    - Whether an inference-only policy edit should still end research jobs. Today every policy revision does.
+    - Whether `research.start` should carry the acknowledged repository, so that main refuses a stale acknowledgement.
+  - Product work:
+    - a park-reason field on the job DTO, so the panel can say why a collecting job waits;
+    - research-specific public messages for collector save conflicts;
+    - a bounded retry of a deferred import inside the watch deadline, instead of waiting for the next start;
+    - deleting verified-but-rejected packages;
+    - disposing a dispatch launch's `storage/collect/<uuid>` folder at once, not only at the next sweep;
+    - the profile dialog's API key held in a controlled input.
+  - Task 7: route the importer's run read to the e2e fake so a journey ends `collected`, and decide whether packaged runs cover the research journeys.
+  - Tests the mutation audit asked for, not yet written:
+    - waiting watch refusals never park (C19);
+    - a tag ref `refs/tags/v1` end to end (S08);
+    - an `APPROVED_BRIEF` receipt without `researchReady` is rejected (I17);
+    - invalid UTF-8 in the run body (I08);
+    - `INPUT_LIMIT` from archive inspection is not turned into `ARTIFACT_INVALID` (A06);
+    - the e2e preload deletes its variable (N05);
+    - `projectRevision` checked against the policy revision with different policy and trust revisions (S09);
+    - Windows tests of `spawnOwned`'s `admissionTimeoutMs` validation and clamp (K01-K04).
+  - Not testable cheaply: the retained-package write is temp plus rename. A crash mid-write cannot be produced in a test, so replacing it with an in-place write is not detected; the recovery of a torn file is tested.
+  - Research spec open questions: Task 5 review Q1-Q10 (`docs/specification/research-review.md`), project memory (`docs/specification/project-memory.md`), and knowledge base decisions D1-D7 (`docs/superpowers/plans/2026-10-03-coding-knowledge-base.md`).
+- **Next cycle (user instruction, October 3):** run it with the lead-orchestrator and careful-coding skills. Research the external facts through Research-Kit before designing anything: one nested project per topic under `docs/research/<date>-<topic>/`, the corpus committed with its ledger, and 20 pages in total.
 - **Small follow-up (done, October 3):** `src/engine/policy.ts` threw `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema`; the tool-policy path now throws the contract code `RESEARCH_NOT_ALLOWED`, as research admission does.
 
 ## Next phase after research: missions

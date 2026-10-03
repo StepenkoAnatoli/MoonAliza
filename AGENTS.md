@@ -40,7 +40,7 @@ _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`)._
 | Other checks   | `node scripts/check-handoff.mjs` |
 
 ### Baseline
-- Linux: exactly 75 failing tests, all needing the Windows native helper (`WINDOWS_REQUIRED`) or results downstream of it, in `research-kit` (21), `managed-ollama` (11), `git` (10), `commands` (8), `guarded-process` (7), `owned-transport` (7), `command-broker` (6), `owned-connection` (3), `hardware` (1) and `scheduler` (1). Measured on `e14fc2c`; identical to the earlier list.
+- Linux (re-measured 2026-10-03 at `8c60521`): exactly 74 failing tests. `research-kit` "changed runtime and missing installation fail closed" now passes on Linux, because the missing helper maps to `INSTALLATION_INVALID`; on Windows it still tests the hash check. Earlier, on `e14fc2c`, there were 75 failing tests, all needing the Windows native helper (`WINDOWS_REQUIRED`) or results downstream of it, in `research-kit` (21), `managed-ollama` (11), `git` (10), `commands` (8), `guarded-process` (7), `owned-transport` (7), `command-broker` (6), `owned-connection` (3), `hardware` (1) and `scheduler` (1). Measured on `e14fc2c`; identical to the earlier list.
 - Windows CI: 0 failures (639 tests, 9 e2e journeys on `e14fc2c`).
 - Pass criterion: no failure outside the Linux set, none of the set skipped or hidden, and a green Windows run on the exact head.
 
@@ -62,6 +62,18 @@ _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`)._
 | `approved` only through the kit's gate and fresh validation of exact bytes | `research_readiness_reserved` trigger tests in `tests/research-jobs-state.test.ts` |
 | Journal before effect; owned-process Stop | `tests/commands.test.ts`, `tests/guarded-process.test.ts`, `e2e/recovery.spec.ts` |
 | Imported research is untrusted data | offline validator tests in `tests/research-kit.test.ts` |
+
+### Research-Kit
+| Item | Value |
+|------|-------|
+| Kit path | `~/.agents/research-kit` (0.9.3, deployed from the Research-Kit checkout on 2026-10-03) |
+| Machine role | collector |
+| Transport / policy | `firecrawl-cli` 1.25.2 with the key from the environment only / `pluralist` |
+| `doctor` result | READY on 2026-10-03, in `docs/research/2026-10-03-coding-knowledge-base` |
+| Gates | commit gate (machine-wide `core.hooksPath`) and edit gate installed 2026-10-03. With no `research/kit.json`, the code paths are `src`, `lib`, `bin`, `scripts`, `app`, and a commit touching them must stage `docs/ARCHITECTURE.md` |
+| Research folder | `docs/research/<YYYY-MM-DD>-<topic>/`, one nested project per topic, committed with `research/raw/.fetches.jsonl` |
+| Existing research | the ten projects under `docs/research/` |
+| Remote collector | none configured for MoonAliza |
 
 ### Parallel execution
 - Shared resources: OS temp (each test uses `mkdtemp`; give each agent its own short `TMPDIR`, since long paths break Chromium sockets), `.build/research-kit-external` (read-only for tests; copy per worktree), SQLite files (per test, under the temp dir), no fixed ports (fakes listen on port 0).
