@@ -385,3 +385,18 @@ test('a job held after a commit error stays owned until the next app start, so n
   expect(next.store.getResearch(job.id)).toMatchObject({ status: 'collecting', workflowRunId: '1' });
   expect([...h.calls, ...second.calls, ...next.calls].filter(c => c.kind === 'dispatch')).toHaveLength(1);
 });
+
+test('a notice for a job held after a commit error does not re-admit it before the next app start', async () => {
+  // The admission commit fails once: the job is held while still queued, and the engine would accept a second try.
+  let failed = false;
+  const h = await harness(happy, { fault: command => { if (command.method === 'research.transition' && command.to === 'dispatching' && !failed) { failed = true; throw new Error('INTERNAL_ERROR'); } } });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => failed);
+  await new Promise(r => setTimeout(r, 50));
+  // The same queued notice again (a resend, a reply): owning it anew would admit and dispatch with a fresh request id.
+  h.supervisor.observe(researchDto(h.store.getResearch(job.id)!));
+  await new Promise(r => setTimeout(r, 150));
+  expect(h.calls).toHaveLength(0); expect(h.store.getResearch(job.id)!.status).toBe('queued');
+  expect(h.supervisor.ownedIds()).toEqual([job.id]);
+});
