@@ -16,6 +16,7 @@ const publicMessages: Record<string, string> = {
   PROJECT_NOT_FOUND: 'This project is no longer available.',
   SESSION_NOT_FOUND: 'This conversation is no longer available.',
   PROFILE_NOT_FOUND: 'Choose an available model profile.',
+  INVALID_ENDPOINT: 'Use an https:// endpoint, or http:// only on this computer (localhost, 127.0.0.1 or [::1]). Ollama profiles must use a local endpoint. Remove any user name, password, query or fragment from the address.',
   CLOUD_NOT_ALLOWED: 'This conversation or project allows local inference only. Choose a local profile or use Review cloud access to explicitly allow this project’s content to reach the selected provider.',
   CREDENTIAL_UNAVAILABLE: 'A saved key cannot be reused at a different endpoint or provider type. Enter the key for the new destination, or create a separate profile.',
   COLLECTOR_TOKEN_REQUIRED: 'Enter the collector token again when you change the collector repository, or remove the saved token.',
