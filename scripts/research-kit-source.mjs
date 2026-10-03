@@ -7,8 +7,13 @@ export const revision = 'fcde0e6c4e9ba585454f81262d695609ef0af474';
 export const legacyRevision = '1a0337b9cb1be34127f655671d72f752fe47210c';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export function exportSource(repo, pin, destination) {
+  // --git-dir, not -C: if the pin clone is broken, git must fail rather than walk up into MoonAliza.
+  const git = ['--git-dir', join(repo, '.git')];
+  // A clone made before the pin moved may not contain the pinned commit: fetch it by SHA rather than fail.
+  try { execFileSync('git', [...git, 'cat-file', '-e', `${pin}^{commit}`], { stdio: 'ignore', windowsHide: true }); }
+  catch { execFileSync('git', [...git, 'fetch', '--quiet', 'origin', pin], { stdio: 'inherit', windowsHide: true }); }
   mkdirSync(destination, { recursive: true });
-  const archive = execFileSync('git', ['-C', repo, 'archive', pin, 'research-kit'], { windowsHide: true, maxBuffer: 64 * 1024 ** 2 });
+  const archive = execFileSync('git', [...git, 'archive', pin, 'research-kit'], { windowsHide: true, maxBuffer: 64 * 1024 ** 2 });
   execFileSync('tar', ['-xf', '-', '-C', destination], { input: archive, windowsHide: true });
   return join(destination, 'research-kit');
 }

@@ -8,9 +8,6 @@ import { exportSource, inventory, revision } from './research-kit-source.mjs';
 process.chdir(fileURLToPath(new URL('../', import.meta.url)));
 const repo = resolve('.build/research-kit-pin');
 if (!existsSync(repo)) execFileSync('git', ['-c', 'core.longpaths=true', 'clone', '--no-checkout', 'https://github.com/StepenkoAnatoli/Research-Kit.git', repo], { stdio: 'inherit', windowsHide: true });
-// A clone made before the pin moved may not contain the pinned commit: fetch rather than fail.
-try { execFileSync('git', ['-C', repo, 'cat-file', '-e', `${revision}^{commit}`], { stdio: 'ignore', windowsHide: true }); }
-catch { execFileSync('git', ['-C', repo, 'fetch', '--quiet', 'origin'], { stdio: 'inherit', windowsHide: true }); }
 // Export into an empty directory, so files from an earlier pin cannot fail the inventory check.
 const destination = resolve('.build/research-kit-external');
 rmSync(destination, { recursive: true, force: true });
