@@ -289,3 +289,24 @@ test('an import stopped by the supervisor\'s own wake re-reads instead of parkin
   expect(h.calls.filter(c => c.kind === 'watch')).toHaveLength(2);
   expect(h.store.getResearch(job.id)!.status).toBe('collecting');
 });
+
+test('a collecting job without a readable dispatchedAt is watched against a deadline from its creation, never expired on sight', async () => {
+  let clock = Date.now();
+  const h = await harness(happy, { now: () => clock });
+  const original = h.jobs.context.bind(h.jobs);
+  // The schema makes this unreachable through the store; the reply is altered as a damaged row would read.
+  h.jobs.context = id => { const ctx = original(id); const { dispatchedAt: _dispatchedAt, ...research } = ctx.research; return { ...ctx, research }; };
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.handoffs.length === 1);
+  expect(h.store.getResearch(job.id)).toMatchObject({ status: 'collecting', workflowRunId: '1' });
+  // Creation precedes dispatch, so the fallback deadline is never later than the real one.
+  const late = await harness(async call => { if (call.kind === 'dispatch') { clock += 8 * 86_400_000; return replay('dispatch-ok'); } return happy(call); }, { now: () => clock });
+  const lateOriginal = late.jobs.context.bind(late.jobs);
+  late.jobs.context = id => { const ctx = lateOriginal(id); const { dispatchedAt: _dispatchedAt, ...research } = ctx.research; return { ...ctx, research }; };
+  await late.supervisor.attach();
+  const old = late.create(); late.supervisor.observe(researchDto(old));
+  await until(() => late.store.getResearch(old.id)!.status === 'failed');
+  expect(late.store.getResearch(old.id)).toMatchObject({ failure: 'COLLECTION_EXPIRED', workflowRunId: '1' });
+  expect(late.calls.filter(c => c.kind === 'watch')).toHaveLength(0);
+});

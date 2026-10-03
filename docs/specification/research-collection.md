@@ -55,7 +55,7 @@ All limits are in `COLLECTOR_LIMITS`.
 | Not-started launches before giving up | 3 (`preStartAttempts`) |
 | Transient backoff | 30 s, doubling, capped at 15 min, no count cap |
 | Still-running re-watch | 5 s (`stillRunningDelayMs`) |
-| Watch deadline | `dispatchedAt` + 7 days (`watchDeadlineMs`) |
+| Watch deadline | `dispatchedAt` + 7 days (`watchDeadlineMs`); `createdAt` + 7 days if `dispatchedAt` does not read; passed if neither reads |
 | Vault grant lifetime | 30 s (`grantMs`) |
 | Quit drain | 15 s (`quitDrainMs`) |
 
@@ -172,7 +172,7 @@ The supervisor handles each outcome this way:
 - `park` stops launching until re-armed. `credentials` is re-armed by a collector save (`configChanged`) or the next app start. `kit` and `import` are re-armed at the next app start. A parked job stays `collecting` and owned.
 - `notLaunched`: `INSTALLATION_INVALID` parks `kit`; `CREDENTIAL_DENIED` parks `credentials`; `HELD`, `ENGINE_UNAVAILABLE` and `STOPPED` wait; other refusals count, and after 3 the job parks `kit`.
 
-A watch never fails a job on a transient result. When the deadline passes, the job fails `COLLECTION_EXPIRED` / `WATCH_DEADLINE`.
+A watch never fails a job on a transient result. When the deadline passes, the job fails `COLLECTION_EXPIRED` / `WATCH_DEADLINE`. The store always sets `dispatchedAt` with the run's target, so a `collecting` job without a readable one is a damaged row. It is still watched, against `createdAt` + 7 days: creation precedes dispatch, so that deadline is never later than the real one and the watch still never runs past the artifact's retention. Expiring such a job on sight (the earlier behaviour) would give up a run that may have succeeded; watching it from "now" would never end.
 
 ## Job planning
 
@@ -363,7 +363,6 @@ Transient and park causes use the same names but are not recorded; the job stays
 - In table B a watch `CREDENTIAL_DENIED` parks `credentials` without checking that the reference is no longer saved. In the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
 - The design does not list the supervisor's pre-admission refusals (`COLLECTOR_NOT_CONFIGURED`, `NO_COLLECTOR`, `NO_TOKEN`, `NO_INSTALLATION`, `COMMAND_LINE`) or the `NOT_OWNED_DISPATCH` cause.
 - A job held after a commit error leaves the owned map when its driver returns. The design keeps it held until the next app start; in the code an engine-only restart's recovery can also act on it.
-- If a `collecting` job has no `dispatchedAt`, the driver treats the deadline as passed and fails it `COLLECTION_EXPIRED`.
 - A negative exit code is named `KIT_EXIT_NEG<n>`, because a minus sign is not valid in a code. Fixed after review: it used to form `KIT_EXIT_-<n>`, which failed the control schema and held the job.
 - `startInputBudget` is defined in `COLLECTOR_LIMITS` but not used by this code.
 - Any failure while node and the staged runtime are rehashed before the child starts (wrong hash, a grown, swapped or linked file) is `INSTALLATION_INVALID`, for the validator as well as the collector.

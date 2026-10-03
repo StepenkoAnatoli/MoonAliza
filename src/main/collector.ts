@@ -301,8 +301,10 @@ export class CollectorSupervisor {
       }
       // collecting
       if (ctx.admission !== null) { if (!(await this.commit(job, { kind: 'continue' }))) return; continue; }
-      const deadline = Date.parse(ctx.research.dispatchedAt ?? '') + this.limits.watchDeadlineMs;
-      const left = (Number.isFinite(deadline) ? deadline : this.now()) - this.now();
+      // The store always sets dispatchedAt on a collecting job. Should it not read, creation (which precedes dispatch)
+      // bounds the watch no later than the real deadline, so the run is still watched and never past retention.
+      const anchor = [ctx.research.dispatchedAt, ctx.research.createdAt].map(at => Date.parse(at ?? '')).find(Number.isFinite);
+      const left = (anchor === undefined ? this.now() : anchor + this.limits.watchDeadlineMs) - this.now();
       if (left <= 0) { if (!(await this.commit(job, { kind: 'expired' }))) return; continue; }
       if (job.park) { await this.pause(job, left); continue; }
       if (this.held(job.projectId)) { await this.pause(job, this.retry * 60); continue; }
