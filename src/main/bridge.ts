@@ -18,6 +18,7 @@ const publicMessages: Record<string, string> = {
   PROFILE_NOT_FOUND: 'Choose an available model profile.',
   CLOUD_NOT_ALLOWED: 'This conversation or project allows local inference only. Choose a local profile or use Review cloud access to explicitly allow this project’s content to reach the selected provider.',
   CREDENTIAL_UNAVAILABLE: 'A saved key cannot be reused at a different endpoint or provider type. Enter the key for the new destination, or create a separate profile.',
+  COLLECTOR_TOKEN_REQUIRED: 'Enter the collector token again when you change the collector repository, or remove the saved token.',
   RUN_CANCELLED: 'The run was stopped.',
   RUN_ACTIVE: 'Wait for the active run to finish, or stop it first.',
   RESEARCH_NOT_ALLOWED: 'Research is off for this project. Allow research in the project policy first.',

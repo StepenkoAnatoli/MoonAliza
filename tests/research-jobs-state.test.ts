@@ -28,7 +28,9 @@ function step(store: Store, id: string, to: StoreResearchStatus, actor: StoreRes
   const current = store.getResearch(id)!;
   return store.transitionResearch({ researchId: id, expectedRevision: current.revision, to, actor, cause: 'TEST_STEP', patch });
 }
-function raw(path: string) { const db = new Database(path); return db; }
+// Fixture setup and inspection only: per-statement fsyncs here cost seconds on a busy Windows runner and test nothing.
+// The Store under test opens its own connection with its production durability settings.
+function raw(path: string) { const db = new Database(path); db.pragma('synchronous = OFF'); return db; }
 
 // Independent restatement of the plan's Task 2 edge table; the test must not import the code's table.
 const EXPECTED: Array<[StoreResearchStatus, StoreResearchStatus, StoreResearchActor[]]> = [

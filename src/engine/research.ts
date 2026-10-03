@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { ResearchCollectorSchema, ResearchSchema, ResearchStartParams, RevisionSchema, type MethodInput, type Research } from '../shared';
+import { IdSchema, ResearchCollectorSchema, ResearchSchema, ResearchStartParams, ResearchStatusSchema, RevisionSchema, type MethodInput, type Research } from '../shared';
 import { canonicalHash } from './policy';
 import { ACTIVE_RESEARCH } from './research-state';
 import type { Store, StoreProject, StoreResearch, StoreResearchEvent } from './store';
@@ -34,6 +34,30 @@ export function researchDto(job: StoreResearch): Research {
   const { id, projectId, revision, status, topic, clientRef, workflowRunId, failure, createdAt, updatedAt } = job;
   return ResearchSchema.parse({ id, projectId, revision, status, topic, clientRef, createdAt, updatedAt, ...(workflowRunId === undefined ? {} : { workflowRunId }), ...(failure === undefined ? {} : { failure }) });
 }
+
+const AdmissionSchema = z.enum(['PROJECT_NOT_FOUND', 'PROJECT_UNTRUSTED', 'RESEARCH_NOT_ALLOWED', 'POLICY_CHANGED', 'TRUST_CHANGED']);
+const Revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+/**
+ * The replies main acts on, parsed strictly there. A decoded row omits NULL columns, so the optional keys of a stored
+ * job stay optional rather than nullable.
+ */
+export const ResearchContextSchema = z.object({
+  research: z.object({
+    id: IdSchema, projectId: IdSchema, revision: RevisionSchema, status: ResearchStatusSchema, topic: z.string().min(1).max(2048), inputs: ResearchInputsSchema,
+    clientRef: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/), researchLevel: z.enum(['public-technical', 'private-connected']), policyRevision: Revision, trustRevision: Revision,
+    collectorRevision: RevisionSchema.optional(), repository: repository.optional(), workflow: workflow.optional(), ref: ref.optional(), dispatchedAt: z.string().max(64).optional(),
+    workflowRunId: WorkflowRunIdSchema.optional(), failure: ResearchCodeSchema.optional(), createdAt: z.string().max(64), updatedAt: z.string().max(64),
+  }).strict(),
+  admission: AdmissionSchema.nullable(),
+}).strict();
+export type ResearchContext = z.infer<typeof ResearchContextSchema>;
+export const ResearchTransitionReplySchema = z.object({ outcome: z.enum(['applied', 'refused']), research: ResearchSchema }).strict();
+const ids = z.array(IdSchema).max(1000);
+export const ResearchRecoverySchema = z.object({
+  failed: ids, cancelled: ids, reviewing: ids, unreadable: ids,
+  resume: z.array(z.object({ researchId: IdSchema, revision: RevisionSchema, workflowRunId: WorkflowRunIdSchema }).strict()).max(1000),
+  dispatchable: z.array(z.object({ researchId: IdSchema, revision: RevisionSchema }).strict()).max(1000),
+}).strict();
 
 export interface ResearchTransitionCommand {
   method: 'research.transition'; requestId: string; researchId: string; expectedRevision: number;

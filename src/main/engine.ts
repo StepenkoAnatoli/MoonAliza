@@ -14,6 +14,8 @@ interface EngineHooks {
   inference(runId: string, messages: InferenceMessage[], epoch: string, tools?: ToolSpec[]): Promise<Completion>;
   cancel(runId: string): void;
   restarted(epoch: string): void;
+  /** Each engine child that reports ready, the first included; `epoch` is that child's. */
+  ready?(epoch: string): void;
   prepareCommand(runId: string, input: CommandInput, epoch: string): Promise<CommandPlan>;
   executeCommand(runId: string, operationId: string, epoch: string): Promise<OwnedResult>;
   inspectGit(runId: string, name: string, input: unknown, epoch: string): Promise<OwnedResult>;
@@ -39,7 +41,7 @@ export class Engine {
         const result = FromEngineSchema.safeParse(raw);
         if (!result.success || result.data.epoch !== this.epoch || child !== this.child) return;
         const message = result.data;
-        if (message.type === 'ready') { clearTimeout(timeout); resolve(); }
+        if (message.type === 'ready') { clearTimeout(timeout); resolve(); this.hooks.ready?.(epoch); }
         else if (message.type === 'reply' || message.type === 'failure') {
           const pending = this.pending.get(message.id); if (!pending) return;
           clearTimeout(pending.timer); this.pending.delete(message.id);

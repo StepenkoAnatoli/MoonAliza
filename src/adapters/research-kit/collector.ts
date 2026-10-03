@@ -138,6 +138,8 @@ export type DispatchOutcome =
   | { kind: 'ambiguous'; cause: string };
 
 const kitCause = (code: string) => `KIT_${code}`;
+/** A cause must match ResearchCodeSchema: a negative or missing exit code gets a spelled-out name, not a minus sign. */
+const exitCause = (code: number | null) => `KIT_EXIT_${code === null ? 'NONE' : code < 0 ? `NEG${-code}` : code}`;
 const rejected = (status: number) => status >= 400 && status <= 499 && status !== 408 && status !== 429;
 
 /**
@@ -157,7 +159,7 @@ export function classifyDispatch(attempt: CollectorAttempt): DispatchOutcome {
   }
   if (result.truncated) return { kind: 'ambiguous', cause: 'KIT_OUTPUT_LIMIT' };
   if (result.code === 1 && (result.timedOut || result.cancelled)) return { kind: 'ambiguous', cause: result.timedOut ? 'OWNED_TIMEOUT' : 'OWNED_STOPPED' };
-  if (result.code !== 3 || !line) return { kind: 'ambiguous', cause: `KIT_EXIT_${result.code ?? 'NONE'}` };
+  if (result.code !== 3 || !line) return { kind: 'ambiguous', cause: exitCause(result.code) };
   // Exit 3 is the kit's "could not start": every row below that names a cause is decided before or by GitHub's refusal.
   if (line.kind === 'noToken') return { kind: 'notDispatched', failure: 'COLLECTOR_TOKEN_MISSING', cause: 'KIT_NO_TOKEN' };
   if (line.kind === 'text') return { kind: 'notDispatched', failure: 'COLLECTOR_REFUSED', cause: 'KIT_REFUSED' };
@@ -233,5 +235,5 @@ export function classifyWatch(attempt: CollectorAttempt, job: { clientRef: strin
     if (line.kind === 'error' && line.code === 'TOKEN') return { kind: 'park', reason: 'credentials', cause: 'KIT_TOKEN' };
     return { kind: 'park', reason: 'kit', cause: line.kind === 'error' ? kitCause(line.code) : line.kind === 'text' ? 'KIT_REFUSED' : 'KIT_EXIT_3' };
   }
-  return { kind: 'transient', cause: `KIT_EXIT_${result.code ?? 'NONE'}` };
+  return { kind: 'transient', cause: exitCause(result.code) };
 }

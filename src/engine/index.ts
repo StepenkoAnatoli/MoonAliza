@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 import { Store } from './store';
 import { Application } from './application';
-import { ToEngineSchema, type Control } from './control';
+import { ToEngineSchema, engineFailureCode, type Control } from './control';
 import type { Completion } from '../main/inference';
 import { CommandInputSchema, type CommandPlan } from '../shared/commands';
 import type { OwnedResult } from '../tools/commands';
@@ -114,9 +114,7 @@ port.on('message', async event => {
     const result = message.type === 'request' ? await app.handle(message.request) : await control(message.control);
     port.postMessage({ type: 'reply', epoch, id: message.id, result });
   } catch (error) {
-    const raw = error instanceof Error ? error.message : '';
-    const code = /^[A-Z_]{2,80}$/.test(raw) ? raw : /request.*reused/i.test(raw) ? 'REQUEST_CONFLICT' : 'INTERNAL_ERROR';
-    port.postMessage({ type: 'failure', epoch, id: message.id, code });
+    port.postMessage({ type: 'failure', epoch, id: message.id, code: engineFailureCode(error) });
   }
 });
 port.postMessage({ type: 'ready', epoch });

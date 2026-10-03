@@ -1,10 +1,12 @@
 // Maintainer-only operation. Never invoked by tests or CI; changes require review.
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
 import { revision, legacyRevision, exportSource, inventory, sha256, json } from './research-kit-source.mjs';
+// Paths below are repository-relative: run from the repository root whatever the caller's cwd.
+process.chdir(fileURLToPath(new URL('../', import.meta.url)));
 // Parsed before anything is exported or written, so a mistyped option changes no file.
 const options = process.argv.slice(2);
 if (options.length > 1 || (options.length === 1 && !['--mutations-only', '--inventory-only'].includes(options[0]))) throw new Error('Use no option, --mutations-only or --inventory-only');

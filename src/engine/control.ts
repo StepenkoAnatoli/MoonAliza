@@ -26,6 +26,11 @@ export const ControlSchema = z.discriminatedUnion('method', [
   z.object({ method: z.literal('shutdown') }).strict(),
 ]);
 export type Control = z.infer<typeof ControlSchema>;
+/** The bare code an engine failure crosses the process boundary as. Main's collector maps errors the same way. */
+export function engineFailureCode(error: unknown): string {
+  const raw = error instanceof Error ? error.message : '';
+  return /^[A-Z_]{2,80}$/.test(raw) ? raw : /request.*reused/i.test(raw) ? 'REQUEST_CONFLICT' : 'INTERNAL_ERROR';
+}
 type JsonValue = z.infer<ReturnType<typeof z.json>>;
 type JsonObject = Record<string, JsonValue>;
 // Check depth before the recursive JSON schema can consume an untrusted tree.

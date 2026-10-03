@@ -2,8 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { lstat, open, writeFile, readdir, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
-import { privateDirectory, serialized, missing } from '../../models/artifact-files';
-import { spawnOwned, type OwnedResult } from '../../tools/commands';
+import { boundedJson, privateDirectory, serialized, missing } from '../../models/artifact-files';
+import { spawnOwned, type OwnedIdentity, type OwnedResult, type OwnedRunner } from '../../tools/commands';
 import { BindingSchema, DigestSchema, FailureSchema, ManifestProjection, ReceiptSchema, ReportSchema, ResultSchema, StateSchema, type Binding, type Receipt, type Report, type Result } from './contracts';
 import { inspectArchive, MAX_ARCHIVE } from './archive';
 import inventory from './runtime-inventory.json';
@@ -13,6 +13,23 @@ const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
 const MAX_OUTPUT = 256 * 1024;
 const ConfigSchema = z.object({ kitRoot: z.string(), nodePath: z.string(), nodeSha256: DigestSchema, storageRoot: z.string(), helperPath: z.string() }).strict();
 export type ResearchConfig = z.infer<typeof ConfigSchema>;
+const InstallationSchema = z.object({ kitRoot: z.string().max(32767), nodePath: z.string().max(32767), nodeSha256: DigestSchema }).strict();
+/** The trusted installation main reads from its own data folder; a missing file means research is not installed. */
+export async function readResearchInstallation(file: string): Promise<z.infer<typeof InstallationSchema> | null> {
+  let value: unknown;
+  try { value = await boundedJson(file, 64 * 1024); } catch (error) { if (missing(error)) return null; throw new Error('INSTALLATION_INVALID', { cause: error }); }
+  const parsed = InstallationSchema.safeParse(value);
+  if (!parsed.success || !isAbsolute(parsed.data.kitRoot) || !isAbsolute(parsed.data.nodePath)) throw new Error('INSTALLATION_INVALID');
+  return parsed.data;
+}
+/** One collector child: a staged, hash-checked kit and its own private folders. Main owns the token and the bounds. */
+export interface CollectorLaunch {
+  readonly node: string; readonly script: string; readonly out: string;
+  start(args: readonly string[], env: Record<string, string>, options: { timeoutMs: number; maxOutputBytes: number; signal: AbortSignal; admit(): Promise<void>; onStarted(identity: OwnedIdentity): void }): Promise<OwnedResult>;
+  /** The private temporary folder the child's environment must point at. */
+  readonly temp: string;
+  dispose(): Promise<void>;
+}
 
 /** These are trusted main-process installation inputs, never IPC request fields. */
 export function validatorEnvironment(directory: string, source: NodeJS.ProcessEnv = process.env): Record<string, string> {
@@ -53,8 +70,12 @@ export class ResearchKit {
   private readonly config: ResearchConfig;
   private runtime: string | undefined;
   private readonly receipts = new Map<string, Receipt>();
-  constructor(config: ResearchConfig) {
+  private readonly launches = new Set<Promise<unknown>>();
+  private readonly run: OwnedRunner;
+  /** `run` is the launcher (the native helper by default); it is not installation input. */
+  constructor(config: ResearchConfig, run?: OwnedRunner) {
     this.config = ConfigSchema.parse(config);
+    this.run = run ?? ((request, signal, options) => spawnOwned(request, signal, { ...options, helperPath: this.config.helperPath }));
     for (const path of [config.kitRoot, config.nodePath, config.storageRoot, config.helperPath]) if (!isAbsolute(path) || path.includes('\0')) throw new Error('INSTALLATION_INVALID');
   }
   private async prepare(signal?: AbortSignal) {
@@ -75,6 +96,31 @@ export class ResearchKit {
       throw new Error('INSTALLATION_INVALID', { cause: error });
     }
   }
+  /**
+   * The only way the kit's code runs: guarded read locks on node and every staged file, rehashed after the locks are
+   * held and before the child starts, then the caller's own admission check. The validator and the collector differ
+   * only in argv, environment, bounds and whether hitting the output limit stops the child.
+   */
+  private guardedRun(runtime: string, args: string[], cwd: string, env: Record<string, string>, bounds: { timeoutMs: number; maxOutputBytes: number; stopOnOutputLimit: boolean }, extra: { locks: string[]; check(): Promise<void> }, signal?: AbortSignal, onStarted?: (identity: OwnedIdentity) => void): Promise<OwnedResult> {
+    const files = inventory.files.map(file => join(runtime, file.path)); const node = this.config.nodePath;
+    const task = this.run({ executable: node, args, cwd, env, timeoutMs: bounds.timeoutMs, maxOutputBytes: bounds.maxOutputBytes }, signal, {
+      readLocks: [node, ...extra.locks, ...files], stopOnOutputLimit: bounds.stopOnOutputLimit, ...(onStarted ? { onStarted } : {}),
+      beforeStart: async () => {
+        checkAbort(signal);
+        // Node and the staged runtime are the installation: a file that grew, was swapped or was linked is not an input error.
+        try {
+          if (hash(await capturedFile(node, 256 * 1024 ** 2)) !== this.config.nodeSha256) throw new Error('INSTALLATION_INVALID');
+          for (let index = 0; index < files.length; index++) {
+            checkAbort(signal); const file = inventory.files[index]!;
+            if (hash(await capturedFile(files[index]!, file.size)) !== file.sha256) throw new Error('INSTALLATION_INVALID');
+          }
+        } catch (error) { checkAbort(signal); throw error instanceof Error && error.message === 'INSTALLATION_INVALID' ? error : new Error('INSTALLATION_INVALID', { cause: error }); }
+        await extra.check();
+      },
+    });
+    this.launches.add(task); void task.catch(() => {}).finally(() => this.launches.delete(task));
+    return task;
+  }
   private async inspectOwned(bytes: Buffer, clientRef: string, signal?: AbortSignal): Promise<Report> {
     checkAbort(signal); if (bytes.length > MAX_ARCHIVE) throw new Error('INPUT_LIMIT');
     BindingSchema.shape.clientRef.parse(clientRef);
@@ -83,20 +129,10 @@ export class ResearchKit {
     try {
       const artifact = join(work, 'artifact.zip'); await writeFile(artifact, bytes, { flag: 'wx' });
       const temporary = await privateDirectory(join(work, 'temp'));
-      const files = inventory.files.map(file => join(runtime, file.path));
-      const expected = hash(bytes); const node = this.config.nodePath;
-      const result = await spawnOwned({ executable: node, args: ['--max-old-space-size=256', join(runtime, 'bin/artifact.mjs'), 'validate', '--file', artifact, '--expect-client-ref', clientRef, '--json'], cwd: work, env: validatorEnvironment(temporary), timeoutMs: 60000, maxOutputBytes: MAX_OUTPUT }, signal, {
-        helperPath: this.config.helperPath, readLocks: [node, artifact, ...files], stopOnOutputLimit: true,
-        beforeStart: async () => {
-          checkAbort(signal);
-          if (hash(await capturedFile(node, 256 * 1024 ** 2)) !== this.config.nodeSha256) throw new Error('INSTALLATION_INVALID');
-          for (let index = 0; index < files.length; index++) {
-            checkAbort(signal); const file = inventory.files[index]!;
-            if (hash(await capturedFile(files[index]!, file.size)) !== file.sha256) throw new Error('INSTALLATION_INVALID');
-          }
-          if (hash(await capturedFile(artifact, MAX_ARCHIVE)) !== expected) throw new Error('ARTIFACT_INVALID');
-        },
-      });
+      const expected = hash(bytes);
+      const result = await this.guardedRun(runtime, ['--max-old-space-size=256', join(runtime, 'bin/artifact.mjs'), 'validate', '--file', artifact, '--expect-client-ref', clientRef, '--json'], work, validatorEnvironment(temporary), { timeoutMs: 60000, maxOutputBytes: MAX_OUTPUT, stopOnOutputLimit: true }, {
+        locks: [artifact], check: async () => { if (hash(await capturedFile(artifact, MAX_ARCHIVE)) !== expected) throw new Error('ARTIFACT_INVALID'); },
+      }, signal);
       checkAbort(signal); return parseValidatorReport(result);
     } finally { await removeOwned(this.config.storageRoot, work); }
   }
@@ -155,7 +191,32 @@ export class ResearchKit {
       } catch { this.receipts.delete(id); throw new Error('STALE_VERIFICATION'); }
     });
   }
+  /**
+   * A collector launch. Staging is serialized with validation; the child is not, so a watch of up to 30 minutes never
+   * blocks a validation. Each launch gets its own folder under storage/collect, removed by dispose().
+   */
+  async prepareCollector(signal?: AbortSignal): Promise<CollectorLaunch> {
+    const runtime = await serialized(this.config.storageRoot, () => this.prepare(signal));
+    const folder = await privateDirectory(join(this.config.storageRoot, 'collect', randomUUID()));
+    const temp = await privateDirectory(join(folder, 'temp')); const out = await privateDirectory(join(folder, 'out'));
+    return {
+      node: this.config.nodePath, script: join(runtime, 'bin/collect-remote.mjs'), out, temp,
+      start: (args, env, options) => this.guardedRun(runtime, [...args], folder, env, { timeoutMs: options.timeoutMs, maxOutputBytes: options.maxOutputBytes, stopOnOutputLimit: false }, { locks: [], check: options.admit }, options.signal, options.onStarted),
+      dispose: () => removeOwned(this.config.storageRoot, folder),
+    };
+  }
+  /** At startup, before any launch: removes staged runtimes, validation work and collector folders a crash left. */
+  sweep(): Promise<void> {
+    return serialized(this.config.storageRoot, async () => {
+      if (this.runtime || this.launches.size) throw new Error('KIT_BUSY');
+      for (const name of ['runtime', 'work', 'collect']) await removeOwned(this.config.storageRoot, join(this.config.storageRoot, name));
+    });
+  }
+  /** Waits for every launched child first: on Windows their read locks would make the runtime undeletable. */
   close(): Promise<void> {
-    return serialized(this.config.storageRoot, async () => { this.receipts.clear(); if (this.runtime) { await removeOwned(this.config.storageRoot, this.runtime); this.runtime = undefined; } });
+    return serialized(this.config.storageRoot, async () => {
+      while (this.launches.size) await Promise.allSettled([...this.launches]);
+      this.receipts.clear(); if (this.runtime) { await removeOwned(this.config.storageRoot, this.runtime); this.runtime = undefined; }
+    });
   }
 }
