@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, open, writeFile, readdir, rm } from 'node:fs/promises';
+import { lstat, open, rename, writeFile, readdir, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 import { boundedJson, privateDirectory, serialized, missing } from '../../models/artifact-files';
@@ -166,13 +166,25 @@ export class ResearchKit {
         checkAbort(signal);
         const artifactSha256 = hash(bytes); const store = await privateDirectory(join(this.config.storageRoot, 'artifacts'));
         const destination = join(store, artifactSha256 + '.zip');
-        try { if (hash(await capturedFile(destination, MAX_ARCHIVE)) !== artifactSha256) throw new Error('STALE_VERIFICATION'); }
-        catch (error) {
-          if (!missing(error)) throw error;
+        // The name is the digest of bytes just verified, so a file under it with other bytes (torn by a crash mid-write,
+        // or altered) is replaced, never trusted. Anything else wrong in the store is this machine's fault and defers.
+        let intact = false;
+        try { intact = hash(await capturedFile(destination, MAX_ARCHIVE)) === artifactSha256; }
+        catch (error) { if (!missing(error) && !(error instanceof Error && error.message === 'INPUT_LIMIT')) throw new Error('INSTALLATION_INVALID', { cause: error }); }
+        if (!intact) {
           let total = 0;
-          for (const name of await readdir(store)) { const info = await lstat(join(store, name)); if (!info.isFile() || info.isSymbolicLink()) throw new Error('ARTIFACT_INVALID', { cause: error }); total += info.size; }
-          if (total + bytes.length > 128 * 1024 ** 2) throw new Error('STORAGE_LIMIT', { cause: error });
-          await writeFile(destination, bytes, { flag: 'wx' });
+          for (const name of await readdir(store)) {
+            const info = await lstat(join(store, name)); if (!info.isFile() || info.isSymbolicLink()) throw new Error('INSTALLATION_INVALID');
+            if (name !== artifactSha256 + '.zip') total += info.size;
+          }
+          if (total + bytes.length > 128 * 1024 ** 2) throw new Error('STORAGE_LIMIT');
+          // Written in full and synced under work/ (swept at start), then renamed into place: the store never holds a partial file.
+          const temporary = join(await privateDirectory(join(this.config.storageRoot, 'work')), randomUUID() + '.zip');
+          try {
+            const handle = await open(temporary, 'wx');
+            try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
+            await rename(temporary, destination);
+          } finally { await rm(temporary, { force: true }); }
         }
         checkAbort(signal);
         const receipt = ReceiptSchema.parse({ id: randomUUID(), artifactSha256, artifactBytes: bytes.length, validatorRevision: VALIDATOR_REVISION, nodeSha256: this.config.nodeSha256, binding, state, researchReady });
