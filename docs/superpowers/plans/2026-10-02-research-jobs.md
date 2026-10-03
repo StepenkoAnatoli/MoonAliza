@@ -100,11 +100,36 @@ How it was tested:
 - Full Linux gate, cwd `/home/user/moonaliza`: 506 passed and 75 failed, all 75 on the Windows baseline, with no leftover temp directories.
 - The October 2 briefs on run reconciliation and artifact download (PRs #22, #23) were checked against this design. Digest verification and a run search after a 204 are kit changes, recorded as Research-Kit work. A secondary-limit 403 parks the job as a credentials problem until a status field exists.
 
+October 3, Task 3 part 2a, the supervisor and the guarded launch (committed; main wiring is next). The behaviour is specified in [research collection](../../specification/research-collection.md).
+- `src/main/collector.ts` (`CollectorSupervisor`), with `planStep` and `CollectorSettings` from the earlier commit. `ResearchKit.prepareCollector` shares the validator's `guardedRun`.
+- Tests:
+  - `tests/research-collector-supervisor.test.ts` (11): the real Store, ResearchJobs, ControlSchema and an AES vault, with a scripted kit replaying the real kit's goldens.
+  - `tests/research-kit-collector-launch.test.ts` (3): the real pinned kit, with a runner standing in for the helper.
+  - Ten mutations each turned a suite red.
+- Bugs found by testing and review, all fixed:
+  - `launch()` captured `started` before awaiting the child, so every dispatch read as HELPER_UNKNOWN.
+  - A withdrawn admission never reached the planner.
+  - A negative exit code formed an invalid cause (`KIT_EXIT_-n`).
+  - A grown runtime file failed as INPUT_LIMIT rather than INSTALLATION_INVALID.
+  - Two tests raced admission.
+- Linux gate, cwd `/home/user/moonaliza`: 554 passed, and the 75 failures are the Windows baseline.
+- Script follow-ups from the break test, landed with this part:
+  - the build empties `dist/` first;
+  - the Research Kit scripts run from the repository root;
+  - `exportSource` fetches a missing pin by SHA and uses `--git-dir`.
+
 ## Recorded for later (not in Task 2)
 
 - **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart; implement `research.collector.read/save`; re-pin Research-Kit to `bf60e21` or later for `--run-id`. Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
 - **Task 4:** the package manifest's `workflow` is always the literal `collect.yml` and its `ref` is the short `GITHUB_REF_NAME`, so they will not equal a configured `refs/heads/main` or another workflow file name; commit and run attempt are not returned by dispatch or `--json` and must come from the GitHub run (never from the package being validated); choose which project revision feeds the adapter's single `projectRevision`; record the job revision a receipt was bound to, because every transition bumps it. Implement `research.purge` with retained-byte deletion. Required verification fields go on `collecting -> collected`.
 - **Task 5:** add review edges (and retry edges such as `not_ready -> reviewing`), replace the `research_readiness_reserved` trigger with a digest-gated rule in a v4 migration, and stream `research.status` on the review run.
+- **Task 3, open from the spec review (October 3).** Decide each one; none can dispatch twice.
+  - `STOPPED` waits without counting toward the three pre-start attempts. The design counts it.
+  - A watch's `CREDENTIAL_DENIED` parks the job for credentials without checking whether the reference is still saved.
+  - A job held after a commit error leaves the owned map, so recovery after an engine-only restart may fail it. The design waits for the next app start, and a spooled run id is then dropped.
+  - A `collecting` job without `dispatchedAt` is treated as expired.
+  - The admission bound covers only `admit()`; the helper's own admission timer uses the launch timeout.
+  - `startInputBudget` in `COLLECTOR_LIMITS` is unused (`params.ts` has its own 12,000).
 - **Small follow-up:** `src/engine/policy.ts` throws `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema` (the contract code is `RESEARCH_NOT_ALLOWED`); research admission now uses the contract code, but the tool-policy path still surfaces as `INTERNAL_ERROR`.
 
 ## Next phase after research: missions
