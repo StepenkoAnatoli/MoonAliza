@@ -25,7 +25,7 @@ export async function readResearchInstallation(file: string): Promise<z.infer<ty
 /** One collector child: a staged, hash-checked kit and its own private folders. Main owns the token and the bounds. */
 export interface CollectorLaunch {
   readonly node: string; readonly script: string; readonly out: string;
-  start(args: readonly string[], env: Record<string, string>, options: { timeoutMs: number; maxOutputBytes: number; signal: AbortSignal; admit(): Promise<void>; onStarted(identity: OwnedIdentity): void }): Promise<OwnedResult>;
+  start(args: readonly string[], env: Record<string, string>, options: { timeoutMs: number; admissionTimeoutMs: number; maxOutputBytes: number; signal: AbortSignal; admit(): Promise<void>; onStarted(identity: OwnedIdentity): void }): Promise<OwnedResult>;
   /** The private temporary folder the child's environment must point at. */
   readonly temp: string;
   dispose(): Promise<void>;
@@ -106,10 +106,10 @@ export class ResearchKit {
    * held and before the child starts, then the caller's own admission check. The validator and the collector differ
    * only in argv, environment, bounds and whether hitting the output limit stops the child.
    */
-  private guardedRun(runtime: string, args: string[], cwd: string, env: Record<string, string>, bounds: { timeoutMs: number; maxOutputBytes: number; stopOnOutputLimit: boolean }, extra: { locks: string[]; check(): Promise<void> }, signal?: AbortSignal, onStarted?: (identity: OwnedIdentity) => void): Promise<OwnedResult> {
+  private guardedRun(runtime: string, args: string[], cwd: string, env: Record<string, string>, bounds: { timeoutMs: number; admissionTimeoutMs?: number; maxOutputBytes: number; stopOnOutputLimit: boolean }, extra: { locks: string[]; check(): Promise<void> }, signal?: AbortSignal, onStarted?: (identity: OwnedIdentity) => void): Promise<OwnedResult> {
     const files = inventory.files.map(file => join(runtime, file.path)); const node = this.config.nodePath;
     const task = this.run({ executable: node, args, cwd, env, timeoutMs: bounds.timeoutMs, maxOutputBytes: bounds.maxOutputBytes }, signal, {
-      readLocks: [node, ...extra.locks, ...files], stopOnOutputLimit: bounds.stopOnOutputLimit, ...(onStarted ? { onStarted } : {}),
+      readLocks: [node, ...extra.locks, ...files], stopOnOutputLimit: bounds.stopOnOutputLimit, ...(onStarted ? { onStarted } : {}), ...(bounds.admissionTimeoutMs === undefined ? {} : { admissionTimeoutMs: bounds.admissionTimeoutMs }),
       beforeStart: async () => {
         checkAbort(signal);
         // Node and the staged runtime are the installation: a file that grew, was swapped or was linked is not an input error.
@@ -206,7 +206,7 @@ export class ResearchKit {
     const temp = await privateDirectory(join(folder, 'temp')); const out = await privateDirectory(join(folder, 'out'));
     return {
       node: this.config.nodePath, script: join(runtime, 'bin/collect-remote.mjs'), out, temp,
-      start: (args, env, options) => this.guardedRun(runtime, [...args], folder, env, { timeoutMs: options.timeoutMs, maxOutputBytes: options.maxOutputBytes, stopOnOutputLimit: false }, { locks: [], check: options.admit }, options.signal, options.onStarted),
+      start: (args, env, options) => this.guardedRun(runtime, [...args], folder, env, { timeoutMs: options.timeoutMs, admissionTimeoutMs: options.admissionTimeoutMs, maxOutputBytes: options.maxOutputBytes, stopOnOutputLimit: false }, { locks: [], check: options.admit }, options.signal, options.onStarted),
       dispose: () => removeOwned(this.config.storageRoot, folder),
     };
   }

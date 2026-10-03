@@ -24,7 +24,7 @@ function runner(seen: Seen[], hold?: Promise<void>): OwnedRunner {
 }
 const make = (seen: Seen[], name: string, hold?: Promise<void>, patch: Partial<{ nodeSha256: string; kitRoot: string }> = {}) =>
   new ResearchKit({ kitRoot, nodePath: process.execPath, nodeSha256, storageRoot: join(root, name), helperPath: resolve('.build/native/MoonAlizaHost.exe'), ...patch }, runner(seen, hold));
-const options = (admit: () => Promise<void> = async () => {}) => ({ timeoutMs: 1000, maxOutputBytes: 4096, signal: new AbortController().signal, admit, onStarted: () => {} });
+const options = (admit: () => Promise<void> = async () => {}) => ({ timeoutMs: 1000, admissionTimeoutMs: 600, maxOutputBytes: 4096, signal: new AbortController().signal, admit, onStarted: () => {} });
 
 beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-collector-launch-')); nodeSha256 = createHash('sha256').update(await readFile(process.execPath)).digest('hex'); });
 afterAll(async () => { if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
@@ -45,6 +45,8 @@ test('a launch runs the staged collect-remote.mjs in its own folder, with the gu
     expect(resolve(request.cwd)).toBe(resolve(launch.out, '..'));
     // A watch's report arrives after the kit wrote its package: hitting the output limit must not kill it mid-write.
     expect(used.stopOnOutputLimit).toBe(false);
+    // The helper bounds the whole pre-start step (locks, rehash, admission) by this, not by the child's own timeout.
+    expect(used.admissionTimeoutMs).toBe(600);
     expect(used.readLocks![0]).toBe(process.execPath);
     expect(used.readLocks).toContain(launch.script);
     await launch.dispose();

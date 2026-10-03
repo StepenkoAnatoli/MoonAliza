@@ -363,7 +363,8 @@ export class CollectorSupervisor {
   /**
    * One launch attempt. The grant covers exactly this launch; the token is decrypted inside withSecret, put into the
    * child's environment block and revoked once the launch is handed over. admit() runs after the kit's read locks
-   * are held and before the child exists: a refusal there means no child ran.
+   * are held and before the child exists: a refusal there means no child ran. The helper bounds that whole pre-start
+   * step (locks, rehash, admit) by admissionMs; on expiry it ends without a child and the launch is not started.
    */
   private async launch(job: Job, ctx: ResearchContext, kind: 'dispatch' | 'watch', msLeft = 0): Promise<{ attempt: CollectorAttempt & { reason?: StopReason }; launch?: CollectorLaunch }> {
     const config = this.deps.settings.current(); const kit = this.deps.kit;
@@ -387,7 +388,7 @@ export class CollectorSupervisor {
       const grant = this.deps.vault.grant({ ...binding, expiresAt: this.now() + this.limits.grantMs });
       running = await this.deps.vault.withSecret(grant, binding, token => ({
         done: launch.start(args, collectorEnvironment(launch.temp, token), {
-          timeoutMs: bounds.ownedTimeoutMs, maxOutputBytes: kind === 'dispatch' ? this.limits.dispatchOutputBytes : this.limits.watchOutputBytes, signal: state.stop.signal,
+          timeoutMs: bounds.ownedTimeoutMs, admissionTimeoutMs: this.limits.admissionMs, maxOutputBytes: kind === 'dispatch' ? this.limits.dispatchOutputBytes : this.limits.watchOutputBytes, signal: state.stop.signal,
           admit: () => this.admit(job, state, ctx, kind, config),
           onStarted: () => { state.started = true; if (kind === 'dispatch') job.started = true; },
         }),

@@ -20,7 +20,7 @@ const roots: string[] = []; const closers: Array<() => Promise<unknown>> = [];
 afterEach(async () => { for (const close of closers.splice(0)) await close().catch(() => {}); for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
 
 type Kind = 'dispatch' | 'watch';
-interface Call { kind: Kind; args: string[]; env: Record<string, string>; out: string; signal: AbortSignal }
+interface Call { kind: Kind; args: string[]; env: Record<string, string>; out: string; signal: AbortSignal; admissionTimeoutMs: number }
 type Script = (call: Call) => Promise<OwnedResult>;
 /** The real kit's recorded output for a scenario, with the fixture clientRef swapped for the job's. */
 function replay(name: string, clientRef?: string, signal?: AbortSignal): OwnedResult {
@@ -62,8 +62,8 @@ async function harness(script: Script, options: { fault?(control: Control): Prom
       await mkdir(out); await mkdir(temp);
       return {
         node: process.execPath, script: resolve('/kit/bin/collect-remote.mjs'), out, temp,
-        start: async (args: readonly string[], env: Record<string, string>, o: { signal: AbortSignal; admit(): Promise<void>; onStarted(id: { pid: number; createdAt: string }): void }) => {
-          const call: Call = { kind: args.includes('--no-wait') ? 'dispatch' : 'watch', args: [...args], env, out, signal: o.signal };
+        start: async (args: readonly string[], env: Record<string, string>, o: { signal: AbortSignal; admissionTimeoutMs: number; admit(): Promise<void>; onStarted(id: { pid: number; createdAt: string }): void }) => {
+          const call: Call = { kind: args.includes('--no-wait') ? 'dispatch' : 'watch', args: [...args], env, out, signal: o.signal, admissionTimeoutMs: o.admissionTimeoutMs };
           calls.push(call);
           await o.admit();
           o.onStarted({ pid: 1, createdAt: '1' });
@@ -116,6 +116,8 @@ test('a queued job is dispatched once, watched, and handed to import with the en
   expect(Object.keys(h.calls[0]!.env).sort()).toEqual(['HOME', 'RESEARCH_KIT_GITHUB_TOKEN', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE', ...(process.env.SystemRoot ? ['SystemRoot'] : [])].sort());
   expect(h.calls[0]!.env.RESEARCH_KIT_GITHUB_TOKEN).toBe(TOKEN);
   expect(h.calls[1]!.args).toContain('--run-id=1');
+  // The whole pre-start step is bounded by admissionMs (60 s), for a dispatch and for a watch alike.
+  expect(h.calls.map(c => c.admissionTimeoutMs)).toEqual([60_000, 60_000]);
   expect(h.handoffs[0]).toMatchObject({ researchId: job.id, workflowRunId: '1', kit: { status: 'PASS', state: 'REVIEW_IN_PROGRESS' } });
   expect(h.handoffs[0]!.file.endsWith(packageFileName(job.clientRef))).toBe(true);
   expect(JSON.stringify(h.controls)).not.toContain(TOKEN);

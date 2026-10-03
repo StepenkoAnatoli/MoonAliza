@@ -35,7 +35,7 @@ Every launch goes through the guarded run that the validator also uses. The nati
 - the saved settings changed repository or token reference (and, for a dispatch, workflow or ref) (`COLLECTOR_CHANGED`);
 - the vault no longer has the token (`CREDENTIAL_DENIED`).
 
-The check is raced against `admissionMs` (60 s); if it does not finish in time it fails with `ADMISSION_REFUSED`.
+The check is raced against `admissionMs` (60 s); if it does not finish in time it fails with `ADMISSION_REFUSED`. The whole pre-start step (taking the locks, the rehash and `admit()`) is also bounded by `admissionMs`: the launch passes it as `admissionTimeoutMs`, and the helper's admission timer uses it (never more than the owned timeout) instead of the owned timeout. On expiry main closes the helper's input before sending the go byte; the helper ends with `ADMISSION_CANCELLED` and no child, which classifies as `notLaunched` (`LAUNCH_FAILED`, counted). So stalled admission never holds the kit's read locks for a watch's owned timeout of up to an hour.
 
 `sweep()` runs at start, before any launch, and removes `runtime`, `work` and `collect` left by a crash. It throws `KIT_BUSY` if a runtime is staged or a launch is live. `close()` waits for every launched child before it deletes the staged runtime.
 
@@ -50,7 +50,7 @@ All limits are in `COLLECTOR_LIMITS`, except the start input budget, which is `R
 | Watch kit `--timeout` | `min(1500, whole seconds left before the deadline)`, at least 1 (`watchBounds`) |
 | Watch owned timeout | kit seconds × 1000 + 300 s, at most 3,600 s |
 | Watch output cap | 4 MiB (`watchOutputBytes`) |
-| Admission check | 60 s (`admissionMs`) |
+| Admission check, and the whole pre-start step | 60 s each (`admissionMs`) |
 | Command line | at most 32,766 characters (`maxCommandLine`; `commandLineFits`) |
 | Start input budget | 12,000 characters of topic, queries, URLs and joined preferred domains (`RESEARCH_INPUT_BUDGET`). An early refusal only: at the budget, with every topic and query character escaped and the longest targets, the dispatch command line still fits; `commandLineFits` stays authoritative |
 | Not-started launches before giving up | 3 (`preStartAttempts`) |
@@ -359,7 +359,6 @@ Transient and park causes use the same names but are not recorded; the job stays
 
 - `classifyWatch` takes `job.pastRetention`, as the October 2 adjustment asks: `NO_ARTIFACT` past retention is `ARTIFACT_EXPIRED`. The supervisor passes `false`. The watch deadline is 7 days from dispatch, and the artifact's retention is 7 days from its upload, which comes after dispatch. So a watch can never see an expired artifact, and in the driver `NO_ARTIFACT` gives `ARTIFACT_MISSING`. A longer deadline would have to compute this.
 - `start` on `CollectorLaunch` takes a built environment, not a token; main builds it with `collectorEnvironment`. The launch exposes `temp` and has no `cwd` field.
-- The design bounds the whole pre-start step at 60 s. The code bounds only the `admit()` check at 60 s; the helper's own admission timer uses the launch's owned timeout.
 - In table A the supervisor also lets `STOPPED` wait without counting; the design lists only `HELD` and `ENGINE_UNAVAILABLE`.
 - In table B, in the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
 - The design does not list the supervisor's pre-admission refusals (`COLLECTOR_NOT_CONFIGURED`, `NO_COLLECTOR`, `NO_TOKEN`, `NO_INSTALLATION`, `COMMAND_LINE`) or the `NOT_OWNED_DISPATCH` cause.
