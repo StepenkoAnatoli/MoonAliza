@@ -2,7 +2,10 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { exportSource, inventory, revision } from './research-kit-source.mjs';
+// Paths below are repository-relative: run from the repository root whatever the caller's cwd.
+process.chdir(fileURLToPath(new URL('../', import.meta.url)));
 const repo = resolve('.build/research-kit-pin');
 if (!existsSync(repo)) execFileSync('git', ['-c', 'core.longpaths=true', 'clone', '--no-checkout', 'https://github.com/StepenkoAnatoli/Research-Kit.git', repo], { stdio: 'inherit', windowsHide: true });
 // A clone made before the pin moved may not contain the pinned commit: fetch rather than fail.
