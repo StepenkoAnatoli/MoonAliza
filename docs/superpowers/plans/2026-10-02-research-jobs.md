@@ -183,6 +183,8 @@ Proposed design (local, not the hosted service, consistent with local-first priv
 - **Trust:** memory steers future runs, so entries derived from untrusted content (GitHub files, web or research captures) stay proposed until the user accepts them; imported text never becomes an instruction. The user can view, edit and delete every record. Project cloud policy applies whenever memory is sent to a cloud model.
 - **Order (confirmed by the user, October 2):** research phase, then project memory, then missions, because mission agents need this shared state for handoffs.
 
+**Specification (October 3):** [project memory](../../specification/project-memory.md) turns this proposal into an implementation-ready design: the data model, the schema step, IPC methods, how runs read the brief, privacy and retention, acceptance tests, nine commit-sized tasks, rejected alternatives and six open product questions with recommendations. Nothing is implemented yet.
+
 ## Decisions recorded October 2
 
 These are user decisions; later phases implement them.
