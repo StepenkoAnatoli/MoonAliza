@@ -329,8 +329,21 @@ test('a watch the vault refuses while the reference is still saved retries, park
   await until(() => launches === 4);
   await new Promise(r => setTimeout(r, 100));
   expect(launches).toBe(4); expect(again.handoffs).toHaveLength(0); expect(again.store.getResearch(other.id)!.status).toBe('collecting');
-  stale = () => false; again.supervisor.configChanged();
+  // A save re-arms it with a fresh count: one more refusal retries instead of parking again at once.
+  stale = n => n === 5; again.supervisor.configChanged();
   await until(() => again.handoffs.length === 1);
+  expect(launches).toBe(6);
+});
+
+test('refusals separated by watches that ran do not add up: three over the job\'s life never park it', async () => {
+  // One stale-epoch refusal per engine-only restart, each followed by a watch that started and found the run still going.
+  let launches = 0; let watches = 0;
+  const h = await harness(async call => { if (call.kind === 'dispatch') return replay('dispatch-ok'); return ++watches < 3 ? replay('watch-timeout') : happy(call); },
+    { epoch: () => [2, 4, 6].includes(++launches) ? 'epoch-2' : 'epoch-1' });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.handoffs.length === 1);
+  expect(launches).toBe(7); expect(watches).toBe(3);
 });
 
 test('a watch whose token is no longer in the vault parks for credentials at once, and a new token re-arms it', async () => {

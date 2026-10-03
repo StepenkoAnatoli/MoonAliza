@@ -145,7 +145,7 @@ October 3, the six spec-review items: five fixed in `src/main/collector.ts` (wit
 - **Task 5:** add review edges (and retry edges such as `not_ready -> reviewing`), replace the `research_readiness_reserved` trigger with a digest-gated rule in a v4 migration, and stream `research.status` on the review run.
 - **Task 3, from the spec review (October 3): decided.** None can dispatch twice. The [collection spec](../../specification/research-collection.md) describes each resolved behaviour, and its "Differences from the design" keeps the one kept item.
   - Resolved: a `collecting` job without a readable `dispatchedAt` is watched against `createdAt` + 7 days instead of expiring at once.
-  - Resolved: a watch's `CREDENTIAL_DENIED` parks for credentials at once only when the reference is gone from the settings or the vault; with it still saved the refusal counts, and parks after three.
+  - Resolved: a watch's `CREDENTIAL_DENIED` parks for credentials at once only when the reference is gone from the settings or the vault; with it still saved the refusal counts, and parks after three in a row (a watch that started, or a park, restarts the watch count; dispatch refusals do not carry into it).
   - Resolved: the start input budget is `RESEARCH_INPUT_BUDGET` in `src/shared/params.ts`; `COLLECTOR_LIMITS.startInputBudget` is removed.
   - Resolved: the helper's admission timer takes `admissionMs`, so the whole pre-start step is bounded at 60 s.
   - Resolved: a job held after a commit error stays in `ownedIds()` until the next app start, so recovery after an engine-only restart (or at attach, after a failed replay) cannot fail it and drop its spooled run id.

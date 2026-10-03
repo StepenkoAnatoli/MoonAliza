@@ -272,7 +272,8 @@ export class CollectorSupervisor {
   // ---------------------------------------------------------------- the driver
 
   private async drive(job: Job): Promise<void> {
-    let notStarted = 0; let transient = 0;
+    // notStarted counts the dispatch's refusals; refused counts watches refused in a row, so one that ran or a park restarts it.
+    let notStarted = 0; let refused = 0; let transient = 0;
     for (;;) {
       if (job.held) return;
       const ctx = await this.read(job.id); if (!ctx) return;
@@ -319,14 +320,16 @@ export class CollectorSupervisor {
         const pkg = launch ? await packageCheck(launch.out, ctx.research.clientRef).catch(() => 'unexpected' as const) : 'absent';
         // Never past retention here: the deadline (7 days from dispatch) ends no later than the artifact's 7 days from upload.
         const outcome = classifyWatch(attempt, { clientRef: ctx.research.clientRef, pastRetention: false }, pkg);
+        if (outcome.kind !== 'notLaunched') refused = 0;
         switch (outcome.kind) {
           case 'notLaunched':
             if (outcome.refusal === 'INSTALLATION_INVALID') job.park = 'kit';
             // Only a reference that is gone waits for a save at once. A refusal with it still saved (a grant under an epoch
             // that just changed, encryption briefly unavailable) counts like any refusal, and parks the same way if it persists.
-            else if (outcome.refusal === 'CREDENTIAL_DENIED') { if (!(await this.tokenSaved()) || ++notStarted >= this.limits.preStartAttempts) job.park = 'credentials'; else await this.pause(job, this.retry); }
-            else if (!waits(outcome.refusal) && ++notStarted >= this.limits.preStartAttempts) job.park = 'kit';
-            else await this.pause(job, this.retry);
+            else if (outcome.refusal === 'CREDENTIAL_DENIED' && !(await this.tokenSaved())) job.park = 'credentials';
+            else if (waits(outcome.refusal) || ++refused < this.limits.preStartAttempts) await this.pause(job, this.retry);
+            else job.park = outcome.refusal === 'CREDENTIAL_DENIED' ? 'credentials' : 'kit';
+            if (job.park) refused = 0;
             break;
           case 'package': {
             const handoff: PackageHandoff = { researchId: job.id, projectId: job.projectId, expectedRevision: ctx.research.revision, projectRevision: ctx.research.policyRevision, clientRef: ctx.research.clientRef,
