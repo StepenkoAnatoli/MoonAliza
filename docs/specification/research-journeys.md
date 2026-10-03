@@ -8,11 +8,11 @@ The collector child gets a minimal environment (`collectorEnvironment` in `src/a
 
 ## Designs considered
 
-1. **A production switch** (an environment variable or command-line flag read by main, perhaps only when `app.isPackaged` is false). Rejected. The desktop tests also run against the packaged build (`MOONALIZA_TEST_EXECUTABLE` in `.github/workflows/windows.yml`), so a switch that worked there would be in the shipped app, and one that did not would leave the packaged run without these journeys. Either way production would carry a code path that adds a CA to a child that holds the GitHub token.
+1. **A production switch** (an environment variable or command-line flag read by main, perhaps only when `app.isPackaged` is false). Rejected. The desktop tests also run against the packaged build (`MOONALIZA_TEST_EXECUTABLE` in `.github/workflows/windows.yml`), so a switch that worked there would be in the shipped app. Either way the shipped code would carry a path that adds a CA to a child that holds the GitHub token. (The chosen harness cannot cover the packaged run either; see below.)
 2. **A separate test build** with the hook compiled in. Rejected: the packaged run would test a different `dist` from the one shipped, and it needs a second build in CI.
 3. **A test-supplied Node in `installation.json`** (a wrapper that sets the variables). Rejected: `nodePath` must be an executable that `CreateProcessW` runs and whose hash the installation records; a wrapper executable would have to be built per platform, and the journeys would no longer run the user's kind of Node.
 4. **Patching main from Playwright after launch** (`app.evaluate`, as `e2e/github-reading.spec.ts` replaces `fetch`). Rejected as the only mechanism: Playwright holds the `ready` event until it attaches, but main's startup continues as soon as it is released, and after a restart the adopted job's watch can launch before an `evaluate` lands. That watch would reach the real api.github.com with the test token.
-5. **A test preload loaded with Electron's `-r`** (chosen). Electron runs a `-r` module in main before the app's own code; Playwright starts every app, packaged or not, the same way with its own loader. `e2e/fixtures/collector-network.cjs` is that module.
+5. **A test preload loaded with Electron's `-r`** (chosen). Electron's `default_app` runs a `-r` module in main before it loads the app, which is how Playwright adds its own loader to the unpackaged app. `e2e/fixtures/collector-network.cjs` is that module. **This works only for the unpackaged app.** A packaged executable such as `release/win-unpacked/MoonAliza.exe` loads `resources/app.asar` and never runs `default_app`, so it ignores `-r`. Playwright also adds its loader only when no `executablePath` is given (`playwright-core/lib/coreBundle.js`, the `-r loader.js` unshift sits in the branch without `executablePath`). So the journeys do not run in the packaged `workflow_dispatch` run; see "Packaged runs" below.
 
 ## The chosen harness
 
@@ -31,6 +31,12 @@ Why this does not weaken production:
 
 The coupling to the helper protocol is deliberate and tested: `tests/research-journeys-network.test.ts` runs the preload against the real `spawnOwned` encoder (with the helper replaced by a recording child), so a protocol change turns that test red on any OS.
 
+## Packaged runs
+
+`e2e/research-journeys.spec.ts` skips its tests when `MOONALIZA_TEST_EXECUTABLE` is set. Run against a packaged executable, the preload would not load, the harness check would fail, and the journeys' collector would get no proxy and no CA, so it would send the test token to the real api.github.com. Every journey also fails closed: `launch()` reads `globalThis.__moonalizaE2eCollectorNetwork` straight after launch, before the journey saves the token or starts a job. If the preload is missing, `launch()` kills the app and throws `E2E_HARNESS_MISSING`. A restart uses the same command line, which its first launch already proved.
+
+Covering the packaged app would need a mechanism that a packaged executable honours, such as a `NODE_OPTIONS=--require` preload where the build's fuses allow it. That is a decision about what the packaged run must prove, so it is left open and not built here.
+
 ## The journeys (`e2e/research-journeys.spec.ts`)
 
 Each journey gets its own data folder with an `installation.json` naming the prepared pinned kit (`.build/research-kit-external/research-kit`) and the test runner's Node with its SHA-256, its own fake GitHub and a trusted project whose policy allows `public-technical` research. The collector is saved through `research.collector.save` and the job is started through `research.start`. The fake keeps the run `in_progress` until the journey changes it.
@@ -41,11 +47,12 @@ Each journey gets its own data folder with an `installation.json` naming the pre
 
 ## Verification
 
-Exact-head Windows CI (`npm run test:e2e`, unpackaged, and again on the packaged app for a `workflow_dispatch` run) is the acceptance check for journeys 2 and 3: they need the native helper, because `spawnOwned` refuses other platforms (`WINDOWS_REQUIRED`) and project trust inspects the path through the helper.
+Exact-head Windows CI (`npm run test:e2e`, unpackaged; the packaged `workflow_dispatch` run skips this file) is the acceptance check for journeys 2 and 3: they need the native helper, because `spawnOwned` refuses other platforms (`WINDOWS_REQUIRED`) and project trust inspects the path through the helper.
 
 What ran on Linux (Node 24.21.0, Electron 44.4.5, under `dbus-run-session -- xvfb-run -a`, with `MOONALIZA_E2E_ELECTRON_ARGS=--no-sandbox` because Electron runs as root there; Playwright's loader already adds `--password-store=basic`):
 
-- `npx playwright test e2e/research-journeys.spec.ts`: the harness check passed; journeys 2 and 3 were skipped by their platform condition. Removing the preload's `delete process.env[...]` turned the harness check red.
+- `npx playwright test e2e/research-journeys.spec.ts`: the harness check passed; journeys 2 and 3 were skipped by their platform condition. Removing the preload's `delete process.env[...]` turned the harness check red. With `-r` removed from the launch and the platform skip removed, all three tests failed at launch with `E2E_HARNESS_MISSING`, before any token was saved.
+- The packaged case was reproduced with a packaged-layout Electron: a copy of `node_modules/electron/dist` without `default_app.asar`, with the app in `resources/app`. Run as `MOONALIZA_TEST_EXECUTABLE`, the previous spec failed its harness check because the preload state was `null`. The current spec skips all three tests.
 - `tests/research-journeys-network.test.ts` (4 tests) passed. Mutations each turned it red: not adding the variables, dropping the guard list, accepting an environment that already carries a variable, accepting a non-loopback proxy, not ending the helper's input on a refusal, comparing variable names case-sensitively (a lowercase `https_proxy`), and not recording a collector launch's outcome.
 - Outside the committed tests, the journey's network steps were run against the real pinned kit without the app: a dispatch with `collectorEnvironment` plus the two variables classified as `dispatched` with run id 1, with one exact-token POST whose `inputs.client_ref` was the job's and one CONNECT to `api.github.com:443`; a package made by the kit's producer for an `mz-` client ref, served after an `in_progress` poll, classified as `package`.
 

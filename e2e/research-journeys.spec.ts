@@ -20,6 +20,10 @@ const RUN = `/repos/${FAKE_REPOSITORY}/actions/runs/1`;
 type Bridge = { moonaliza: { invoke(method: string, params?: unknown): Promise<unknown> } };
 type Job = { id: string; status: string; clientRef: string; workflowRunId?: string; failure?: string };
 const invoke = <T>(page: Page, method: string, params?: unknown) => page.evaluate(([m, p]) => (window as unknown as Bridge).moonaliza.invoke(m as string, p), [method, params] as const) as Promise<T>;
+// Electron's -r is handled by its default_app, which a packaged executable does not run (and Playwright adds its own
+// -r loader only without an executablePath). Against MOONALIZA_TEST_EXECUTABLE the harness cannot load, and the
+// collector would reach the real api.github.com, so this file runs only against the unpackaged app.
+test.skip(Boolean(process.env.MOONALIZA_TEST_EXECUTABLE), 'The -r harness cannot load into a packaged executable');
 // Linux only, for a local run (as root Electron needs --no-sandbox): never committed as unconditional arguments.
 const localArgs = process.platform === 'linux' ? (process.env.MOONALIZA_E2E_ELECTRON_ARGS ?? '').split(' ').filter(Boolean) : [];
 
@@ -42,12 +46,20 @@ async function journey(name: string) {
   const fake = await startFakeGitHub(TOKEN);
   // The run stays in progress until a journey says otherwise, so every watch is mid-collection.
   fake.set({ runStatus: 'in_progress', conclusion: null });
-  const packaged = process.env.MOONALIZA_TEST_EXECUTABLE;
-  const launch = () => electron.launch({
-    ...(packaged ? { executablePath: packaged } : {}),
-    args: [...localArgs, '-r', PRELOAD, ...(packaged ? [] : [resolve('.')]), `--user-data-dir=${data}`],
-    env: { ...process.env, MOONALIZA_E2E_COLLECTOR_NETWORK: JSON.stringify({ HTTPS_PROXY: fake.proxyUrl, NODE_EXTRA_CA_CERTS: TEST_CA }) },
-  });
+  // Fails closed: an app without the harness is killed before a journey saves the token or starts a job. A restart
+  // uses the same command line its first launch proved.
+  const launch = async () => {
+    const app = await electron.launch({
+      args: [...localArgs, '-r', PRELOAD, resolve('.'), `--user-data-dir=${data}`],
+      env: { ...process.env, MOONALIZA_E2E_COLLECTOR_NETWORK: JSON.stringify({ HTTPS_PROXY: fake.proxyUrl, NODE_EXTRA_CA_CERTS: TEST_CA }) },
+    });
+    if (await network(app) === null) {
+      const main = app.process(); const exited = new Promise(done => main.once('exit', done));
+      main.kill(); await exited;
+      throw new Error('E2E_HARNESS_MISSING: the collector network preload did not load');
+    }
+    return app;
+  };
   return { root, data, project, fake, launch };
 }
 
