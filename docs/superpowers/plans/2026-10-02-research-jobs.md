@@ -132,18 +132,24 @@ October 3, Task 4 part 1, verified import. The behaviour is specified in [resear
 - Linux gate, cwd the team worktree, Node 24.21.0: typecheck and lint clean. Full suite 652 tests: 577 pass, and the 75 failures are exactly the Windows baseline.
 - Found in passing, not changed here: the supervisor never disposes a dispatch launch's folder (`storage/collect/<uuid>`), so it stays until the next start's sweep.
 
+October 3, the six spec-review items: five fixed in `src/main/collector.ts` (with `src/tools/commands.ts` and the adapter for the admission bound, `src/shared/params.ts` for the budget), one kept and justified, each its own commit.
+- Each fix has a test that failed first, except the budget refactor (no behaviour change), whose test was shown to fail under mutation instead. Every new test was also turned red by at least one deliberate mutation.
+- The stale-epoch test reproduces a real gap: a watch launched between an engine-only restart and the vault's new epoch was refused although the token was saved, and waited for a user's save.
+- Linux gate, cwd the team worktree: typecheck and lint clean; full suite 644 tests, 569 passed and the 75 failures are exactly the Windows baseline; `tests/research-collector-supervisor.test.ts` (15) passed 20 times in 20 runs.
+- Not verifiable on Linux: the helper's admission timer itself (`spawnOwned`); exact-head Windows CI is its check.
+
 ## Recorded for later (not in Task 2)
 
 - **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart; implement `research.collector.read/save`; re-pin Research-Kit to `bf60e21` or later for `--run-id`. Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
 - **Task 4 (part 1 resolved October 3; purge open):** the package manifest's `workflow` is always the literal `collect.yml` and its `ref` is the short `GITHUB_REF_NAME`, so they will not equal a configured `refs/heads/main` or another workflow file name; commit and run attempt are not returned by dispatch or `--json` and must come from the GitHub run (never from the package being validated); choose which project revision feeds the adapter's single `projectRevision`; record the job revision a receipt was bound to, because every transition bumps it. Implement `research.purge` with retained-byte deletion. Required verification fields go on `collecting -> collected`.
 - **Task 5:** add review edges (and retry edges such as `not_ready -> reviewing`), replace the `research_readiness_reserved` trigger with a digest-gated rule in a v4 migration, and stream `research.status` on the review run.
-- **Task 3, open from the spec review (October 3).** Decide each one; none can dispatch twice.
-  - `STOPPED` waits without counting toward the three pre-start attempts. The design counts it.
-  - A watch's `CREDENTIAL_DENIED` parks the job for credentials without checking whether the reference is still saved.
-  - A job held after a commit error leaves the owned map, so recovery after an engine-only restart may fail it. The design waits for the next app start, and a spooled run id is then dropped.
-  - A `collecting` job without `dispatchedAt` is treated as expired.
-  - The admission bound covers only `admit()`; the helper's own admission timer uses the launch timeout.
-  - `startInputBudget` in `COLLECTOR_LIMITS` is unused (`params.ts` has its own 12,000).
+- **Task 3, from the spec review (October 3): decided.** None can dispatch twice. The [collection spec](../../specification/research-collection.md) describes each resolved behaviour, and its "Differences from the design" keeps the one kept item.
+  - Resolved: a `collecting` job without a readable `dispatchedAt` is watched against `createdAt` + 7 days instead of expiring at once.
+  - Resolved: a watch's `CREDENTIAL_DENIED` parks for credentials at once only when the reference is gone from the settings or the vault; with it still saved the refusal counts, and parks after three.
+  - Resolved: the start input budget is `RESEARCH_INPUT_BUDGET` in `src/shared/params.ts`; `COLLECTOR_LIMITS.startInputBudget` is removed.
+  - Resolved: the helper's admission timer takes `admissionMs`, so the whole pre-start step is bounded at 60 s.
+  - Resolved: a job held after a commit error stays in `ownedIds()` until the next app start, so recovery after an engine-only restart (or at attach, after a failed replay) cannot fail it and drop its spooled run id.
+  - Kept: `STOPPED` waits without counting; it only follows the supervisor's own stop, and counting it would let user holds fail a job.
 - **Small follow-up:** `src/engine/policy.ts` throws `RESEARCH_DISABLED`, which is not in `ErrorCodeSchema` (the contract code is `RESEARCH_NOT_ALLOWED`); research admission now uses the contract code, but the tool-policy path still surfaces as `INTERNAL_ERROR`.
 
 ## Next phase after research: missions
