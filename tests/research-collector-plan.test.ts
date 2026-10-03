@@ -12,6 +12,8 @@ const at = '2026-10-02T00:00:00.000Z';
 const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(s => s.close()); roots.splice(0).forEach(p => rmSync(p, { recursive: true, force: true })); });
 const target = { collectorRevision: 1, repository: 'owner/collector', workflow: 'collect.yml', ref: 'main' };
+const verification = (jobRevision: number) => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
+  jobRevision, projectRevision: 1, repository: 'owner/collector', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, downloadDigest: 'unverified' as const });
 const policy = (revision: number, research: 'off' | 'public-technical' = 'public-technical') => ({ revision, inference: 'local-only' as const, research });
 
 type Start = 'queued' | 'dispatching' | 'collecting' | 'cancelling-before-run' | 'cancelling-with-run' | 'collected' | 'failed' | 'cancelled';
@@ -32,7 +34,7 @@ function setup(start: Start, change: Change = 'none') {
       else if (start !== 'dispatching') {
         move('collecting', 'main', { workflowRunId: '41' });
         if (start === 'cancelling-with-run') move('cancelling', 'user');
-        if (start === 'collected') move('collected');
+        if (start === 'collected') move('collected', 'main', { verification: verification(3) });
       }
     }
   }
@@ -64,6 +66,10 @@ const EXPECTED: Array<[string, Start, Change, Outcome, string | undefined, Retur
   ['collecting + runFailed fails', 'collecting', 'none', { kind: 'runFailed', failure: 'RUN_FAILED', cause: 'RUN_FAILURE' }, undefined, T('failed', 'RUN_FAILURE', { failure: 'RUN_FAILED' })],
   ['collecting past the deadline expires', 'collecting', 'none', { kind: 'expired' }, undefined, T('failed', 'WATCH_DEADLINE', { failure: 'COLLECTION_EXPIRED' })],
   ['collecting continues while nothing is final', 'collecting', 'none', continuing, undefined, { kind: 'continue' }],
+  ['collecting + verified records the verification on collected', 'collecting', 'none', { kind: 'verified', verification: verification(3) }, undefined, T('collected', 'PACKAGE_VERIFIED', { verification: verification(3) })],
+  ['collecting + a verification bound to another revision records nothing', 'collecting', 'none', { kind: 'verified', verification: verification(2) }, undefined, { kind: 'continue' }],
+  ['collecting + rejected fails with the import failure', 'collecting', 'none', { kind: 'rejected', failure: 'PACKAGE_IDENTITY_MISMATCH', cause: 'IMPORT_IDENTITY_MISMATCH' }, undefined, T('failed', 'IMPORT_IDENTITY_MISMATCH', { failure: 'PACKAGE_IDENTITY_MISMATCH' })],
+  ['collecting + verified after a trust change fails instead', 'collecting', 'trust', { kind: 'verified', verification: verification(3) }, undefined, T('failed', 'ADMISSION_CHANGED', { failure: 'TRUST_CHANGED' })],
   ['collecting after a policy change fails whatever the outcome', 'collecting', 'policy', continuing, undefined, T('failed', 'ADMISSION_CHANGED', { failure: 'POLICY_CHANGED' })],
   ['a cancel that raced the dispatch keeps the learned run', 'cancelling-before-run', 'none', { kind: 'dispatched', workflowRunId: '77' }, undefined, T('cancelled', 'COLLECTOR_STOPPED', { workflowRunId: '77' })],
   ['a cancel over an ambiguous dispatch says so', 'cancelling-before-run', 'none', { kind: 'ambiguous', cause: 'KIT_NETWORK' }, undefined, T('cancelled', 'COLLECTOR_STOPPED', { failure: 'REMOTE_STATE_UNKNOWN' })],

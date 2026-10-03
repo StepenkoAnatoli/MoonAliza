@@ -15,6 +15,7 @@ import { Engine } from './engine';
 import { Vault } from './vault';
 import { CollectorSettings } from './collector-settings';
 import { CollectorSupervisor } from './collector';
+import { packageImporter } from './research-import';
 import { ResearchKit, readResearchInstallation } from '../adapters/research-kit/adapter';
 import { ProjectTickets } from './projects';
 import { createBridge } from './bridge';
@@ -115,6 +116,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
   const supervisor = new CollectorSupervisor({
     control: control => { if (!engine) throw new Error('ENGINE_UNAVAILABLE'); return engine.control(control); },
     epoch: () => engine?.epoch ?? '', vault, settings: collectorSettings, kit: researchKit, spoolDirectory: join(researchData, 'runs'),
+    // Verified import: the run's commit and attempt from GitHub (token through a 30-second grant), then the pinned validator.
+    importPackage: packageImporter({ epoch: () => engine?.epoch ?? '', vault, settings: collectorSettings, kit: researchKit }),
   });
   collector = supervisor;
   collectorSettings.attach({ busy: () => supervisor.busy(), credentialsChanged: () => supervisor.credentialsChanged(), configChanged: () => supervisor.configChanged() });

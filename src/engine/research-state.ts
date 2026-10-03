@@ -21,7 +21,7 @@ export const RESEARCH_EDGES: Readonly<Partial<Record<StoreResearchStatus, Partia
     cancelling: { actors: ['user'] },
   },
   collecting: {
-    collected: { actors: ['main'] },
+    collected: { actors: ['main'], requires: ['verification'] },
     failed: { actors: ['main'], requires: ['failure'] },
     cancelling: { actors: ['user'] },
   },
@@ -37,4 +37,6 @@ export function assertResearchEdge(existing: StoreResearch, to: StoreResearchSta
   for (const key of edge.requires ?? []) if (patch[key] === undefined) throw new Error('RESEARCH_TRANSITION_INVALID');
   for (const [key, value] of Object.entries(patch)) if (value === undefined || !permitted.has(key as keyof StoreResearchPatch)) throw new Error('RESEARCH_TRANSITION_INVALID');
   if (patch.workflowRunId !== undefined && existing.workflowRunId !== undefined) throw new Error('RESEARCH_TRANSITION_INVALID');
+  // A receipt is bound to the job revision it was validated at and to the admitted policy revision; any other is stale.
+  if (patch.verification && (patch.verification.jobRevision !== existing.revision || patch.verification.projectRevision !== existing.policyRevision)) throw new Error('RESEARCH_TRANSITION_INVALID');
 }

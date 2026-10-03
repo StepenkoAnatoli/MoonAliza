@@ -14,17 +14,22 @@ import type { CollectorConfig } from './collector-settings';
 import type { Vault } from './vault';
 
 export interface CollectorKit { prepareCollector(signal?: AbortSignal): Promise<CollectorLaunch> }
-/** What Task 4's verified import receives. The run id is the engine's, never the kit's; the file is recomputed by main. */
+/**
+ * What the verified import receives. The run id, revisions and target are the engine's, never the kit's; the file is
+ * recomputed by main. `projectRevision` is the policy revision the job was admitted under.
+ */
 export interface PackageHandoff {
-  researchId: string; projectId: string; expectedRevision: number; clientRef: string; target: CollectorTarget; workflowRunId: string;
+  researchId: string; projectId: string; expectedRevision: number; projectRevision: number; clientRef: string; target: CollectorTarget; workflowRunId: string;
   file: string; kit: { status: 'PASS'; state: 'REVIEW_REQUIRED' | 'REVIEW_IN_PROGRESS' | 'PREFLIGHT_BLOCKED' }; signal: AbortSignal;
 }
+/** `deferred`: nothing is known about the package (no kit, no token, GitHub or the validator unavailable, stopped). */
+export type ImportOutcome = Extract<Outcome, { kind: 'verified' | 'rejected' }> | { kind: 'deferred' };
 export interface CollectorDeps {
   control(control: Control): Promise<unknown>; epoch(): string;
   vault: Pick<Vault, 'grant' | 'withSecret' | 'revokeContext' | 'has'>;
   settings: { current(): CollectorConfig | null };
   kit: CollectorKit | null; spoolDirectory: string;
-  importPackage?(handoff: PackageHandoff): Promise<'imported' | 'deferred'>;
+  importPackage?(handoff: PackageHandoff): Promise<ImportOutcome>;
   limits?: Partial<CollectorLimits>; now?(): number; sleep?(ms: number, signal: AbortSignal): Promise<void>;
   /** Pause before re-checking a refused or held launch (default 1 s). */
   retryDelayMs?: number;
@@ -316,11 +321,14 @@ export class CollectorSupervisor {
             else await this.pause(job, this.retry);
             break;
           case 'package': {
-            const handoff: PackageHandoff = { researchId: job.id, projectId: job.projectId, expectedRevision: ctx.research.revision, clientRef: ctx.research.clientRef,
+            const handoff: PackageHandoff = { researchId: job.id, projectId: job.projectId, expectedRevision: ctx.research.revision, projectRevision: ctx.research.policyRevision, clientRef: ctx.research.clientRef,
               target: { collectorRevision: ctx.research.collectorRevision!, repository: ctx.research.repository!, workflow: ctx.research.workflow!, ref: ctx.research.ref! },
               workflowRunId: ctx.research.workflowRunId!, file: join(launch!.out, packageFileName(ctx.research.clientRef)), kit: { status: 'PASS', state: outcome.state }, signal: job.wake.signal };
-            const imported = this.deps.importPackage ? await this.deps.importPackage(handoff).catch(() => 'deferred' as const) : 'deferred';
-            if (imported === 'deferred') job.park = 'import';
+            const deferred: ImportOutcome = { kind: 'deferred' };
+            const imported = this.deps.importPackage ? await this.deps.importPackage(handoff).catch(() => deferred) : deferred;
+            // A deferral caused by this supervisor's own wake (cancel, hold, engine restart) re-reads instead of parking.
+            if (imported.kind === 'deferred') { if (!handoff.signal.aborted) job.park = 'import'; break; }
+            if (!(await this.commit(job, imported))) return;
             break;
           }
           case 'runFailed': if (!(await this.commit(job, outcome))) return; break;

@@ -8,7 +8,7 @@ import { Store } from '../src/engine/store';
 import { ResearchJobs, researchDto } from '../src/engine/research';
 import { ControlSchema, engineFailureCode, type Control } from '../src/engine/control';
 import { Vault } from '../src/main/vault';
-import { CollectorSupervisor, type PackageHandoff } from '../src/main/collector';
+import { CollectorSupervisor, type ImportOutcome, type PackageHandoff } from '../src/main/collector';
 import { packageFileName } from '../src/adapters/research-kit/collector';
 import type { CollectorConfig } from '../src/main/collector-settings';
 import type { OwnedResult } from '../src/tools/commands';
@@ -29,7 +29,7 @@ function replay(name: string, clientRef?: string, signal?: AbortSignal): OwnedRe
 }
 const gate = () => { let open!: () => void; const promise = new Promise<void>(resolve => { open = resolve; }); return { promise, open }; };
 
-async function harness(script: Script, options: { fault?(control: Control): Promise<void> | void; root?: string; now?(): number; noToken?: boolean } = {}) {
+async function harness(script: Script, options: { fault?(control: Control): Promise<void> | void; root?: string; now?(): number; noToken?: boolean; importPackage?(handoff: PackageHandoff): Promise<ImportOutcome> } = {}) {
   const root = options.root ?? await mkdtemp(join(tmpdir(), 'moonaliza-supervisor-')); if (!options.root) roots.push(root);
   const store = new Store(join(root, 'state.sqlite')); closers.push(async () => store.close());
   const notices: unknown[] = []; const jobs = new ResearchJobs(store, research => notices.push(research));
@@ -76,7 +76,7 @@ async function harness(script: Script, options: { fault?(control: Control): Prom
   const handoffs: PackageHandoff[] = [];
   const supervisor = new CollectorSupervisor({
     control, epoch: () => 'epoch-1', vault, settings: { current: () => config }, kit, spoolDirectory: join(root, 'runs'),
-    importPackage: async handoff => { handoffs.push(handoff); return 'deferred'; },
+    importPackage: async handoff => { handoffs.push(handoff); return options.importPackage ? options.importPackage(handoff) : { kind: 'deferred' }; },
     limits: { backoffFirstMs: 5, stillRunningDelayMs: 5, quitDrainMs: 50 }, retryDelayMs: 10, ...(options.now ? { now: options.now } : {}),
   });
   closers.unshift(() => supervisor.close(50));
@@ -243,4 +243,49 @@ test('a run past its seven-day deadline fails as COLLECTION_EXPIRED without anot
   await until(() => h.store.getResearch(job.id)!.status === 'failed');
   expect(h.store.getResearch(job.id)).toMatchObject({ failure: 'COLLECTION_EXPIRED', workflowRunId: '1' });
   expect(h.calls.filter(c => c.kind === 'watch')).toHaveLength(0);
+});
+
+const verification = (jobRevision: number) => ({ artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS' as const,
+  jobRevision, projectRevision: 1, repository: 'o/r', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, downloadDigest: 'unverified' as const });
+
+test('a verified import commits collecting -> collected with its verification journaled; a rejected one fails the job', async () => {
+  const h = await harness(happy, { importPackage: async handoff => ({ kind: 'verified', verification: verification(handoff.expectedRevision) }) });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.store.getResearch(job.id)!.status === 'collected');
+  expect(h.handoffs[0]).toMatchObject({ expectedRevision: 3, projectRevision: 1 });
+  const step = h.store.researchEvents(job.id).events.at(-1)!;
+  expect(step).toMatchObject({ from: 'collecting', to: 'collected', actor: 'main', cause: 'PACKAGE_VERIFIED', detail: { verification: verification(3) } });
+  const rejected = await harness(happy, { importPackage: async () => ({ kind: 'rejected', failure: 'PACKAGE_IDENTITY_MISMATCH', cause: 'IMPORT_IDENTITY_MISMATCH' }) });
+  await rejected.supervisor.attach();
+  const other = rejected.create(); rejected.supervisor.observe(researchDto(other));
+  await until(() => rejected.store.getResearch(other.id)!.status === 'failed');
+  expect(rejected.store.getResearch(other.id)).toMatchObject({ failure: 'PACKAGE_IDENTITY_MISMATCH', workflowRunId: '1' });
+  expect(rejected.store.researchEvents(other.id).events.at(-1)).toMatchObject({ cause: 'IMPORT_IDENTITY_MISMATCH' });
+});
+
+test('a receipt bound to another job revision records nothing and the package is verified again', async () => {
+  let imports = 0;
+  const h = await harness(happy, { importPackage: async handoff => (++imports === 1 ? { kind: 'verified', verification: verification(handoff.expectedRevision + 1) } : { kind: 'deferred' }) });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => imports === 2);
+  expect(h.store.getResearch(job.id)!.status).toBe('collecting');
+  expect(h.controls.some(c => c.method === 'research.transition' && c.to === 'collected')).toBe(false);
+});
+
+test('an import stopped by the supervisor\'s own wake re-reads instead of parking; a plain deferral parks', async () => {
+  const h = await harness(happy, {
+    importPackage: handoff => h.handoffs.length > 1 ? Promise.resolve({ kind: 'deferred' })
+      : new Promise(resolve => handoff.signal.addEventListener('abort', () => resolve({ kind: 'deferred' }), { once: true })),
+  });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.handoffs.length === 1);
+  h.supervisor.engineReady('epoch-1');
+  await until(() => h.handoffs.length === 2);
+  await new Promise(r => setTimeout(r, 100));
+  expect(h.handoffs).toHaveLength(2);
+  expect(h.calls.filter(c => c.kind === 'watch')).toHaveLength(2);
+  expect(h.store.getResearch(job.id)!.status).toBe('collecting');
 });

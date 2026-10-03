@@ -4,7 +4,7 @@ This is the behaviour contract of the collection process that MoonAliza owns (pl
 
 ## Purpose and scope
 
-A research job collects a corpus on GitHub. MoonAliza does not call GitHub itself. It runs the pinned Research Kit collector (`bin/collect-remote.mjs`) as a child process, once to dispatch a workflow run and then repeatedly to watch that run and download its package. The pinned kit and its trust model are described in [Offline Research Kit consumer](research-kit-offline.md).
+A research job collects a corpus on GitHub. MoonAliza does not dispatch or download through its own GitHub calls: it runs the pinned Research Kit collector (`bin/collect-remote.mjs`) as a child process, once to dispatch a workflow run and then repeatedly to watch that run and download its package. Its only GitHub request is the verified import's read of the run (below). The pinned kit and its trust model are described in [Offline Research Kit consumer](research-kit-offline.md).
 
 The work is split this way:
 
@@ -13,6 +13,7 @@ The work is split this way:
 - [`src/main/collector-settings.ts`](../../src/main/collector-settings.ts) owns the collector target and the token reference (`CollectorSettings`).
 - [`src/main/collector.ts`](../../src/main/collector.ts) owns every collector child (`CollectorSupervisor`). It is work in progress; this document states its intended invariants as its doc comments give them.
 - [`src/adapters/research-kit/adapter.ts`](../../src/adapters/research-kit/adapter.ts) stages the kit and launches it (`prepareCollector`).
+- [`src/main/research-import.ts`](../../src/main/research-import.ts) verifies a downloaded package (`packageImporter`); see [Verified import](#verified-import).
 - [`src/engine/research-state.ts`](../../src/engine/research-state.ts) owns the job states and the allowed edges (`RESEARCH_EDGES`).
 
 The engine owns job state. Main owns the children, the token and the collector settings. The kit's free text never leaves the classifier.
@@ -165,7 +166,7 @@ An attempt that the supervisor itself stopped (cancel, hold, new credentials, qu
 The supervisor handles each outcome this way:
 
 - `runFailed` fails the job (collecting → failed).
-- `package` calls the import seam with a `PackageHandoff`. The run id comes from the engine and the file path is recomputed by main. If there is no import seam, it throws, or it answers `deferred`, the job parks as `import`.
+- `package` calls the import seam with a `PackageHandoff`. The run id, revisions and target come from the engine and the file path is recomputed by main. `verified` and `rejected` are committed through `planStep`. If there is no import seam, it throws, or it answers `deferred`, the job parks as `import`, unless the supervisor's own wake (cancel, hold, engine restart, quit) stopped it: then the driver re-reads, and a still-`collecting` job is watched again.
 - `stillRunning` waits 5 s and resets the transient count.
 - `transient` waits with the backoff above.
 - `park` stops launching until re-armed. `credentials` is re-armed by a collector save (`configChanged`) or the next app start. `kit` and `import` are re-armed at the next app start. A parked job stays `collecting` and owned.
@@ -191,7 +192,9 @@ A watch never fails a job on a transient result. When the deadline passes, the j
 | dispatching | ambiguous (c) | dispatching → failed, failure `REMOTE_STATE_UNKNOWN`, cause c, with a learned run id |
 | dispatching | other | continue |
 | collecting | admission not null | collecting → failed, failure = admission, cause `ADMISSION_CHANGED` |
-| collecting | runFailed (f, c) | collecting → failed, failure f, cause c |
+| collecting | runFailed (f, c) or rejected (f, c) | collecting → failed, failure f, cause c |
+| collecting | verified, bound to the job's current revision | collecting → collected with the verification, cause `PACKAGE_VERIFIED` |
+| collecting | verified, bound to another revision | continue (nothing recorded; the next watch verifies again) |
 | collecting | expired | collecting → failed, failure `COLLECTION_EXPIRED`, cause `WATCH_DEADLINE` |
 | collecting | other | continue |
 
@@ -237,6 +240,18 @@ A started dispatcher keeps the token copy in its environment. Watches restart wi
 ### Crash windows
 
 `open()` tombstones a `retiredSecretRef` left by an interrupted save. `references()` gives the startup reconcile the reference to keep. `finishStartup()` then clears `retiredSecretRef`. A crash after staging leaves an unreferenced staged token for the reconcile to delete; after the write, the staged token is referenced and the reconcile commits it; after the commit, the retired token is removed at the next start.
+
+## Verified import
+
+`packageImporter` (`src/main/research-import.ts`) turns a `PackageHandoff` into `verified`, `rejected` or `deferred`. It never writes job state; the supervisor commits its answer through `planStep`, which re-checks admission and the bound revision.
+
+1. Without a kit, a saved token reference, or settings for the job's repository, it defers.
+2. It reads the run once: `GET https://api.github.com/repos/<owner>/<repo>/actions/runs/<run id>`. The token comes from a 30-second vault grant (purpose `research`, context `import:<researchId>:<uuid>`, revoked afterwards) and travels only in that request's `Authorization` header. A redirect is refused rather than followed, the response is bounded to 1 MiB and 20 s, and only `id`, `run_attempt`, `head_sha`, `head_branch`, `path`, `event`, `status` and `repository.full_name` are read. Any failure defers; nothing from the response is kept as text.
+3. The run must be the one the job dispatched: the same id, the repository (case-insensitive), `path` = `.github/workflows/<job workflow>`, `head_branch` = the job's ref without `refs/heads/` or `refs/tags/`, and event `workflow_dispatch`. Otherwise `RUN_IDENTITY_MISMATCH` / `IMPORT_RUN_MISMATCH`, before any validation. A run whose status is not `completed` (a re-run in progress) defers.
+4. The binding: project id; project revision = the job's admitted policy revision; job id and its current revision (the `collecting` revision, so a receipt is bound to the revision the job leaves); client ref; repository = `repository.full_name`; ref = `head_branch` (the short `GITHUB_REF_NAME` the package records); workflow = the literal `collect.yml`, which the kit's workflow always records whatever its file is called; commit = `head_sha`; run id; run attempt = `run_attempt`. Commit and attempt come only from the run, never from the package.
+5. `ResearchKit.validate` checks the package under that binding and retains the exact bytes. PASS in `REVIEW_REQUIRED`, `REVIEW_IN_PROGRESS` or `PREFLIGHT_BLOCKED` is `verified`; an approval is `ARTIFACT_INVALID` / `IMPORT_UNEXPECTED_APPROVAL`; `COLLECTION_FAILED` is `COLLECTION_FAILED` / `IMPORT_COLLECTION_FAILED`. FAIL is `ARTIFACT_INVALID` / `IMPORT_FAIL`, INCOMPLETE is `ARTIFACT_INCOMPLETE` / `IMPORT_INCOMPLETE`. A binding mismatch (a package from another run, attempt or commit) is `PACKAGE_IDENTITY_MISMATCH` / `IMPORT_IDENTITY_MISMATCH`; `ARTIFACT_INVALID` and `INPUT_LIMIT` are `ARTIFACT_INVALID` with `IMPORT_ARTIFACT_INVALID` / `IMPORT_INPUT_LIMIT`. Every other validator error (installation, validator output or bounds, storage limit, a stop) defers.
+
+`collecting → collected` requires the verification, and the engine refuses one whose `jobRevision` is not the job's revision or whose `projectRevision` is not its policy revision. It holds `artifactSha256`, `artifactBytes`, `validatorRevision`, `nodeSha256`, `state`, `jobRevision`, `projectRevision`, `repository`, `ref`, `workflow`, `commit`, `runAttempt` and `downloadDigest: 'unverified'` (the pinned kit does not check the artifact's digest). It is stored only in that step's journal detail; no column holds it. The receipt itself stays process-local; with the journaled binding, a later stage can validate the retained bytes again after a restart.
 
 ## Lifecycle
 
@@ -285,6 +300,7 @@ Every value matches `^[A-Z][A-Z0-9_]{1,63}$`. Names written with `<...>`, the `R
 - Dispatch refused: `COLLECTOR_REFUSED`, `COLLECTOR_NOT_FOUND`, `COLLECTOR_FORBIDDEN`, `COLLECTOR_TOKEN_REJECTED`, `COLLECTOR_REJECTED`.
 - Ambiguous dispatch: `REMOTE_STATE_UNKNOWN`.
 - Watch: `RUN_FAILED`, `ARTIFACT_MISSING`, `ARTIFACT_EXPIRED`, `ARTIFACT_INVALID`, `ARTIFACT_INCOMPLETE`, `COLLECTION_FAILED`, `COLLECTION_EXPIRED`.
+- Import: `RUN_IDENTITY_MISMATCH`, `PACKAGE_IDENTITY_MISMATCH`, and `ARTIFACT_INVALID`, `ARTIFACT_INCOMPLETE`, `COLLECTION_FAILED` as above.
 
 ### Causes (stored on the transition)
 
@@ -295,6 +311,7 @@ Every value matches `^[A-Z][A-Z0-9_]{1,63}$`. Names written with `<...>`, the `R
 - Kit output: `KIT_OUTPUT_LIMIT`, `KIT_OUTPUT_INVALID`, `KIT_EXIT_<n>`, `KIT_EXIT_NEG<n>`, `KIT_EXIT_NONE`, `KIT_REFUSED`, `KIT_NO_TOKEN`.
 - Kit codes: `KIT_<CODE>` for each of `KIT_CODES` (`REPOSITORY`, `TOKEN`, `NETWORK`, `NO_RUN_ID`, `NOT_FOUND`, `FORBIDDEN`, `HTTP`, `UNKNOWN`, `TIMEOUT`, `BAD_BODY`, `NO_ARTIFACT`, `EXPIRED`, `ARTIFACT_NAME`, `OUT_DIR`), plus `KIT_OTHER` for an unlisted code, and `KIT_HTTP_<status>`.
 - Package report: `KIT_<first error code>` (for example `KIT_CLIENT_REF_MISMATCH`), `KIT_FAIL`, `KIT_INCOMPLETE`, `KIT_BLOCKED`, `KIT_UNEXPECTED_APPROVAL`, `IDENTITY_MISMATCH`, `KIT_COLLECTION_FAILED`, `KIT_STATE_UNKNOWN`, `PACKAGE_NAME_UNEXPECTED`.
+- Import: `PACKAGE_VERIFIED`, `IMPORT_RUN_MISMATCH`, `IMPORT_IDENTITY_MISMATCH`, `IMPORT_FAIL`, `IMPORT_INCOMPLETE`, `IMPORT_ARTIFACT_INVALID`, `IMPORT_INPUT_LIMIT`, `IMPORT_UNEXPECTED_APPROVAL`, `IMPORT_COLLECTION_FAILED`.
 - Run conclusion: `RUN_FAILURE`, `RUN_CANCELLED`, `RUN_TIMED_OUT`, `RUN_ACTION_REQUIRED`, `RUN_NEUTRAL`, `RUN_SKIPPED`, `RUN_STALE`, `RUN_STARTUP_FAILURE`, `RUN_CONCLUDED`.
 
 Transient and park causes use the same names but are not recorded; the job stays `collecting`.
@@ -325,7 +342,8 @@ Transient and park causes use the same names but are not recorded; the job stays
 
 ## Out of scope
 
-- Task 4: verified import. It replaces the `deferred` import seam, fetches the commit and run attempt from GitHub, validates with the full binding and commits `collecting → collected`. Until then a successful watch parks as `import`.
+- `research.purge` and deleting retained bytes (plan Task 4, second part). Rejected packages that passed the validator (an approval or a failed collection) are retained until then too.
+- Retrying an import parked by a GitHub or validator failure before the next app start.
 - Keeping `COLLECTION_FAILED` diagnostic packages.
 - Task 5: review edges and review owners in the owned list.
 - Task 6: the settings panel, the failure vocabulary in the UI, and a "needs attention" signal for parked jobs. Its text for a `credentials` park must say both "no access" and "run deleted by retention".
@@ -349,4 +367,4 @@ Transient and park causes use the same names but are not recorded; the job stays
 - A negative exit code is named `KIT_EXIT_NEG<n>`, because a minus sign is not valid in a code. Fixed after review: it used to form `KIT_EXIT_-<n>`, which failed the control schema and held the job.
 - `startInputBudget` is defined in `COLLECTOR_LIMITS` but not used by this code.
 - Any failure while node and the staged runtime are rehashed before the child starts (wrong hash, a grown, swapped or linked file) is `INSTALLATION_INVALID`, for the validator as well as the collector.
-- Wiring (`src/main/index.ts`, `src/main/engine.ts`): settings, installation, sweep, reconcile with the collector reference, `attach`, `observe` on notices and on start/cancel replies, `engineReady` on each engine `ready`, `hold` around trust and policy changes, `research.collector.read/save`, and the quit order supervisor → kit → engine. `importPackage` is not wired until Task 4, so a collected package parks as `import`.
+- Wiring (`src/main/index.ts`, `src/main/engine.ts`): settings, installation, sweep, reconcile with the collector reference, `attach`, `observe` on notices and on start/cancel replies, `engineReady` on each engine `ready`, `hold` around trust and policy changes, `research.collector.read/save`, and the quit order supervisor → kit → engine. `importPackage` is `packageImporter` over the vault, the collector settings and the kit.
