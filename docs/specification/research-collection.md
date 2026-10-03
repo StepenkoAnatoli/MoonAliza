@@ -203,7 +203,7 @@ Before admitting a queued job, the supervisor refuses what cannot work: no setti
 
 The engine allows only the edges in `RESEARCH_EDGES`. `queued` is the only source of `dispatching`, nothing returns to `queued`, and a run id can be written once. `cancelling → cancelled` accepts a run id and a failure, because a cancel can race the collector printing its run id.
 
-Commits use one random request id per planned command, kept until the engine answers, so a reply lost to an engine restart replays instead of applying twice. Every command is checked with `ControlSchema` before it is sent. `STALE_REVISION` or `RESEARCH_TRANSITION_INVALID` drops the command and re-plans from a fresh read, at most 5 times. `ENGINE_UNAVAILABLE` waits for the engine's ready signal or backs off (1 s doubling, at most 60 s) and resends the same command. Any other error holds the job: its driver stops and the next app start recovers it.
+Commits use one random request id per planned command, kept until the engine answers, so a reply lost to an engine restart replays instead of applying twice. Every command is checked with `ControlSchema` before it is sent. `STALE_REVISION` or `RESEARCH_TRANSITION_INVALID` drops the command and re-plans from a fresh read, at most 5 times. `ENGINE_UNAVAILABLE` waits for the engine's ready signal or backs off (1 s doubling, at most 60 s) and resends the same command. Any other error holds the job: its driver stops, but the job stays in `ownedIds()` (and `busy()`) until the next app start, so no recovery in this process acts on it, nothing relaunches it and a notice cannot re-admit it. The next app start recovers it, and replays its spooled run id if it has one.
 
 ## Credentials
 
@@ -261,7 +261,7 @@ A started dispatcher keeps the token copy in its environment. Watches restart wi
 `attach()` runs once and resolves `attached`. `observe()` waits for it, so nothing is admitted before recovery has run.
 
 1. Spool replay. Each spool file is parsed; an invalid one is deleted. If the job is gone, finished, or already has that run id, the file is deleted. Otherwise the fact is re-planned against the current state: a `dispatching` job commits `dispatched`, which gives `collecting` (or failed with the admission); a `cancelling` job records the run id on `cancelling → cancelled`. The file is deleted once a commit that carried the run id, or that finished the job, is acknowledged.
-2. `research.recover` with an empty owned list. The engine fails every `dispatching` job as `REMOTE_STATE_UNKNOWN` (cause `RECOVERED`) and cancels every `cancelling` job (cause `NO_OWNED_WORK`). It never re-queues.
+2. `research.recover` with an owned list that is empty unless a replay commit in step 1 failed: such a job is held, kept out of recovery, and replayed again at the following start. The engine fails every `dispatching` job as `REMOTE_STATE_UNKNOWN` (cause `RECOVERED`) and cancels every `cancelling` job (cause `NO_OWNED_WORK`). It never re-queues.
 3. Adopt: each `dispatchable` (queued) and `resume` (collecting) entry is owned and driven. `reviewing` and `unreadable` are left alone.
 
 ### Cancel
@@ -362,7 +362,6 @@ Transient and park causes use the same names but are not recorded; the job stays
 - In table A the supervisor also lets `STOPPED` wait without counting; the design lists only `HELD` and `ENGINE_UNAVAILABLE`.
 - In table B, in the PASS branch the code checks approval and client ref before `COLLECTION_FAILED`; the design lists `COLLECTION_FAILED` first.
 - The design does not list the supervisor's pre-admission refusals (`COLLECTOR_NOT_CONFIGURED`, `NO_COLLECTOR`, `NO_TOKEN`, `NO_INSTALLATION`, `COMMAND_LINE`) or the `NOT_OWNED_DISPATCH` cause.
-- A job held after a commit error leaves the owned map when its driver returns. The design keeps it held until the next app start; in the code an engine-only restart's recovery can also act on it.
 - A negative exit code is named `KIT_EXIT_NEG<n>`, because a minus sign is not valid in a code. Fixed after review: it used to form `KIT_EXIT_-<n>`, which failed the control schema and held the job.
 - Any failure while node and the staged runtime are rehashed before the child starts (wrong hash, a grown, swapped or linked file) is `INSTALLATION_INVALID`, for the validator as well as the collector.
 - Wiring (`src/main/index.ts`, `src/main/engine.ts`): settings, installation, sweep, reconcile with the collector reference, `attach`, `observe` on notices and on start/cancel replies, `engineReady` on each engine `ready`, `hold` around trust and policy changes, `research.collector.read/save`, and the quit order supervisor → kit → engine. `importPackage` is `packageImporter` over the vault, the collector settings and the kit.

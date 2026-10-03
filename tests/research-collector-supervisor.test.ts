@@ -346,3 +346,29 @@ test('a watch whose token is no longer in the vault parks for credentials at onc
   h.config.secretRef = replaced; h.supervisor.configChanged();
   await until(() => h.handoffs.length === 1);
 });
+
+test('a job held after a commit error stays owned until the next app start, so no recovery fails it and its spooled run id is recorded then', async () => {
+  const refuse = (command: Control) => { if (command.method === 'research.transition' && command.to === 'collecting') throw new Error('INTERNAL_ERROR'); };
+  const h = await harness(happy, { fault: refuse });
+  await h.supervisor.attach();
+  const job = h.create(); h.supervisor.observe(researchDto(job));
+  await until(() => h.controls.some(c => c.method === 'research.transition' && c.to === 'collecting'));
+  await new Promise(r => setTimeout(r, 50));
+  // An engine-only restart: recovery must skip the held job, or it would fail it as REMOTE_STATE_UNKNOWN without its run.
+  h.supervisor.engineReady('epoch-1');
+  await until(() => h.controls.filter(c => c.method === 'research.recover').length === 2);
+  expect(h.controls.filter(c => c.method === 'research.recover').at(-1)).toEqual({ method: 'research.recover', owned: [job.id] });
+  expect(h.store.getResearch(job.id)!.status).toBe('dispatching');
+  await h.supervisor.close(50);
+  // A start whose replay commit fails too keeps the job out of its own recovery.
+  const second = await harness(happy, { root: h.root, fault: refuse });
+  await second.supervisor.attach();
+  expect(second.controls.filter(c => c.method === 'research.recover')).toEqual([{ method: 'research.recover', owned: [job.id] }]);
+  expect(second.store.getResearch(job.id)!.status).toBe('dispatching');
+  await second.supervisor.close(50);
+  const next = await harness(happy, { root: h.root });
+  await next.supervisor.attach();
+  await until(() => next.handoffs.length === 1);
+  expect(next.store.getResearch(job.id)).toMatchObject({ status: 'collecting', workflowRunId: '1' });
+  expect([...h.calls, ...second.calls, ...next.calls].filter(c => c.kind === 'dispatch')).toHaveLength(1);
+});

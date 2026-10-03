@@ -87,6 +87,8 @@ async function packageCheck(out: string, clientRef: string): Promise<PackageChec
 export class CollectorSupervisor {
   private readonly jobs = new Map<string, Job>();
   private readonly drivers = new Map<string, Promise<void>>();
+  /** Jobs whose driver stopped on a commit error: still owned, so no recovery acts on them, until the next app start. */
+  private readonly heldIds = new Set<string>();
   private readonly holds = new Map<string, number>();
   private readonly limits: CollectorLimits;
   private readonly now: () => number;
@@ -103,15 +105,16 @@ export class CollectorSupervisor {
     this.now = deps.now ?? Date.now; this.sleep = deps.sleep ?? defaultSleep; this.retry = deps.retryDelayMs ?? 1000;
   }
 
-  ownedIds(): string[] { return [...this.jobs.keys()]; }
-  busy(): boolean { return this.jobs.size > 0; }
+  ownedIds(): string[] { return [...this.jobs.keys(), ...this.heldIds]; }
+  busy(): boolean { return this.jobs.size > 0 || this.heldIds.size > 0; }
 
   /** At app start, once: replay learned run ids, recover what nobody owns, then adopt what can continue. */
   async attach(): Promise<void> {
     try {
       await mkdir(this.deps.spoolDirectory, { recursive: true });
       for (const name of await readdir(this.deps.spoolDirectory)) await this.replay(join(this.deps.spoolDirectory, name));
-      const recovery = ResearchRecoverySchema.parse(await this.engine(() => this.deps.control({ method: 'research.recover', owned: [] })));
+      // Empty unless a replayed run id could not be committed: that job waits, spool and all, for the next start.
+      const recovery = ResearchRecoverySchema.parse(await this.engine(() => this.deps.control({ method: 'research.recover', owned: this.ownedIds() })));
       await this.adopt(recovery);
     } finally { this.attachedDone = true; this.resolveAttached(); }
   }
@@ -120,7 +123,7 @@ export class CollectorSupervisor {
   observe(research: Research): void {
     void this.attached.then(() => {
       const job = this.jobs.get(research.id);
-      if (research.status === 'queued' && !job && !this.closing) this.own(research.id, research.projectId, research.clientRef);
+      if (research.status === 'queued' && !job && !this.heldIds.has(research.id) && !this.closing) this.own(research.id, research.projectId, research.clientRef);
       if (research.status === 'cancelling' && job) this.stop(job, 'cancel');
     });
   }
@@ -174,13 +177,13 @@ export class CollectorSupervisor {
     const existing = this.jobs.get(id); if (existing) return existing;
     const job: Job = { id, projectId, clientRef, mayDispatch: false, started: false, wake: new AbortController(), held: false, ...seed };
     this.jobs.set(id, job);
-    const driver = this.drive(job).catch(() => {}).finally(() => { this.jobs.delete(id); this.drivers.delete(id); });
+    const driver = this.drive(job).catch(() => {}).finally(() => { if (job.held) this.heldIds.add(id); this.jobs.delete(id); this.drivers.delete(id); });
     this.drivers.set(id, driver);
     return job;
   }
   private async adopt(recovery: z.infer<typeof ResearchRecoverySchema>) {
     for (const entry of [...recovery.dispatchable, ...recovery.resume]) {
-      if (this.jobs.has(entry.researchId) || this.closing) continue;
+      if (this.jobs.has(entry.researchId) || this.heldIds.has(entry.researchId) || this.closing) continue;
       const ctx = await this.read(entry.researchId); if (!ctx) continue;
       this.own(ctx.research.id, ctx.research.projectId, ctx.research.clientRef);
     }
@@ -263,7 +266,7 @@ export class CollectorSupervisor {
     if (!ctx || FINISHED.has(ctx.research.status) || ctx.research.workflowRunId === spool.workflowRunId) { await unlink(file).catch(() => {}); return; }
     // Re-planned against the current state: a cancel that won the race still records the run on its own edge.
     const job: Job = { id: spool.researchId, projectId: ctx.research.projectId, clientRef: spool.clientRef, mayDispatch: false, started: true, learnedRunId: spool.workflowRunId, wake: new AbortController(), held: false };
-    await this.commit(job, ctx.research.status === 'dispatching' ? { kind: 'dispatched', workflowRunId: spool.workflowRunId } : { kind: 'continue' });
+    if (!(await this.commit(job, ctx.research.status === 'dispatching' ? { kind: 'dispatched', workflowRunId: spool.workflowRunId } : { kind: 'continue' }))) this.heldIds.add(job.id);
   }
 
   // ---------------------------------------------------------------- the driver
