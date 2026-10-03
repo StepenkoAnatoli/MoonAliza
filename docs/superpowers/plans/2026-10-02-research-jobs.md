@@ -226,3 +226,20 @@ The user asked what MoonAliza can take from [awesome-mcp-servers](https://github
 - **Provenance gating (proposed for missions), listed as `cgrtml/reasongate`:** a tool call whose arguments were derived from untrusted content (a fetched page, another tool's output) needs approval. This defends against prompt injection once agents browse and run tools.
 - **Decision tracking with testable predictions (proposed for project memory), listed as `mcp-server-decisions`:** each recorded decision carries a check that could prove it wrong, which feeds "does not repeat mistakes".
 - **Not taken:** installing directory servers freely, and cloud code-execution sandboxes as a default. MoonAliza stays local-first; Windows Sandbox comes first.
+
+## Coding knowledge base and the October 3 repository review (researched with the kit)
+
+Both questions were answered through Research-Kit corpora with a ledger and a passing gate, not by a quick read.
+
+- **Coding knowledge base (proposed, after project memory)**, from `docs/research/2026-10-03-coding-knowledge-base/research/BRIEF.md`:
+  - A local, version-matched documentation store in DevDocs' format.
+  - Each set is downloaded on the user's approval, with its license and attribution kept beside it: Python (PSF), Node.js (MIT), MDN (CC-BY-SA prose, CC0 samples), OpenJDK (GPLv2 with the Classpath Exception). Oracle Javadoc is excluded.
+  - The version comes from the project's own files: `engines.node`, `requires-python`, `maven.compiler.release`.
+  - Agents read the store as untrusted text, and it is never build-gate evidence.
+  - llms.txt is an optional refresh source. Context7 is only an approved MCP plug-in.
+- **Repository review**, from `docs/research/2026-10-03-agent-repo-review/research/BRIEF.md`. Patterns only:
+  - a reviewer loop in missions (gpt-pilot, which is FSL-1.1-MIT and unmaintained);
+  - bait MCP tools in the prompt-injection tests (beelzebub, GPL-3.0);
+  - the supply-chain lesson of gpt-pilot's ten-month hidden loader.
+
+  tffm is unrelated. The GitHub research-and-development topic page refused the fetch, so it remains a known unknown.
