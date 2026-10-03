@@ -138,6 +138,11 @@ October 3, the six spec-review items: five fixed in `src/main/collector.ts` (wit
 - Linux gate, cwd the team worktree: typecheck and lint clean; full suite 644 tests, 569 passed and the 75 failures are exactly the Windows baseline; `tests/research-collector-supervisor.test.ts` (15) passed 20 times in 20 runs.
 - Not verifiable on Linux: the helper's admission timer itself (`spawnOwned`); exact-head Windows CI is its check.
 
+October 3, Task 7 preparation, the research desktop journeys. The collector's minimal environment has no route to a fake GitHub, so the journeys load a test-only preload into main with Electron's `-r`; it adds the loopback proxy and the test CA to collector launches on their way into the native helper. No production code changed. Design, rejected alternatives and evidence: [research journeys](../../specification/research-journeys.md).
+- `e2e/research-journeys.spec.ts`: a harness check on every OS; start, restart mid-collection and park at import, and cancel mid-collection on Windows only (they need the helper).
+- `tests/research-journeys-network.test.ts` (3) runs the preload against the real `spawnOwned` encoder; four mutations each turned it red.
+- On Linux under xvfb the harness check passed and the two journeys were skipped; they have not run yet. Exact-head Windows CI is their first run.
+
 ## Recorded for later (not in Task 2)
 
 - **Task 3:** stop owned collectors on `research.cancel`, `project.revokeTrust` and `project.policy.update` (Task 2 only refuses at the next effect); decide whether a collector survives an engine-only restart; implement `research.collector.read/save`; re-pin Research-Kit to `bf60e21` or later for `--run-id`. Because the binding uses strict revision equality, any project policy edit (including an inference-only one) fails a queued job at dispatch.
