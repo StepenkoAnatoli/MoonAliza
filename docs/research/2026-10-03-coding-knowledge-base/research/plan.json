@@ -1,0 +1,93 @@
+{
+  "topic": "A local coding knowledge base for MoonAliza's agents: which language and platform documentation (Python, Node.js, Java, the web platform) may be stored offline and redistributed, in what packaging, how the version a project uses is chosen, and how agent-oriented documentation formats (llms.txt, Context7) work",
+  "notes": "Owning pages named directly: keyless search answered 2 of 6 phase-0 searches (bot checks). Leads came from a WebFetch pass on 2026-10-03, which is not evidence.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 14,
+  "prefer": [
+    "docs.python.org",
+    "developer.mozilla.org",
+    "raw.githubusercontent.com",
+    "docs.oracle.com",
+    "llmstxt.org",
+    "docs.npmjs.com",
+    "packaging.python.org",
+    "maven.apache.org",
+    "devdocs.io"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/freeCodeCamp/devdocs/main/README.md",
+      "type": "P",
+      "why": "U-01: how DevDocs packages documentation for offline use and its attribution and trademark terms"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/freeCodeCamp/devdocs/main/COPYING",
+      "type": "P",
+      "why": "U-01: the DevDocs code license"
+    },
+    {
+      "url": "https://devdocs.io/docs.json",
+      "type": "P",
+      "why": "U-08, U-09: every DevDocs doc set with its version, release, mtime and size"
+    },
+    {
+      "url": "https://docs.python.org/3/license.html",
+      "type": "P",
+      "why": "U-02: the license of the Python documentation and its code examples"
+    },
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Attrib_copyright_license",
+      "type": "P",
+      "why": "U-03: MDN prose and code-sample licenses and attribution"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/nodejs/node/main/LICENSE",
+      "type": "P",
+      "why": "U-04: the license covering Node.js and its documentation"
+    },
+    {
+      "url": "https://docs.oracle.com/en/java/javase/21/docs/legal/copyright.html",
+      "type": "P",
+      "why": "U-05: the terms of Oracle's Java SE documentation"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/freeCodeCamp/devdocs/main/lib/docs/scrapers/openjdk.rb",
+      "type": "P",
+      "why": "U-05: where DevDocs' OpenJDK docs come from and their license"
+    },
+    {
+      "url": "https://llmstxt.org/",
+      "type": "P",
+      "why": "U-06: the llms.txt format"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/upstash/context7/master/README.md",
+      "type": "P",
+      "why": "U-07: what Context7 is, how it is reached, keys and its disclaimer"
+    },
+    {
+      "url": "https://docs.npmjs.com/cli/v11/configuring-npm/package-json",
+      "type": "P",
+      "why": "U-08: how a Node project declares its Node version (engines)"
+    },
+    {
+      "url": "https://packaging.python.org/en/latest/specifications/pyproject-toml/",
+      "type": "P",
+      "why": "U-08: how a Python project declares its Python version (requires-python)"
+    },
+    {
+      "url": "https://maven.apache.org/plugins/maven-compiler-plugin/examples/set-compiler-release.html",
+      "type": "P",
+      "why": "U-08: how a Maven project declares its Java release"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/npm/cli/latest/docs/lib/content/configuring-npm/package-json.md",
+      "type": "P",
+      "why": "U-08: npm's own source of the package.json page (the rendered page extracted only 65 characters): the engines field"
+    }
+  ]
+}

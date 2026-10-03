@@ -226,3 +226,29 @@ The user asked what MoonAliza can take from [awesome-mcp-servers](https://github
 - **Provenance gating (proposed for missions), listed as `cgrtml/reasongate`:** a tool call whose arguments were derived from untrusted content (a fetched page, another tool's output) needs approval. This defends against prompt injection once agents browse and run tools.
 - **Decision tracking with testable predictions (proposed for project memory), listed as `mcp-server-decisions`:** each recorded decision carries a check that could prove it wrong, which feeds "does not repeat mistakes".
 - **Not taken:** installing directory servers freely, and cloud code-execution sandboxes as a default. MoonAliza stays local-first; Windows Sandbox comes first.
+
+## Coding knowledge base and the October 3 repository review (adopted October 3)
+
+Both questions were answered through Research-Kit corpora with a ledger and a passing gate, not by a quick read. On October 3 the user approved incorporating both as suggested. The phase order is now:
+
+1. research;
+2. project memory;
+3. the coding knowledge base;
+4. missions, beginning with background tasks, and carrying the reviewer loop and the bait-tool tests;
+5. sandbox-only computer use.
+
+- **Coding knowledge base (adopted; its own phase after project memory)**, from `docs/research/2026-10-03-coding-knowledge-base/research/BRIEF.md`:
+  - A local, version-matched documentation store in DevDocs' format.
+  - Each set is downloaded on the user's approval, with its license and attribution kept beside it: Python (PSF), Node.js (MIT), MDN (CC-BY-SA prose, CC0 samples), OpenJDK (GPLv2 with the Classpath Exception). Oracle Javadoc is excluded.
+  - The version comes from the project's own files: `engines.node`, `requires-python`, `maven.compiler.release`.
+  - Agents read the store as untrusted text, and it is never build-gate evidence.
+  - llms.txt is an optional refresh source. Context7 is only an approved MCP plug-in.
+  - Defaults: nothing ships in the installer. Java docs are offered only for Java projects, because the OpenJDK set is about 103 MB. If a project declares no version, the user is asked rather than a version guessed.
+  - First build step: a `docs.json` reader that maps a project's declared Node, Python and Java versions to DevDocs releases, tested over the captured index.
+  - Day-one check: read the OpenJDK package's `debian/copyright` before offering Java docs.
+- **Repository review (adopted)**, from `docs/research/2026-10-03-agent-repo-review/research/BRIEF.md`. Patterns only, no code:
+  - **Missions: a reviewer loop** (from gpt-pilot, which is FSL-1.1-MIT and unmaintained). Each mission step goes to a reviewer agent, which accepts it or sends it back with the reason, before the user approves. It reuses the adopted PASS/FIX/ESCALATE verdicts. First step: write it into the mission plan contract (step, then review verdict, then user approval).
+  - **Prompt-injection tests: bait MCP tools** (from beelzebub, GPL-3.0). The test harness registers decoy tools no legitimate task needs. A call to one after reading untrusted content fails the test. It detects some attempts, not all, and complements provenance gating.
+  - **Supply chain: a standing rule** (from gpt-pilot's ten-month hidden loader). No telemetry in the engine. Every external tool is pinned by hash and reviewed, as Research-Kit is. An unmaintained dependency is a risk to remove.
+
+  tffm is unrelated. The GitHub research-and-development topic page refused the fetch, so it remains a known unknown.

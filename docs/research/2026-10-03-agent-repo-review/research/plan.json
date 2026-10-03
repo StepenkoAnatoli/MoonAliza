@@ -1,0 +1,46 @@
+{
+  "topic": "What MoonAliza can adopt from three public repositories the user named (gpt-pilot, beelzebub, tffm) and the GitHub research-and-development topic: what each is, its license and maintenance state, and which patterns fit a local, approval-gated agent",
+  "notes": "User-named repositories, read from their own READMEs and license files. No search needed.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 10,
+  "prefer": [
+    "raw.githubusercontent.com",
+    "github.com"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/Pythagora-io/gpt-pilot/main/README.md",
+      "type": "P",
+      "why": "U-01, U-02: what gpt-pilot is, its agent roles and workflow, and its maintenance and security notices"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Pythagora-io/gpt-pilot/main/LICENSE",
+      "type": "P",
+      "why": "U-02: gpt-pilot's license"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/beelzebub-labs/beelzebub/main/README.md",
+      "type": "P",
+      "why": "U-03: what beelzebub is, including its MCP bait tools for agent testing"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/beelzebub-labs/beelzebub/main/LICENSE",
+      "type": "P",
+      "why": "U-04: beelzebub's license"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/geffy/tffm/master/README.md",
+      "type": "P",
+      "why": "U-05: what tffm is and what it depends on"
+    },
+    {
+      "url": "https://github.com/topics/research-and-development",
+      "type": "P",
+      "why": "U-06: the repositories listed under the topic"
+    }
+  ]
+}
