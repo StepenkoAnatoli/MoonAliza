@@ -240,7 +240,7 @@ test('a run cancelled while the status body is still arriving closes the connect
 
 test.each<[string, Reply]>([
   ['an oversized 200 body that never ends', (_request, response) => { response.setHeader('Content-Type', 'application/json'); response.write(' '.repeat(65 * 1024)); /* never ends */ }],
-  ['a 500 whose body never ends', (_request, response) => { response.statusCode = 500; response.setHeader('Content-Type', 'application/json'); response.write('{"error":'); /* never ends */ }],
+  ['a 500 whose body never ends', (_request, response) => { response.statusCode = 500; response.setHeader('Content-Type', 'application/json'); response.write('{"error":'); /* never ends; shape: wire E-31, gin.H{"error"} */ }],
 ])('%s is refused before the bound and its connection closes, even through a fetcher that ignores the signal', async (_case, reply) => {
   const ollama = await startOllama(reply);
   const started = Date.now();
@@ -319,5 +319,5 @@ test('infer() awaits the check as a statement of its own, straight after the pol
   expect(at).toBeGreaterThan(policyCheck);
   expect(at).toBeLessThan(invoke);
   expect(at).toBeLessThan(lines.findIndex(line => line.includes('vault.grant(')));
-  expect(source.split('verifyOllamaLocality(').length - 1).toBe(1); // infer() only: not profile.test, not the managed runtime
+  expect(source.split('verifyOllamaLocality(').length - 1).toBe(1); // once in src/main/index.ts, inside infer(): not profile.test (the managed runtime, in src/models/, keeps its own startup check)
 });

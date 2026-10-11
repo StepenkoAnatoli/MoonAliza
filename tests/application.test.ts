@@ -56,7 +56,7 @@ test('an oversized prompt fails before inference and persists an actionable cont
   expect(result.context.estimatedInputTokens).toBeGreaterThan(result.context.inputBudgetTokens);
 });
 
-test('a local Ollama that can reach cloud models fails the run with an actionable message, never retried', async () => {
+test('an unverified local Ollama fails the run with an actionable message, never retried', async () => {
   // Guard: the engine maps LOCAL_MODEL_UNVERIFIED to its own message, the whole of it (mutations: drop the failures
   // entry, drop a remedy step such as the server.json setting or restarting Ollama).
   const { store } = fixture(); let calls = 0;

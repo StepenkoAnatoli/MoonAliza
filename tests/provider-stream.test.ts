@@ -450,7 +450,7 @@ test.each(['insufficient_system_resource', 'aborted', 'error', 'function_call'])
 });
 
 test('a stream that ends with no finish_reason at all stays incomplete', async () => {
-  // Kept as it was (docs/specification/more-models.md): no terminal is not a failure signal. E-20's stream
+  // Kept as it was (briefs/p1-u1-builder.md; the spec's "As built (Phase 1)"): no terminal is not a failure signal. E-20's stream
   // without its last chunk and [DONE]. Guard: a missing reason is exempt from the known-set check
   // (mutation: drop the exemption; the call then fails).
   const body = E20_STREAM.split('\n\n').slice(0, -2).join('\n\n');
@@ -507,7 +507,8 @@ test('[DONE] ends the stream: what follows it is never read, and an open connect
 });
 
 test('E-20: a normal chunk carrying "error": null is not an error chunk', async () => {
-  // No capture shows `"error": null` (MUT-12); E-20's capture (lines 1143-1165) with it added to every chunk, as a
+  // No chat-completions chunk capture shows `"error": null` (MUT-12; E-16's Responses API body does, on a
+  // completed response); E-20's capture (lines 1143-1165) with it added to every chunk, as a
   // server serialising an unset field would send it. Guard: only a non-null `error` fails the stream (mutation
   // S02: `!= null` to `!== undefined`; the first chunk then fails as PROVIDER_STREAM_ERROR).
   const body = E20_STREAM.replaceAll('"object": "chat.completion.chunk"', '"object": "chat.completion.chunk", "error": null');

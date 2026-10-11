@@ -1,0 +1,416 @@
+[
+ {
+  "findings": [
+   {
+    "id": "MM-P1-SPEC-1",
+    "severity": "S1",
+    "problem": "D-1 is NOT MET at f1c4867. AGENTS.md has no locality invariant row, and docs/specification/more-models.md has no \"as built\" notes. Only ARCHITECTURE.md was updated. The deviations that should be written down as built are not recorded in the spec: (1) the readSseEvents/readSse split (the spec names readSse as keeping event names); (2) the internal codes PROVIDER_STREAM_ERROR and PROVIDER_FINISH_FAILED; (3) an empty finish_reason counts as no reason and gives incomplete (U1-R2, kept), although the spec says any unknown value fails; (4) a stream with no finish_reason stays incomplete (this came from the U1 brief, not the spec); (5) Electron session.fetch behaviour that no test covers.",
+    "evidence": "`git diff --stat b793f13..f1c4867` does not list AGENTS.md. The AGENTS.md Invariants table (lines 76-87) has no locality row. more-models.md has no as-built section; the only Phase 1 text is the design. RUN.md 'Next action' still lists 'docs (spec as built, AGENTS.md locality invariant row)' as pending. REQUIREMENTS-P1.md D-1 says they must be current in the same pull request.",
+    "reproduction": "cd <worktree at f1c4867>; git diff --stat b793f13..f1c4867 | grep -c AGENTS.md  -> 0; sed -n 76,87p AGENTS.md (no locality row); grep -n -i 'as built' docs/specification/more-models.md -> nothing",
+    "fix": "Before the PR: (a) add an AGENTS.md Invariants row, for example 'Under a local-only policy, no prompt reaches a user-run Ollama unless its GET /api/status answered 200 with cloud.disabled true in that same step | tests/ollama-locality.test.ts (refusal table, two-step re-check, cloud-allowed no request, infer() source pin)'. State the scope in the row: `ollama` kind only, and an openai-compatible profile on loopback is not covered (see MM-P1-SPEC-5). (b) Add an 'As built (Phase 1)' subsection to more-models.md recording items (1)-(5) above."
+   },
+   {
+    "id": "MM-P1-SPEC-2",
+    "severity": "S2",
+    "problem": "S-1 says the status request 'carries no credential', but no test covers that half. The guard `credentials: 'omit'` (src/main/ollama-locality.ts:54) can be deleted and all 34 locality tests still pass. Node's fetch never sends cookies or ambient auth, so the 'bare GET: no credential, no cookie' test (tests/ollama-locality.test.ts:173-182) cannot fail on this. In production the guard matters: Electron 44.4.5 net.fetch turns a default 'same-origin' request with no Origin header into credentials 'include', which sends the local session's cookies and HTTP auth.",
+    "evidence": "Mutation H (removed `credentials: 'omit'` from the fetch init at ollama-locality.ts:54): SURVIVED, 34/34 passed. The U2 guard-proof table pins this test only with 'Authorization header injected (G16)'. Electron 44.4.5 binary (node_modules/electron/dist/electron), fetchWithSession: `u=\"same-origin\"!==c.credentials||d?c.credentials:\"include\"` and then `request({...,credentials:u,...,redirect:c.redirect})`. The same code confirms `redirect:'error'` kills the request: `_die(new Error(\"Attempted to redirect, but redirect policy was 'error'\"))`. Electron's Response is built with `new Response(...)`, so `response.redirected` is always false there, and `redirect:'error'` is the only working redirect guard in production.",
+    "reproduction": "In the worktree, edit src/main/ollama-locality.ts:54 from `redirect: 'error', credentials: 'omit', signal` to `redirect: 'error', signal`; run `npx vitest run tests/ollama-locality.test.ts`: 34 passed.",
+    "fix": "Add a test with a recording fetcher that asserts the exact RequestInit handed to it: method 'GET', redirect 'error', credentials 'omit', no headers and no body, and the signal present. Prove it red by removing `credentials: 'omit'`. Optionally rename the existing test so it claims only what Node's fetch can show (no Authorization header, no body, no prompt text)."
+   },
+   {
+    "id": "MM-P1-SPEC-3",
+    "severity": "S2",
+    "problem": "The user-facing setup doc is now misleading. Local-only is the default policy for folder-free chats and for new projects. Ollama's cloud features are on unless the user turns them off. So after this change a stock user-run Ollama is refused with LOCAL_MODEL_UNVERIFIED on every run, which also includes one never signed in to ollama.com. Yet README's instructions for an existing Ollama server still say only 'enter its loopback endpoint and the name of a tool-capable model'. No release note announces the behaviour change. The spec does not mention the impact on the default path either.",
+    "evidence": "README.md:22 ('For an existing Ollama server, enter its loopback endpoint and the name of a tool-capable model already installed there.'). src/engine/application.ts:181: a folder-free session defaults to 'local-only'. src/engine/control-dispatch.ts:18: a new project policy defaults to inference 'local-only'. Wire E-28 (raw/2026-10-05-cloud-ollama-ollama-a13ccce8.md:100): 'To use only local models, disable cloud features', so cloud is on by default. src/main/ollama-locality.ts:49-50 refuses unless disabled is true. docs/releases/ has no entry for this change.",
+    "reproduction": "Start a General chat (local-only by default) with an `ollama` profile pointed at a stock Ollama that has no OLLAMA_NO_CLOUD and no disable_ollama_cloud setting. /api/status answers cloud.disabled false, and the run fails with LOCAL_MODEL_UNVERIFIED (this path is pinned by tests/ollama-locality.test.ts:105-109, the 'disabled: false' row).",
+    "fix": "Add one sentence to README.md:22: under a local-only conversation or project Moonzila first checks Ollama's /api/status, and the user must turn off Ollama's cloud features (OLLAMA_NO_CLOUD=1 or \"disable_ollama_cloud\": true in server.json) and restart it. Add a release-note line, and note the default-path impact in the spec's as-built notes."
+   },
+   {
+    "id": "MM-P1-SPEC-4",
+    "severity": "S3",
+    "problem": "The spec's 5 s status bound is not pinned. The timing test accepts any bound under 9.5 s, so a wrong bound of 6-9 s passes. The test's comment 'so a wrong bound is caught' claims more than the test does: it catches only a bound of 9.5 s or more.",
+    "evidence": "Mutation I (STATUS_TIMEOUT_MS 5_000 -> 9_000 at src/main/ollama-locality.ts:10): SURVIVED, 34/34 passed. The assertion is tests/ollama-locality.test.ts:241-244 (>= 4900, < 9500). No test references STATUS_TIMEOUT_MS or STATUS_MAX_BYTES (grep finds no hits in tests/). be71033 loosened the upper bound from 7 s to 9.5 s for Windows CI.",
+    "reproduction": "sed -i 's/STATUS_TIMEOUT_MS = 5_000/STATUS_TIMEOUT_MS = 9_000/' src/main/ollama-locality.ts; npx vitest run tests/ollama-locality.test.ts -> 34 passed.",
+    "fix": "Add `expect(STATUS_TIMEOUT_MS).toBe(5_000)` (and `expect(STATUS_MAX_BYTES).toBe(64 * 1024)`) beside the behavioural test. The behavioural test then shows the constant is the one in effect, and the equality pins its value. Reword the comment."
+   },
+   {
+    "id": "MM-P1-SPEC-5",
+    "severity": "S3",
+    "problem": "Wire design point 8 says 'a loopback Ollama is accepted only when GET /api/status reports cloud.disabled: true'. Per E-31, Ollama's /v1/chat/completions sits behind cloudPassthroughMiddleware in front of the same ChatHandler that proxies cloud references. The code checks only profiles of kind `ollama`. An `openai-compatible` profile at http://127.0.0.1:11434/v1 with a `-cloud` model can still send a local-only prompt to ollama.com. The spec records this as a 'Known limit'. However, ARCHITECTURE.md says only that openai-compatible profiles 'make no such request' and does not name the gap. The planned AGENTS.md invariant row could therefore be read as covering every local Ollama route. Phase 1 did not introduce this gap (it existed before).",
+    "evidence": "src/main/ollama-locality.ts:31 (`if (context.profile.kind !== 'ollama' || !localOnly(context)) return;`). tests/ollama-locality.test.ts:155-159 pins the skip. more-models.md 'Known limit' paragraph (line 86). Wire BRIEF.md lines 266-274 and design point 8 (lines 522-533). ARCHITECTURE.md:9 ('cloud-allowed runs, `openai-compatible` profiles, `profile.test` and the managed runtime make no such request').",
+    "reproduction": "Under a local-only project, create an openai-compatible profile with endpoint http://127.0.0.1:11434/v1 and model gpt-oss:120b-cloud against a signed-in, cloud-enabled Ollama. infer() makes no status request (verifyOllamaLocality returns at line 31), and the chat request goes through Ollama's /v1 passthrough.",
+    "fix": "Keep it out of Phase 1 as the spec decides, but state the scope wherever the invariant is recorded: the AGENTS.md row, ARCHITECTURE.md:9 ('openai-compatible loopback profiles remain unverified, a known limit') and README. Record it under 'Recorded for later' in the plan so it is tracked beyond the spec paragraph."
+   },
+   {
+    "id": "MM-P1-SPEC-6",
+    "severity": "S3",
+    "problem": "The RUN.md findings ledger misstates the U2-R1 fix as 'behavioural test of the awaited check'. Commit 3ed4f59 strengthened the source-text test of infer() and explicitly set aside an infer() harness. F-6's real wiring (infer() awaits the check before every step) is therefore still pinned only by reading src/main/index.ts as text. The behavioural tests use a `step()` helper that copies infer()'s order instead of calling infer().",
+    "evidence": "RUN.md Findings row P1-U2-R1: 'FIXED `3ed4f59` (behavioural test of the awaited check)'. The 3ed4f59 message says 'the infer() source test reads index.ts as whole trimmed lines ... Set aside: an infer() harness.' tests/ollama-locality.test.ts:65-69 (step helper) and 253-278 (source-text test). My mutation K (call removed) is caught only by the source-text test.",
+    "reproduction": "git show 3ed4f59 --stat (tests/ollama-locality.test.ts only); read tests/ollama-locality.test.ts:253-278.",
+    "fix": "Correct the ledger wording to 'stricter source-text pin; infer() harness set aside'. Record the missing infer() harness as a later item, so the gap is tracked rather than reported as closed."
+   },
+   {
+    "id": "MM-P1-SPEC-7",
+    "severity": "S4",
+    "problem": "ARCHITECTURE.md says 'the managed runtime make[s] no such request', but the managed runtime does read /api/status, once at startup. Also, the test comment 'infer() only: not profile.test, not the managed runtime' at tests/ollama-locality.test.ts:277 counts calls only in src/main/index.ts, so it does not pin anything about the managed path in src/models/managed-provider.ts.",
+    "evidence": "src/models/managed-ollama.ts:99-100 (`z.object({ cloud: z.object({ disabled: z.boolean() }) }).parse(await runtimeJson(session, '/api/status', ...)); if (!status.cloud.disabled) throw new Error('RUNTIME_CLOUD')`). ARCHITECTURE.md:9. tests/ollama-locality.test.ts:277.",
+    "reproduction": "Read the cited lines.",
+    "fix": "Reword ARCHITECTURE.md to say the managed runtime keeps its own startup check (src/models/managed-ollama.ts) and makes no per-step request. Either reword the test comment or extend the count to src/models/."
+   },
+   {
+    "id": "MM-P1-SPEC-8",
+    "severity": "S4",
+    "problem": "Some test wording drifted from what the tests prove. (a) provider-stream.test.ts:452-454 cites 'Kept as it was (docs/specification/more-models.md)' for the no-finish_reason rule, but the spec says nothing about it; the rule comes from the U1 brief. (b) The name of application.test.ts:59, 'a local Ollama that can reach cloud models fails the run', keeps the pre-U2-R4 meaning: the refusal now covers 'could not confirm' (404, not running), not only an Ollama known to reach the cloud. (c) The id:/retry: fixture (provider-stream.test.ts:367-376), the Mistral message fill (provider-transport.test.ts:270-273) and the '404 page not found' body are not copied from captures. Each is documented in a comment, but T-1 asks for captured fixtures.",
+    "evidence": "The cited lines. more-models.md, Phase 1 design 1, has no statement on a missing finish_reason. briefs/p1-u1-builder.md:43 is the source.",
+    "reproduction": "Read the cited lines.",
+    "fix": "Cite briefs/p1-u1-builder.md (and the as-built note) in (a). Rename (b) to, for example, 'an unverified local Ollama fails the run...'. Keep the (c) comments, and list the non-captured fixtures in the spec's as-built notes."
+   },
+   {
+    "id": "MM-P1-SPEC-9",
+    "severity": "S4",
+    "problem": "The top-level `error` check exists only in the stream accumulator. A plain JSON 200 (a server that ignores `stream: true`) carrying both a top-level `error` and a valid `choices[0]` is read as an answer, because ChatSchema is non-strict. No captured vendor page documents that shape: OpenRouter's top-level error is documented for SSE only (E-25), and an error body without choices already fails ChatSchema. F-2 says 'error chunk', so this is outside the requirement.",
+    "evidence": "src/main/inference.ts:133 (the plain JSON path goes to readBoundedJson) and 178-180 (ChatSchema.safeParse, with no `error` check). src/main/provider-stream.ts:158 (the check exists only in the accumulator).",
+    "reproduction": "complete(openaiProfile, [], { fetcher: async () => Response.json({ error: { code: 'server_error' }, choices: [{ message: { content: 'x' }, finish_reason: 'stop' }] }), signal }) resolves { content: 'x', outcome: 'complete' }.",
+    "fix": "Optional: apply the same `error != null` refusal to the plain JSON body before ChatSchema, or record the decision in the as-built notes."
+   }
+  ],
+  "checked": [
+   "Setup: scratch worktree /home/user/task5-handoff/wt/mm-p1-int-spec at f1c4867, node_modules and .build symlinked; removed at the end with `git worktree remove --force` (worktree list count 0). Nothing in /home/user/moonaliza or any other worktree was edited. The /home/user/task5-handoff/results directory was only read.",
+   "Read: briefs/p1-common.md, p1-u1-builder.md, p1-u2-builder.md, REQUIREMENTS-P1.md, docs/specification/more-models.md, MANDATE.md, RUN.md, wire BRIEF.md (design points 3 and 8, Decision, U-18), diff b793f13..f1c4867 (src/, tests/, docs/ARCHITECTURE.md).",
+   "F-1 MET. Code: src/main/provider-stream.ts:57-74 (readSseEvents: field parse, `event` kept, reset at the blank line, comment/id/retry dropped) and :77-79 (readSse yields data only; its only caller is src/main/inference.ts:135). Tests: tests/provider-stream.test.ts:325 (fixtures verbatim in the E-10/E-25/E-20 captures), :333 (E-10 names, ping, error event), :349 (readSse data only), :354 (E-25 comment between and inside events), :367 (id:/retry:), :378 (name reset).",
+   "F-2 MET. Code: provider-stream.ts:158 (top-level `error` != null throws PROVIDER_STREAM_ERROR before the no-choice return) and inference.ts:189-190 (`error`/`insufficient_system_resource`/`aborted` fail as PROVIDER_FINISH_FAILED). These throw, so nothing is returned to save, and inferenceErrorCode gives PROVIDER_ERROR. Tests: provider-stream.test.ts:406, :421, :443; provider-transport.test.ts:288. Captures checked: DeepSeek finish_reason enum (raw deepseek lines 503, 1034), OpenRouter mid-stream error (raw openrouter line 445), Mistral model_length/error enum in the source HTML.",
+   "F-3 MET, with a recorded deviation: an empty finish_reason gives incomplete (U1-R2), which is not in the spec. Code: inference.ts:189-194 (known set stop/tool_calls/length/model_length/content_filter; failure checked before refusal). Tests: provider-transport.test.ts:278 (model_length), :288 (unknown function_call), :297 (empty), :305 (refusal vs error; stop/length/content_filter/tool_calls); provider-stream.test.ts:443, :452.",
+   "F-4 MET. Code: provider-stream.ts:188-193. Tests: provider-stream.test.ts:391 (E-25 repeated stop accepted, usage from E-26 lines 40-54, checked) and :397 (changed reason fails).",
+   "F-5 MET. Code: ollama-locality.ts:25-27 (localOnly: session OR project, fail-closed on unknown values, matching assertConversationPolicy), :41-51, :53-75 (200 only, response.redirected, 64 KiB bound, JSON, z.boolean, === true; 5 s via AbortSignal.any plus untilAborted). Wired at src/main/index.ts:96, after assertConversationPolicy/validateEndpoint and before fetcher/vault.grant/complete. Tests: ollama-locality.test.ts:105 (14 refusal rows, the fake sees only GET /api/status), :111, :117, :122, :128, :145, :221.",
+   "F-6 MET. infer() runs once per engine step (application.ts:356 host.infer inside the step loop). Tests: ollama-locality.test.ts:161 (two steps make two status requests; cloud turned on between steps refuses), :135 (cloud-allowed: no status request), :253-278 (source pin). The managed runtime is unchanged: no diff under src/models; managed-provider.ts:32 still calls complete() directly.",
+   "F-7 MET. Code: src/shared/errors.ts:6, src/engine/control.ts:96, inference.ts:97-100, application.ts:393 (message equals the spec text apart from a typographic apostrophe) and :396 (retry 'never'). Research mode: reviewEnd appends the message to REVIEW_RUN_FAILED. Tests: provider-transport.test.ts:252, application.test.ts:59 (calls === 1, retry never). My mutation removing the code from ErrorCodeSchema is KILLED by application.test.ts (a ZodError on the run.failed event).",
+   "S-1 PARTLY. Code meets it: localSession (direct proxy), no headers, no body, `redirect:'error'` and `credentials:'omit'`; Electron 44.4.5 net.fetch was confirmed to honour both. Tests: no Authorization, no body, no prompt, and redirect are pinned; the credentials half is not (MM-P1-SPEC-2).",
+   "T-1 MET for the tests' recorded guard proofs (reports/p1-build-workflow.json U1/U2 tables, commits 03b54de/3ed4f59/be71033). My spot mutations: 14 of 16 KILLED (A error check, B changed reason, C known set, D model_length, E project half, F redirected, G redirect follow, J 64 KiB bound, K infer call, M inferenceErrorCode, N control enum, O retry, P kind check, Q status path). SURVIVED: H credentials omit, I timeout 9 s. A few fixtures are derived rather than captured, each documented (MM-P1-SPEC-8).",
+   "A-1 PARTLY. The pinned Linux gate on f1c4867 by the lead (results/mm-p1-f1c4867; the gate worktree HEAD is f1c4867cfab5) shows typecheck=0, lint=0, build=0, 1170 tests (1090 passed, 74 failed, 6 skipped). The 74 failures are exactly the names in baseline-failing.json, there are no new failures, and no file is without results. Windows CI on the merged head is not yet run (no push). My own run of the 4 touched test files: 128/128 passed.",
+   "D-1 PARTLY / NOT MET: ARCHITECTURE.md is current and accurate except one wording point (MM-P1-SPEC-7); the spec has no as-built notes and AGENTS.md has no locality row (MM-P1-SPEC-1).",
+   "Spec 'Set aside' alternatives not built: an unknown finish_reason is no longer incomplete (it fails); no warn-and-send path (refusal before the chat request); no check at profile save (grep finds no status call outside infer()); no per-model rule (no remote_host, :cloud or /api/show checks in src/ apart from the pre-existing managed model-store).",
+   "Wire design point 3 against the code: comment lines skipped, event lines tolerated, unknown event types ignored by readSse; OpenRouter error chunk, Mistral error and DeepSeek insufficient_system_resource/aborted fail; model_length gives incomplete; unknown values fail (mapped in complete() rather than OpenAIAccumulator, same outcome); the repeated reason on the usage chunk is accepted. The Anthropic error event and the Responses error event belong to Phases 2/3. The first build step's zero-delta content block is for the Anthropic accumulator (Phase 2).",
+   "Wire design point 8 against the code: cloud.disabled true is required under local-only; a missing /api/status (404) refuses; the finer per-model rule stays off; the check runs before every step in main rather than in validateEndpoint (inference.ts:18-20 unchanged). This deviation is documented and keeps the profile-save path untouched. The openai-compatible-to-Ollama /v1 route is not covered: a known limit (MM-P1-SPEC-5).",
+   "Engine message claims checked against evidence: OLLAMA_NO_CLOUD and disable_ollama_cloud in server.json are backed by the older corpus (docs/handoff/work/research raw config.go lines 245-246, 340, 392, 449-450), cited by wire DISCOVERY U-17.",
+   "Bridge publicMessages (src/main/bridge.ts) has no LOCAL_MODEL_UNVERIFIED entry. This matches existing practice: run failures reach the renderer as run.failed events carrying the engine's message (the same path CONTEXT_LIMIT uses), not through safeError.",
+   "Untested, carried as a risk: Electron session.fetch closing the socket on abort or body cancel (the tests use Node's undici, as the 3ed4f59 report says). The Electron source shows `h.abort()` on signal abort, which supports this, but it has not been run."
+  ]
+ },
+ {
+  "findings": [
+   {
+    "id": "BRK-1",
+    "severity": "S1",
+    "problem": "Under some conditions the fail-closed locality check is answered from Electron's HTTP cache instead of by Ollama, so it does not actually run before every step (F-6). readStatus calls `localSession.fetch(url, { method: 'GET', redirect: 'error', credentials: 'omit', signal })` and sets no `cache` mode. If the /api/status answer carries a freshness header (Cache-Control max-age, Expires, or only Last-Modified, which gets heuristic freshness), the session cache (the in-memory 'moonaliza-local' partition, alive for the whole app session) serves the old `cloud.disabled: true` on later steps and later runs. If Ollama is restarted with cloud on in between, the check still passes and the chat request goes out, so the prompt can reach ollama.com under a local-only policy. That is the case design point (b) gives as its reason for checking every step rather than at profile save. Precondition: stock Ollama's StatusHandler (E-31 capture lines 2211-2218, gin `c.JSON`) sets none of these headers, so a bare Ollama is not affected. A server in front of it that adds them is affected, and the spec supports endpoints with a path. The unit tests cannot see this because they use Node's fetch, which has no HTTP cache.",
+    "evidence": "Electron 44.4.5 (the repo's node_modules/electron), session.fromPartition + setProxy({mode:'direct'}) as in infer(), assertOllamaLocal bundled from f1c4867. The fake Ollama answers disabled:true on step 1 and disabled:false on step 2:\nno cache headers (as gin c.JSON sends): step 1 ok, step 2 (cloud now ON) LOCAL_MODEL_UNVERIFIED; Ollama saw 2 status request(s)\nCache-Control: max-age=600: step 1 ok, step 2 (cloud now ON) ok; Ollama saw 1 status request(s)\nExpires in the future: step 1 ok, step 2 (cloud now ON) ok; Ollama saw 1 status request(s)\nLast-Modified only (heuristic freshness): step 1 ok, step 2 (cloud now ON) ok; Ollama saw 1 status request(s)\n...same three with cache:'no-store' added to the init: step 2 LOCAL_MODEL_UNVERIFIED; Ollama saw 2 status request(s)\nsrc/main/ollama-locality.ts readStatus: `fetcher(url, { method: 'GET', redirect: 'error', credentials: 'omit', signal })`.",
+    "reproduction": "Harness: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/el/cache.cjs, which requires the already-built bundle locality.cjs in the same folder. To rebuild it, run `node_modules/.bin/esbuild entry.ts --bundle --platform=node --format=cjs --target=node24 --external:electron --outfile=locality.cjs` from a checkout of f1c4867, with entry.ts re-exporting assertOllamaLocal from src/main/ollama-locality.ts. Run: `cd /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/el && timeout 120 xvfb-run -a /home/user/moonaliza/node_modules/electron/dist/electron --no-sandbox --disable-gpu ./cache.cjs`",
+    "fix": "In readStatus, add `cache: 'no-store'` to the fetch init. The same harness shows it closes all three cases. Pin it with a unit test: a recording fetcher asserts that the init it receives has `cache: 'no-store'`, and the test is shown red with the field removed. Optionally add one sentence to the spec's as-built notes: the status answer is never served from the session cache."
+   },
+   {
+    "id": "BRK-2",
+    "severity": "S4",
+    "problem": "The status connection can stay open after the refusal. This happens when the fetcher ignores the signal, the response headers arrive after the 5 s bound, and the body never ends. readStatus reaches `signal.addEventListener('abort', cancel, { once: true })` with a signal that has already aborted, so the listener never fires. The read loop does not check `signal.aborted`, so it reads forever. The refusal itself still arrives on time through untilAborted. The existing test 'a run cancelled while the status body is still arriving closes the connection, even through a fetcher that ignores the signal' covers only the case where headers arrive before the abort. The production fetcher (Electron session.fetch) honours the signal, and in Electron both the silent and stalled servers had their sockets closed. So this is a defensive gap only.",
+    "evidence": "Scratch test 'late headers through a fetcher that ignores the signal...': fake writes headers + '{\"cloud\":' at 5.5 s then a space every 200 ms; fetcher = fetch(url, {...init, signal: null}).\nresult { v: 'THROW LOCAL_MODEL_UNVERIFIED', ms: 4999 }\nconnections still open 3 s after the refusal (headers came at 5.5 s): 1",
+    "reproduction": "Copy /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/breaker-tests/zz-breaker-locality.test.ts into tests/ of an f1c4867 worktree, then run `export PATH=/versions/node/v24.21.0/bin:$PATH && npx vitest run tests/zz-breaker-locality.test.ts -t 'late headers' --disableConsoleIntercept` (cwd: the worktree root).",
+    "fix": "After registering the abort listener in readStatus, add `if (signal.aborted) { cancel(); return false; }`. Add the late-headers case to the existing closedBy test."
+   },
+   {
+    "id": "BRK-3",
+    "severity": "S4",
+    "problem": "A plain-JSON 200 body (a server that ignored `stream: true`) with a top-level `error` object and a usable choice comes back as a complete answer with its text. The same object sent as an SSE chunk fails with PROVIDER_STREAM_ERROR. The top-level-error rule lives only in OpenAIAccumulator.push, while the finish_reason map is applied to both paths ('streamed or not'). No captured page shows a vendor sending this body, so the case is derived, not observed.",
+    "evidence": "Scratch test output:\nplain JSON 200 + top-level error -> {\"content\":\"partial text\",\"outcome\":\"complete\"}\nsame as SSE -> THROW PROVIDER_STREAM_ERROR\nBody: {error:{code:'server_error',message:'Provider disconnected unexpectedly'}, choices:[{index:0,message:{role:'assistant',content:'partial text'},finish_reason:'stop'}]} (E-25 capture line 445's error object on a non-streamed choice).",
+    "reproduction": "Copy scratchpad/breaker-tests/zz-breaker-stream.test.ts into tests/ of an f1c4867 worktree, then run `npx vitest run tests/zz-breaker-stream.test.ts -t 'non-streamed JSON' --disableConsoleIntercept`.",
+    "fix": "In complete() on the OpenAI-shaped path, apply the same top-level `error != null` check to the plain-JSON body (or in readStreamed after readBoundedJson), throwing PROVIDER_STREAM_ERROR. Alternatively, record in the as-built notes that the rule is stream-only."
+   },
+   {
+    "id": "BRK-4",
+    "severity": "S4",
+    "problem": "Pre-existing, not introduced by b793f13..f1c4867. lines() splits only on `\\r?\\n`, but the SSE grammar that readSseEvents now follows also allows a lone CR as a line end. A CR-framed stream therefore arrives as one line. If it begins with OpenRouter's comment, the whole stream, data and [DONE] included, is skipped as a single comment. The call then ends `incomplete` with empty content, the run fails with PROVIDER_ERROR, and an empty partial message is kept. A CR-framed stream that starts with `data:` fails with PROVIDER_INVALID_RESPONSE. No vendor in the corpus uses lone CR.",
+    "evidence": "Scratch test: BASE.join('\\r\\r') (comment, 4 chunks, [DONE]) -> `CR-only framing -> { content: '', outcome: 'incomplete' }`. The same stream with LF or CRLF: complete, with content and usage.",
+    "reproduction": "Run `npx vitest run tests/zz-breaker-stream.test.ts -t 'CR-only' --disableConsoleIntercept` with scratchpad/breaker-tests/zz-breaker-stream.test.ts copied into tests/.",
+    "fix": "Optional: split on `/\\r\\n|\\r|\\n/`, holding back a trailing lone `\\r` until the next chunk shows whether `\\n` follows. Or record lone CR as unsupported in the readSseEvents doc comment."
+   },
+   {
+    "id": "BRK-5",
+    "severity": "S4",
+    "problem": "Pre-existing, in lines(), unchanged by this diff, but on the readSseEvents path. Every chunk appends to `pending` and re-splits the whole buffer, so parsing a long event is quadratic in the number of chunks. A provider (or a hostile endpoint) that trickles one roughly 4 MiB event in small chunks burns main-process CPU until the 120 s request timeout.",
+    "evidence": "One 4,184,192-byte SSE event (content 1,990,000 chars, under MAX_TEXT), outcome complete in every case:\nchunk 65536 B, 64 reads -> 154 ms\nchunk 4096 B, 1022 reads -> 1499 ms\nchunk 1024 B, 4087 reads -> 6105 ms",
+    "reproduction": "Copy scratchpad/breaker-tests/zz-breaker-perf.test.ts into tests/, then run `npx vitest run tests/zz-breaker-perf.test.ts --disableConsoleIntercept`.",
+    "fix": "Optional: search for line breaks only in the newly decoded text (plus one carried CR), or keep a parts array and join only when a newline arrives."
+   }
+  ],
+  "checked": [
+   "Setup: worktree /home/user/task5-handoff/wt/mm-p1-int-breaker at f1c4867 with node_modules and .build symlinked; Node v24.21.0. The worktree was removed at the end; the moonaliza shared node_modules and .build are intact. Scratch tests are saved in /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/breaker-tests/ and the Electron harness in .../scratchpad/el/.",
+   "Baseline for the change: `npx vitest run tests/ollama-locality.test.ts tests/provider-stream.test.ts tests/provider-transport.test.ts` gave 109 passed (cwd = worktree root). `npm run typecheck` was clean. `npx eslint src tests/ollama-locality.test.ts tests/provider-stream.test.ts` was clean.",
+   "SSE with LF and with CRLF framing, a body holding a comment, multi-byte UTF-8 (\u00e9, \u00f6, emoji), the usage repeat and [DONE]: split into two chunks at every byte boundary and also sent one byte per chunk, it gave the same complete answer with usage every time. A leading BOM split at bytes 1-4 was stripped correctly.",
+   "A comment line between two data lines of one event: the data lines were joined and the call completed.",
+   "4 MiB boundary: a stream of exactly 4,194,304 bytes is read; one byte more gives PROVIDER_RESPONSE_TOO_LARGE.",
+   "A stream closing mid-event: a cut inside the JSON and a cut inside a UTF-8 sequence both give PROVIDER_INVALID_RESPONSE. A clean close with no finish_reason is incomplete, and keep-alive comments only are incomplete with empty content; both are as designed and as before. A terminal data line without its blank line is still read, as the doc comment says.",
+   "An error chunk (E-25 line 445) after a tool call started, and after a terminal tool_calls chunk, gives PROVIDER_STREAM_ERROR. `event: error` with data that has no top-level error gives PROVIDER_INVALID_RESPONSE.",
+   "finish_reason twice: stop+stop, stop+null+stop, length+length and content_filter+content_filter keep their outcome. stop then length, and length then stop, give PROVIDER_INVALID_RESPONSE. error+error gives PROVIDER_FINISH_FAILED. stop followed by '' stays complete.",
+   "readSseEvents: `event:` with CRLF is kept; `data :` (space before the colon) is ignored per the grammar; `data:[DONE]` without a space ends the stream.",
+   "Locality via Node fetch: status at 4.5 s passes, then the chat runs. Status at 5.5 s is refused at 5002 ms with no chat request. Headers at once with the body at 4.5 s passes. 301, 302, 303, 307 and 308 are refused and the target is never requested. disabled as the string \"true\" is refused. Extra fields are accepted. A BOM is refused (fail-closed; RFC 8259 allows it). Leading whitespace, duplicate keys (last wins) and a text/html content-type are accepted. A gzip bomb (10 MB decoded) is refused at the 64 KiB bound in 57 ms. A truncated body is refused. Valid JSON followed by chunked data that never ends is refused at 5002 ms.",
+   "Endpoint spellings ('/', '//', '/./', '/a/../', '/%2e%2e/', '/v1/', '/api/', '/api/chat'): the status and chat requests always use the same base. '/?' and '/#' send the status request to '/', which a real Ollama answers with plain text, so it is refused (fail-closed).",
+   "IPv6: this sandbox cannot open IPv6 sockets (EAFNOSUPPORT). The URLs were checked with a recording fetcher instead. http://[::1]:11434, [::1]:11434/ and [0:0:0:0:0:0:0:1]:11434/x/ normalise to the same [::1] base for status and chat. [::ffff:127.0.0.1] gives INVALID_ENDPOINT before any request.",
+   "Policy changed between two steps of one run (infer()'s prelude replayed): a session switch to local-only (rev 1) or a project switch (rev 2) throws RUN_CANCELLED in assertConversationPolicy, before any status or chat request.",
+   "Production fetcher, Electron 44.4.5 session.fetch under xvfb: redirects 301/302/307/308 are not followed. No Cookie header is sent, and the response's Set-Cookie is not stored. A 401 with a Basic challenge is refused in 4 ms with no login event. Silent and stalled servers are refused at 5000/5001 ms with 0 open sockets after 700 ms. A cancel mid-body gives RUN_CANCELLED in 102 ms with the socket closed. localhost/ resolves to the right base. Exactly 64 KiB is accepted and 64 KiB + 1 refused. Without cache headers (stock gin) every step reaches Ollama; with freshness headers it does not (BRK-1).",
+   "Engine path read, not run: LOCAL_MODEL_UNVERIFIED crosses through inferenceErrorCode and the inference.error schema. application.ts shows the spec message with retry 'never'. A review run gets REVIEW_RUN_FAILED with the message appended (2048-char slice; the message is about 400 chars). verifyOllamaLocality has one caller, infer(); profile.test and managed-provider make no status request, as documented.",
+   "Not reported, because it cannot be reproduced offline: whether any OpenAI-compatible vendor outside the corpus uses a finish_reason value the new allow-list rejects. Under the spec's rule such a value now fails the call."
+  ]
+ },
+ {
+  "findings": [
+   {
+    "id": "INV-1",
+    "severity": "S2",
+    "problem": "S-1 says the status request carries no credential, but no test covers the `credentials: 'omit'` guard in readStatus (src/main/ollama-locality.ts:54). If someone removes it, the whole suite stays green. In production, removing it would send the local session's cookies and cached HTTP auth with GET /api/status. The test 'the status request is a bare GET: no credential, no cookie, ...' cannot fail on this guard because it runs through Node's global fetch, which has no cookie jar and no auth cache. T-1 (every guard shown red) is also not met for this guard.",
+    "evidence": "Electron 44.4.5 fetchWithSession, read from node_modules/electron/dist/electron, does: `d=c.headers.get(\"origin\")??void 0, u=\"same-origin\"!==c.credentials||d?c.credentials:\"include\"` and then `credentials:u`. Without the explicit 'omit', the Request default 'same-origin' with no Origin header becomes 'include', so the request carries the session's cookies and HTTP auth. Cookies are scoped by host, not port, so a cookie set by any other 127.0.0.1 server would reach Ollama. ClientRequest docs (electron.d.ts:21056-21065): 'If set to include, credentials from the session associated with the request will be used.'",
+    "reproduction": "In a worktree at f1c4867, run `sed -i \"s/redirect: 'error', credentials: 'omit', signal })/redirect: 'error', signal })/\" src/main/ollama-locality.ts && npx vitest run tests/ollama-locality.test.ts`. Observed: 34 passed (the mutation survives). Scratch test (kept at /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/zz-scratch-invariant.test.ts): the fetcher copies Electron's credential resolution and adds a Cookie header when credentials resolve to 'include'. It passes on f1c4867. With the guard removed it fails: `AssertionError: expected 'jar=from-another-loopback-server' to be undefined`.",
+    "fix": "Add a test that pins the request init. One way: a recording fetcher that asserts init is exactly { method: 'GET', redirect: 'error', credentials: 'omit', signal } with no headers and no body. The other way: a fetcher that copies Electron's `same-origin`-to-`include` rule and injects a cookie and an Authorization header for 'include', as in the scratch test. Then show it red with `credentials: 'omit'` removed."
+   },
+   {
+    "id": "INV-2",
+    "severity": "S2",
+    "problem": "D-1 is not yet met at f1c4867. The invariants table in AGENTS.md (lines 76-87) has no locality row, and docs/specification/more-models.md has no 'as built' notes. RUN.md 'Next action' plans both after this review, so this is an open merge blocker, not a defect in the code. Under the given scale an unmet requirement would be S1; it is filed as S2 because it is a missing doc that is already scheduled.",
+    "evidence": "`git diff --stat b793f13..f1c4867` does not touch AGENTS.md. `grep -n 'As built\\|as built' docs/specification/more-models.md` finds nothing. REQUIREMENTS-P1.md D-1: 'ARCHITECTURE.md, the spec's \"as built\" notes and AGENTS.md (a locality invariant row) current in the same pull request'. RUN.md Next action: 'docs (spec as built, AGENTS.md locality invariant row)'.",
+    "reproduction": "Run `git diff --name-only b793f13..f1c4867 | grep -c AGENTS.md`, which prints 0. Then read the AGENTS.md '### Invariants' table: no row covers inference locality.",
+    "fix": "Before the merge, add a row such as: 'Under a local-only policy no prompt byte reaches a user-run Ollama unless, in the same model step, GET <endpoint>/api/status (local session, no credential, no redirect, 5 s, 64 KiB) answered 200 with cloud.disabled true | tests/ollama-locality.test.ts (14 refusal cases see only GET /api/status; per-step re-check; cloud-allowed makes no status request; infer() order pinned from source)'. Cite INV-1's new test once it lands. Also add the spec's as-built notes."
+   },
+   {
+    "id": "INV-3",
+    "severity": "S4",
+    "problem": "Under Electron the `response.redirected` fallback in readStatus (src/main/ollama-locality.ts:55-56) never triggers, so the comment 'A fetcher that followed a redirect anyway is refused too' is true only for Node's fetch. This is not a hole: Electron honours `redirect: 'error'`, and a test pins that guard.",
+    "evidence": "Electron's fetchWithSession builds every answer with `new Response(r,{headers:t,status:e.statusCode,statusText:e.statusMessage})`, and a constructed Response always has redirected === false. Electron's ClientRequest on redirect does: `if(\"error\"===this._redirectPolicy)this._die(new Error(\"Attempted to redirect, but redirect policy was 'error'\"))`. The test 'a fetcher that follows redirects regardless...' runs on Node fetch, which does set `redirected`.",
+    "reproduction": "Run `grep -a -o 'new Response(r,{headers:t,status:e.statusCode[^)]*)' node_modules/electron/dist/electron`. Then read src/main/ollama-locality.ts:55-56.",
+    "fix": "Reword the comment to name the real guard (`redirect: 'error'`, which Electron enforces) and call `redirected` a check that applies only to fetchers that report it. Alternatively, also compare `response.url` with the requested URL when it is non-empty."
+   },
+   {
+    "id": "INV-4",
+    "severity": "S4",
+    "problem": "If response headers arrive after the 5 s bound through a fetcher that ignores the signal, readStatus keeps the connection open indefinitely. The abort listener (line 60) is added to a signal that has already aborted, so it never fires, and reader.read() waits forever. The production fetcher (Electron session.fetch) honours the signal and calls h.abort(), so this does not happen in production. It only contradicts the module's stated aim of bounding a fetcher that ignores the signal.",
+    "evidence": "Scratch test: the fake server answers headers at 5.3 s and then stalls the body, and the fetcher uses `{...init, signal: null}`. assertOllamaLocal rejects with LOCAL_MODEL_UNVERIFIED at 5 s as specified, but 1.5 s after the late headers 1 socket is still open (logged: 'open sockets 1.5 s after the late headers: 1').",
+    "reproduction": "Run scratch test 2 in /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/zz-scratch-invariant.test.ts against f1c4867.",
+    "fix": "In readStatus, right after `getReader()`, add `if (signal.aborted) { cancel(); return false; }`, before or instead of relying on the abort listener."
+   },
+   {
+    "id": "INV-5",
+    "severity": "S4",
+    "problem": "Pre-existing and outside this diff, recorded for later. The chat request in complete() (src/main/inference.ts, the `options.fetcher(... { method: 'POST', headers, signal, redirect: 'error', body })` call) sets no `credentials`. Under Electron it therefore goes out as 'include' with the session's cookies and HTTP auth cache, on both the local and the provider session. The new status request omits them, so the two requests behave differently.",
+    "evidence": "Same fetchWithSession rule as INV-1. The complete() init has no credentials key, so the Request default 'same-origin' with no Origin header resolves to 'include'.",
+    "reproduction": "Read src/main/inference.ts in complete() at the fetcher call, together with the Electron fetchWithSession code quoted in INV-1.",
+    "fix": "Not for Phase 1. Record it under 'Recorded for later': pass `credentials: 'omit'` on provider and local chat requests and pin it with a test that uses Electron credential semantics."
+   }
+  ],
+  "checked": [
+   "Credentials never leave main or reach the wrong request: HOLD. In infer(), verifyOllamaLocality (src/main/index.ts:96) runs before vault.grant (index.ts:102). Its fetcher carries no secret and the init has no headers. Electron's fetchWithSession passes credentials 'omit' through, so no cookies and no HTTP auth are sent (read from the Electron 44.4.5 binary). An error chunk is thrown as the fixed code PROVIDER_STREAM_ERROR and its text is never kept. The only test gap is INV-1.",
+   "No prompt byte before a policy check: HOLD. infer() runs, in order: run.context, the revision checks, assertConversationPolicy, PROJECT_REQUIRED, validateEndpoint/INVALID_ENDPOINT, then awaited verifyOllamaLocality, then complete(). The status request is a GET with an empty body, and the test asserts the prompt is absent. A source-text test pins the order: a whole-line awaited statement, no enclosing try/then, after the policy check, before invoke and vault.grant.",
+   "Local-only never sends off the machine: HOLD for ollama profiles. The base URL comes from validateEndpoint('ollama'), which rejects any non-loopback host, and it is the same base complete() posts /api/chat to (tested with a trailing slash and a trailing path). localOnly() treats anything but cloud-allowed on the session or the project as local-only, the same reading as assertConversationPolicy and assertInferencePolicy. The check fails closed: 14 refusal cases (non-200 status, false, missing field, wrong type, null, non-JSON, over 64 KiB including a valid prefix, 302, network error) plus timeout and stall cases. It runs again before every step, because infer() is called once per step. During the 5 s await gap, cancellation and policy changes abort capability.stop (policy-route.ts:61), assertOllamaLocal re-checks the signal, and complete() checks it on entry. The openai-compatible-on-loopback gap is the spec's recorded Known limit.",
+   "Redaction of provider output: HOLD. infer() still returns vault.redact(content) and still runs the tool-call redaction check. The status body never leaves readStatus (only a boolean does). The new failures (PROVIDER_STREAM_ERROR, PROVIDER_FINISH_FAILED, PROVIDER_INVALID_RESPONSE) are fixed strings and cross as PROVIDER_ERROR. Provider text cannot forge LOCAL_MODEL_UNVERIFIED, because refusalCode returns only PROVIDER_HTTP_<n> or CONTEXT_LIMIT. An unknown or failure finish_reason now throws before anything is saved, so the partial-message save in application.ts runs only for 'incomplete'.",
+   "Engine/main boundary codes: HOLD. inferenceErrorCode returns only CONTEXT_LIMIT, LOCAL_MODEL_UNVERIFIED or PROVIDER_ERROR, and RUN_CANCELLED still crosses as PROVIDER_ERROR. The inference.error enum in ToEngineSchema (control.ts:96) includes LOCAL_MODEL_UNVERIFIED; without it the engine's safeParse would silently drop the message. engine/index.ts rejects with Error(code). The application.ts failures map gives the spec message with retry 'never'. ErrorCodeSchema includes the code. A research-mode run ends REVIEW_RUN_FAILED with the message appended. Covered by tests in provider-transport.test.ts and application.test.ts.",
+   "Network sessions (local vs provider): HOLD. The status request always uses localSession, which is set to setProxy direct. The source test pins the exact line `(url, init) => localSession.fetch(url, init)`. Chat for ollama also uses localSession, because the locality validateEndpoint infers must equal profile.locality, and ollama is always loopback.",
+   "Redirects under Electron: HOLD. fetchWithSession passes `redirect: c.redirect` to ClientRequest, which dies on redirect when the policy is 'error'. Removing the guard makes the Node-fetch test go red (the redirect target gets requested). The `redirected` fallback is dead under Electron (INV-3).",
+   "Chat request not sent when the check refuses: HOLD. Every refusal case asserts the fake server saw only ['GET /api/status']. The cloud-allowed cases assert no status request is made.",
+   "profile.test unchanged: HOLD. The index.ts diff is the import plus two lines inside infer(). The profile.test handler is unchanged and the source test asserts verifyOllamaLocality appears exactly once in index.ts. By design profile.test still sends 'Reply with OK.' with no policy context.",
+   "Managed runtime path unchanged: HOLD. `git diff b793f13..f1c4867 -- src/models` is empty. managed-ollama.ts:99-100 keeps its own startup check on /api/status.",
+   "Nothing else in src/ changed: HOLD. Exactly 7 src files changed: errors.ts, control.ts, application.ts (one failures-map line), inference.ts (inferenceErrorCode plus the OpenAI branch of complete()), provider-stream.ts, ollama-locality.ts (new) and index.ts (import plus call). All are declared in the RUN.md units U0, U1 and U2.",
+   "No new dependency: HOLD. package.json and package-lock.json are unchanged. The new module imports only zod (already a dependency) and ./inference.",
+   "Gate at f1c4867 (cwd: the scratch worktree /home/user/task5-handoff/wt/mm-p1-int-invariant, TMPDIR=/tmp/claude-0/inv, Node 24.21.0): npm run typecheck passed; npm run lint passed; npx vitest run on the ollama-locality, provider-stream, provider-transport and application test files passed (4 files, 128 tests). The full suite ran 1180 tests with 74 failures, exactly the baseline-failing.json set: no new failure, no baseline test missing, 0 files without results.",
+   "Scratch worktree created at f1c4867 with node_modules and .build symlinked, and removed with `git worktree remove --force`. /home/user/moonaliza was not edited. The scratch test file is kept outside the repository at /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/zz-scratch-invariant.test.ts."
+  ]
+ },
+ {
+  "findings": [
+   {
+    "id": "MUT-1",
+    "severity": "S2",
+    "problem": "Requirement S-1 (the status request carries no credential) has no test that can fail. Both credentials mutations in readStatus survive: L14 `credentials: 'omit'` -> `credentials: 'include'`, and L15 removing `, credentials: 'omit'`.",
+    "evidence": "src/main/ollama-locality.ts:54 `const response = await fetcher(url, { method: 'GET', redirect: 'error', credentials: 'omit', signal });`. The only S-1 test, tests/ollama-locality.test.ts 'the status request is a bare GET: no credential, no cookie, no body, no prompt text', sends the request through Node's fetch. Node's fetch has no cookie jar and no auth cache, so the header assertions hold whatever `credentials` says. In production the fetcher is Electron's localSession.fetch (src/main/index.ts:96). Electron 44.4.5's typings (node_modules/electron/electron.d.ts:21056-21065) say: 'If set to `include`, credentials from the session associated with the request will be used ... If this option is not specified, authentication data from the session will be sent'. Either mutation therefore sends session credentials to the Ollama endpoint, and all 128 tests stay green.",
+    "reproduction": "In a worktree at f1c4867, apply L14 or L15 to src/main/ollama-locality.ts:54 and run `npx vitest run tests/provider-stream.test.ts tests/provider-transport.test.ts tests/ollama-locality.test.ts tests/application.test.ts`: 128/128 pass. Then add the probe test 'P-L14/L15/L12' (saved at /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/mut/zz-mutation-probe.test.ts): it passes on f1c4867 and fails under L14, L15 and L12 ('expected { method: GET, ... } to match object').",
+    "fix": "Add a recording-fetcher test that calls assertOllamaLocal and asserts the init it receives: `{ method: 'GET', credentials: 'omit', redirect: 'error' }`, with body and headers undefined. This pins S-1 at the boundary main controls, independent of Node fetch."
+   },
+   {
+    "id": "MUT-2",
+    "severity": "S2",
+    "problem": "The rewritten readSseEvents no longer has any test for a last event that the stream ends without its blank line. Mutation S14, which deletes the trailing-event yield, survives. With it, an OpenAI-compatible answer whose final chunk is not followed by a blank line is saved as incomplete and its usage is lost.",
+    "evidence": "src/main/provider-stream.ts:73 `if (payload && payload !== '[DONE]') yield { event, data: json(payload) };`. Mutation S14 replaces it with nothing. The docstring (provider-stream.ts:49-55) promises 'a last event the stream ends without its blank line is still read, as before', and F-1 requires that existing callers keep receiving the parsed data. Every new fixture goes through `events()`, which appends '\\n\\n', so this branch is never reached. Probe P-S14 on body `data: {stop chunk}` followed by `data: {stop chunk with usage}` with no trailing newline: f1c4867 returns `{ usage: {3,1}, content: 'Hi', outcome: 'complete' }`; under S14 the result has only `{ content, outcome }` and fails the equality, because the terminal chunk is dropped and finish_reason stays null, which maps to incomplete.",
+    "reproduction": "Apply S14 at src/main/provider-stream.ts:73 and run the 4 related files: 128/128 green. Run tests/zz-mutation-probe.test.ts: P-S14 and P-S13 fail.",
+    "fix": "Add a complete() test whose stream ends with its terminal chunk and no blank line (P-S14), and a readSseEvents test that the unterminated last event keeps its `event:` name (P-S13)."
+   },
+   {
+    "id": "MUT-3",
+    "severity": "S3",
+    "problem": "The fail-closed branch for a 200 with no body is untested. Mutation L28, `if (!reader) return false;` -> `if (!reader) return true;`, survives, so the locality check would accept a body-less 200 as 'cloud disabled'.",
+    "evidence": "src/main/ollama-locality.ts:58. Every locality test uses a real loopback server, and Node always gives a 200 a body stream, so `response.body` is never null there. Probe P-L28 uses fetcher `async () => new Response(null, { status: 200 })`: f1c4867 rejects with LOCAL_MODEL_UNVERIFIED; under L28 the promise resolves undefined and the check passes. It is reachable only through a fetcher that yields a null-body Response, which is why this is S3 and not S1.",
+    "reproduction": "Apply L28 and run the 4 related files: 128/128 green. Run the probe: 'promise resolved \"undefined\" instead of rejecting'.",
+    "fix": "Add the null-body 200 case to the refusal table (direct assertOllamaLocal call with a stub fetcher)."
+   },
+   {
+    "id": "MUT-4",
+    "severity": "S3",
+    "problem": "The 5 s bound is not pinned. Mutation L09, `STATUS_TIMEOUT_MS = 5_000` -> `9_000`, survives because the timing test accepts any bound from 4.9 s up to 9.5 s.",
+    "evidence": "src/main/ollama-locality.ts:10. tests/ollama-locality.test.ts 'every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound' asserts elapsed >= 4900 and < 9500. Its comment says 'still below the 10 s a doubled 5 s bound would show, so a wrong bound is caught', but only a doubled bound is caught (L08, 10_000, was killed). The spec and F-5 say 5 s.",
+    "reproduction": "Apply L09 and run the 4 related files: 128/128 green (the timing test takes about 9 s and passes).",
+    "fix": "Keep the slack for Windows CI, but also assert the exported constant: `expect(STATUS_TIMEOUT_MS).toBe(5_000)`. Optionally assert STATUS_MAX_BYTES === 65536 alongside it."
+   },
+   {
+    "id": "MUT-5",
+    "severity": "S3",
+    "problem": "When the status body overflows, the check refuses but nothing tests that the connection closes. Mutation L20 drops `cancel()` from readStatus's finally and survives. A status body that never ends, read through a fetcher that ignores the signal, then keeps its socket open after the refusal.",
+    "evidence": "src/main/ollama-locality.ts:70 `} finally { signal.removeEventListener('abort', cancel); cancel(); }` -> `} finally { signal.removeEventListener('abort', cancel); }`. Both oversize refusal cases ('one byte over 64 KiB', 'valid answer followed by whitespace past 64 KiB') use a server that ends the response, and neither checks closure. Probe P-L20 (server writes 65 KiB of whitespace and never ends; unsignalled fetcher): f1c4867 refuses within 2 s and the socket closes; under L20 the refusal still comes, but `closedBy(open, 1000)` is false.",
+    "reproduction": "Apply L20 and run the 4 related files: 128/128 green. Run the probe: P-L20 fails, 'expected false to be true'.",
+    "fix": "Add P-L20: an oversized, never-ending status body through `unsignalled`, asserting both the refusal and that the connection closes."
+   },
+   {
+    "id": "MUT-6",
+    "severity": "S3",
+    "problem": "`data:` lines without the optional space are no longer tested. Mutation S09, where the value always drops the character after the colon, survives. Every chunk from a server that writes `data:{...}` would then fail as PROVIDER_INVALID_RESPONSE.",
+    "evidence": "src/main/provider-stream.ts:68 `line.startsWith(' ', colon + 1) ? colon + 2 : colon + 1` -> `colon + 2`. The pre-change code handled this explicitly (`line.slice(line.startsWith('data: ') ? 6 : 5)`), and the SSE grammar allows it. `git grep -E '^data:[^ ]'` over the wire corpus finds no vendor capture using it, hence S3. Probe P-S09 (`data:{...}` / `data:[DONE]`): f1c4867 completes with 'Hi'; under S09 it throws PROVIDER_INVALID_RESPONSE at provider-stream.ts:63.",
+    "reproduction": "Apply S09 and run the 4 related files: 128/128 green. Run the probe: P-S09 fails.",
+    "fix": "Add P-S09: a stream whose data lines have no space after the colon still completes."
+   },
+   {
+    "id": "MUT-7",
+    "severity": "S3",
+    "problem": "The engine's LOCAL_MODEL_UNVERIFIED message is pinned by only three substrings, so dropping remedy steps the spec requires goes unnoticed. Two mutations survive: A03 removes ', restart Ollama' (the step that makes OLLAMA_NO_CLOUD take effect), and A02 removes the server.json remedy.",
+    "evidence": "src/engine/application.ts:393. A03: `, restart Ollama, then try again.` -> `, then try again.`. A02: `, or \"disable_ollama_cloud\": true in Ollama\u2019s server.json)` -> `)`. tests/application.test.ts checks only 'OLLAMA_NO_CLOUD=1', 'could not confirm' and 'running and up to date'. F-7 requires 'the actionable message from the spec'. Today the message equals the spec text apart from the typographic apostrophe in 'Ollama\u2019s', which matches the file's existing style.",
+    "reproduction": "Apply A02 or A03 and run the 4 related files: 128/128 green.",
+    "fix": "Assert the whole message, e.g. `expect(result.failure.message.replace(/\u2019/g, \"'\")).toBe(<spec text>)`."
+   },
+   {
+    "id": "MUT-8",
+    "severity": "S4",
+    "problem": "`[DONE]` ending the stream is untested. Mutation S16, `if (payload === '[DONE]') return;` -> `continue;`, survives. The line itself is unchanged by the diff, but it sits inside the rewritten readSseEvents.",
+    "evidence": "src/main/provider-stream.ts:62. Probe P-S16 (a garbage `data:` line after `[DONE]`): f1c4867 completes with 'Hi'; under S16 the call throws PROVIDER_INVALID_RESPONSE. A server that keeps the connection open after [DONE] would also hold the call until the 120 s bound.",
+    "reproduction": "Apply S16 and run the 4 related files: green. Run the probe: P-S16 fails.",
+    "fix": "Add P-S16: bytes after [DONE] are never read."
+   },
+   {
+    "id": "MUT-9",
+    "severity": "S4",
+    "problem": "The `event:` name of an unterminated last event is untested. Mutation S13, which yields `event: undefined` for the trailing event, survives. No Phase 1 caller reads names, but the Phase 2 Anthropic adapter will.",
+    "evidence": "src/main/provider-stream.ts:73 `yield { event, data: json(payload) }` -> `yield { event: undefined, data: json(payload) }`. Probe P-S13 (`event: message_stop\\ndata: {...}` with no trailing blank line) fails under S13.",
+    "reproduction": "Apply S13 and run the 4 related files: green.",
+    "fix": "Add P-S13 together with the MUT-2 test."
+   },
+   {
+    "id": "MUT-10",
+    "severity": "S4",
+    "problem": "A non-200 status body is never tested for being cancelled. Mutation L31, which drops `await response.body?.cancel()`, survives. A non-200 answer whose body never ends, read through a fetcher that ignores the signal, leaves its socket open after the refusal.",
+    "evidence": "src/main/ollama-locality.ts:56 `{ await response.body?.cancel().catch(() => undefined); return false; }` -> `{ return false; }`. Probe P-L31 (status 500, body never ends, unsignalled fetcher): the refusal still comes, but under L31 the connection is still open after 1 s; on f1c4867 it closes.",
+    "reproduction": "Apply L31 and run the 4 related files: green. Run the probe: P-L31 fails.",
+    "fix": "Add P-L31, or fold it into a 'connection closes on every refusal' table."
+   },
+   {
+    "id": "MUT-11",
+    "severity": "S4",
+    "problem": "`redirect: 'error'` is not pinned. Mutation L12 (`'error'` -> `'manual'`) survives. The outcome is the same today, because a 3xx is refused by the status check and its target is not requested, so S-1 still holds. Only the option itself is unguarded; `'follow'` (L13) is killed.",
+    "evidence": "src/main/ollama-locality.ts:54. The redirect tests observe only that the target is not requested and that the call is refused, and both hold under 'manual'.",
+    "reproduction": "Apply L12 and run the 4 related files: green. The MUT-1 probe kills it.",
+    "fix": "Covered by the init assertion proposed in MUT-1."
+   },
+   {
+    "id": "MUT-12",
+    "severity": "S4",
+    "problem": "How a non-object `error` field is treated is unpinned. Mutation S02 (`.error != null` -> `.error !== undefined`) would fail every call from a vendor that sends `\"error\": null` on normal chunks. Mutation S03 (`.error != null` -> `.error`, truthy) would accept `\"error\": false`, `\"\"` or `0`. Both survive.",
+    "evidence": "src/main/provider-stream.ts:158 `if (typeof raw === 'object' && raw !== null && (raw as { error?: unknown }).error != null) throw new Error('PROVIDER_STREAM_ERROR');`. No captured vendor stream shows either shape, so the effect stays hypothetical.",
+    "reproduction": "Apply S02 or S03 and run the 4 related files: green.",
+    "fix": "Optional: a test where an E-20 chunk carrying `\"error\": null` still completes, which pins the `!= null` choice."
+   },
+   {
+    "id": "MUT-13",
+    "severity": "S4",
+    "problem": "Two SSE grammar edge cases are unpinned. Mutation S07 (`event = value || undefined` -> `event = value`) makes an empty `event:` line yield the name ''. Mutation S11 (`colon === -1 ? line : ...` -> `colon === -1 ? '' : ...`) ignores a colon-less `data` line, which the SSE grammar reads as an empty data value. Both survive.",
+    "evidence": "src/main/provider-stream.ts:67 (S11) and :69 (S07). No vendor capture sends either form.",
+    "reproduction": "Apply S07 or S11 and run the 4 related files: green.",
+    "fix": "Optional grammar tests. Low value until a vendor shows either form."
+   },
+   {
+    "id": "MUT-14",
+    "severity": "S4",
+    "problem": "readSse forwards its `maxBytes` parameter, but nothing tests it. Mutation S18 (call `readSseEvents(response)` without it) survives. It is equivalent today: the only production caller, src/main/inference.ts:135 `readSse(response)`, uses the default 4 MiB.",
+    "evidence": "src/main/provider-stream.ts:78.",
+    "reproduction": "Apply S18 and run the 4 related files: green.",
+    "fix": "Either test readSse with a small maxBytes expecting PROVIDER_RESPONSE_TOO_LARGE, or drop the unused parameter."
+   },
+   {
+    "id": "MUT-15",
+    "severity": "S4",
+    "problem": "The post-read abort check in readStatus can never change the outcome. Mutation L21 (remove `if (signal.aborted) return false;`) is equivalent: untilAborted already rejects on the same `bounded` signal, so readStatus's result is discarded and `disabled` stays false.",
+    "evidence": "src/main/ollama-locality.ts:71. untilAborted (lines 80-86) rejects on abort, and assertOllamaLocal's catch leaves `disabled = false`.",
+    "reproduction": "Apply L21 and run the 4 related files: green.",
+    "fix": "Keep it as defence in depth with a comment that says so, or remove it. No test can tell it apart."
+   },
+   {
+    "id": "MUT-16",
+    "severity": "S4",
+    "problem": "Control mutation I07 survives, as intended: it is an equivalent rewrite of the null exemption, `reason !== null &&` -> `(reason ?? '') !== '' &&`, so it confirms the harness does not over-report kills.",
+    "evidence": "src/main/inference.ts:190 (the known-reason check). `reason` is `choice.finish_reason || null`, so it is never ''.",
+    "reproduction": "Apply I07 and run the 4 related files: green.",
+    "fix": "None needed."
+   }
+  ],
+  "checked": [
+   "Setup: a scratch worktree at f1c4867 (detached) with node_modules and .build symlinked, and Node v24.21.0 on PATH. Baseline for tests/provider-stream.test.ts, tests/provider-transport.test.ts, tests/ollama-locality.test.ts and tests/application.test.ts: 128/128 passed. The harness applied one exact-match replacement at a time (each pattern was checked to occur exactly once), ran those 4 files with the JSON reporter (every run executed all 128 tests), restored the file byte-for-byte and checked the restore. git status was clean afterwards. The worktree was removed with `git worktree remove --force`. Harness, mutation list and results: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/mut/ (run.mjs, list.mjs, mutations.json, results.jsonl).",
+   "Totals: 75 mutations, 55 killed and 20 survived. By file: provider-stream.ts 18 (9 killed), inference.ts 16 (15 killed; the survivor I07 is a deliberate equivalent control), ollama-locality.ts 32 (24 killed), index.ts infer() 4 (4 killed), and engine/shared contract extras 5 (3 killed).",
+   "KILLED S01 remove the top-level error-chunk check (provider-stream.ts:158): 'E-25: a mid-stream error chunk fails the call without its text' and 1 more",
+   "KILLED S04 remove the conflicting finish_reason check: 'a second terminal chunk with a different finish_reason fails the call'",
+   "KILLED S05 conflicting finish_reason -> first reason wins silently (`return`): same test",
+   "KILLED S06 any second finish_reason throws: 'E-25: the usage chunk repeating finish_reason is an accounting frame'",
+   "KILLED S08 event name not reset at the blank line: 'an event name belongs to its own event'",
+   "KILLED S10 value keeps its leading space (`colon + 1`): 19 tests, e.g. 'E-07: OpenAI index-keyed fragments join into one call'",
+   "KILLED S12 every non-`event` field kept as data: 'E-25: a comment line is skipped' and 3 more",
+   "KILLED S15 readSse yields the whole {event,data} item: 22 tests",
+   "KILLED S17 event names dropped: 'E-10: readSseEvents keeps each event name with its data' and 2 more",
+   "KILLED I01 model_length removed from the known set: 'E-22: a plain JSON model_length answer is incomplete'",
+   "KILLED I02 length removed: 'truncated, rejected and missing terminal outcomes never look successful' and 2 more",
+   "KILLED I03 content_filter removed: same pre-existing test and 2 more",
+   "KILLED I04 tool_calls removed: 14 tests",
+   "KILLED I05 stop removed: 18 tests",
+   "KILLED I06 `finish_reason || null` -> `?? null`: 'a plain JSON empty finish_reason is no reason'",
+   "KILLED I08 allowlist -> denylist of the documented failures: 'a streamed finish_reason of function_call fails the call' and the plain-JSON twin",
+   "KILLED I09 remove the finish_reason failure check: 9 tests",
+   "KILLED I10 remove the null exemption: 'streamed text accumulates, and a stream cut before its terminal never looks complete' and 4 more",
+   "KILLED I11 no reason becomes complete: 4 tests",
+   "KILLED I12 model_length becomes complete: 'E-22: a plain JSON model_length answer is incomplete'",
+   "KILLED I13 failure check moved after the blocked return: 'a failure finish_reason wins over a refusal'",
+   "KILLED I14 inferenceErrorCode drops LOCAL_MODEL_UNVERIFIED: 'an unverified local Ollama crosses into the engine as LOCAL_MODEL_UNVERIFIED'",
+   "KILLED I15 inferenceErrorCode also passes RUN_CANCELLED: 'a context overflow crosses into the engine as CONTEXT_LIMIT'",
+   "KILLED I16 inferenceErrorCode leaks PROVIDER_FINISH_FAILED: 8 tests",
+   "KILLED L01 kind check removed: 'an openai-compatible profile on loopback is not checked'",
+   "KILLED L02 localOnly `||` -> `&&`: 26 tests",
+   "KILLED L03 localOnly ignores the project: 'the effective policy is local-only when the session is cloud-allowed and the project local-only'",
+   "KILLED L04 localOnly ignores the session: 25 tests",
+   "KILLED L05 pre-check cancellation removed: 'a run cancelled before the check sends nothing'",
+   "KILLED L06 post-check cancellation removed: 'a run cancelled while the status request is pending is RUN_CANCELLED at once' and 1 more",
+   "KILLED L07 `let disabled = true` (fail-open default): 4 tests, e.g. 'a 302 to an answer that says disabled', 'a network error'",
+   "KILLED L08 timeout 10 s: 'every way of not answering ends ... at the 5 s bound'",
+   "KILLED L10 STATUS_MAX_BYTES + 1: 'a body one byte over 64 KiB'",
+   "KILLED L11 `>` -> `>=` on the byte bound: 'a body of exactly 64 KiB is read whole and accepted'",
+   "KILLED L13 `redirect: 'follow'`: 'a 302 to an answer that says disabled' and 'a redirect is never followed'",
+   "KILLED L16 `response.redirected` check removed: 'a fetcher that follows redirects regardless still gets a refusal'",
+   "KILLED L17 status 200 -> any 2xx (`!response.ok`): 'a 201 that still says disabled'",
+   "KILLED L18 oversize -> break and parse what was read: 'a valid answer followed by whitespace past 64 KiB'",
+   "KILLED L19 reader not cancelled on abort: 'a run cancelled while the status body is still arriving closes the connection'",
+   "KILLED L22 untilAborted wrapper removed: the 5 s bound test (deaf fetcher)",
+   "KILLED L23 `z.coerce.boolean()`: 'disabled as the string \"true\"' and 'disabled as 1'",
+   "KILLED L24 disabled value not read (`return parsed.success`): 5 tests",
+   "KILLED L25 raw endpoint instead of the normalised base: 'an endpoint with a trailing slash asks the same base'",
+   "KILLED L26 check not awaited (`void ... .catch()`): 22 tests",
+   "KILLED L27 status request ignores the run signal: 'a run cancelled while the status request is pending is RUN_CANCELLED at once'",
+   "KILLED L29 fetch failures rethrown raw: 6 tests",
+   "KILLED L30 untilAborted never rejects on abort: the 5 s bound test",
+   "KILLED L32 status request sent as POST: 29 tests",
+   "KILLED X01 index.ts status request on providerSession: 'infer() awaits the check as a statement of its own ...'. Note: this and X02-X04 are killed only by that test's exact source-line match, because infer() has no runtime harness; any edit to the line kills, so this shows the line is pinned, not that its behaviour is exercised.",
+   "KILLED X02 call moved after the `const fetcher` line: same source-order test",
+   "KILLED X03 call passes a fresh AbortController signal: same source-line test",
+   "KILLED X04 call passes `{ ...context, project: null }`: same source-line test",
+   "KILLED A01 engine message entry renamed: 'a local Ollama that can reach cloud models fails the run with an actionable message'",
+   "KILLED C01 control.ts inference.error enum drops LOCAL_MODEL_UNVERIFIED: 'an unverified local Ollama crosses into the engine'",
+   "KILLED C02 shared ErrorCodeSchema drops LOCAL_MODEL_UNVERIFIED: application.test.ts LOCAL_MODEL_UNVERIFIED test",
+   "Probe follow-up on the survivors: a throwaway tests/zz-mutation-probe.test.ts (8 tests, saved at scratchpad/mut/zz-mutation-probe.test.ts, never committed) passed 8/8 on f1c4867. Re-running the survivors against it killed S09, S13, S14, S16, L12, L14, L15, L20, L28 and L31, so each proposed test catches its survivor. Not killed by any probe: S02, S03, S07, S11 (no probe written), S18, L21 and I07 (equivalent), L09 (fix is a constant assertion) and A02/A03 (fix is a full-message assertion).",
+   "Engine message vs spec: src/engine/application.ts LOCAL_MODEL_UNVERIFIED text equals the spec's 'The engine shows' text exactly, except for the typographic apostrophe in 'Ollama\u2019s' (the file's existing style).",
+   "Wiring traced end to end: main/engine.ts:86 posts `code: inferenceErrorCode(error)`, engine/index.ts:77 rejects with `new Error(message.code)`, and application.ts maps it through `failures`. All three are consistent with the new code.",
+   "Not run: the full Linux suite (74 known failures), typecheck and lint. By inspection, every surviving mutation is type-correct, so typecheck would not kill any of them."
+  ]
+ }
+]

@@ -100,3 +100,50 @@ server forwards to. Recorded for the locality label work in a later phase.
   no `/api/chat` request); `disabled: true` lets it through; under cloud-allowed no status request is
   made; the check runs before every inference step, not once per run; the managed path is unchanged.
 - Every new test is shown failing with its guard removed.
+
+### As built (Phase 1)
+
+Recorded from the build, the unit reviews and the integration review
+(`docs/orchestration/2026-10-05-more-models/reports/p1-integration-review.json`).
+
+- `readSse` is split in two: `readSseEvents` yields `{ event, data }`, keeping the event name for the
+  Phase 2 and 3 adapters, and `readSse` yields only the data, so its existing callers are unchanged.
+  Line ends are the reader's existing `\n` and `\r\n`; a lone CR is not a line end (recorded for later).
+- Internal messages, all crossing to the engine as PROVIDER_ERROR: a non-null top-level `error`, in a
+  stream chunk or in a plain JSON answer, is `PROVIDER_STREAM_ERROR`; a failure or unknown
+  `finish_reason` is `PROVIDER_FINISH_FAILED`; a second, different reason is
+  `PROVIDER_INVALID_RESPONSE`. `"error": null` on a normal chunk is no error.
+- An empty `finish_reason` counts as no reason (the stream accumulator always skipped it; unit review
+  U1-R2), and no reason at all - a stream cut short - stays incomplete, as before. This rule comes from
+  the U1 builder brief (`briefs/p1-u1-builder.md`), not from the design above, which names only values.
+- The status request is `GET` with `redirect: 'error'`, `credentials: 'omit'` and `cache: 'no-store'`,
+  no header and no body, through the local session; a test pins that exact request. Under Electron the
+  last two matter: `session.fetch` turns a default request into one that carries the session's cookies
+  and HTTP authentication (integration review INV-1), and the session's HTTP cache could otherwise
+  answer a later step with an earlier `disabled: true` (BRK-1). Electron enforces `redirect: 'error'`;
+  its responses never report `redirected`, so that second check only catches fetchers that do.
+- Default-path impact: local-only is the default for folder-free chats and new projects, and Ollama's
+  cloud features are on unless the user turns them off, so a stock user-run Ollama is now refused in
+  those chats until they are off. README.md and `docs/development-status.md` say so.
+- What the tests do not reach: the order inside `infer()` (the check, then `complete()`) is pinned by
+  reading `src/main/index.ts` as text, and the behavioural tests call a helper that copies that order;
+  an `infer()` harness was set aside. Electron's credential and cache behaviour was shown with the
+  integration review's Electron harness; the unit tests run on Node's fetch and pin the request instead.
+- Fixtures not copied from a capture, each marked in its test: the `id:`/`retry:` lines (no captured
+  stream uses them), the message text in the Mistral `model_length` test, and the `404 page not found`
+  body.
+
+## Recorded for later
+
+- An `openai-compatible` profile on a loopback address (Ollama's `/v1`, LM Studio, a local proxy) is
+  labelled local without a check (Phase 1 known limit; integration review MM-P1-SPEC-5). Ollama's `/v1`
+  sits in front of the same handler that forwards cloud models (wire E-31).
+- An `infer()` harness, so the check-before-`complete()` order is shown by behaviour, not source text
+  (MM-P1-SPEC-6).
+- Chat requests set no `credentials`, so under Electron they carry the session's cookies and HTTP
+  authentication (INV-5): pass `credentials: 'omit'` in the Phase 2 per-kind request builder and pin it.
+- `lines()` in `src/main/provider-stream.ts`: a lone CR is not a line end (BRK-4), and each chunk
+  re-splits the whole pending buffer, which is quadratic on one long event trickled in small chunks
+  (BRK-5). Both predate Phase 1; no captured vendor uses a lone CR.
+- `profile.test` passes against a user-run Ollama with cloud on, and the first local-only run is then
+  refused. A warning there needs a contract change.
