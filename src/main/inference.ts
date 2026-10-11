@@ -127,10 +127,16 @@ async function refusalCode(response: Response): Promise<string> {
 /**
  * Folds a streamed answer back into the one-body shape validated below. Ollama's NDJSON reads a
  * non-streamed body as its single line; an OpenAI-compatible server that ignores `stream` answers
- * with plain JSON rather than `text/event-stream`, and is read as before.
+ * with plain JSON rather than `text/event-stream`, and is read as before - except that a top-level
+ * `error` that is not null fails it as PROVIDER_STREAM_ERROR, the rule the stream accumulator applies
+ * to each chunk (OpenRouter, wire E-25), so the same object is never an answer in one form only.
  */
 async function readStreamed(response: Response, local: boolean): Promise<unknown> {
-  if (!local && !/^text\/event-stream\b/i.test(response.headers.get('content-type') ?? '')) return readBoundedJson(response);
+  if (!local && !/^text\/event-stream\b/i.test(response.headers.get('content-type') ?? '')) {
+    const body = await readBoundedJson(response);
+    if (typeof body === 'object' && body !== null && (body as { error?: unknown }).error != null) throw new Error('PROVIDER_STREAM_ERROR');
+    return body;
+  }
   const accumulator = local ? new OllamaAccumulator() : new OpenAIAccumulator();
   for await (const chunk of local ? readNdjson(response) : readSse(response)) accumulator.push(chunk);
   return accumulator.result();

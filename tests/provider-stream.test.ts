@@ -456,3 +456,110 @@ test('a stream that ends with no finish_reason at all stays incomplete', async (
   const body = E20_STREAM.split('\n\n').slice(0, -2).join('\n\n');
   expect(await complete(openai, [], { fetcher: async () => events(body), signal: signal() })).toEqual({ content: 'Hello! How can I assist you today?', outcome: 'incomplete' });
 });
+
+// Integration review of f1c4867 (docs/orchestration/2026-10-05-more-models/reports/p1-integration-review.json):
+// SSE grammar edges and bounds that no test pinned (MUT-2, -6, -8, -9, -12, -13, -14), and the top-level error
+// rule on a plain JSON answer (BRK-3, MM-P1-SPEC-9). Where no capture shows a form, the test says so and builds
+// it from a captured fixture; the grammar cited is WHATWG HTML's "Interpreting an event stream", not in the corpus.
+const E20_COMPLETE = { usage: { inputTokens: 17, outputTokens: 9 }, content: 'Hello! How can I assist you today?', outcome: 'complete' };
+
+test('E-20: a stream that ends on its terminal chunk, with no blank line and no [DONE], completes with its usage', async () => {
+  // The grammar discards an event the stream ends inside; readSseEvents has always read it (MUT-2). E-20's
+  // capture without its `data: [DONE]` event, so the body ends on the terminal chunk (stop, with usage).
+  // Guard: the trailing event is yielded after the stream ends (mutation S14: delete that yield; the terminal
+  // chunk is lost, and the answer is incomplete with no usage).
+  const body = E20_STREAM.split('\n\n').slice(0, -1).join('\n\n');
+  expect(body.endsWith('"prompt_cache_miss_tokens": 17}}')).toBe(true);
+  expect(await complete(openai, [], { fetcher: async () => streamed(body, 'text/event-stream'), signal: signal() })).toEqual(E20_COMPLETE);
+});
+
+test('E-10: a last event the stream ends without its blank line keeps its event name', async () => {
+  // E10_BASIC is the capture as published, ending on message_stop with no blank line after it (MUT-9).
+  // Guard: the trailing event is yielded with its name (mutation S13: yield it with `event: undefined`).
+  expect(E10_BASIC.endsWith('data: {"type": "message_stop"}')).toBe(true);
+  const items = await collect(readSseEvents(streamed(E10_BASIC, 'text/event-stream')));
+  expect(items).toHaveLength(8);
+  expect(items.at(-1)).toEqual({ event: 'message_stop', data: { type: 'message_stop' } });
+});
+
+test('data lines with no space after the colon are read the same, [DONE] included', async () => {
+  // The grammar drops one space after the colon when there is one (MUT-6). No capture shows the form without it:
+  // this is E-20's capture with every `data: ` written `data:`. Guard: the value starts right after the colon
+  // when no space follows (mutation S09: always skip colon + 2; every chunk then fails to parse).
+  const body = E20_STREAM.replaceAll('data: ', 'data:');
+  expect(body).toContain('data:[DONE]');
+  expect(body).not.toContain('data: ');
+  expect(await complete(openai, [], { fetcher: async () => events(body), signal: signal() })).toEqual(E20_COMPLETE);
+});
+
+test('[DONE] ends the stream: what follows it is never read, and an open connection is closed', async () => {
+  // E-20: the stream is "terminated by a data: [DONE] message" (MUT-8). E-20's capture, then a line that is not
+  // JSON, on a connection the server keeps open. Guard: [DONE] returns (mutation S16: `continue`; the line after
+  // it is parsed and fails the call).
+  let cancelled = false;
+  const open = new ReadableStream({
+    start(controller) { controller.enqueue(new TextEncoder().encode(`${E20_STREAM}\n\ndata: not json\n\n`)); },
+    cancel() { cancelled = true; },
+  });
+  const fetcher = async () => new Response(open, { headers: { 'Content-Type': 'text/event-stream' } });
+  expect(await complete(openai, [], { fetcher, signal: signal() })).toEqual(E20_COMPLETE);
+  expect(cancelled).toBe(true);
+});
+
+test('E-20: a normal chunk carrying "error": null is not an error chunk', async () => {
+  // No capture shows `"error": null` (MUT-12); E-20's capture (lines 1143-1165) with it added to every chunk, as a
+  // server serialising an unset field would send it. Guard: only a non-null `error` fails the stream (mutation
+  // S02: `!= null` to `!== undefined`; the first chunk then fails as PROVIDER_STREAM_ERROR).
+  const body = E20_STREAM.replaceAll('"object": "chat.completion.chunk"', '"object": "chat.completion.chunk", "error": null');
+  expect(body.split('"error": null')).toHaveLength(12);
+  expect(await complete(openai, [], { fetcher: async () => events(body), signal: signal() })).toEqual(E20_COMPLETE);
+});
+
+test('an empty `event:` line names nothing: its event has no name', async () => {
+  // Grammar: an empty event type dispatches as the default, unnamed type (MUT-13). E-10's message_stop event with
+  // its name emptied. Guard: an empty value is no name (mutation S07: keep '' as the name).
+  const stop = E10_BASIC.split('\n\n').at(-1)!.replace('event: message_stop', 'event:');
+  expect(stop).toBe('event:\ndata: {"type": "message_stop"}');
+  expect(await collect(readSseEvents(events(stop)))).toEqual([{ event: undefined, data: { type: 'message_stop' } }]);
+});
+
+test('a colon-less `data` line is a data field with an empty value, as the grammar reads it', async () => {
+  // Grammar: a line with no colon is a field named by the whole line, with the empty string as its value; each
+  // data value is appended with a line feed, and one trailing line feed is removed at dispatch (MUT-13). So one
+  // `data` line is the empty data (readSseEvents yields no event without data), and two are the data "\n", which
+  // is not JSON. Guard: a colon-less line names its field (mutation S11: read it as no field; both are skipped).
+  expect(await collect(readSseEvents(events('data')))).toEqual([]);
+  expect((await failure(collect(readSseEvents(events('data\ndata'))))).message).toBe('PROVIDER_INVALID_RESPONSE');
+});
+
+test('readSse applies the byte bound it is given', async () => {
+  // E-20's capture as a body (MUT-14): a bound of exactly its size reads it; one byte less is refused with the
+  // error the line reader throws. Guard: readSse passes maxBytes on (mutation S18: drop it; the 4 MiB default
+  // then admits the body).
+  const body = `${E20_STREAM}\n\n`;
+  const size = new TextEncoder().encode(body).byteLength;
+  expect(await collect(readSse(streamed(body, 'text/event-stream'), size))).toHaveLength(11);
+  await expect(collect(readSse(streamed(body, 'text/event-stream'), size - 1))).rejects.toThrow('PROVIDER_RESPONSE_TOO_LARGE');
+});
+
+// E-25, capture line 445: the mid-stream error chunk, parsed; its `error` object is the one used below.
+const E25_ERROR_CHUNK = JSON.parse(E25_ERROR.slice('data: '.length)) as Record<string, unknown>;
+/** E-25's chunk as one plain JSON body: its top-level fields, the given `error`, and a usable non-streamed choice. */
+const plainAnswer = (error: unknown) => ({ ...E25_ERROR_CHUNK, error, choices: [{ index: 0, message: { role: 'assistant', content: 'partial text' }, finish_reason: 'stop' }] });
+
+test('E-25: a plain JSON answer carrying a top-level error fails the call, as the stream chunk does', async () => {
+  // A server that ignored `stream: true` answers with one JSON body (BRK-3, MM-P1-SPEC-9). No capture shows a
+  // vendor sending this body; the rule is E-25's. Guard: the plain JSON path checks the top-level `error` before
+  // ChatSchema (mutation: remove the check; the call then completes with "partial text").
+  expect(E25_ERROR_CHUNK.error).toEqual({ code: 'server_error', message: 'Provider disconnected unexpectedly' });
+  const error = await failure(complete(openai, [], { fetcher: async () => Response.json(plainAnswer(E25_ERROR_CHUNK.error)), signal: signal() }));
+  expect(error.message).toBe('PROVIDER_STREAM_ERROR');
+  expect(error.message).not.toContain('Provider disconnected');
+  expect(inferenceErrorCode(error)).toBe('PROVIDER_ERROR');
+});
+
+test('E-25: a plain JSON answer carrying "error": null is an answer', async () => {
+  // As in a stream, `"error": null` is no error. Guard: only a non-null `error` fails the plain JSON body
+  // (mutation: `!= null` to `!== undefined` in that check; the call then fails).
+  expect(await complete(openai, [], { fetcher: async () => Response.json(plainAnswer(null)), signal: signal() })).toEqual({ content: 'partial text', outcome: 'complete' });
+});
