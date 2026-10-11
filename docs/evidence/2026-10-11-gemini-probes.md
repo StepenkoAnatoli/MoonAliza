@@ -256,7 +256,7 @@ recorded SSE events directly and applies the same test to what the model sent.
 |---|---|---|---|---|---|---|
 | `gemini-3.5-flash-lite` | 21 of 21 | **0 of 16** | 5 of 5 / 0 | 16 of 16 | 0 of 5 | 16 `PROVIDER_INVALID_RESPONSE`, 5 `complete` |
 | `gemini-3.7-flash` | 8 of 21 (5 x 503, 8 x 429 daily cap) | **0 of 16** (8 answered) | none answered (turns 17-21: 429, 503) | 8 of 8 answered | none answered | 8 `PROVIDER_INVALID_RESPONSE`, 5 `PROVIDER_HTTP_503`, 8 `PROVIDER_HTTP_429` |
-| `gemini-3.8-flash` | first attempt: 2 of 8 before the daily cap (`raw/u06-gemini-3.8-flash-first-attempt.log`); rows not saved | 0 of 2 answered | not reached | 2 of 2 answered | not reached | 2 `PROVIDER_INVALID_RESPONSE`, 2 x 503, 4 x 429 |
+| `gemini-3.8-flash` | first attempt: 2 of 8 before the daily cap (`raw/u06-gemini-3.8-flash-first-attempt.txt`); rows not saved | 0 of 2 answered | not reached | 2 of 2 answered | not reached | 2 `PROVIDER_INVALID_RESPONSE`, 2 x 503, 4 x 429 |
 
 Every answered tool turn on every model failed in the product for the reason in probe (1): no `index` on
 the tool-call entries (and `finish_reason: "stop"` behind it). On the wire every answered tool turn was
