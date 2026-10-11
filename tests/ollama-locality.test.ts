@@ -6,7 +6,7 @@ import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Serv
 import type { AddressInfo, Socket } from 'node:net';
 import { readFileSync } from 'node:fs';
 import { complete, type Fetcher, type InferenceMessage } from '../src/main/inference';
-import { assertOllamaLocal, verifyOllamaLocality } from '../src/main/ollama-locality';
+import { assertOllamaLocal, STATUS_MAX_BYTES, STATUS_TIMEOUT_MS, verifyOllamaLocality } from '../src/main/ollama-locality';
 
 // Wire E-30 (docs/research/2026-10-05-provider-wire-formats/research/raw/2026-10-05-types-go-githubusercontent-4d8bd3e9.md,
 // capture lines 877-885): `type CloudStatus struct { Disabled bool `json:"disabled"` Source string `json:"source"` }` inside
@@ -114,6 +114,12 @@ test('under local-only, cloud.disabled true lets the chat request through, after
   expect(paths(ollama.seen)).toEqual(['GET /api/status', 'POST /api/chat']);
 });
 
+test('a 200 with no body at all refuses with LOCAL_MODEL_UNVERIFIED', async () => {
+  // Node's fetch always gives a 200 a body stream, so only a stub fetcher reaches the no-reader branch.
+  const bodiless: Fetcher = async () => new Response(null, { status: 200 });
+  await expect(assertOllamaLocal('http://127.0.0.1:11434', bodiless, new AbortController().signal)).rejects.toThrow('LOCAL_MODEL_UNVERIFIED');
+});
+
 test('a body of exactly 64 KiB is read whole and accepted', async () => {
   const ollama = await startOllama((_request, response) => { response.setHeader('Content-Type', 'application/json'); response.end(padded(64 * 1024)); });
   await expect(assertOllamaLocal(ollama.endpoint, fetcher, new AbortController().signal)).resolves.toBeUndefined();
@@ -170,7 +176,7 @@ test('every step of a run asks again: two steps make two status requests, and cl
   expect(paths(ollama.seen).slice(4)).toEqual(['GET /api/status']);
 });
 
-test('the status request is a bare GET: no credential, no cookie, no body, no prompt text', async () => {
+test('on the wire the status request is a bare GET: no Authorization or Cookie header, no body, no prompt text', async () => {
   const ollama = await startOllama(json(200, statusBody(true)));
   await step(context(ollama.endpoint, 'local-only'));
   const [status, chat] = ollama.seen;
@@ -179,6 +185,20 @@ test('the status request is a bare GET: no credential, no cookie, no body, no pr
   expect(status!.headers.cookie).toBeUndefined();
   expect(JSON.stringify(status)).not.toContain(PROMPT);
   expect(chat!.body).toContain(PROMPT); // the fake would have seen the prompt, had it been sent
+});
+
+test('main hands the fetcher exactly a bare GET: no credential, no redirect, never from the cache, no headers, no body', async () => {
+  // Node's fetch has no cookie jar, auth cache or HTTP cache, so the wire test above cannot see these options. In Electron
+  // they decide what leaves the machine: without credentials 'omit' session.fetch resolves a default 'same-origin' request
+  // to 'include' and sends the session's cookies and HTTP auth; without cache 'no-store' the session cache can answer a
+  // later step with an old cloud.disabled: true (integration review BRK-1, MM-P1-SPEC-2).
+  const inits: RequestInit[] = [];
+  const recording: Fetcher = async (_url, init) => { inits.push(init); return Response.json(statusBody(true)); };
+  await assertOllamaLocal('http://127.0.0.1:11434', recording, new AbortController().signal);
+  expect(inits).toHaveLength(1);
+  const { signal, ...rest } = inits[0]!;
+  expect(rest).toStrictEqual({ method: 'GET', redirect: 'error', credentials: 'omit', cache: 'no-store' });
+  expect(signal).toBeInstanceOf(AbortSignal);
 });
 
 test.each([
@@ -218,7 +238,32 @@ test('a run cancelled while the status body is still arriving closes the connect
   expect(await closedBy(ollama, Date.now() + 500), 'the reader is cancelled on abort').toBe(true);
 });
 
+test.each<[string, Reply]>([
+  ['an oversized 200 body that never ends', (_request, response) => { response.setHeader('Content-Type', 'application/json'); response.write(' '.repeat(65 * 1024)); /* never ends */ }],
+  ['a 500 whose body never ends', (_request, response) => { response.statusCode = 500; response.setHeader('Content-Type', 'application/json'); response.write('{"error":'); /* never ends */ }],
+])('%s is refused before the bound and its connection closes, even through a fetcher that ignores the signal', async (_case, reply) => {
+  const ollama = await startOllama(reply);
+  const started = Date.now();
+  await expect(assertOllamaLocal(ollama.endpoint, unsignalled, new AbortController().signal)).rejects.toThrow('LOCAL_MODEL_UNVERIFIED');
+  expect(Date.now() - started, 'refused on the answer, not at the 5 s bound').toBeLessThan(2000);
+  expect(await closedBy(ollama, Date.now() + 1000), 'the refused body is cancelled').toBe(true);
+});
+
+test('headers that arrive after the 5 s bound, through a fetcher that ignores the signal, close their connection at once', async () => {
+  // The headers are held until the check has refused, so they always reach readStatus with its signal already aborted.
+  let held: ServerResponse | undefined;
+  const ollama = await startOllama((_request, response) => { held = response; });
+  const started = Date.now();
+  await expect(assertOllamaLocal(ollama.endpoint, unsignalled, new AbortController().signal)).rejects.toThrow('LOCAL_MODEL_UNVERIFIED');
+  expect(Date.now() - started).toBeGreaterThanOrEqual(4900);
+  held!.setHeader('Content-Type', 'application/json'); held!.write('{"cloud":'); /* body never ends */
+  expect(await closedBy(ollama, Date.now() + 1000), 'the reader is cancelled when the late headers arrive').toBe(true);
+}, 20_000);
+
 test('every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound, never later, and the status connection closes with it', async () => {
+  // The spec's bounds, pinned exactly; the elapsed times below show this constant is the one in effect.
+  expect(STATUS_TIMEOUT_MS).toBe(5_000);
+  expect(STATUS_MAX_BYTES).toBe(64 * 1024);
   const stall: Reply = (_request, response) => { response.setHeader('Content-Type', 'application/json'); response.write('{"cloud":'); /* body never ends */ };
   const silent = await startOllama(() => { /* no headers */ });
   const stalled = await startOllama(stall);
@@ -239,8 +284,8 @@ test('every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound
   for (const [index, result] of results.entries()) {
     expect(result.outcome, `case ${index}`).toBe('LOCAL_MODEL_UNVERIFIED');
     expect(result.elapsed, `case ${index}`).toBeGreaterThanOrEqual(4900);
-    // Slack for a slow runner (Windows CI has run a test 12 times slower than usual, P5-27); still below
-    // the 10 s a doubled 5 s bound would show, so a wrong bound is caught.
+    // Slack for a slow runner (Windows CI has run a test 12 times slower than usual, P5-27). This upper bound
+    // catches only a bound of 9.5 s or more, such as a doubled one; the exact 5 s is pinned by the constant above.
     expect(result.elapsed, `case ${index}`).toBeLessThan(9500);
   }
   expect(paths(silent.seen)).toEqual(['GET /api/status']);

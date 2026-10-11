@@ -35,7 +35,8 @@ export async function verifyOllamaLocality(context: LocalityContext, fetcher: Fe
 /**
  * Returns only when GET <endpoint>/api/status answers 200 with JSON whose cloud.disabled is true. Any other
  * status, shape or value, a body over 64 KiB or not JSON, a redirect, a network error or no answer within
- * 5 s throws LOCAL_MODEL_UNVERIFIED. The request carries no credential and no prompt. A run cancelled
+ * 5 s throws LOCAL_MODEL_UNVERIFIED. The request carries no credential and no prompt, and its answer is never
+ * taken from the session's HTTP cache, so every step hears from the server itself. A run cancelled
  * before or during the check throws RUN_CANCELLED instead.
  */
 export async function assertOllamaLocal(endpoint: string, fetcher: Fetcher, signal: AbortSignal): Promise<void> {
@@ -51,13 +52,17 @@ export async function assertOllamaLocal(endpoint: string, fetcher: Fetcher, sign
 }
 
 async function readStatus(url: string, fetcher: Fetcher, signal: AbortSignal): Promise<boolean> {
-  const response = await fetcher(url, { method: 'GET', redirect: 'error', credentials: 'omit', signal });
-  // A fetcher that followed a redirect anyway is refused too: the answer must come from the endpoint itself.
+  // cache 'no-store': a cached cloud.disabled: true must never answer for an Ollama restarted with cloud on.
+  const response = await fetcher(url, { method: 'GET', redirect: 'error', credentials: 'omit', cache: 'no-store', signal });
+  // The redirect guard is redirect: 'error', which Electron's session.fetch enforces (its responses never report
+  // `redirected`); this check only catches a fetcher that followed a redirect anyway and says so, as Node's fetch does.
   if (response.status !== 200 || response.redirected) { await response.body?.cancel().catch(() => undefined); return false; }
   const reader = response.body?.getReader();
   if (!reader) return false;
   const cancel = () => { void reader.cancel().catch(() => undefined); };
   signal.addEventListener('abort', cancel, { once: true });
+  // Headers that arrive after the bound, through a fetcher that ignores the signal: the listener above never fires.
+  if (signal.aborted) { cancel(); return false; }
   const chunks: Uint8Array[] = []; let bytes = 0;
   try {
     while (true) {
@@ -68,6 +73,7 @@ async function readStatus(url: string, fetcher: Fetcher, signal: AbortSignal): P
       chunks.push(chunk.value);
     }
   } finally { signal.removeEventListener('abort', cancel); cancel(); }
+  // Defence in depth: untilAborted already rejects on this same signal, so this result would be discarded anyway.
   if (signal.aborted) return false;
   let data: unknown;
   try { data = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return false; }
