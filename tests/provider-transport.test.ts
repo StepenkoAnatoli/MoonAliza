@@ -265,3 +265,40 @@ test.each([400, 413, 422])('overflow status %i is classified within a strict 64 
   expect(cancelled).toBe(true); expect(body.locked).toBe(false);
   await expect(complete(profile, [], { fetcher: async () => Response.json({ error: { code: 'prompt_too_long' } }, { status }), signal: signal() })).rejects.toThrow('CONTEXT_LIMIT');
 });
+
+// More models Phase 1 (docs/specification/more-models.md, design 1): a plain JSON answer follows the same
+// finish_reason map as a stream. E-22 (docs/research/2026-10-05-provider-wire-formats,
+// raw/2026-10-05-chat-mistral-b5c8b721.md lines 466-478): Mistral's documented 200 body. The page leaves its
+// choice unfilled (`"index": "<to fill>"`, no message); the index and the message below fill it.
+const mistral = (finish_reason: string) => ({
+  choices: [{ finish_reason, index: 0, message: { role: 'assistant', content: 'partial' } }],
+  created: '1702256327', id: 'cmpl-e5cc70bb28c444948073e77776eb30ef', model: 'mistral-small-latest', object: 'chat.completion', usage: {},
+});
+
+test('E-22: a plain JSON model_length answer is incomplete, its text kept', async () => {
+  // Mistral's non-streamed finish_reason adds model_length (E-22). Guard: model_length is a known reason
+  // (mutation: remove it from the known set; the call then fails).
+  expect(await complete(profile, [], { fetcher: async () => Response.json(mistral('model_length')), signal: signal() })).toEqual({ content: 'partial', outcome: 'incomplete' });
+});
+
+// Failure values: Mistral's `error` (E-22), DeepSeek's `insufficient_system_resource` and `aborted` (E-20,
+// raw/2026-10-05-chat-completions-api-deepseek-api-docs-deepseek-3c16da97.md lines 503-510, the non-streamed
+// choice), and OpenAI's deprecated `function_call` (docs/research/2026-09-28-open-gaps,
+// raw/2026-09-28-chat-openai-api-reference-openai-b5558b02.md line 116), which this adapter does not know.
+test.each(['error', 'insufficient_system_resource', 'aborted', 'function_call'])('a plain JSON finish_reason of %s fails the call, never a partial answer', async reason => {
+  // Guard: a finish_reason outside the known set fails the call (mutation: remove the check; it was incomplete).
+  let thrown: unknown;
+  try { await complete(profile, [], { fetcher: async () => Response.json(mistral(reason)), signal: signal() }); } catch (error) { thrown = error; }
+  expect(thrown).toBeInstanceOf(Error);
+  expect((thrown as Error).message).toBe('PROVIDER_FINISH_FAILED');
+  expect(inferenceErrorCode(thrown)).toBe('PROVIDER_ERROR');
+});
+
+test('a failure finish_reason wins over a refusal, and stop, length, content_filter and tool_calls keep their outcomes', async () => {
+  // Guard: the failure check runs before the blocked outcome (mutation: move it after; a refusal then hides an error).
+  await expect(complete(profile, [], { fetcher: async () => Response.json({ choices: [{ message: { refusal: 'Blocked' }, finish_reason: 'error' }] }), signal: signal() })).rejects.toThrow('PROVIDER_FINISH_FAILED');
+  for (const [reason, outcome] of [['stop', 'complete'], ['length', 'incomplete'], ['content_filter', 'blocked']] as const) {
+    expect((await complete(profile, [], { fetcher: async () => Response.json(mistral(reason)), signal: signal() })).outcome).toBe(outcome);
+  }
+  expect((await complete(profile, [], { tools, fetcher: async () => Response.json({ choices: [{ message: { tool_calls: [openaiCall] }, finish_reason: 'tool_calls' }] }), signal: signal() })).outcome).toBe('tool_calls');
+});

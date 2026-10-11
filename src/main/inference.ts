@@ -178,8 +178,17 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   const parsed = ChatSchema.safeParse(data);
   if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
   const choice = parsed.data.choices[0]!;
+  // finish_reason, streamed or not (docs/specification/more-models.md, Phase 1 design 1): `stop` is
+  // complete when it carries no call; `tool_calls`; `length` and Mistral's `model_length` (wire E-22)
+  // are incomplete; `content_filter` or a refusal is blocked; no reason at all (a stream cut short) stays
+  // incomplete. Every other value fails the call, before a refusal can make it look blocked: the failures
+  // vendors document - `error` (OpenRouter E-25, Mistral E-22), `insufficient_system_resource` and
+  // `aborted` (DeepSeek E-20) - and any value not listed here, so a new failure signal is never saved
+  // as a partial answer.
+  const reason = choice.finish_reason || null;
+  if (reason !== null && !['stop', 'tool_calls', 'length', 'model_length', 'content_filter'].includes(reason)) throw new Error('PROVIDER_FINISH_FAILED');
   const content = choice.message.content ?? choice.message.refusal ?? '';
-  if (choice.message.refusal || choice.finish_reason === 'content_filter') return { ...usage, content, outcome: 'blocked' };
-  if (choice.finish_reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
-  return { ...usage, content, outcome: choice.finish_reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
+  if (choice.message.refusal || reason === 'content_filter') return { ...usage, content, outcome: 'blocked' };
+  if (reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
+  return { ...usage, content, outcome: reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
 }
