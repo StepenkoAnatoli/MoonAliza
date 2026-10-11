@@ -1,0 +1,146 @@
+{
+  "label": "p8-turn1",
+  "model": "gemini-3.8-flash",
+  "exchange": {
+    "label": "p8-turn1#2",
+    "startedAt": "2026-10-11T22:14:33.800Z",
+    "request": {
+      "method": "POST",
+      "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "<redacted>"
+      },
+      "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+    },
+    "status": 200,
+    "responseHeaders": {
+      "cache-control": "private",
+      "content-encoding": "gzip",
+      "content-type": "text/event-stream",
+      "date": "Sun, 11 Oct 2026 22:14:39 GMT",
+      "expires": "Sun, 11 Oct 2026 22:14:39 GMT",
+      "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+      "server": "scaffolding on HTTPServer2",
+      "server-timing": "gfet4t7; dur=6021",
+      "set-cookie": "<redacted>",
+      "transfer-encoding": "chunked",
+      "vary": "Origin,X-Origin,Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    },
+    "chunks": [
+      {
+        "ms": 6049,
+        "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EvoBCvcBAWkUfROG+T+bAnDgiRjrEo3eFEnDAR3NEFR6kJzfEq+LPwX1PkR8ZS+z+J3OB90k6lZZq0UTrjhd31YLOxScHmOgr97vcUe/OQSOKDTaXLVJPtROFx8E/VOe9zLWNvmdGkW/QX/d2IvBAPue3wSvZ9kAovutesV80if+j9ZHALTX7/9g9mGbgkCuqTirCCMnpx5N9npOWY8EmG/2N3Ynk3QU6QegQXqVC+2nh8UMYKEQWxpINOF/xNl4sW2HgHj912eqGF75GN0G0wf1owkUCaiIsJGLnnfE2g5LKqD4KGXQhrg1DWx2sjR+0URQN8w/8mXqAGjUTw==\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_80220\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791756879,\"id\":\"SQrMasHlOO2M_PUPz_vKgQ0\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":122}}\n\n"
+      },
+      {
+        "ms": 6647,
+        "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791756880,\"id\":\"SQrMasHlOO2M_PUPz_vKgQ0\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":122}}\n\n"
+      },
+      {
+        "ms": 6648,
+        "text": "data: [DONE]\n\n"
+      }
+    ],
+    "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EvoBCvcBAWkUfROG+T+bAnDgiRjrEo3eFEnDAR3NEFR6kJzfEq+LPwX1PkR8ZS+z+J3OB90k6lZZq0UTrjhd31YLOxScHmOgr97vcUe/OQSOKDTaXLVJPtROFx8E/VOe9zLWNvmdGkW/QX/d2IvBAPue3wSvZ9kAovutesV80if+j9ZHALTX7/9g9mGbgkCuqTirCCMnpx5N9npOWY8EmG/2N3Ynk3QU6QegQXqVC+2nh8UMYKEQWxpINOF/xNl4sW2HgHj912eqGF75GN0G0wf1owkUCaiIsJGLnnfE2g5LKqD4KGXQhrg1DWx2sjR+0URQN8w/8mXqAGjUTw==\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_80220\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791756879,\"id\":\"SQrMasHlOO2M_PUPz_vKgQ0\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":122}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791756880,\"id\":\"SQrMasHlOO2M_PUPz_vKgQ0\",\"model\":\"gemini-3.8-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":122}}\n\ndata: [DONE]\n\n",
+    "framing": {
+      "bytes": 1043,
+      "crlf": 0,
+      "lf": 6,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 3,
+      "eventLines": 0,
+      "doneMarker": true,
+      "lastBytes": "\"\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":18,\\\"prompt_tokens\\\":66,\\\"total_tokens\\\":122}}\\n\\ndata: [DONE]\\n\\n\""
+    }
+  },
+  "earlierAttempts": [
+    {
+      "label": "p8-turn1#1",
+      "startedAt": "2026-10-11T22:14:13.488Z",
+      "request": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "<redacted>"
+        },
+        "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+      },
+      "status": 503,
+      "responseHeaders": {
+        "content-encoding": "gzip",
+        "content-length": "175",
+        "content-type": "application/json; charset=UTF-8",
+        "date": "Sun, 11 Oct 2026 22:14:13 GMT",
+        "server": "scaffolding on HTTPServer2",
+        "server-timing": "gfet4t7; dur=276",
+        "vary": "Origin,X-Origin,Referer",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN",
+        "x-xss-protection": "0"
+      },
+      "chunks": [
+        {
+          "ms": 303,
+          "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+        }
+      ],
+      "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+      "framing": {
+        "bytes": 200,
+        "crlf": 0,
+        "lf": 7,
+        "cr": 0,
+        "commentLines": 0,
+        "dataLines": 0,
+        "eventLines": 0,
+        "doneMarker": false,
+        "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+      }
+    }
+  ],
+  "completeThrew": "PROVIDER_INVALID_RESPONSE",
+  "eventsCarryingExtraContent": [
+    {
+      "index": 0,
+      "event": {
+        "choices": [
+          {
+            "delta": {
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "extra_content": {
+                    "google": {
+                      "thought_signature": "EvoBCvcBAWkUfROG+T+bAnDgiRjrEo3eFEnDAR3NEFR6kJzfEq+LPwX1PkR8ZS+z+J3OB90k6lZZq0UTrjhd31YLOxScHmOgr97vcUe/OQSOKDTaXLVJPtROFx8E/VOe9zLWNvmdGkW/QX/d2IvBAPue3wSvZ9kAovutesV80if+j9ZHALTX7/9g9mGbgkCuqTirCCMnpx5N9npOWY8EmG/2N3Ynk3QU6QegQXqVC+2nh8UMYKEQWxpINOF/xNl4sW2HgHj912eqGF75GN0G0wf1owkUCaiIsJGLnnfE2g5LKqD4KGXQhrg1DWx2sjR+0URQN8w/8mXqAGjUTw=="
+                    }
+                  },
+                  "function": {
+                    "arguments": "{\"path\":\"README.md\"}",
+                    "name": "read_file"
+                  },
+                  "id": "call_80220",
+                  "type": "function"
+                }
+              ]
+            },
+            "index": 0
+          }
+        ],
+        "created": 1791756879,
+        "id": "SQrMasHlOO2M_PUPz_vKgQ0",
+        "model": "gemini-3.8-flash",
+        "object": "chat.completion.chunk",
+        "usage": {
+          "completion_tokens": 18,
+          "prompt_tokens": 66,
+          "total_tokens": 122
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "p1-gemini-3.8-flash": {
+    "status": 503,
+    "framing": {
+      "bytes": 200,
+      "crlf": 0,
+      "lf": 7,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 0,
+      "eventLines": 0,
+      "doneMarker": false,
+      "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+    },
+    "completeThrew": "PROVIDER_HTTP_503"
+  },
+  "p1-gemini-3.5-flash-lite": {
+    "status": 200,
+    "framing": {
+      "bytes": 844,
+      "crlf": 0,
+      "lf": 6,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 3,
+      "eventLines": 0,
+      "doneMarker": true,
+      "lastBytes": "\",\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":18,\\\"prompt_tokens\\\":66,\\\"total_tokens\\\":84}}\\n\\ndata: [DONE]\\n\\n\""
+    },
+    "completeThrew": "PROVIDER_INVALID_RESPONSE"
+  }
+}

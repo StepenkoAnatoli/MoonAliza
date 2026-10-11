@@ -1,0 +1,2040 @@
+{
+  "summary": {
+    "model": "gemini-3.7-flash",
+    "turns": 21,
+    "answered200": 8,
+    "product": {
+      "toolTurnsPassed": 0,
+      "toolTurns": 16,
+      "noCallCorrect": 0,
+      "noCallWronglyCalled": 0,
+      "noCallTurns": 5,
+      "outcomes": {
+        "PROVIDER_HTTP_503": 5,
+        "PROVIDER_INVALID_RESPONSE": 8,
+        "PROVIDER_HTTP_429": 8
+      }
+    },
+    "wire": {
+      "toolTurnsPassed": 8,
+      "toolTurns": 16,
+      "noCallWronglyCalled": 0,
+      "finishReasons": {
+        "stop": 8
+      },
+      "callsWithIndex": 0,
+      "calls": 11,
+      "callsWithExtraContent": 8
+    }
+  },
+  "rows": [
+    {
+      "id": 1,
+      "kind": "single",
+      "prompt": "Call read_file on README.md",
+      "status": 503,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_HTTP_503",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-1#1",
+          "startedAt": "2026-10-11T22:34:42.949Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:34:43 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=353",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 467,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-1#2",
+          "startedAt": "2026-10-11T22:35:05.423Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:35:05 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=373",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 407,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "single",
+      "prompt": "Open src/app.ts and show me what is in it.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_748726",
+            "name": "read_file",
+            "arguments": "{\"path\":\"src/app.ts\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-2#1",
+          "startedAt": "2026-10-11T22:35:12.837Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Open src/app.ts and show me what is in it.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:36:10 GMT",
+            "expires": "Sun, 11 Oct 2026 22:36:10 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=57497",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 57530,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EvABCu0BAWkUfRMb4U2wqhqJ9KTDa+QZbayatfwXkMTYCT3R5A/DboCAIgORSV0yTQvsFDyVoUvsP0y6QiVMYPUM6DCc+EOTzTBHgKneIKeACkM21WPFxVIx79dF1FguRnZ9owAtDUiCso9sgCGWcXn+IUweX+63RysXgfNgCFexwhWwDaYLWJhmiveCBb61KVey9xHCep6yLwjBoGTerKsNCpvPw8uFc9MSWlHpJRe+yKAyk901m1LfawX8IxCWXubOr1Ohrhqxw3tXTODPfmMPflhzYcUiWrc+jAIwrWIAoglrt3T/HYBc0FnIhnuUw6xz\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src/app.ts\\\"}\",\"name\":\"read_file\"},\"id\":\"call_748726\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758170,\"id\":\"IQ_MauQi24D89Q_628S5AQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":374}}\n\n"
+            },
+            {
+              "ms": 57535,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758170,\"id\":\"IQ_MauQi24D89Q_628S5AQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":374}}\n\n"
+            },
+            {
+              "ms": 57537,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EvABCu0BAWkUfRMb4U2wqhqJ9KTDa+QZbayatfwXkMTYCT3R5A/DboCAIgORSV0yTQvsFDyVoUvsP0y6QiVMYPUM6DCc+EOTzTBHgKneIKeACkM21WPFxVIx79dF1FguRnZ9owAtDUiCso9sgCGWcXn+IUweX+63RysXgfNgCFexwhWwDaYLWJhmiveCBb61KVey9xHCep6yLwjBoGTerKsNCpvPw8uFc9MSWlHpJRe+yKAyk901m1LfawX8IxCWXubOr1Ohrhqxw3tXTODPfmMPflhzYcUiWrc+jAIwrWIAoglrt3T/HYBc0FnIhnuUw6xz\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src/app.ts\\\"}\",\"name\":\"read_file\"},\"id\":\"call_748726\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758170,\"id\":\"IQ_MauQi24D89Q_628S5AQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":374}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758170,\"id\":\"IQ_MauQi24D89Q_628S5AQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":374}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1029,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":319,\\\"total_tokens\\\":374}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "single",
+      "prompt": "List the files in the docs directory.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_111068",
+            "name": "list_dir",
+            "arguments": "{\"recursive\":true,\"path\":\"docs\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-3#1",
+          "startedAt": "2026-10-11T22:36:17.395Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the files in the docs directory.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:37:08 GMT",
+            "expires": "Sun, 11 Oct 2026 22:37:08 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=50865",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 50904,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"Er0FCroFAWkUfRNGID1PFrxjXRvsxcKu6DETypjomS4DvxTKn8nYJbj8Ou6X3084TJ0+5qrJ3kxiZcKWvhnH6GuaqKVjTGh5QAyI84nB5viIDhb5HxkNd5ONcc94Gis7Xws14CO3z0Iin1K7r4HC2fjAzQNr80oQdgiOkJaYePqOVV8fuKl/Wh429j/zSbgSZiDjOgsWaVeyc9ZTjTW2tYwPcGRWCjulCHASSz7Cm2IkKYxKtsw73HAPuItIIX05lkGo8/tsOnSILcZ5kjRQRmRxaPKPaA8kYd0KEttYNQ011NiKsmS77r9uayZ7rNntdcJMt7L9cHo4vOJ+Y2Itkb+g0EE0gcAvOuSGqSNKFUT63skO01k/P6dBpyDwEpSXQnQmlUYP+/08cGk6z56OD64WP1cBV5iFHYV7Zl8F8AjjZ7T7PWziEYRd+kUJkl/JYqTtGMm+1wjT6CS5LMWUb+JmZElrB76nqbro7JPMAJ5MobT4gKPDB8SGaJR1eCpOpHGPRSbIEP7/2mBtKUhh1cH81ldmlGlmTh8FtAT86BUu5a0YylDHlas2BTg7ZskY5tnDwIK4a2r5gDGiwVgq5tA8GtqDoy+HHgAZxpVv3gX608gTkK/pkPHu45QrW7sH96GU+xjV3kIWW5O1V+ZjEauyiD28IWFjRt43zvWlarWI2MW/7h6IKzQSVGHXRMfXek0a0uoUDZHaTRVog+Ve+ixQx/c65wxPSy+1trJL0XweRgS4kqabpvWEhLykXFlNsuP8LJ/LIJ2qAevsKwhpevAQ0TV16LWudJo9skgAWzSftLo3kudd3DlcPLXjKNW0Pqa+d+poEUPq0i8PEXovpjM8ynoJDOXo3U3IeK8TsRUQQhVbOc5dSLaFozJ5eh8lEyRPd0QyxbhRzBlsXAVkCxm2nkGw0iiz8XerYdJinso=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":true,\\\"path\\\":\\\"docs\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_111068\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758228,\"id\":\"YQ_MatnqIuGM_uMP0-qD8A0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":467}}\n\n"
+            },
+            {
+              "ms": 52311,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758229,\"id\":\"YQ_MatnqIuGM_uMP0-qD8A0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":467}}\n\n"
+            },
+            {
+              "ms": 52313,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"Er0FCroFAWkUfRNGID1PFrxjXRvsxcKu6DETypjomS4DvxTKn8nYJbj8Ou6X3084TJ0+5qrJ3kxiZcKWvhnH6GuaqKVjTGh5QAyI84nB5viIDhb5HxkNd5ONcc94Gis7Xws14CO3z0Iin1K7r4HC2fjAzQNr80oQdgiOkJaYePqOVV8fuKl/Wh429j/zSbgSZiDjOgsWaVeyc9ZTjTW2tYwPcGRWCjulCHASSz7Cm2IkKYxKtsw73HAPuItIIX05lkGo8/tsOnSILcZ5kjRQRmRxaPKPaA8kYd0KEttYNQ011NiKsmS77r9uayZ7rNntdcJMt7L9cHo4vOJ+Y2Itkb+g0EE0gcAvOuSGqSNKFUT63skO01k/P6dBpyDwEpSXQnQmlUYP+/08cGk6z56OD64WP1cBV5iFHYV7Zl8F8AjjZ7T7PWziEYRd+kUJkl/JYqTtGMm+1wjT6CS5LMWUb+JmZElrB76nqbro7JPMAJ5MobT4gKPDB8SGaJR1eCpOpHGPRSbIEP7/2mBtKUhh1cH81ldmlGlmTh8FtAT86BUu5a0YylDHlas2BTg7ZskY5tnDwIK4a2r5gDGiwVgq5tA8GtqDoy+HHgAZxpVv3gX608gTkK/pkPHu45QrW7sH96GU+xjV3kIWW5O1V+ZjEauyiD28IWFjRt43zvWlarWI2MW/7h6IKzQSVGHXRMfXek0a0uoUDZHaTRVog+Ve+ixQx/c65wxPSy+1trJL0XweRgS4kqabpvWEhLykXFlNsuP8LJ/LIJ2qAevsKwhpevAQ0TV16LWudJo9skgAWzSftLo3kudd3DlcPLXjKNW0Pqa+d+poEUPq0i8PEXovpjM8ynoJDOXo3U3IeK8TsRUQQhVbOc5dSLaFozJ5eh8lEyRPd0QyxbhRzBlsXAVkCxm2nkGw0iiz8XerYdJinso=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":true,\\\"path\\\":\\\"docs\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_111068\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758228,\"id\":\"YQ_MatnqIuGM_uMP0-qD8A0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":467}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758229,\"id\":\"YQ_MatnqIuGM_uMP0-qD8A0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":467}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1659,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":313,\\\"total_tokens\\\":467}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "single",
+      "prompt": "List everything under src, recursively.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_595059",
+            "name": "list_dir",
+            "arguments": "{\"path\":\"src\",\"recursive\":true}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-4#1",
+          "startedAt": "2026-10-11T22:37:16.715Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List everything under src, recursively.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:39:50 GMT",
+            "expires": "Sun, 11 Oct 2026 22:39:50 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=153274",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 153296,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"Et4CCtsCAWkUfRM134meySGM+qMQKYNWXzFdD41Vhb0lydP+AYraQ3EpFfL0KSL9USNaBYP2lf7eyzwPKsbHY7HmCglixz0AlqaKfVtUkN8iJfxfrg5zR5s5TVJ/uGUfS2S9QuCSVr7H+robpr42UHNrel8OhS1FAcDDjf6RIfFW547XB5pns/Y2reWdQa/17HIXzgIUOddmh3ZR5BJVMrPHIDmAvV8adntTF/YSwEkbG0OTZe0WG/Xg4fQSHEfQBi9K7lSIsAPkD8x1XMIkhmLYLiIW0G8+wkUz/R+WycGfJyGwXqRHQWbWUjHc3XME9dn0TDVKzj3hrNHMnJkFsPaXgMfKqHxg1ZrXh3mhO39kg4IAaEmKFjBrs+TPQMIHxoRpwmOfnpIThkb7CHi/Q7k8vz0kVBpRyvI8wYx3sKBprw1uBE3iNPqZ5+82uwKEqNY7U5vvrHSptnUEqBGXo1U=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src\\\",\\\"recursive\\\":true}\",\"name\":\"list_dir\"},\"id\":\"call_595059\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758390,\"id\":\"nA_MauXVNYa939IP-MqbqAQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":388}}\n\n"
+            },
+            {
+              "ms": 153301,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758390,\"id\":\"nA_MauXVNYa939IP-MqbqAQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":388}}\n\n"
+            },
+            {
+              "ms": 153301,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"Et4CCtsCAWkUfRM134meySGM+qMQKYNWXzFdD41Vhb0lydP+AYraQ3EpFfL0KSL9USNaBYP2lf7eyzwPKsbHY7HmCglixz0AlqaKfVtUkN8iJfxfrg5zR5s5TVJ/uGUfS2S9QuCSVr7H+robpr42UHNrel8OhS1FAcDDjf6RIfFW547XB5pns/Y2reWdQa/17HIXzgIUOddmh3ZR5BJVMrPHIDmAvV8adntTF/YSwEkbG0OTZe0WG/Xg4fQSHEfQBi9K7lSIsAPkD8x1XMIkhmLYLiIW0G8+wkUz/R+WycGfJyGwXqRHQWbWUjHc3XME9dn0TDVKzj3hrNHMnJkFsPaXgMfKqHxg1ZrXh3mhO39kg4IAaEmKFjBrs+TPQMIHxoRpwmOfnpIThkb7CHi/Q7k8vz0kVBpRyvI8wYx3sKBprw1uBE3iNPqZ5+82uwKEqNY7U5vvrHSptnUEqBGXo1U=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src\\\",\\\"recursive\\\":true}\",\"name\":\"list_dir\"},\"id\":\"call_595059\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758390,\"id\":\"nA_MauXVNYa939IP-MqbqAQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":388}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758390,\"id\":\"nA_MauXVNYa939IP-MqbqAQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":388}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1190,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":312,\\\"total_tokens\\\":388}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "single",
+      "prompt": "Create a file named notes.txt containing the text hello world.",
+      "status": 200,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_619187",
+            "name": "write_file",
+            "arguments": "{\"path\":\"notes.txt\",\"content\":\"hello world\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-5#1",
+          "startedAt": "2026-10-11T22:39:57.026Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Create a file named notes.txt containing the text hello world.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:40:00 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=3131",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 3179,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-5#2",
+          "startedAt": "2026-10-11T22:40:22.215Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Create a file named notes.txt containing the text hello world.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:40:26 GMT",
+            "expires": "Sun, 11 Oct 2026 22:40:26 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=4256",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 4284,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EpcDCpQDAWkUfRMXuH8RBwz79bzP2XQL0U77b0ZggRPv2IjrOKxVnDq3o07rPbew2rIMFRaytGVE4/CSOm+MN6iL7EFCYdvdtU/tSkRNRw7E5MjJVm1DvAB92RWa69J1BmmPnJNOZYub/uXebLUF8oKv+D/aAUS74nEsmZctqlQkFmgsVw/05UELHjs4oQ2A/uYJU8SLtLSHQts+oHzrrz8GpJXWBCLrZRxj1tAbTDpaCZbyFr0NFKZ9nl1RuvTb9cPOpXou5YNIlfBsT7hwEiJBN1gdIGkpSji8rvqKjqQQlwsrl4hvmcijDa/+fwlTWmngXe/DU2eky57Vp7XpP2QsZqClk3rK/YT8p2AANYw/gPBUAU+b1JcP0Bvbeqbf1ibmhSO8pp8M4i8JVsmCh1b//qu5i1IhlvEhkAOc/r//i9f2m8S0PDGetxkU3ba7erZ0uOzjvXYQTq6XqYLQ6HIzLVtaSOsMUlLLk0K4JbAKRXWwR89nw11mRPeMBWyEEoL1/8s4MrvWhXFEjIJbS0nPbxgZa4H+0y4=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"notes.txt\\\",\\\"content\\\":\\\"hello world\\\"}\",\"name\":\"write_file\"},\"id\":\"call_619187\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758426,\"id\":\"VhDMasDWFurV-8YPvva9sQQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":408}}\n\n"
+            },
+            {
+              "ms": 4286,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758426,\"id\":\"VhDMasDWFurV-8YPvva9sQQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":408}}\n\n"
+            },
+            {
+              "ms": 4286,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EpcDCpQDAWkUfRMXuH8RBwz79bzP2XQL0U77b0ZggRPv2IjrOKxVnDq3o07rPbew2rIMFRaytGVE4/CSOm+MN6iL7EFCYdvdtU/tSkRNRw7E5MjJVm1DvAB92RWa69J1BmmPnJNOZYub/uXebLUF8oKv+D/aAUS74nEsmZctqlQkFmgsVw/05UELHjs4oQ2A/uYJU8SLtLSHQts+oHzrrz8GpJXWBCLrZRxj1tAbTDpaCZbyFr0NFKZ9nl1RuvTb9cPOpXou5YNIlfBsT7hwEiJBN1gdIGkpSji8rvqKjqQQlwsrl4hvmcijDa/+fwlTWmngXe/DU2eky57Vp7XpP2QsZqClk3rK/YT8p2AANYw/gPBUAU+b1JcP0Bvbeqbf1ibmhSO8pp8M4i8JVsmCh1b//qu5i1IhlvEhkAOc/r//i9f2m8S0PDGetxkU3ba7erZ0uOzjvXYQTq6XqYLQ6HIzLVtaSOsMUlLLk0K4JbAKRXWwR89nw11mRPeMBWyEEoL1/8s4MrvWhXFEjIJbS0nPbxgZa4H+0y4=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"notes.txt\\\",\\\"content\\\":\\\"hello world\\\"}\",\"name\":\"write_file\"},\"id\":\"call_619187\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758426,\"id\":\"VhDMasDWFurV-8YPvva9sQQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":408}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758426,\"id\":\"VhDMasDWFurV-8YPvva9sQQ\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":408}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1283,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":25,\\\"prompt_tokens\\\":318,\\\"total_tokens\\\":408}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "single",
+      "prompt": "Read the file config/settings.json.",
+      "status": 200,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_905134",
+            "name": "read_file",
+            "arguments": "{\"path\":\"config/settings.json\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-6#1",
+          "startedAt": "2026-10-11T22:40:33.508Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read the file config/settings.json.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:40:33 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=291",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 320,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-6#2",
+          "startedAt": "2026-10-11T22:40:55.847Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read the file config/settings.json.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:41:14 GMT",
+            "expires": "Sun, 11 Oct 2026 22:41:14 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=18962",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 18989,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EusBCugBAWkUfRNRNOb+SLmjdlFZPnkxyHPleQbilIv0csf8GBJ9VF/WRr4UMyxtc+v0t2iZmhjIB01pzNPUlY3Ye1wmzHGBX8OtJGe+OfILNyj/zkI+6ag8GchJF8toFdtOlUq1teefG7QaFrgDfF1r1wSYHAyJbE4XJCsx4kgBEB5F2Q4lTUMxG6vlNa1Yrd253JpAMW3uY6QG1eoUVQsnySuKRu+nAIktiiKmmkzICCxYybOvCdO21eLzz0jQPwX7PnS3lu6m7tfPq7OlonHrLvGGS2+0KX3Ho20RvBPGpfLOIKKTImzKRtBDlQ==\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"config/settings.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_905134\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758474,\"id\":\"eBDMao85grn89Q_A8-rBCw\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":367}}\n\n"
+            },
+            {
+              "ms": 18993,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758474,\"id\":\"eBDMao85grn89Q_A8-rBCw\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":367}}\n\n"
+            },
+            {
+              "ms": 18994,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EusBCugBAWkUfRNRNOb+SLmjdlFZPnkxyHPleQbilIv0csf8GBJ9VF/WRr4UMyxtc+v0t2iZmhjIB01pzNPUlY3Ye1wmzHGBX8OtJGe+OfILNyj/zkI+6ag8GchJF8toFdtOlUq1teefG7QaFrgDfF1r1wSYHAyJbE4XJCsx4kgBEB5F2Q4lTUMxG6vlNa1Yrd253JpAMW3uY6QG1eoUVQsnySuKRu+nAIktiiKmmkzICCxYybOvCdO21eLzz0jQPwX7PnS3lu6m7tfPq7OlonHrLvGGS2+0KX3Ho20RvBPGpfLOIKKTImzKRtBDlQ==\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"config/settings.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_905134\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758474,\"id\":\"eBDMao85grn89Q_A8-rBCw\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":367}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758474,\"id\":\"eBDMao85grn89Q_A8-rBCw\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":367}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1035,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":314,\\\"total_tokens\\\":367}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "two",
+      "prompt": "Read package.json and tsconfig.json. Call read_file for both in this turn.",
+      "status": 503,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_HTTP_503",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-7#1",
+          "startedAt": "2026-10-11T22:41:21.849Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read package.json and tsconfig.json. Call read_file for both in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:41:22 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=421",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 448,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-7#2",
+          "startedAt": "2026-10-11T22:41:44.315Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read package.json and tsconfig.json. Call read_file for both in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:41:46 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=1670",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 1702,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "two",
+      "prompt": "List the src directory and read README.md, both in this same turn.",
+      "status": 503,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_HTTP_503",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-8#1",
+          "startedAt": "2026-10-11T22:41:53.024Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the src directory and read README.md, both in this same turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:41:53 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=891",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 912,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-8#2",
+          "startedAt": "2026-10-11T22:42:15.956Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the src directory and read README.md, both in this same turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:42:18 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=2028",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 2063,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "two",
+      "prompt": "Read a.txt and b.txt in parallel.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_1242965",
+            "name": "read_file",
+            "arguments": "{\"path\":\"a.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_1242968",
+            "name": "read_file",
+            "arguments": "{\"path\":\"b.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-9#1",
+          "startedAt": "2026-10-11T22:42:25.029Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read a.txt and b.txt in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:42:47 GMT",
+            "expires": "Sun, 11 Oct 2026 22:42:47 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=22579",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 22606,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EvQCCvECAWkUfRPtpNwnXbOeeRVbbMX3JG3YHjAgGoHddi1YXLA5Yu+AqbR5xawn1HEodqHyR+saQQ9gA8GSIqEUUGjFBaxjdS5eUo+KSVyK9sx3tul9T435etlE+xafDtV0sKk2myU+CdLzbf15dvOGcwQrSQzBIdYEqMOsML9I0fA3Qcr6dcJFeHxXmRf/UfhuoWt2HsP8QZMwxvLsSGyfpN4TdLAmLuFgtHCkKDZLK1xmAB/Wfci3vvp/PYnMj6BSMvslJj1XhiM1d7HJB6EOs1brSAzR1GvpNDp91WEGTkUT0Xsz12dBWT3Oz+vTC8MyeZr271npX6LtSRqjpQvLd51VBJd7eNJ6huyvNkntmFg8wcruAZPxFJgFe1B7cGbpz6ol26mryFwyPXpYkdko9I4oVeDM62xiq3Un3iEoePVf70wrCK3nCpTxYBWF0DAUD+SQJEU6niuEfJNscRgRPsTMSb3WOZsD5SGefzNfuiJq4KZ1\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"a.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_1242965\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758567,\"id\":\"0RDMav-EC_Gb_uMPte3s2Q0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":316,\"total_tokens\":405}}\n\n"
+            },
+            {
+              "ms": 22659,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"b.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_1242968\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758567,\"id\":\"0RDMav-EC_Gb_uMPte3s2Q0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":423}}\n\n"
+            },
+            {
+              "ms": 22672,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758567,\"id\":\"0RDMav-EC_Gb_uMPte3s2Q0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":423}}\n\n"
+            },
+            {
+              "ms": 22674,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EvQCCvECAWkUfRPtpNwnXbOeeRVbbMX3JG3YHjAgGoHddi1YXLA5Yu+AqbR5xawn1HEodqHyR+saQQ9gA8GSIqEUUGjFBaxjdS5eUo+KSVyK9sx3tul9T435etlE+xafDtV0sKk2myU+CdLzbf15dvOGcwQrSQzBIdYEqMOsML9I0fA3Qcr6dcJFeHxXmRf/UfhuoWt2HsP8QZMwxvLsSGyfpN4TdLAmLuFgtHCkKDZLK1xmAB/Wfci3vvp/PYnMj6BSMvslJj1XhiM1d7HJB6EOs1brSAzR1GvpNDp91WEGTkUT0Xsz12dBWT3Oz+vTC8MyeZr271npX6LtSRqjpQvLd51VBJd7eNJ6huyvNkntmFg8wcruAZPxFJgFe1B7cGbpz6ol26mryFwyPXpYkdko9I4oVeDM62xiq3Un3iEoePVf70wrCK3nCpTxYBWF0DAUD+SQJEU6niuEfJNscRgRPsTMSb3WOZsD5SGefzNfuiJq4KZ1\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"a.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_1242965\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758567,\"id\":\"0RDMav-EC_Gb_uMPte3s2Q0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":316,\"total_tokens\":405}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"b.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_1242968\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758567,\"id\":\"0RDMav-EC_Gb_uMPte3s2Q0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":423}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758567,\"id\":\"0RDMav-EC_Gb_uMPte3s2Q0\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":423}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1571,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":36,\\\"prompt_tokens\\\":316,\\\"total_tokens\\\":423}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "two",
+      "prompt": "Write 'one' to one.txt and 'two' to two.txt in this turn.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_1264913",
+            "name": "write_file",
+            "arguments": "{\"content\":\"one\",\"path\":\"one.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_1264916",
+            "name": "write_file",
+            "arguments": "{\"content\":\"two\",\"path\":\"two.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-10#1",
+          "startedAt": "2026-10-11T22:42:54.714Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Write 'one' to one.txt and 'two' to two.txt in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:43:32 GMT",
+            "expires": "Sun, 11 Oct 2026 22:43:32 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=37255",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 37290,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EtUCCtICAWkUfRPMy5U1vvea0CVE80/4dzVBM35vETI5SHn4Z7CD5gIr1gJU/Hjek0Sntku/xUumxYQku7znjSJF/moMtQgwZquZfoJAixIIsSm4+d2jhrzhEb765rnFsCz9pP4qfLI2nFQrCWN5pBQAYbkB+VO+i6l/Hxen1LN2TVUg3k6CeFIFTQMuVy0b96+ofG7MHOZqnFyYleI9T13itltBzqYWHsE7NRRwDKjspA7w29UeW6+IcLDjwJ12Ft8P/XfkosCGcNp7zYkni3sO5I5X+JXUXpnVNsDaBnR22xn4So3tVNxNH2XnH4QhymAf7/cCG39USdx2+sgIk4drwReqBj1ZK0Da9ORZh0PunjzcU+Mfoos9F3u35f/Luw7vzqPl9CNoWo6y4c1kSJVqLhy1pcSNs6KYNPODKA/ipLX+toCro0xOXwJxEivOb+oW+1hWXUw=\"}},\"function\":{\"arguments\":\"{\\\"content\\\":\\\"one\\\",\\\"path\\\":\\\"one.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_1264913\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758612,\"id\":\"7hDMatKcNt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":24,\"prompt_tokens\":325,\"total_tokens\":407}}\n\n"
+            },
+            {
+              "ms": 37368,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"content\\\":\\\"two\\\",\\\"path\\\":\\\"two.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_1264916\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758612,\"id\":\"7hDMatKcNt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":431}}\n\n"
+            },
+            {
+              "ms": 37382,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758612,\"id\":\"7hDMatKcNt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":431}}\n\n"
+            },
+            {
+              "ms": 37383,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EtUCCtICAWkUfRPMy5U1vvea0CVE80/4dzVBM35vETI5SHn4Z7CD5gIr1gJU/Hjek0Sntku/xUumxYQku7znjSJF/moMtQgwZquZfoJAixIIsSm4+d2jhrzhEb765rnFsCz9pP4qfLI2nFQrCWN5pBQAYbkB+VO+i6l/Hxen1LN2TVUg3k6CeFIFTQMuVy0b96+ofG7MHOZqnFyYleI9T13itltBzqYWHsE7NRRwDKjspA7w29UeW6+IcLDjwJ12Ft8P/XfkosCGcNp7zYkni3sO5I5X+JXUXpnVNsDaBnR22xn4So3tVNxNH2XnH4QhymAf7/cCG39USdx2+sgIk4drwReqBj1ZK0Da9ORZh0PunjzcU+Mfoos9F3u35f/Luw7vzqPl9CNoWo6y4c1kSJVqLhy1pcSNs6KYNPODKA/ipLX+toCro0xOXwJxEivOb+oW+1hWXUw=\"}},\"function\":{\"arguments\":\"{\\\"content\\\":\\\"one\\\",\\\"path\\\":\\\"one.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_1264913\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758612,\"id\":\"7hDMatKcNt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":24,\"prompt_tokens\":325,\"total_tokens\":407}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"content\\\":\\\"two\\\",\\\"path\\\":\\\"two.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_1264916\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758612,\"id\":\"7hDMatKcNt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":431}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758612,\"id\":\"7hDMatKcNt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":431}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1577,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":48,\\\"prompt_tokens\\\":325,\\\"total_tokens\\\":431}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "two",
+      "prompt": "List both the tests and the scripts directories now, in parallel.",
+      "status": 200,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_595088",
+            "name": "list_dir",
+            "arguments": "{\"path\":\"tests\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_595091",
+            "name": "list_dir",
+            "arguments": "{\"path\":\"scripts\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-11#1",
+          "startedAt": "2026-10-11T22:43:39.107Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List both the tests and the scripts directories now, in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:43:39 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=230",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 269,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-11#2",
+          "startedAt": "2026-10-11T22:44:01.386Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List both the tests and the scripts directories now, in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:44:13 GMT",
+            "expires": "Sun, 11 Oct 2026 22:44:13 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=11843",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 11866,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"Ep8DCpwDAWkUfRNXmY8/A/PvL1zH/1OZG4BY/nHftGHmgmppB10EPjt9dc0OaKWObjYwuYUSg98AI4YRfFTSfJkNMKAJZwQ6XIJy5v1xHhCGK2R3AHlH1yoP+Bx1vwfKq0croC/YrQdQ2W/SWkcTEFqy8WOGkQSXZQ85OlTFmlR2hAwJ2Ee7ouC45NI65yyxTD2Bfdy4hTcC1GVYLd2n1qHwnQ2PZ71ixkFEaJ7a5scQKPYArrnDt4TUeUHItM4EJq8mtBOSA4ay257qaWKVTxduQD77KOKYei6Bu6JxMDjML4i6HSbTBjHQaeQXDXx+fcLfADlhFHlcz8qwJ9tycQaMLyDAT6cFYfk6ThtHeE9gwP1pYAQbTV8S5q1gcq6CFRPdBstek8lh3EEiN22V92C5GQozrn5+7WycZXTLOKWw2hk84vPk3ujhYSxpKj0d5JU1ShVRhu+hQP5oVQ1K4mCfkUw8ZLg7lJuzlfckl9SNRJMUoPB3xEpqF6gy/7fpMdvwWRKmhVb9X5yT14/JiokTy3e1OlBuq1F3vIq22Wkwhw==\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"tests\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_595088\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758653,\"id\":\"MRHMavT-H6D6-8YPz6fssQo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":16,\"prompt_tokens\":318,\"total_tokens\":407}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"scripts\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_595091\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758653,\"id\":\"MRHMavT-H6D6-8YPz6fssQo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":32,\"prompt_tokens\":318,\"total_tokens\":423}}\n\n"
+            },
+            {
+              "ms": 11869,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758653,\"id\":\"MRHMavT-H6D6-8YPz6fssQo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":32,\"prompt_tokens\":318,\"total_tokens\":423}}\n\n"
+            },
+            {
+              "ms": 11871,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"Ep8DCpwDAWkUfRNXmY8/A/PvL1zH/1OZG4BY/nHftGHmgmppB10EPjt9dc0OaKWObjYwuYUSg98AI4YRfFTSfJkNMKAJZwQ6XIJy5v1xHhCGK2R3AHlH1yoP+Bx1vwfKq0croC/YrQdQ2W/SWkcTEFqy8WOGkQSXZQ85OlTFmlR2hAwJ2Ee7ouC45NI65yyxTD2Bfdy4hTcC1GVYLd2n1qHwnQ2PZ71ixkFEaJ7a5scQKPYArrnDt4TUeUHItM4EJq8mtBOSA4ay257qaWKVTxduQD77KOKYei6Bu6JxMDjML4i6HSbTBjHQaeQXDXx+fcLfADlhFHlcz8qwJ9tycQaMLyDAT6cFYfk6ThtHeE9gwP1pYAQbTV8S5q1gcq6CFRPdBstek8lh3EEiN22V92C5GQozrn5+7WycZXTLOKWw2hk84vPk3ujhYSxpKj0d5JU1ShVRhu+hQP5oVQ1K4mCfkUw8ZLg7lJuzlfckl9SNRJMUoPB3xEpqF6gy/7fpMdvwWRKmhVb9X5yT14/JiokTy3e1OlBuq1F3vIq22Wkwhw==\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"tests\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_595088\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758653,\"id\":\"MRHMavT-H6D6-8YPz6fssQo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":16,\"prompt_tokens\":318,\"total_tokens\":407}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"scripts\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_595091\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758653,\"id\":\"MRHMavT-H6D6-8YPz6fssQo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":32,\"prompt_tokens\":318,\"total_tokens\":423}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758653,\"id\":\"MRHMavT-H6D6-8YPz6fssQo\",\"model\":\"gemini-3.7-flash\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":32,\"prompt_tokens\":318,\"total_tokens\":423}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1629,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":32,\\\"prompt_tokens\\\":318,\\\"total_tokens\\\":423}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "nested",
+      "prompt": "Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.",
+      "status": 503,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_HTTP_503",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-12#1",
+          "startedAt": "2026-10-11T22:44:20.265Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:44:21 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=795",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 815,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-12#2",
+          "startedAt": "2026-10-11T22:44:43.101Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:44:43 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=391",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 436,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "nested",
+      "prompt": "Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.",
+      "status": 429,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-13#1",
+          "startedAt": "2026-10-11T22:44:50.543Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:44:51 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=609",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 630,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-13#2",
+          "startedAt": "2026-10-11T22:45:13.178Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:45:13 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=74",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 101,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m46.675700389s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4486s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m46.675700389s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4486s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4486s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "nested",
+      "prompt": "Search for the word deprecated, case-insensitive, in *.md, *.txt and *.rst files.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-14#1",
+          "startedAt": "2026-10-11T22:45:20.286Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search for the word deprecated, case-insensitive, in *.md, *.txt and *.rst files.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:45:20 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=88",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 110,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m39.558458748s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4479s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m39.558458748s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4479s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4479s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "nested",
+      "prompt": "Look for 'class Engine' case-sensitively in src/**/*.ts, limit 10.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-15#1",
+          "startedAt": "2026-10-11T22:45:27.401Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Look for 'class Engine' case-sensitively in src/**/*.ts, limit 10.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "588",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:45:27 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=89",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 105,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m32.450493829s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.7-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4472s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m32.450493829s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.7-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4472s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4472s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "nested",
+      "prompt": "Search for 'password' case-insensitively across *.env.example files, max 3 results.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-16#1",
+          "startedAt": "2026-10-11T22:45:34.509Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search for 'password' case-insensitively across *.env.example files, max 3 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:45:34 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=75",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 97,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m25.348829481s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4465s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m25.348829481s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4465s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4465s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "none",
+      "prompt": "What is 17 times 3? Answer directly; do not use any tool.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-17#1",
+          "startedAt": "2026-10-11T22:45:41.613Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"What is 17 times 3? Answer directly; do not use any tool.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "588",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:45:41 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=92",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 132,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m18.209638837s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4458s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h14m18.209638837s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4458s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4458s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "none",
+      "prompt": "Say hello in French.",
+      "status": 503,
+      "attempts": 2,
+      "product": {
+        "threw": "PROVIDER_HTTP_503",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-18#1",
+          "startedAt": "2026-10-11T22:45:48.753Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Say hello in French.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:45:49 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=298",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 319,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        },
+        {
+          "label": "u06-gemini-3.7-flash-18#2",
+          "startedAt": "2026-10-11T22:46:11.088Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Say hello in French.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 503,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "175",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:46:32 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=21419",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 21458,
+              "text": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "framing": {
+            "bytes": 200,
+            "crlf": 0,
+            "lf": 7,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"ncing high demand. Spikes in demand are usually temporary. Please try again later.\\\",\\n    \\\"status\\\": \\\"UNAVAILABLE\\\"\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "kind": "none",
+      "prompt": "In one sentence, what is a JSON object?",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-19#1",
+          "startedAt": "2026-10-11T22:46:39.553Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"In one sentence, what is a JSON object?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "587",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:46:39 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=99",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 123,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h13m20.277007235s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4400s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h13m20.277007235s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4400s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4400s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "kind": "none",
+      "prompt": "Without reading any file, suggest a good name for a variable that counts retries.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-20#1",
+          "startedAt": "2026-10-11T22:46:46.683Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Without reading any file, suggest a good name for a variable that counts retries.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "588",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:46:46 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=89",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 107,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h13m13.162052284s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4393s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h13m13.162052284s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4393s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1372,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4393s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "kind": "none",
+      "prompt": "Thanks, that is all for now.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.7-flash-21#1",
+          "startedAt": "2026-10-11T22:46:53.795Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.7-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Thanks, that is all for now.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "588",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Sun, 11 Oct 2026 22:46:53 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=83",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 118,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h13m6.039256817s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4386s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.7-flash\\nPlease retry in 1h13m6.039256817s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.7-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"4386s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1371,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"4386s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    }
+  ]
+}
