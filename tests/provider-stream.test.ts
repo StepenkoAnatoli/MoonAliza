@@ -375,6 +375,19 @@ data: {"type": "message_stop"}`;
   expect(await collect(readSseEvents(events(body)))).toEqual([{ event: 'message_stop', data: { type: 'message_stop' } }]);
 });
 
+test('an event name belongs to its own event: the next event without an `event:` line has no name', async () => {
+  // F-1, names kept with their data. E-10's named message_stop event, then E-20's first chunk, which has no
+  // `event:` line. Guard: the name is reset at each blank line (mutation: drop `event = undefined;` there,
+  // so message_stop carries over to the unnamed event).
+  const stop = E10_BASIC.split('\n\n').at(-1)!;
+  const [first] = E20_STREAM.split('\n\n');
+  expect(stop).toBe('event: message_stop\ndata: {"type": "message_stop"}');
+  expect(await collect(readSseEvents(events(`${stop}\n\n${first}`)))).toEqual([
+    { event: 'message_stop', data: { type: 'message_stop' } },
+    { event: undefined, data: dataLines(first!)[0] },
+  ]);
+});
+
 test('E-25: the usage chunk repeating finish_reason is an accounting frame, not a second terminal', async () => {
   // Guard: a repeated reason equal to the first is accepted (mutation: fail on any second non-null reason).
   const fetcher = async () => events([E25_COMMENT, `data: ${JSON.stringify(e25Terminal('stop'))}`, `data: ${JSON.stringify({ ...e25Terminal('stop'), usage: E26_USAGE })}`, 'data: [DONE]'].join('\n\n'));

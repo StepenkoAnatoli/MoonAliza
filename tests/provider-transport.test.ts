@@ -294,6 +294,14 @@ test.each(['error', 'insufficient_system_resource', 'aborted', 'function_call'])
   expect(inferenceErrorCode(thrown)).toBe('PROVIDER_ERROR');
 });
 
+test('a plain JSON empty finish_reason is no reason: incomplete, as a stream reads it', async () => {
+  // No capture shows an empty reason; this is E-22's body with its reason emptied. The stream accumulator
+  // has read an empty reason as none since before Phase 1 (`if (choice.finish_reason)`), so a plain JSON
+  // answer, which follows the same map as a stream, reads it the same way. Guard: the empty string counts as
+  // no reason (mutation: `choice.finish_reason || null` to `?? null`; the call then fails).
+  expect(await complete(profile, [], { fetcher: async () => Response.json(mistral('')), signal: signal() })).toEqual({ content: 'partial', outcome: 'incomplete' });
+});
+
 test('a failure finish_reason wins over a refusal, and stop, length, content_filter and tool_calls keep their outcomes', async () => {
   // Guard: the failure check runs before the blocked outcome (mutation: move it after; a refusal then hides an error).
   await expect(complete(profile, [], { fetcher: async () => Response.json({ choices: [{ message: { refusal: 'Blocked' }, finish_reason: 'error' }] }), signal: signal() })).rejects.toThrow('PROVIDER_FINISH_FAILED');

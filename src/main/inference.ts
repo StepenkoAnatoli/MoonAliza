@@ -181,10 +181,11 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   // finish_reason, streamed or not (docs/specification/more-models.md, Phase 1 design 1): `stop` is
   // complete when it carries no call; `tool_calls`; `length` and Mistral's `model_length` (wire E-22)
   // are incomplete; `content_filter` or a refusal is blocked; no reason at all (a stream cut short) stays
-  // incomplete. Every other value fails the call, before a refusal can make it look blocked: the failures
-  // vendors document - `error` (OpenRouter E-25, Mistral E-22), `insufficient_system_resource` and
-  // `aborted` (DeepSeek E-20) - and any value not listed here, so a new failure signal is never saved
-  // as a partial answer.
+  // incomplete. An empty reason is no reason: the stream accumulator has always skipped it, so a plain JSON
+  // answer reads it the same way. Every other value fails the call, before a refusal can make it look
+  // blocked: the failures vendors document - `error` (OpenRouter E-25, Mistral E-22),
+  // `insufficient_system_resource` and `aborted` (DeepSeek E-20) - and any value not listed here, so a new
+  // failure signal is never saved as a partial answer.
   const reason = choice.finish_reason || null;
   if (reason !== null && !['stop', 'tool_calls', 'length', 'model_length', 'content_filter'].includes(reason)) throw new Error('PROVIDER_FINISH_FAILED');
   const content = choice.message.content ?? choice.message.refusal ?? '';
