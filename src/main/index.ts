@@ -26,6 +26,7 @@ import { ProjectTickets } from './projects';
 import { createBridge } from './bridge';
 import { createPolicyRoute } from './policy-route';
 import { complete, validateEndpoint, type InferenceMessage } from './inference';
+import { verifyOllamaLocality } from './ollama-locality';
 import { probeHardware } from '../models/hardware';
 import { inspectLocalRuntime } from '../models/local-runtime';
 
@@ -91,6 +92,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
     if (context.run.projectId === null && tools?.some(tool => tool.name !== 'read_github' || !context.repositories.length)) throw new Error('PROJECT_REQUIRED');
     const inferred = validateEndpoint(context.profile.kind, context.profile.endpoint);
     if (inferred.locality !== context.profile.locality) throw new Error('INVALID_ENDPOINT');
+    // A user-run Ollama can forward prompts to ollama.com: under local-only it must answer that its cloud is off, before every step.
+    await verifyOllamaLocality(context, (url, init) => localSession.fetch(url, init), capability.stop.signal);
     const fetcher = (url: string, init: RequestInit) => (context.profile.locality === 'local' ? localSession : providerSession).fetch(url, init);
     const invoke = (secret?: string) => complete(context.profile, messages, { fetcher, secret, signal: capability.stop.signal, tools });
     let output;
