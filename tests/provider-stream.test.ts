@@ -418,6 +418,18 @@ test('E-25: a mid-stream error chunk fails the call without its text, as the onl
   }
 });
 
+test('an error chunk that carries no choice still fails the call (review U1-R6)', async () => {
+  // Guard: the top-level `error` check runs before the no-choice early return (mutation: move it below
+  // `if (!choice) return`; the chunk is then skipped and the stream ends as an incomplete answer).
+  // Derived from E-25's error chunk (capture line 445) with its choices emptied - no capture shows this
+  // shape; it is the case the position of the check exists for.
+  const noChoice = E25_ERROR.replace(/"choices":\[.*\]\}$/, '"choices":[]}');
+  expect(noChoice).not.toBe(E25_ERROR);
+  const [first, hello] = E20_STREAM.split('\n\n');
+  const error = await failure(complete(openai, [], { fetcher: async () => events(`${first}\n\n${hello}\n\n${noChoice}`), signal: signal() }));
+  expect(error.message).toBe('PROVIDER_STREAM_ERROR');
+});
+
 test('E-20: DeepSeek\'s captured stream completes with its usage', async () => {
   // The positive control for the failure cases below: the capture as published. Guard: `stop` is a
   // known reason (mutation: remove it from the known set; the call then fails).

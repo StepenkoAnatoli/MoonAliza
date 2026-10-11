@@ -65,9 +65,12 @@ its prompt off the machine.
   E-30, E-31). Anything else - another status, a missing field, `false`, a timeout, a body that is
   not JSON - refuses the call with the new code `LOCAL_MODEL_UNVERIFIED`, before any prompt byte is
   sent.
-- The engine shows: "This Ollama can send prompts to ollama.com cloud models, and this conversation
-  is local only. Turn off Ollama's cloud features (set OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud":
-  true in Ollama's server.json), restart Ollama, then try again." No retry.
+- The engine shows: "Moonzila could not confirm that this Ollama keeps prompts on this computer, and
+  this conversation is local only. Ollama can send prompts to ollama.com cloud models unless its cloud
+  features are off. Check that Ollama is running and up to date, turn off its cloud features (set
+  OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama's server.json), restart Ollama, then try
+  again." One message covers every refusal - cloud reported on, an Ollama without `/api/status`, one not
+  running - so it claims only what Moonzila knows (unit review U2-R4). No retry.
 - Under a cloud-allowed policy nothing changes.
 - The managed runtime already makes the same check at startup (`src/models/managed-ollama.ts`); this
   extends it to profiles the user points at their own Ollama.

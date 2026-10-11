@@ -67,6 +67,8 @@ test('a local Ollama that can reach cloud models fails the run with an actionabl
   const result = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { failure: { code: string; message: string; retry: string } };
   expect(result.failure).toMatchObject({ code: 'LOCAL_MODEL_UNVERIFIED', retry: 'never' });
   expect(result.failure.message).toContain('OLLAMA_NO_CLOUD=1');
+  // Every refusal reads true: cloud on, an Ollama without /api/status, or one not running (review U2-R4).
+  expect(result.failure.message).toContain('could not confirm'); expect(result.failure.message).toContain('running and up to date');
 });
 
 test('result retrieval cannot cross conversation boundaries or rerun an operation', async () => {

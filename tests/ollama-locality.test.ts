@@ -239,14 +239,16 @@ test('every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound
   for (const [index, result] of results.entries()) {
     expect(result.outcome, `case ${index}`).toBe('LOCAL_MODEL_UNVERIFIED');
     expect(result.elapsed, `case ${index}`).toBeGreaterThanOrEqual(4900);
-    expect(result.elapsed, `case ${index}`).toBeLessThan(7000); // slack for a slow runner; a doubled 5 s bound would show 10 s
+    // Slack for a slow runner (Windows CI has run a test 12 times slower than usual, P5-27); still below
+    // the 10 s a doubled 5 s bound would show, so a wrong bound is caught.
+    expect(result.elapsed, `case ${index}`).toBeLessThan(9500);
   }
   expect(paths(silent.seen)).toEqual(['GET /api/status']);
   expect(paths(stalled.seen)).toEqual(['GET /api/status']);
   // The refusal is not enough: the request itself must end, or every refused step leaves a socket open to a hung Ollama.
   const fakes = [silent, stalled, stalledUnsignalled];
   for (const [index, fake] of fakes.entries()) expect(await closedBy(fake, results[index]!.settled + 500), `case ${index} closed`).toBe(true);
-}, 12_000);
+}, 20_000);
 
 test('infer() awaits the check as a statement of its own, straight after the policy and endpoint checks and before the model call, on the local session', () => {
   // infer() is a closure inside Electron's ready handler and has no harness; its order is pinned from its source, by whole
