@@ -249,6 +249,12 @@ test('a context overflow crosses into the engine as CONTEXT_LIMIT, not a generic
 });
 
 
+test('an unverified local Ollama crosses into the engine as LOCAL_MODEL_UNVERIFIED (More models Phase 1)', () => {
+  // Guard: inferenceErrorCode passes the code through (mutation: let it fall back to PROVIDER_ERROR).
+  expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.error', code: 'LOCAL_MODEL_UNVERIFIED' }).success).toBe(true);
+  expect(inferenceErrorCode(new Error('LOCAL_MODEL_UNVERIFIED'))).toBe('LOCAL_MODEL_UNVERIFIED');
+});
+
 test.each([400, 413, 422])('overflow status %i is classified within a strict 64 KiB inspection bound', async status => {
   let cancelled = false;
   const body = new ReadableStream<Uint8Array>({ start(controller) {

@@ -90,10 +90,13 @@ function hasCalls(raw: unknown): boolean { return raw !== undefined && (!Array.i
  * The code an inference failure crosses into the engine with. Only an overflow is told apart:
  * the engine already explains CONTEXT_LIMIT to the user. Everything else stays PROVIDER_ERROR,
  * as it always crossed - RUN_CANCELLED included, whose passage would change how a run that lost
- * its trust or policy mid-flight is reported, a separate decision.
+ * its trust or policy mid-flight is reported, a separate decision. LOCAL_MODEL_UNVERIFIED (a local
+ * Ollama that may send prompts to its cloud, refused under a local-only policy before any prompt
+ * byte; docs/specification/more-models.md) crosses too, so the user is told how to fix it.
  */
-export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'PROVIDER_ERROR' {
-  return error instanceof Error && error.message === 'CONTEXT_LIMIT' ? 'CONTEXT_LIMIT' : 'PROVIDER_ERROR';
+export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'LOCAL_MODEL_UNVERIFIED' | 'PROVIDER_ERROR' {
+  const reason = error instanceof Error ? error.message : '';
+  return reason === 'CONTEXT_LIMIT' || reason === 'LOCAL_MODEL_UNVERIFIED' ? reason : 'PROVIDER_ERROR';
 }
 
 // Providers do not share one overflow code. Accept known structured codes and the

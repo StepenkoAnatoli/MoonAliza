@@ -4,7 +4,7 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-05 |
-| Last checkpoint | 2026-10-10 - Stage 1 research DONE (both corpora pass); ideas review; phase PR |
+| Last checkpoint | 2026-10-11 - Stages 2-4 done (Mandate taken under "you have full access. continue"); Phase 1 contracts committed |
 | Engagement      | Full (provider adapters, downloads, signed catalogue, external services) |
 | Working branch  | `main-axuse`, restarted from `main` @ `b490e50` (PR #37 merge) |
 | Skills          | auto-build, lead-orchestrator, careful-coding, Research-Kit 0.9.5 |
@@ -14,17 +14,17 @@
 |-------|--------|----------|------------|
 | 0 Orient | DONE | this ledger; baseline below | 2026-10-05 |
 | 1 Research | DONE: two corpora, preflight PASS and handoff OK each, briefs authored, adversarially verified | docs/research/2026-10-05-provider-wire-formats/research/BRIEF.md; docs/research/2026-10-05-coding-model-shortlist/research/BRIEF.md | 2026-10-10 |
-| 2 Requirements | PENDING | - | - |
-| 3 Design | PENDING | - | - |
-| 4 Mandate | PENDING: architectural, waits for the user | - | - |
-| 5 Build | PENDING | - | - |
+| 2 Requirements | DONE (Phase 1) | REQUIREMENTS-P1.md | 2026-10-11 |
+| 3 Design | DONE (phase plan; Phase 1 in full) | docs/specification/more-models.md | 2026-10-11 |
+| 4 Mandate | DONE: user, 2026-10-11, "you have full access. continue"; the lead took the recommended option for each held question (no one approved them individually) | MANDATE.md | 2026-10-11 |
+| 5 Build | ACTIVE: Phase 1 | units below | 2026-10-11 |
 | 6 Harden | PENDING | - | - |
 | 7 Audit | PENDING | - | - |
 | 8 Deliver and merge | PENDING | - | - |
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Stage 1 is finished and this phase stops here (user, 2026-10-05: "finish the phase. merge what needed, make sure no bugs and then stop"). Next run: Stage 2 requirements and Stage 3 design from the two briefs, then the Mandate, which waits for the user (architectural). Questions held for the Mandate: which vendor keys the user will provide for the day-one probes (wire-formats U-18); the order of the three directions; whether to approve the SmartRouter advisory UI note (see reports/2026-10-10-ideas-review.md).
+Phase 1: contracts committed (U0); write the U1 and U2 builder briefs and the reviewer briefs, launch both builders in parallel worktrees, then unit reviews, integration review, docs, the pinned gate, Windows CI, the PR and the merge.
 
 ## Task statement
 User, 2026-10-04: "Can we add more models to moonzila?" then "add it as its own task after Task 5. Yes". User, 2026-10-05: "continue"; chose "More models" as the next task and "I'll add a new key" for research collection.
@@ -50,8 +50,12 @@ Kit 0.9.5 at `$HOME/.agents/research-kit`, role collector. `doctor` on MoonAliza
 
 Credits: this task's collection spent about 80 (76 pages and 2 searches by the two ledgers: runs 1-2 68, run 3 10, wire run 4 2), within the 100-credit budget; measured 642 before and 564 after run 3. On 2026-10-10 `doctor` reports 391: about 171 more were spent outside this task's ledgers between 2026-10-05 and 2026-10-10, which nothing here records or can attribute (other use of the same account is the likely cause). A shortlist run 4 (4 owner pages) was declined by the user on 2026-10-05; nothing was fetched, the plan file the interrupted command had written was removed, and the corpus records the decision.
 
-## Units
-(none yet: no build in this phase)
+## Units (Phase 1)
+| Unit | Owns | Status | Commit | Model |
+|------|------|--------|--------|-------|
+| U0 contracts | `src/shared/errors.ts` (LOCAL_MODEL_UNVERIFIED), `src/engine/control.ts` (inference.error code), `inferenceErrorCode` in `src/main/inference.ts`, the engine's message in `src/engine/application.ts`, two red-first tests | DONE (lead): both tests red before, green after | this commit | lead |
+| U1 stream robustness | `src/main/provider-stream.ts`, the OpenAI-shaped branch of `complete()` in `src/main/inference.ts`, `tests/provider-stream.test.ts` (and new finish-reason tests in `tests/provider-transport.test.ts`) | PENDING | - | - |
+| U2 Ollama locality | new `src/main/ollama-locality.ts`, its call in `infer()` in `src/main/index.ts`, `tests/ollama-locality.test.ts` | PENDING | - | - |
 
 ## Discovery (reports/discovery-1.json, five mappers and a critic, 2026-10-05)
 - Only `openai-compatible` and `ollama` run; `anthropic` and `openai-responses` are declared but throw NOT_IMPLEMENTED (`src/main/inference.ts:142-143`), and the profile form offers only the two that run (`src/renderer/App.tsx:266`). The plan's "already reaches many models through profiles (ollama, openai-compatible, openai-responses, anthropic)" overstates what works.
@@ -80,3 +84,4 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 - 2026-10-05: verify round 2 (`reports/research-verify-2.json`): wire formats - run 4 folded in, 2 material issues resolved, preflight PASS 0 warnings; shortlist - integrated after the 529 retry, 6 material issues resolved per a fresh checker, preflight PASS with the accepted U-18 warning. The lead proposed a shortlist run 4 (4 owner pages); the user declined it.
 - 2026-10-10: resumed after five days; the uncommitted work was intact. Removed the declined `plan-4.json` (MM-2). Gates re-run: both PASS, handoff OK. Corpora committed with their ledgers (`2773ee7`, `71436b5`). The user asked to check two proposals (the SmartRouter Phase 6 advisory UI note and a Maintenance self-check plan); copies in `reports/inputs/`, review workflow launched against Moonzila b490e50 and SmartRouter 9b4bd68/ac59658 (cloned read-only). Found first: SmartRouter's handoff points to `docs/MOONZILA_ADVISORY_UI.md`, which exists neither at its head nor in its `v1.0.0-pilot` tag.
 - 2026-10-10: ideas review returned (25 agents; `reports/2026-10-10-ideas-review.md`, raw verdicts in `reports/2026-10-10-ideas-review-workflow.json`). Advisory UI note: 24 claims VERIFIED, 39 PARTLY, 5 WRONG; recommendation - do not adopt it as an implementation spec, take its four plan-backed rules into direction 3 at the Mandate. Maintenance plan: its picture of Moonzila mostly accurate; recommendation - record its principles only if the user approves them, and split the work across Stage F2, a GitHub-run Full check, Self-unblocking and missions. The lead spot-checked citations (the `d7c00f9a` pin, SmartRouter's Phase 2 record, `application.ts:363`) and corrected two points: my statement that the note existed nowhere in SmartRouter was wrong (it is inside the committed release zip `tools/release/SmartRouter-v1.0.0-pilot.zip`), and the review's "ancestry does not reproduce" came from my own `--depth=1` tag fetch re-shallowing the clone (with full history, 9b4bd68 is an ancestor of ac59658, 33 commits). Plan gets an end section pointing to the review; nothing approved or built.
+- 2026-10-11: user: "you have full access. continue". Stages 2-4: REQUIREMENTS-P1.md, docs/specification/more-models.md (phase plan, Phase 1 design), MANDATE.md (each held question answered with its recommended option; recorded as not individually approved). Phase 1 = stream robustness and fail-closed Ollama locality. U0 contracts by the lead, red-first.

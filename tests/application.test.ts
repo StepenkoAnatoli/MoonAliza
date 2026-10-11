@@ -56,6 +56,19 @@ test('an oversized prompt fails before inference and persists an actionable cont
   expect(result.context.estimatedInputTokens).toBeGreaterThan(result.context.inputBudgetTokens);
 });
 
+test('a local Ollama that can reach cloud models fails the run with an actionable message, never retried', async () => {
+  // Guard: the engine maps LOCAL_MODEL_UNVERIFIED to its own message (mutation: drop the failures entry).
+  const { store } = fixture(); let calls = 0;
+  const app = new Application(store, { publish() {}, async infer() { calls++; throw new Error('LOCAL_MODEL_UNVERIFIED'); } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'hello' }, 'start'));
+  await app.whenIdle();
+  expect(calls).toBe(1);
+  const result = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { failure: { code: string; message: string; retry: string } };
+  expect(result.failure).toMatchObject({ code: 'LOCAL_MODEL_UNVERIFIED', retry: 'never' });
+  expect(result.failure.message).toContain('OLLAMA_NO_CLOUD=1');
+});
+
 test('result retrieval cannot cross conversation boundaries or rerun an operation', async () => {
   const { store } = fixture(); let steps = 0;
   const at = new Date().toISOString();
