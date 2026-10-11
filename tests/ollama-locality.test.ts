@@ -3,7 +3,7 @@
 // /api/chat and records every request, so "refused before the chat request" is read off what it saw.
 import { afterEach, expect, test } from 'vitest';
 import { createServer, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 import { readFileSync } from 'node:fs';
 import { complete, type Fetcher, type InferenceMessage } from '../src/main/inference';
 import { assertOllamaLocal, verifyOllamaLocality } from '../src/main/ollama-locality';
@@ -31,10 +31,15 @@ afterEach(async () => {
   for (const server of servers.splice(0)) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 });
 
-/** A loopback Ollama: GET .../api/status answers with `status`, POST .../api/chat with the E-30 chat answer. */
+/**
+ * A loopback Ollama: GET .../api/status answers with `status`, POST .../api/chat with the E-30 chat answer.
+ * `open` holds every connection that carried a request and has not closed yet.
+ */
 async function startOllama(status: Reply) {
-  const seen: Seen[] = []; const fake = { seen, status, endpoint: '' };
+  const seen: Seen[] = []; const open = new Set<Socket>(); const fake = { seen, open, status, endpoint: '' };
   const server = createServer((request, response) => {
+    const socket = request.socket;
+    if (!open.has(socket)) { open.add(socket); socket.once('close', () => open.delete(socket)); }
     const chunks: Buffer[] = [];
     request.on('data', (chunk: Buffer) => chunks.push(chunk));
     request.on('end', () => {
@@ -63,6 +68,13 @@ async function step(item: ReturnType<typeof context>, signal = new AbortControll
   return complete(item.profile, messages, { fetcher, signal });
 }
 const paths = (seen: Seen[]) => seen.map(entry => `${entry.method} ${entry.path}`);
+/** True once every connection that carried a request to `fake` has closed, false if one is still open at `deadline`. */
+async function closedBy(fake: { open: Set<Socket> }, deadline: number) {
+  while (fake.open.size > 0 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+  return fake.open.size === 0;
+}
+/** A fetcher whose request and body ignore the run's signal: only the reader's own cancel can end a stalled body. */
+const unsignalled: Fetcher = (url, init) => fetch(url, { ...init, signal: null });
 
 const padded = (bytes: number) => {
   const base = JSON.stringify(statusBody(true)).length;
@@ -80,6 +92,12 @@ const refusals: Array<[string, Reply]> = [
   ['JSON null', json(200, null)],
   ['a body that is not JSON', (_request, response) => { response.end('cloud disabled'); }],
   ['a body one byte over 64 KiB', (_request, response) => { response.setHeader('Content-Type', 'application/json'); response.end(padded(64 * 1024 + 1)); }],
+  // A valid answer first, in a chunk of its own, then whitespace past the bound: only refusing on overflow refuses this,
+  // because the bytes read before the bound still parse as `disabled: true`.
+  ['a valid answer followed by whitespace past 64 KiB', (_request, response) => {
+    response.setHeader('Content-Type', 'application/json'); response.write(JSON.stringify(statusBody(true)));
+    setTimeout(() => response.end(' '.repeat(65 * 1024)), 20);
+  }],
   ['a 302 to an answer that says disabled', (_request, response) => { response.statusCode = 302; response.setHeader('Location', '/redirected-status'); response.end(); }],
   ['a network error', request => { request.socket.destroy(); }],
 ];
@@ -181,7 +199,7 @@ test('a run cancelled before the check sends nothing and is RUN_CANCELLED', asyn
   expect(calls).toEqual([]);
 });
 
-test('a run cancelled while the status request is pending is RUN_CANCELLED at once, not LOCAL_MODEL_UNVERIFIED', async () => {
+test('a run cancelled while the status request is pending is RUN_CANCELLED at once, not LOCAL_MODEL_UNVERIFIED, and its connection closes', async () => {
   const ollama = await startOllama(() => { /* never answers */ });
   const controller = new AbortController();
   const started = Date.now();
@@ -189,20 +207,33 @@ test('a run cancelled while the status request is pending is RUN_CANCELLED at on
   await expect(step(context(ollama.endpoint, 'local-only'), controller.signal)).rejects.toThrow('RUN_CANCELLED');
   expect(Date.now() - started).toBeLessThan(2000);
   expect(paths(ollama.seen)).toEqual(['GET /api/status']);
+  expect(await closedBy(ollama, Date.now() + 500), 'the status request carries the run signal').toBe(true);
 });
 
-test('every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound, never later', async () => {
+test('a run cancelled while the status body is still arriving closes the connection, even through a fetcher that ignores the signal', async () => {
+  const ollama = await startOllama((_request, response) => { response.setHeader('Content-Type', 'application/json'); response.write('{"cloud":'); /* body never ends */ });
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 50);
+  await expect(verifyOllamaLocality(context(ollama.endpoint, 'local-only'), unsignalled, controller.signal)).rejects.toThrow('RUN_CANCELLED');
+  expect(await closedBy(ollama, Date.now() + 500), 'the reader is cancelled on abort').toBe(true);
+});
+
+test('every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound, never later, and the status connection closes with it', async () => {
+  const stall: Reply = (_request, response) => { response.setHeader('Content-Type', 'application/json'); response.write('{"cloud":'); /* body never ends */ };
   const silent = await startOllama(() => { /* no headers */ });
-  const stalled = await startOllama((_request, response) => { response.setHeader('Content-Type', 'application/json'); response.write('{"cloud":'); /* body never ends */ });
+  const stalled = await startOllama(stall);
+  const stalledUnsignalled = await startOllama(stall);
   const deaf: Fetcher = () => new Promise<Response>(() => { /* ignores the signal and never settles */ });
   const timed = async (run: () => Promise<unknown>) => {
     const started = Date.now();
     const outcome = await run().then(() => 'resolved', (error: Error) => error.message);
-    return { outcome, elapsed: Date.now() - started };
+    const settled = Date.now();
+    return { outcome, elapsed: settled - started, settled };
   };
   const results = await Promise.all([
     timed(() => step(context(silent.endpoint, 'local-only'))),
     timed(() => step(context(stalled.endpoint, 'local-only'))),
+    timed(() => assertOllamaLocal(stalledUnsignalled.endpoint, unsignalled, new AbortController().signal)),
     timed(() => assertOllamaLocal('http://127.0.0.1:11434', deaf, new AbortController().signal)),
   ]);
   for (const [index, result] of results.entries()) {
@@ -212,19 +243,34 @@ test('every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound
   }
   expect(paths(silent.seen)).toEqual(['GET /api/status']);
   expect(paths(stalled.seen)).toEqual(['GET /api/status']);
+  // The refusal is not enough: the request itself must end, or every refused step leaves a socket open to a hung Ollama.
+  const fakes = [silent, stalled, stalledUnsignalled];
+  for (const [index, fake] of fakes.entries()) expect(await closedBy(fake, results[index]!.settled + 500), `case ${index} closed`).toBe(true);
 }, 12_000);
 
-test('infer() runs the check after the policy and endpoint checks and before the model call, on the local session', () => {
-  // infer() is a closure inside Electron's ready handler and has no harness; its order is pinned from its source.
-  const source = readFileSync('src/main/index.ts', 'utf8');
+test('infer() awaits the check as a statement of its own, straight after the policy and endpoint checks and before the model call, on the local session', () => {
+  // infer() is a closure inside Electron's ready handler and has no harness; its order is pinned from its source, by whole
+  // lines, so that the call cannot sit inside a try, a .then() or a function nobody awaits and still pass.
+  const source = readFileSync(new URL('../src/main/index.ts', import.meta.url), 'utf8');
   const start = source.indexOf('async function infer(');
-  const body = source.slice(start, source.indexOf('async function readGitHub(', start));
-  const call = 'await verifyOllamaLocality(context, (url, init) => localSession.fetch(url, init), capability.stop.signal);';
-  const at = body.indexOf(call);
   expect(start).toBeGreaterThan(-1);
-  expect(at).toBeGreaterThan(body.indexOf('assertConversationPolicy('));
-  expect(at).toBeGreaterThan(body.indexOf("throw new Error('INVALID_ENDPOINT')"));
-  expect(at).toBeLessThan(body.indexOf('const invoke = '));
-  expect(at).toBeLessThan(body.indexOf('vault.grant('));
+  const lines = source.slice(start, source.indexOf('async function readGitHub(', start)).split('\n').map(line => line.trim());
+  const code = (line: string) => line !== '' && !line.startsWith('//');
+  const call = 'await verifyOllamaLocality(context, (url, init) => localSession.fetch(url, init), capability.stop.signal);';
+  const at = lines.indexOf(call);
+  const endpointCheck = lines.findIndex(line => line.includes("throw new Error('INVALID_ENDPOINT')"));
+  const invoke = lines.findIndex(line => line.startsWith('const invoke = '));
+  expect(at, 'the call is a whole line').toBeGreaterThan(-1);
+  expect(endpointCheck).toBeGreaterThan(-1);
+  expect(lines.slice(0, at).filter(code).at(-1), 'the code line before the call').toBe(lines[endpointCheck]);
+  expect(lines.slice(endpointCheck + 1, invoke).filter(code).filter(line => /\btry\b|\bcatch\b|\.then\(/.test(line)), 'nothing can catch or detach the refusal').toEqual([]);
+  // And it sits in infer()'s own body, not in a block or callback opened earlier: every bracket opened since the signature is closed.
+  const depth = [...lines.slice(1, at).filter(code).join('')].reduce((open, char) => open + ('{(['.includes(char) ? 1 : ')}]'.includes(char) ? -1 : 0), 0);
+  expect(depth, 'brackets still open before the call').toBe(0);
+  const policyCheck = lines.findIndex(line => line.includes('assertConversationPolicy('));
+  expect(policyCheck).toBeGreaterThan(-1);
+  expect(at).toBeGreaterThan(policyCheck);
+  expect(at).toBeLessThan(invoke);
+  expect(at).toBeLessThan(lines.findIndex(line => line.includes('vault.grant(')));
   expect(source.split('verifyOllamaLocality(').length - 1).toBe(1); // infer() only: not profile.test, not the managed runtime
 });
