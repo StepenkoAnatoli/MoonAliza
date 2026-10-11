@@ -1,0 +1,1943 @@
+{
+  "summary": {
+    "model": "gemini-3.5-flash-lite",
+    "turns": 21,
+    "answered200": 21,
+    "product": {
+      "toolTurnsPassed": 0,
+      "toolTurns": 16,
+      "noCallCorrect": 5,
+      "noCallWronglyCalled": 0,
+      "noCallTurns": 5,
+      "outcomes": {
+        "PROVIDER_INVALID_RESPONSE": 16,
+        "complete": 5
+      }
+    },
+    "wire": {
+      "toolTurnsPassed": 16,
+      "toolTurns": 16,
+      "noCallWronglyCalled": 0,
+      "finishReasons": {
+        "stop": 21
+      },
+      "callsWithIndex": 0,
+      "calls": 21,
+      "callsWithExtraContent": 16
+    }
+  },
+  "rows": [
+    {
+      "id": 1,
+      "kind": "single",
+      "prompt": "Call read_file on README.md",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_646972",
+            "name": "read_file",
+            "arguments": "{\"path\":\"README.md\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-1#1",
+          "startedAt": "2026-10-11T22:47:00.923Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:01 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:01 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=334",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 352,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TVxZ/WUgrLhL125Xee6krWwdomZtuDsOdvVcr17+1fCVtkVh5TAntOMamX/VV1U62MdXPLp08/XhmqTMr6KhmUFCcBf+Dkq1K8vw+Nkna9FJYH1CndkZQYNM=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_646972\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758821,\"id\":\"5RHMaqTUBPDe_uMPnvjrqQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":313,\"total_tokens\":331}}\n\n"
+            },
+            {
+              "ms": 371,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758821,\"id\":\"5RHMaqTUBPDe_uMPnvjrqQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":313,\"total_tokens\":331}}\n\n"
+            },
+            {
+              "ms": 372,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TVxZ/WUgrLhL125Xee6krWwdomZtuDsOdvVcr17+1fCVtkVh5TAntOMamX/VV1U62MdXPLp08/XhmqTMr6KhmUFCcBf+Dkq1K8vw+Nkna9FJYH1CndkZQYNM=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_646972\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758821,\"id\":\"5RHMaqTUBPDe_uMPnvjrqQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":313,\"total_tokens\":331}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758821,\"id\":\"5RHMaqTUBPDe_uMPnvjrqQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":313,\"total_tokens\":331}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 848,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":18,\\\"prompt_tokens\\\":313,\\\"total_tokens\\\":331}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "single",
+      "prompt": "Open src/app.ts and show me what is in it.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_566964",
+            "name": "read_file",
+            "arguments": "{\"path\":\"src/app.ts\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-2#1",
+          "startedAt": "2026-10-11T22:47:08.301Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Open src/app.ts and show me what is in it.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:08 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:08 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=467",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 485,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0T940r/W78yYIPZ+u3PWuilQ3wTPua55HbSL3mfUQll1mJUy6qCKtcTHDbZJDML2+FZ98ZVTzD2Pm4Y6Wfpbf76z6hbBE7i5+tNEI4Jf4EwGPP/WS/QMOJoXI=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src/app.ts\\\"}\",\"name\":\"read_file\"},\"id\":\"call_566964\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758828,\"id\":\"7BHMarapHIS2sOIPvKGYiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":339}}\n\n"
+            },
+            {
+              "ms": 492,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758828,\"id\":\"7BHMarapHIS2sOIPvKGYiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":339}}\n\ndata: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0T940r/W78yYIPZ+u3PWuilQ3wTPua55HbSL3mfUQll1mJUy6qCKtcTHDbZJDML2+FZ98ZVTzD2Pm4Y6Wfpbf76z6hbBE7i5+tNEI4Jf4EwGPP/WS/QMOJoXI=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src/app.ts\\\"}\",\"name\":\"read_file\"},\"id\":\"call_566964\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758828,\"id\":\"7BHMarapHIS2sOIPvKGYiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":339}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758828,\"id\":\"7BHMarapHIS2sOIPvKGYiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":319,\"total_tokens\":339}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 849,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":319,\\\"total_tokens\\\":339}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "single",
+      "prompt": "List the files in the docs directory.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_717643",
+            "name": "list_dir",
+            "arguments": "{\"recursive\":true,\"path\":\"docs\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-3#1",
+          "startedAt": "2026-10-11T22:47:15.797Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the files in the docs directory.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:16 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:16 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=463",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 491,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TUtAmR9xU+xpYB2e9WJFMJS6hHkCXQG2kJbpoD57CJrvhwkcy6zpPDcDQ8CEbwOQZud5UiFGrgBPEpj9ve2ZcIK/yXsLW/ffGjApXmFYtUXTBwfBvNK2eSPg=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":true,\\\"path\\\":\\\"docs\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_717643\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758836,\"id\":\"8xHMare5OoqM_uMP54rS0QE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":333}}\n\n"
+            },
+            {
+              "ms": 500,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758836,\"id\":\"8xHMare5OoqM_uMP54rS0QE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":333}}\n\n"
+            },
+            {
+              "ms": 500,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TUtAmR9xU+xpYB2e9WJFMJS6hHkCXQG2kJbpoD57CJrvhwkcy6zpPDcDQ8CEbwOQZud5UiFGrgBPEpj9ve2ZcIK/yXsLW/ffGjApXmFYtUXTBwfBvNK2eSPg=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":true,\\\"path\\\":\\\"docs\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_717643\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758836,\"id\":\"8xHMare5OoqM_uMP54rS0QE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":333}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758836,\"id\":\"8xHMare5OoqM_uMP54rS0QE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":313,\"total_tokens\":333}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 861,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":313,\\\"total_tokens\\\":333}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "single",
+      "prompt": "List everything under src, recursively.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_725131",
+            "name": "list_dir",
+            "arguments": "{\"path\":\"src\",\"recursive\":true}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-4#1",
+          "startedAt": "2026-10-11T22:47:23.303Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List everything under src, recursively.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:23 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:23 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=490",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 516,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TOVaYEsS9SadMGew8OTXj+RHNF1Bk8SDdWdKUsr8vTTnrWj8BGFpSPpFIEtBZH28MwLX7ZymBbLeuoVIVBtZYV3s/Vh6tZXnnLRhGqPwG/PxGlyarHYSb/GA=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src\\\",\\\"recursive\\\":true}\",\"name\":\"list_dir\"},\"id\":\"call_725131\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758843,\"id\":\"-xHMasjiHf6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":332}}\n\n"
+            },
+            {
+              "ms": 519,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758843,\"id\":\"-xHMasjiHf6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":332}}\n\n"
+            },
+            {
+              "ms": 520,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TOVaYEsS9SadMGew8OTXj+RHNF1Bk8SDdWdKUsr8vTTnrWj8BGFpSPpFIEtBZH28MwLX7ZymBbLeuoVIVBtZYV3s/Vh6tZXnnLRhGqPwG/PxGlyarHYSb/GA=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"src\\\",\\\"recursive\\\":true}\",\"name\":\"list_dir\"},\"id\":\"call_725131\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758843,\"id\":\"-xHMasjiHf6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":332}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758843,\"id\":\"-xHMasjiHf6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":312,\"total_tokens\":332}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 860,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":312,\\\"total_tokens\\\":332}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "single",
+      "prompt": "Create a file named notes.txt containing the text hello world.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_667930",
+            "name": "write_file",
+            "arguments": "{\"content\":\"hello world\",\"path\":\"notes.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-5#1",
+          "startedAt": "2026-10-11T22:47:30.829Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Create a file named notes.txt containing the text hello world.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:31 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:31 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=434",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 458,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TsKgw0Os6Ue+IOI9qQ+pp3ABV7y1Dam/EWG+zthO/zv9OJ+8rrgAZ8jlKLfPcuIXAHXmE7G2O2VUFNzovSs3tmO7BtoFsfqFk5odVaN26uH/FkJOaR3e2uKs=\"}},\"function\":{\"arguments\":\"{\\\"content\\\":\\\"hello world\\\",\\\"path\\\":\\\"notes.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_667930\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758851,\"id\":\"AhLMaq-PPLe2sOIPzuO1iAo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":343}}\n\n"
+            },
+            {
+              "ms": 462,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758851,\"id\":\"AhLMaq-PPLe2sOIPzuO1iAo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":343}}\n\n"
+            },
+            {
+              "ms": 462,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TsKgw0Os6Ue+IOI9qQ+pp3ABV7y1Dam/EWG+zthO/zv9OJ+8rrgAZ8jlKLfPcuIXAHXmE7G2O2VUFNzovSs3tmO7BtoFsfqFk5odVaN26uH/FkJOaR3e2uKs=\"}},\"function\":{\"arguments\":\"{\\\"content\\\":\\\"hello world\\\",\\\"path\\\":\\\"notes.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_667930\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758851,\"id\":\"AhLMaq-PPLe2sOIPzuO1iAo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":343}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758851,\"id\":\"AhLMaq-PPLe2sOIPzuO1iAo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":25,\"prompt_tokens\":318,\"total_tokens\":343}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 877,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":25,\\\"prompt_tokens\\\":318,\\\"total_tokens\\\":343}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "single",
+      "prompt": "Read the file config/settings.json.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_724382",
+            "name": "read_file",
+            "arguments": "{\"path\":\"config/settings.json\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-6#1",
+          "startedAt": "2026-10-11T22:47:38.298Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read the file config/settings.json.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:38 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:38 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=473",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 494,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TKfQ/ZIjcOngem+hJELSimtqBP+JLnQ0xixXb11MBNJbr3I0NajO1rO0D4WSI1FrnEsxSo3C/pxiYroVoAplXcqOrgVnvzN9b5dMyp8D50l9UxczKxctx5ac=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"config/settings.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_724382\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758858,\"id\":\"ChLMavvqG5-d_uMPlqrYqA0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":334}}\n\n"
+            },
+            {
+              "ms": 500,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758858,\"id\":\"ChLMavvqG5-d_uMPlqrYqA0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":334}}\n\n"
+            },
+            {
+              "ms": 500,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TKfQ/ZIjcOngem+hJELSimtqBP+JLnQ0xixXb11MBNJbr3I0NajO1rO0D4WSI1FrnEsxSo3C/pxiYroVoAplXcqOrgVnvzN9b5dMyp8D50l9UxczKxctx5ac=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"config/settings.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_724382\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758858,\"id\":\"ChLMavvqG5-d_uMPlqrYqA0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":334}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758858,\"id\":\"ChLMavvqG5-d_uMPlqrYqA0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":314,\"total_tokens\":334}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 859,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":20,\\\"prompt_tokens\\\":314,\\\"total_tokens\\\":334}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "two",
+      "prompt": "Read package.json and tsconfig.json. Call read_file for both in this turn.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_808981",
+            "name": "read_file",
+            "arguments": "{\"path\":\"package.json\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_808984",
+            "name": "read_file",
+            "arguments": "{\"path\":\"tsconfig.json\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-7#1",
+          "startedAt": "2026-10-11T22:47:45.805Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read package.json and tsconfig.json. Call read_file for both in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:46 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:46 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=431",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 451,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0Tpytp/kX6rAt3H9bvsI84+oSNpp76FZxgUm9T91T1+pf4UUDT5IjMDXHtV2JDTrHSp789c4ONlHBH6ZTUrnXkw60597XLqspLAdSK+VLGi6J80+VJB2qkcBU=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"package.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_808981\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758866,\"id\":\"ERLMaqOuOufU_uMPq5CXyQE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":325,\"total_tokens\":343}}\n\n"
+            },
+            {
+              "ms": 488,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"tsconfig.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_808984\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758866,\"id\":\"ERLMaqOuOufU_uMPq5CXyQE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":325,\"total_tokens\":361}}\n\n"
+            },
+            {
+              "ms": 494,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758866,\"id\":\"ERLMaqOuOufU_uMPq5CXyQE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":325,\"total_tokens\":361}}\n\n"
+            },
+            {
+              "ms": 494,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0Tpytp/kX6rAt3H9bvsI84+oSNpp76FZxgUm9T91T1+pf4UUDT5IjMDXHtV2JDTrHSp789c4ONlHBH6ZTUrnXkw60597XLqspLAdSK+VLGi6J80+VJB2qkcBU=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"package.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_808981\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758866,\"id\":\"ERLMaqOuOufU_uMPq5CXyQE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":325,\"total_tokens\":343}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"tsconfig.json\\\"}\",\"name\":\"read_file\"},\"id\":\"call_808984\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758866,\"id\":\"ERLMaqOuOufU_uMPq5CXyQE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":325,\"total_tokens\":361}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758866,\"id\":\"ERLMaqOuOufU_uMPq5CXyQE\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":325,\"total_tokens\":361}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1231,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":36,\\\"prompt_tokens\\\":325,\\\"total_tokens\\\":361}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "two",
+      "prompt": "List the src directory and read README.md, both in this same turn.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_622606",
+            "name": "list_dir",
+            "arguments": "{\"recursive\":false,\"path\":\"src\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_622609",
+            "name": "read_file",
+            "arguments": "{\"path\":\"README.md\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-8#1",
+          "startedAt": "2026-10-11T22:47:53.308Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the src directory and read README.md, both in this same turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:47:53 GMT",
+            "expires": "Sun, 11 Oct 2026 22:47:53 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=405",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 439,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0Tq1OdKx+dASPyavl6CZHsprLKPWm9o6pI5wopy8Btr8OLKq/9Cw23EN2gQ5N0rYMAYTSkgpI+g+P2Q+OuEj7tjePmVSQ8iuUEXud/YGxctog9N/mZDKyrqf8=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":false,\\\"path\\\":\\\"src\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_622606\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758873,\"id\":\"GRLMapHgHM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":321,\"total_tokens\":341}}\n\n"
+            },
+            {
+              "ms": 479,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_622609\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758873,\"id\":\"GRLMapHgHM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":321,\"total_tokens\":359}}\n\n"
+            },
+            {
+              "ms": 483,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758873,\"id\":\"GRLMapHgHM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":321,\"total_tokens\":359}}\n\n"
+            },
+            {
+              "ms": 484,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0Tq1OdKx+dASPyavl6CZHsprLKPWm9o6pI5wopy8Btr8OLKq/9Cw23EN2gQ5N0rYMAYTSkgpI+g+P2Q+OuEj7tjePmVSQ8iuUEXud/YGxctog9N/mZDKyrqf8=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":false,\\\"path\\\":\\\"src\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_622606\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758873,\"id\":\"GRLMapHgHM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":321,\"total_tokens\":341}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_622609\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758873,\"id\":\"GRLMapHgHM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":321,\"total_tokens\":359}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758873,\"id\":\"GRLMapHgHM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":321,\"total_tokens\":359}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1234,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":38,\\\"prompt_tokens\\\":321,\\\"total_tokens\\\":359}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "two",
+      "prompt": "Read a.txt and b.txt in parallel.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_930969",
+            "name": "read_file",
+            "arguments": "{\"path\":\"a.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_930972",
+            "name": "read_file",
+            "arguments": "{\"path\":\"b.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-9#1",
+          "startedAt": "2026-10-11T22:48:00.801Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read a.txt and b.txt in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:01 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:01 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=319",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 345,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0T/hEgU77diQCgQmUtUqMok5LGSz5TFu2z4n0wkLBIEbe8+MYZDKtKcB/F+H0BoKfWKxRiee7Sl7NPScfgL4xD+DWm+clTAIvxIAF9/SO9o+Th0oUzp4e5k9U=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"a.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_930969\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758881,\"id\":\"IBLMaraOOt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":316,\"total_tokens\":334}}\n\n"
+            },
+            {
+              "ms": 379,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"b.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_930972\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758881,\"id\":\"IBLMaraOOt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":352}}\n\n"
+            },
+            {
+              "ms": 386,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758881,\"id\":\"IBLMaraOOt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":352}}\n\n"
+            },
+            {
+              "ms": 387,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0T/hEgU77diQCgQmUtUqMok5LGSz5TFu2z4n0wkLBIEbe8+MYZDKtKcB/F+H0BoKfWKxRiee7Sl7NPScfgL4xD+DWm+clTAIvxIAF9/SO9o+Th0oUzp4e5k9U=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"a.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_930969\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758881,\"id\":\"IBLMaraOOt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":316,\"total_tokens\":334}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"b.txt\\\"}\",\"name\":\"read_file\"},\"id\":\"call_930972\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758881,\"id\":\"IBLMaraOOt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":352}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758881,\"id\":\"IBLMaraOOt7d_uMP2Ze24Qo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":36,\"prompt_tokens\":316,\"total_tokens\":352}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1216,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":36,\\\"prompt_tokens\\\":316,\\\"total_tokens\\\":352}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "two",
+      "prompt": "Write 'one' to one.txt and 'two' to two.txt in this turn.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_932367",
+            "name": "write_file",
+            "arguments": "{\"content\":\"one\",\"path\":\"one.txt\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_932370",
+            "name": "write_file",
+            "arguments": "{\"path\":\"two.txt\",\"content\":\"two\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-10#1",
+          "startedAt": "2026-10-11T22:48:08.197Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Write 'one' to one.txt and 'two' to two.txt in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:08 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:08 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=461",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 480,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0T9UXrOY8c2nxkhR2uIBaSkyivAYdJAbQOa1DWzgI7WFwk+FpBHWa8A/Xenl3+4pFwealyKLkUht+JQTTEG/S+xt7fXjmeRqYndP1YZLnkro5pw4mYedUhJYY=\"}},\"function\":{\"arguments\":\"{\\\"content\\\":\\\"one\\\",\\\"path\\\":\\\"one.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_932367\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758888,\"id\":\"KBLMaq-BFe2M_PUPz_vKgQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":24,\"prompt_tokens\":325,\"total_tokens\":349}}\n\n"
+            },
+            {
+              "ms": 498,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"two.txt\\\",\\\"content\\\":\\\"two\\\"}\",\"name\":\"write_file\"},\"id\":\"call_932370\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758888,\"id\":\"KBLMaq-BFe2M_PUPz_vKgQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":373}}\n\n"
+            },
+            {
+              "ms": 504,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758888,\"id\":\"KBLMaq-BFe2M_PUPz_vKgQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":373}}\n\n"
+            },
+            {
+              "ms": 504,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0T9UXrOY8c2nxkhR2uIBaSkyivAYdJAbQOa1DWzgI7WFwk+FpBHWa8A/Xenl3+4pFwealyKLkUht+JQTTEG/S+xt7fXjmeRqYndP1YZLnkro5pw4mYedUhJYY=\"}},\"function\":{\"arguments\":\"{\\\"content\\\":\\\"one\\\",\\\"path\\\":\\\"one.txt\\\"}\",\"name\":\"write_file\"},\"id\":\"call_932367\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758888,\"id\":\"KBLMaq-BFe2M_PUPz_vKgQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":24,\"prompt_tokens\":325,\"total_tokens\":349}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"path\\\":\\\"two.txt\\\",\\\"content\\\":\\\"two\\\"}\",\"name\":\"write_file\"},\"id\":\"call_932370\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758888,\"id\":\"KBLMaq-BFe2M_PUPz_vKgQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":373}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758888,\"id\":\"KBLMaq-BFe2M_PUPz_vKgQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":325,\"total_tokens\":373}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1262,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":48,\\\"prompt_tokens\\\":325,\\\"total_tokens\\\":373}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "two",
+      "prompt": "List both the tests and the scripts directories now, in parallel.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_1351209",
+            "name": "list_dir",
+            "arguments": "{\"recursive\":false,\"path\":\"tests\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          },
+          {
+            "id": "call_1351212",
+            "name": "list_dir",
+            "arguments": "{\"recursive\":false,\"path\":\"scripts\"}",
+            "hasIndex": false,
+            "hasExtraContent": false
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-11#1",
+          "startedAt": "2026-10-11T22:48:15.710Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List both the tests and the scripts directories now, in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:16 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:16 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=408",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 431,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TCaeXXvB4ot/Uz/O+5DEIbgKX7g6YgrS16CsJU4Tdiw9bKtLlkKrLW4KjX0f7UE4xsMow3rTtR4nmt2RUN6Pz0JL5fOmnEY1dwiLB/EAkL5HxRK+yJCixCrY=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":false,\\\"path\\\":\\\"tests\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_1351209\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758896,\"id\":\"LxLMasaoNO2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":318,\"total_tokens\":338}}\n\n"
+            },
+            {
+              "ms": 468,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"recursive\\\":false,\\\"path\\\":\\\"scripts\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_1351212\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758896,\"id\":\"LxLMasaoNO2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":40,\"prompt_tokens\":318,\"total_tokens\":358}}\n\n"
+            },
+            {
+              "ms": 475,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758896,\"id\":\"LxLMasaoNO2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":40,\"prompt_tokens\":318,\"total_tokens\":358}}\n\n"
+            },
+            {
+              "ms": 475,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TCaeXXvB4ot/Uz/O+5DEIbgKX7g6YgrS16CsJU4Tdiw9bKtLlkKrLW4KjX0f7UE4xsMow3rTtR4nmt2RUN6Pz0JL5fOmnEY1dwiLB/EAkL5HxRK+yJCixCrY=\"}},\"function\":{\"arguments\":\"{\\\"recursive\\\":false,\\\"path\\\":\\\"tests\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_1351209\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758896,\"id\":\"LxLMasaoNO2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":20,\"prompt_tokens\":318,\"total_tokens\":338}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"function\":{\"arguments\":\"{\\\"recursive\\\":false,\\\"path\\\":\\\"scripts\\\"}\",\"name\":\"list_dir\"},\"id\":\"call_1351212\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758896,\"id\":\"LxLMasaoNO2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":40,\"prompt_tokens\":318,\"total_tokens\":358}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758896,\"id\":\"LxLMasaoNO2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":40,\"prompt_tokens\":318,\"total_tokens\":358}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1258,
+            "crlf": 0,
+            "lf": 8,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 4,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":40,\\\"prompt_tokens\\\":318,\\\"total_tokens\\\":358}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "nested",
+      "prompt": "Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_567332",
+            "name": "search_code",
+            "arguments": "{\"query\":\"TODO\",\"options\":{\"globs\":[\"*.ts\",\"*.tsx\"],\"caseSensitive\":true,\"maxResults\":20}}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-12#1",
+          "startedAt": "2026-10-11T22:48:23.192Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:23 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:23 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=428",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 449,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TFFyErej1/UjUNbxVvzxGcOgXGWoDAHmCjzCkC5fHHszJwEQCbYWPxL/bkHFzvlIh1HLxYjLPSnuV0kveoryo2Rnunn+oSDT9UDvth/AlioJuHDXAj+Vuxj4=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"TODO\\\",\\\"options\\\":{\\\"globs\\\":[\\\"*.ts\\\",\\\"*.tsx\\\"],\\\"caseSensitive\\\":true,\\\"maxResults\\\":20}}\",\"name\":\"search_code\"},\"id\":\"call_567332\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758903,\"id\":\"NxLMarmGFZSo-8YPxZKjOA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":42,\"prompt_tokens\":331,\"total_tokens\":373}}\n\n"
+            },
+            {
+              "ms": 453,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758903,\"id\":\"NxLMarmGFZSo-8YPxZKjOA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":42,\"prompt_tokens\":331,\"total_tokens\":373}}\n\n"
+            },
+            {
+              "ms": 454,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TFFyErej1/UjUNbxVvzxGcOgXGWoDAHmCjzCkC5fHHszJwEQCbYWPxL/bkHFzvlIh1HLxYjLPSnuV0kveoryo2Rnunn+oSDT9UDvth/AlioJuHDXAj+Vuxj4=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"TODO\\\",\\\"options\\\":{\\\"globs\\\":[\\\"*.ts\\\",\\\"*.tsx\\\"],\\\"caseSensitive\\\":true,\\\"maxResults\\\":20}}\",\"name\":\"search_code\"},\"id\":\"call_567332\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758903,\"id\":\"NxLMarmGFZSo-8YPxZKjOA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":42,\"prompt_tokens\":331,\"total_tokens\":373}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758903,\"id\":\"NxLMarmGFZSo-8YPxZKjOA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":42,\"prompt_tokens\":331,\"total_tokens\":373}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 930,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":42,\\\"prompt_tokens\\\":331,\\\"total_tokens\\\":373}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "nested",
+      "prompt": "Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_737278",
+            "name": "search_code",
+            "arguments": "{\"options\":{\"caseSensitive\":false,\"maxResults\":5,\"globs\":[\"**/*.js\"]},\"query\":\"fetch(\"}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-13#1",
+          "startedAt": "2026-10-11T22:48:30.653Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:31 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:31 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=489",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 513,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TdVGVzix9iznFsJ6LGeuUhVCNCURKixRL6Aq9mzo3ht1U3D33SG6Upqi/un/75YpNyoeRLYIUXtXZA22EUywbKINCnCS2DsT8m+fNqKX+9prr/lMLRWkU4k0=\"}},\"function\":{\"arguments\":\"{\\\"options\\\":{\\\"caseSensitive\\\":false,\\\"maxResults\\\":5,\\\"globs\\\":[\\\"**/*.js\\\"]},\\\"query\\\":\\\"fetch(\\\"}\",\"name\":\"search_code\"},\"id\":\"call_737278\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758911,\"id\":\"PhLMauedMM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\n"
+            },
+            {
+              "ms": 515,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758911,\"id\":\"PhLMauedMM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\n"
+            },
+            {
+              "ms": 516,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TdVGVzix9iznFsJ6LGeuUhVCNCURKixRL6Aq9mzo3ht1U3D33SG6Upqi/un/75YpNyoeRLYIUXtXZA22EUywbKINCnCS2DsT8m+fNqKX+9prr/lMLRWkU4k0=\"}},\"function\":{\"arguments\":\"{\\\"options\\\":{\\\"caseSensitive\\\":false,\\\"maxResults\\\":5,\\\"globs\\\":[\\\"**/*.js\\\"]},\\\"query\\\":\\\"fetch(\\\"}\",\"name\":\"search_code\"},\"id\":\"call_737278\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758911,\"id\":\"PhLMauedMM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758911,\"id\":\"PhLMauedMM_K-8YPsbqJIA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 925,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":38,\\\"prompt_tokens\\\":327,\\\"total_tokens\\\":365}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "nested",
+      "prompt": "Search for the word deprecated, case-insensitive, in *.md, *.txt and *.rst files.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_724834",
+            "name": "search_code",
+            "arguments": "{\"query\":\"deprecated\",\"options\":{\"maxResults\":100,\"globs\":[\"*.md\",\"*.txt\",\"*.rst\"],\"caseSensitive\":false}}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-14#1",
+          "startedAt": "2026-10-11T22:48:38.177Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search for the word deprecated, case-insensitive, in *.md, *.txt and *.rst files.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:38 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:38 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=404",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 429,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TJNDUSrgnjb+adjs3cP4kyw4qVnBrrBVzMCetaF6tI8KY4m6/BZmHUY+Sl3plGIZcEmWuXkeqxNBdFvYe/KC2kduH5j6PpSaW1vchurJx1W38NiLjhXuSxQk=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"deprecated\\\",\\\"options\\\":{\\\"maxResults\\\":100,\\\"globs\\\":[\\\"*.md\\\",\\\"*.txt\\\",\\\"*.rst\\\"],\\\"caseSensitive\\\":false}}\",\"name\":\"search_code\"},\"id\":\"call_724834\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758918,\"id\":\"RhLMaoiJE-2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":326,\"total_tokens\":374}}\n\n"
+            },
+            {
+              "ms": 432,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758918,\"id\":\"RhLMaoiJE-2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":326,\"total_tokens\":374}}\n\n"
+            },
+            {
+              "ms": 433,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TJNDUSrgnjb+adjs3cP4kyw4qVnBrrBVzMCetaF6tI8KY4m6/BZmHUY+Sl3plGIZcEmWuXkeqxNBdFvYe/KC2kduH5j6PpSaW1vchurJx1W38NiLjhXuSxQk=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"deprecated\\\",\\\"options\\\":{\\\"maxResults\\\":100,\\\"globs\\\":[\\\"*.md\\\",\\\"*.txt\\\",\\\"*.rst\\\"],\\\"caseSensitive\\\":false}}\",\"name\":\"search_code\"},\"id\":\"call_724834\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758918,\"id\":\"RhLMaoiJE-2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":326,\"total_tokens\":374}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758918,\"id\":\"RhLMaoiJE-2M_PUPpv3KiQ0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":48,\"prompt_tokens\":326,\"total_tokens\":374}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 950,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":48,\\\"prompt_tokens\\\":326,\\\"total_tokens\\\":374}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "nested",
+      "prompt": "Look for 'class Engine' case-sensitively in src/**/*.ts, limit 10.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_928221",
+            "name": "search_code",
+            "arguments": "{\"query\":\"class Engine\",\"options\":{\"caseSensitive\":true,\"globs\":[\"src/**/*.ts\"],\"maxResults\":10}}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-15#1",
+          "startedAt": "2026-10-11T22:48:45.616Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Look for 'class Engine' case-sensitively in src/**/*.ts, limit 10.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:46 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:46 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=518",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 541,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TI/6C2Pu64vCpFXUecdRF+JKte5qO4LNbfasxfISYWnfWNS+URCIAYf9szRlMwziNfLr9uSy6vxpmeJmxjxCWmt7jWy6Eg0tpS3WtruRYw6igKczRw2CXukA=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"class Engine\\\",\\\"options\\\":{\\\"caseSensitive\\\":true,\\\"globs\\\":[\\\"src/**/*.ts\\\"],\\\"maxResults\\\":10}}\",\"name\":\"search_code\"},\"id\":\"call_928221\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758926,\"id\":\"TRLMataeMLuc_uMP2cbk2A0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":39,\"prompt_tokens\":325,\"total_tokens\":364}}\n\n"
+            },
+            {
+              "ms": 551,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758926,\"id\":\"TRLMataeMLuc_uMP2cbk2A0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":39,\"prompt_tokens\":325,\"total_tokens\":364}}\n\n"
+            },
+            {
+              "ms": 552,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TI/6C2Pu64vCpFXUecdRF+JKte5qO4LNbfasxfISYWnfWNS+URCIAYf9szRlMwziNfLr9uSy6vxpmeJmxjxCWmt7jWy6Eg0tpS3WtruRYw6igKczRw2CXukA=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"class Engine\\\",\\\"options\\\":{\\\"caseSensitive\\\":true,\\\"globs\\\":[\\\"src/**/*.ts\\\"],\\\"maxResults\\\":10}}\",\"name\":\"search_code\"},\"id\":\"call_928221\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758926,\"id\":\"TRLMataeMLuc_uMP2cbk2A0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":39,\"prompt_tokens\":325,\"total_tokens\":364}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758926,\"id\":\"TRLMataeMLuc_uMP2cbk2A0\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":39,\"prompt_tokens\":325,\"total_tokens\":364}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 937,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":39,\\\"prompt_tokens\\\":325,\\\"total_tokens\\\":364}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "nested",
+      "prompt": "Search for 'password' case-insensitively across *.env.example files, max 3 results.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_INVALID_RESPONSE",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [
+          {
+            "id": "call_337781",
+            "name": "search_code",
+            "arguments": "{\"query\":\"password\",\"options\":{\"caseSensitive\":false,\"globs\":[\"*.env.example\"],\"maxResults\":3}}",
+            "hasIndex": false,
+            "hasExtraContent": true
+          }
+        ],
+        "argsParseAndValidate": true,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-16#1",
+          "startedAt": "2026-10-11T22:48:53.175Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search for 'password' case-insensitively across *.env.example files, max 3 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:48:53 GMT",
+            "expires": "Sun, 11 Oct 2026 22:48:53 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=489",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 509,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TF8TZCghE64VkaVHGMzKAFZTXjLsDWdoN1x+PYSToJMTednxdsQqpFUVyTEV3Z3RiA1B7SizzG+8Ljumy59ptyro+5QkNSp+MVx4u0LSpp5mM+R/Ah7LYzDQ=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"password\\\",\\\"options\\\":{\\\"caseSensitive\\\":false,\\\"globs\\\":[\\\"*.env.example\\\"],\\\"maxResults\\\":3}}\",\"name\":\"search_code\"},\"id\":\"call_337781\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758933,\"id\":\"VRLMauLZFM7E_PUPtKy7yQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\n"
+            },
+            {
+              "ms": 515,
+              "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758933,\"id\":\"VRLMauLZFM7E_PUPtKy7yQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\ndata: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TF8TZCghE64VkaVHGMzKAFZTXjLsDWdoN1x+PYSToJMTednxdsQqpFUVyTEV3Z3RiA1B7SizzG+8Ljumy59ptyro+5QkNSp+MVx4u0LSpp5mM+R/Ah7LYzDQ=\"}},\"function\":{\"arguments\":\"{\\\"query\\\":\\\"password\\\",\\\"options\\\":{\\\"caseSensitive\\\":false,\\\"globs\\\":[\\\"*.env.example\\\"],\\\"maxResults\\\":3}}\",\"name\":\"search_code\"},\"id\":\"call_337781\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791758933,\"id\":\"VRLMauLZFM7E_PUPtKy7yQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758933,\"id\":\"VRLMauLZFM7E_PUPtKy7yQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":38,\"prompt_tokens\":327,\"total_tokens\":365}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 935,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":38,\\\"prompt_tokens\\\":327,\\\"total_tokens\\\":365}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "none",
+      "prompt": "What is 17 times 3? Answer directly; do not use any tool.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "outcome": "complete",
+        "calls": [],
+        "pass": true,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": "51"
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-17#1",
+          "startedAt": "2026-10-11T22:49:00.697Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"What is 17 times 3? Answer directly; do not use any tool.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:49:01 GMT",
+            "expires": "Sun, 11 Oct 2026 22:49:01 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=454",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 478,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"51\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758941,\"id\":\"XBLMaricNKvW-8YPu-6c-Qc\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":323,\"total_tokens\":325}}\n\n"
+            },
+            {
+              "ms": 481,
+              "text": "data: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TY/XbiJtBBxHGSa5/NNQMRa6ypqANTgItMWjjPWWUesQak3gEEC7jyG0DjEYWUtKg4vxFoWDujrjN3GSs0WP1RPJbmAaETnu35t6w6JBwC9EkWOlRgpDV1Gg=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758941,\"id\":\"XBLMaricNKvW-8YPu-6c-Qc\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":323,\"total_tokens\":325}}\n\n"
+            },
+            {
+              "ms": 481,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"content\":\"51\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758941,\"id\":\"XBLMaricNKvW-8YPu-6c-Qc\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":323,\"total_tokens\":325}}\n\ndata: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TY/XbiJtBBxHGSa5/NNQMRa6ypqANTgItMWjjPWWUesQak3gEEC7jyG0DjEYWUtKg4vxFoWDujrjN3GSs0WP1RPJbmAaETnu35t6w6JBwC9EkWOlRgpDV1Gg=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758941,\"id\":\"XBLMaricNKvW-8YPu-6c-Qc\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":323,\"total_tokens\":325}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 736,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":2,\\\"prompt_tokens\\\":323,\\\"total_tokens\\\":325}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "none",
+      "prompt": "Say hello in French.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "outcome": "complete",
+        "calls": [],
+        "pass": true,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": "Bonjour !"
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-18#1",
+          "startedAt": "2026-10-11T22:49:08.187Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Say hello in French.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:49:08 GMT",
+            "expires": "Sun, 11 Oct 2026 22:49:08 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=472",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 494,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"Bonjour !\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758948,\"id\":\"ZBLMaqGUFOyb_uMPzeOSwQw\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":310,\"total_tokens\":312}}\n\n"
+            },
+            {
+              "ms": 497,
+              "text": "data: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TILkQx34qmRC3rkcJm8A9KoJZbfr/mnbuEzWs8SBpUD4qDwbpRZ8iz/0+SGaBB77mlwm4kd5cwWqoADhFpOb4rYTskYpp3xEPYprARlWeyGNeLyWFIH15nxQ=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758948,\"id\":\"ZBLMaqGUFOyb_uMPzeOSwQw\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":310,\"total_tokens\":312}}\n\n"
+            },
+            {
+              "ms": 498,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"content\":\"Bonjour !\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758948,\"id\":\"ZBLMaqGUFOyb_uMPzeOSwQw\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":310,\"total_tokens\":312}}\n\ndata: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TILkQx34qmRC3rkcJm8A9KoJZbfr/mnbuEzWs8SBpUD4qDwbpRZ8iz/0+SGaBB77mlwm4kd5cwWqoADhFpOb4rYTskYpp3xEPYprARlWeyGNeLyWFIH15nxQ=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758948,\"id\":\"ZBLMaqGUFOyb_uMPzeOSwQw\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":310,\"total_tokens\":312}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 743,
+            "crlf": 0,
+            "lf": 6,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 3,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":2,\\\"prompt_tokens\\\":310,\\\"total_tokens\\\":312}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "kind": "none",
+      "prompt": "In one sentence, what is a JSON object?",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "outcome": "complete",
+        "calls": [],
+        "pass": true,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": "A JSON object is an unordered collection of key-value pairs enclosed in curly braces, where each key is a string and each value can be a string, number, boolean, null, array, or another object."
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-19#1",
+          "startedAt": "2026-10-11T22:49:15.694Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"In one sentence, what is a JSON object?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:49:16 GMT",
+            "expires": "Sun, 11 Oct 2026 22:49:16 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=328",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 348,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"A JSON\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":315,\"total_tokens\":317}}\n\n"
+            },
+            {
+              "ms": 407,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\" object is an unordered collection of key-value pairs enclosed in curly braces, where each key is\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":21,\"prompt_tokens\":315,\"total_tokens\":336}}\n\n"
+            },
+            {
+              "ms": 461,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\" a string and each value can be a string, number, boolean, null, array, or another object.\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":43,\"prompt_tokens\":315,\"total_tokens\":358}}\n\n"
+            },
+            {
+              "ms": 463,
+              "text": "data: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TwfsxR4LjpYQakv5Lqh5fsQDhXZti4wTU6BVUKoZUK1zcnqRlTQuIre3Xl8rCpMAELg8Oqb0piHEg2ah8ZjsCCr7D353zZNxml3La9bEmSgyI15QA+C1kg98=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":43,\"prompt_tokens\":315,\"total_tokens\":358}}\n\n"
+            },
+            {
+              "ms": 464,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"content\":\"A JSON\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":315,\"total_tokens\":317}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" object is an unordered collection of key-value pairs enclosed in curly braces, where each key is\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":21,\"prompt_tokens\":315,\"total_tokens\":336}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" a string and each value can be a string, number, boolean, null, array, or another object.\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":43,\"prompt_tokens\":315,\"total_tokens\":358}}\n\ndata: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TwfsxR4LjpYQakv5Lqh5fsQDhXZti4wTU6BVUKoZUK1zcnqRlTQuIre3Xl8rCpMAELg8Oqb0piHEg2ah8ZjsCCr7D353zZNxml3La9bEmSgyI15QA+C1kg98=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758956,\"id\":\"axLMateVM_6ysOIPpp2MiQo\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":43,\"prompt_tokens\":315,\"total_tokens\":358}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1456,
+            "crlf": 0,
+            "lf": 10,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 5,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":43,\\\"prompt_tokens\\\":315,\\\"total_tokens\\\":358}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "kind": "none",
+      "prompt": "Without reading any file, suggest a good name for a variable that counts retries.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "outcome": "complete",
+        "calls": [],
+        "pass": true,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": "A great and conventional name for a variable that counts retries is **`retryCount`** (or **`retry_count`** depending on your language's naming convention, such as camelCase vs. snake_case). \n\nOther clear alternatives include:\n* **`attempts`** or **`attemptCount`** (if you want to track total tries, "
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-20#1",
+          "startedAt": "2026-10-11T22:49:23.167Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Without reading any file, suggest a good name for a variable that counts retries.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:49:23 GMT",
+            "expires": "Sun, 11 Oct 2026 22:49:23 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=410",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 447,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"A great\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":322,\"total_tokens\":324}}\n\n"
+            },
+            {
+              "ms": 492,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\" and conventional name for a variable that counts retries is **`retryCount`** (or **\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":22,\"prompt_tokens\":322,\"total_tokens\":344}}\n\n"
+            },
+            {
+              "ms": 555,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"`retry_count`** depending on your language's naming convention, such as camelCase vs. snake_case). \\n\\n\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":49,\"prompt_tokens\":322,\"total_tokens\":371}}\n\n"
+            },
+            {
+              "ms": 623,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"Other clear alternatives include:\\n* **`attempts`** or **`attemptCount`** (if you want to track total\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":75,\"prompt_tokens\":322,\"total_tokens\":397}}\n\n"
+            },
+            {
+              "ms": 697,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\" tries, including the initial attempt).\\n* **`retriesRemaining`** or **`remainingRetries`** (if\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":101,\"prompt_tokens\":322,\"total_tokens\":423}}\n\n"
+            },
+            {
+              "ms": 712,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\" you are counting down instead of up).\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":109,\"prompt_tokens\":322,\"total_tokens\":431}}\n\n"
+            },
+            {
+              "ms": 719,
+              "text": "data: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TRM4Oc950E7PcU+Vl5WCxeavM2Uqx3nZrpeJTn4WH9sFCROTP32+3EJ0mRnjois1NW/LyArfYrUoW5DSlELPDBIzbuPl0EpptPW08bKOKc0dQyKR0z/ORsPc=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":109,\"prompt_tokens\":322,\"total_tokens\":431}}\n\n"
+            },
+            {
+              "ms": 719,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"content\":\"A great\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":322,\"total_tokens\":324}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" and conventional name for a variable that counts retries is **`retryCount`** (or **\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":22,\"prompt_tokens\":322,\"total_tokens\":344}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"`retry_count`** depending on your language's naming convention, such as camelCase vs. snake_case). \\n\\n\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":49,\"prompt_tokens\":322,\"total_tokens\":371}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"Other clear alternatives include:\\n* **`attempts`** or **`attemptCount`** (if you want to track total\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":75,\"prompt_tokens\":322,\"total_tokens\":397}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" tries, including the initial attempt).\\n* **`retriesRemaining`** or **`remainingRetries`** (if\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":101,\"prompt_tokens\":322,\"total_tokens\":423}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" you are counting down instead of up).\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":109,\"prompt_tokens\":322,\"total_tokens\":431}}\n\ndata: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TRM4Oc950E7PcU+Vl5WCxeavM2Uqx3nZrpeJTn4WH9sFCROTP32+3EJ0mRnjois1NW/LyArfYrUoW5DSlELPDBIzbuPl0EpptPW08bKOKc0dQyKR0z/ORsPc=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758963,\"id\":\"cxLMaoOiFLWK-8YPp5aj2QQ\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":109,\"prompt_tokens\":322,\"total_tokens\":431}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 2486,
+            "crlf": 0,
+            "lf": 16,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 8,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"bject\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":109,\\\"prompt_tokens\\\":322,\\\"total_tokens\\\":431}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "kind": "none",
+      "prompt": "Thanks, that is all for now.",
+      "status": 200,
+      "attempts": 1,
+      "product": {
+        "outcome": "complete",
+        "calls": [],
+        "pass": true,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [
+          "stop"
+        ],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": true,
+        "wronglyCalled": false,
+        "text": "You're very welcome! If you ever need help with anything else in the future, feel free to reach out. Have a great day!"
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.5-flash-lite-21#1",
+          "startedAt": "2026-10-11T22:49:30.892Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Thanks, that is all for now.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 200,
+          "responseHeaders": {
+            "cache-control": "private",
+            "content-encoding": "gzip",
+            "content-type": "text/event-stream",
+            "date": "Sun, 11 Oct 2026 22:49:31 GMT",
+            "expires": "Sun, 11 Oct 2026 22:49:31 GMT",
+            "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=520",
+            "set-cookie": "<redacted>",
+            "transfer-encoding": "chunked",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 536,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"You'\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":313,\"total_tokens\":315}}\n\n"
+            },
+            {
+              "ms": 627,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\"re very welcome! If you ever need help with anything else in the future, feel free to reach out\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":23,\"prompt_tokens\":313,\"total_tokens\":336}}\n\n"
+            },
+            {
+              "ms": 698,
+              "text": "data: {\"choices\":[{\"delta\":{\"content\":\". Have a great day!\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":29,\"prompt_tokens\":313,\"total_tokens\":342}}\n\n"
+            },
+            {
+              "ms": 704,
+              "text": "data: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TtuPAyzXFrVPu3gp39ihzE1/4zJywnpnicHtHSBnYylsaYR40A+5LobMYZm0ZuR+3nM0lahTtylcK58F5wkYOFf9yczGKzFGXfdaoyPTBz0hcOMyGg5PK+wQ=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":29,\"prompt_tokens\":313,\"total_tokens\":342}}\n\n"
+            },
+            {
+              "ms": 704,
+              "text": "data: [DONE]\n\n"
+            }
+          ],
+          "body": "data: {\"choices\":[{\"delta\":{\"content\":\"You'\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":313,\"total_tokens\":315}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"re very welcome! If you ever need help with anything else in the future, feel free to reach out\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":23,\"prompt_tokens\":313,\"total_tokens\":336}}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\". Have a great day!\",\"role\":\"assistant\"},\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":29,\"prompt_tokens\":313,\"total_tokens\":342}}\n\ndata: {\"choices\":[{\"delta\":{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TtuPAyzXFrVPu3gp39ihzE1/4zJywnpnicHtHSBnYylsaYR40A+5LobMYZm0ZuR+3nM0lahTtylcK58F5wkYOFf9yczGKzFGXfdaoyPTBz0hcOMyGg5PK+wQ=\"}},\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791758971,\"id\":\"exLMavi8AsXh_uMPyN6L8Ak\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":29,\"prompt_tokens\":313,\"total_tokens\":342}}\n\ndata: [DONE]\n\n",
+          "framing": {
+            "bytes": 1381,
+            "crlf": 0,
+            "lf": 10,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 5,
+            "eventLines": 0,
+            "doneMarker": true,
+            "lastBytes": "\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":29,\\\"prompt_tokens\\\":313,\\\"total_tokens\\\":342}}\\n\\ndata: [DONE]\\n\\n\""
+          }
+        }
+      ]
+    }
+  ]
+}

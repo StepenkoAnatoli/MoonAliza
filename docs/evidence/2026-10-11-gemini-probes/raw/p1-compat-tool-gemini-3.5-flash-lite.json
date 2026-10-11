@@ -1,0 +1,58 @@
+{
+  "label": "p1-gemini-3.5-flash-lite",
+  "model": "gemini-3.5-flash-lite",
+  "exchange": {
+    "label": "p1-gemini-3.5-flash-lite#1",
+    "startedAt": "2026-10-11T22:12:16.576Z",
+    "request": {
+      "method": "POST",
+      "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "<redacted>"
+      },
+      "body": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+    },
+    "status": 200,
+    "responseHeaders": {
+      "cache-control": "private",
+      "content-encoding": "gzip",
+      "content-type": "text/event-stream",
+      "date": "Sun, 11 Oct 2026 22:12:17 GMT",
+      "expires": "Sun, 11 Oct 2026 22:12:17 GMT",
+      "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
+      "server": "scaffolding on HTTPServer2",
+      "server-timing": "gfet4t7; dur=453",
+      "set-cookie": "<redacted>",
+      "transfer-encoding": "chunked",
+      "vary": "Origin,X-Origin,Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    },
+    "chunks": [
+      {
+        "ms": 484,
+        "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TlkFs55cg29KGtN1Io+3pmk5Q5UAUjHpJdA/KHpiThDF5Tiyy6IXrUi4SlKxyTfq2UpSJJsNUn09hvxiZzA+mbTdPBA4/NrZiMXO89zmTBpCcWl5tC+VTnaY=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_689648\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791756737,\"id\":\"wAnMaraTLLCsjrEP7ti0WA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":84}}\n\n"
+      },
+      {
+        "ms": 500,
+        "text": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791756737,\"id\":\"wAnMaraTLLCsjrEP7ti0WA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":84}}\n\ndata: [DONE]\n\n"
+      }
+    ],
+    "body": "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"extra_content\":{\"google\":{\"thought_signature\":\"EmAKXgFpFH0TlkFs55cg29KGtN1Io+3pmk5Q5UAUjHpJdA/KHpiThDF5Tiyy6IXrUi4SlKxyTfq2UpSJJsNUn09hvxiZzA+mbTdPBA4/NrZiMXO89zmTBpCcWl5tC+VTnaY=\"}},\"function\":{\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\",\"name\":\"read_file\"},\"id\":\"call_689648\",\"type\":\"function\"}]},\"index\":0}],\"created\":1791756737,\"id\":\"wAnMaraTLLCsjrEP7ti0WA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":84}}\n\ndata: {\"choices\":[{\"delta\":{\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1791756737,\"id\":\"wAnMaraTLLCsjrEP7ti0WA\",\"model\":\"gemini-3.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":18,\"prompt_tokens\":66,\"total_tokens\":84}}\n\ndata: [DONE]\n\n",
+    "framing": {
+      "bytes": 842,
+      "crlf": 0,
+      "lf": 6,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 3,
+      "eventLines": 0,
+      "doneMarker": true,
+      "lastBytes": "\",\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"usage\\\":{\\\"completion_tokens\\\":18,\\\"prompt_tokens\\\":66,\\\"total_tokens\\\":84}}\\n\\ndata: [DONE]\\n\\n\""
+    }
+  },
+  "earlierAttempts": [],
+  "completeThrew": "PROVIDER_INVALID_RESPONSE"
+}
