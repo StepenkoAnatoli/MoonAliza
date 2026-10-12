@@ -4,7 +4,7 @@ Live measurements against Google's Gemini API for the GEMINI parts of U-18 probe
 (8), (9) and (11) in `docs/research/2026-10-05-provider-wire-formats/research/DISCOVERY.md` (with U-05
 and U-20), and for U-06 in `docs/research/2026-10-05-coding-model-shortlist/research/DISCOVERY.md`.
 
-- Date: 2026-10-11, 22:10-22:55 UTC (first run). Checkout: `main-axuse` at `b793f13`; no file under
+- Date: 2026-10-11, 22:10-22:55 UTC (first run); U-06 rerun 2026-10-12, 00:05-00:09 UTC. Checkout: `main-axuse` at `b793f13`; no file under
   `src/` changed.
 - Key: the repository owner's key from `GEMINI_API_KEY`, sent only as `Authorization: Bearer` (compatible
   route) or `x-goog-api-key` (native route). It is a **free-tier** key: every quota error names a
@@ -231,7 +231,14 @@ Three kinds of 429 were met; all are `RESOURCE_EXHAUSTED` with a `google.rpc.Quo
 |---|---|---|---|---|
 | input tokens per minute | `GenerateContentInputTokensPerModelPerMinute-FreeTier` | 250000 | `3s`, `30s` | `raw/p11-rate-limits-p2.json`, `raw/p2-over-window.json` |
 | requests per day, `gemini-3.8-flash` | `GenerateRequestsPerDayPerProjectPerModel-FreeTier` | 20 | `5155s` ("1h25m55.8s") | `raw/p11-daily-quota-gemini-3.8-flash.json` |
-| requests per day, `gemini-3.7-flash` | `GenerateRequestsPerDayPerProjectPerModel-FreeTier` | 20 | about 1h15m | `raw/u06-gemini-3.7-flash.json` (turns 13-21) |
+| requests per day, `gemini-3.7-flash` | `GenerateRequestsPerDayPerProjectPerModel-FreeTier` | 20 | about 1h15m on 2026-10-11 22:45; `86092s` (23h54m52s) on 2026-10-12 00:05 | `raw/u06-gemini-3.7-flash.json` (current rows 1, 7, 8, 12-21; the first run's rows under `earlierRuns`) |
+| requests per day, `gemini-3.8-flash`, after the expected reset | same | 20 | `85998s` (23h53m18s) on 2026-10-12 00:06 | `raw/u06-gemini-3.8-flash.json` (all 21 rows) |
+
+The daily delays given before midnight UTC (5155 s at 22:41, about 1h15m at 22:45) both pointed at
+00:00 UTC, but requests sent at 00:05 UTC, after that moment, were still refused with the same quota and
+a new delay pointing at the next midnight UTC; no request had been answered after midnight. So the
+daily `retryDelay` did not predict when requests would be accepted again; what resets the counter was
+not established.
 
 Finding: a retry delay is carried in `details[].retryDelay` of type RetryInfo; a client can read it, and
 must not retry a daily-quota 429 within the run (delays of over an hour). E-36 lists only ErrorInfo and
@@ -255,8 +262,8 @@ recorded SSE events directly and applies the same test to what the model sent.
 | Model | Turns answered (200) | Product: tool turns ending `tool_calls` with valid args | Product: no-call turns correct / wrongly called | Wire: tool turns with the right valid calls | Wire: no-call turns that called a tool | `complete()` outcomes |
 |---|---|---|---|---|---|---|
 | `gemini-3.5-flash-lite` | 21 of 21 | **0 of 16** | 5 of 5 / 0 | 16 of 16 | 0 of 5 | 16 `PROVIDER_INVALID_RESPONSE`, 5 `complete` |
-| `gemini-3.7-flash` | 8 of 21 (5 x 503, 8 x 429 daily cap) | **0 of 16** (8 answered) | none answered (turns 17-21: 429, 503) | 8 of 8 answered | none answered | 8 `PROVIDER_INVALID_RESPONSE`, 5 `PROVIDER_HTTP_503`, 8 `PROVIDER_HTTP_429` |
-| `gemini-3.8-flash` | first attempt: 2 of 8 before the daily cap (`raw/u06-gemini-3.8-flash-first-attempt.txt`); rows not saved | 0 of 2 answered | not reached | 2 of 2 answered | not reached | 2 `PROVIDER_INVALID_RESPONSE`, 2 x 503, 4 x 429 |
+| `gemini-3.7-flash` | 8 of 21 (first run: 5 x 503, 8 x 429 daily cap; the 13 unanswered turns rerun at 00:05 UTC: 13 x 429 daily cap) | **0 of 16** (8 answered) | none answered (turns 17-21: 429, 503) | 8 of 8 answered | none answered | 8 `PROVIDER_INVALID_RESPONSE`, 13 `PROVIDER_HTTP_429` (current rows) |
+| `gemini-3.8-flash` | 2 of 21: first attempt 2 of 8 before the daily cap (`raw/u06-gemini-3.8-flash-first-attempt.txt`, rows not saved); rerun of all 21 at 00:06 UTC: 21 x 429 daily cap (`raw/u06-gemini-3.8-flash.json`) | 0 of 2 answered | not reached | 2 of 2 answered | not reached | 2 `PROVIDER_INVALID_RESPONSE`, 2 x 503, 4 x 429 |
 
 Every answered tool turn on every model failed in the product for the reason in probe (1): no `index` on
 the tool-call entries (and `finish_reason: "stop"` behind it). On the wire every answered tool turn was
@@ -293,5 +300,5 @@ argument string parsed as a JSON object; no no-call turn called a tool. All turn
 | (9) countTokens | measured | - |
 | (11) 429 bodies | measured | - |
 | U-06 3.5-flash-lite | measured, 21 of 21 | - |
-| U-06 3.7-flash | partial, 8 of 21 | 503 high demand; free-tier cap of 20 requests/day reached |
-| U-06 3.8-flash | partial, 2 of 21 answered | 503 high demand; free-tier cap of 20 requests/day reached |
+| U-06 3.7-flash | partial, 8 of 21 | 503 high demand; free-tier cap of 20 requests/day reached; rerun after midnight UTC still capped |
+| U-06 3.8-flash | partial, 2 of 21 answered | 503 high demand; free-tier cap of 20 requests/day reached; rerun after midnight UTC still capped. Note that 21 turns cannot fit one free-tier day of 20 requests per model; a full run needs a paid-tier key or two days |
