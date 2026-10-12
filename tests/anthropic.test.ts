@@ -606,6 +606,17 @@ describe('usage', () => {
     const noOutput = sseText([messageStart({ input_tokens: 5 }), ...blockEvents([textOf('Hi')]), { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null } }, { type: 'message_stop' }]);
     expect((await map(noOutput)).usage).toBeUndefined();
   });
+
+  test('a malformed count is never taken, and never fails an otherwise valid answer', async () => {
+    // Built from E-10 shapes, not a capture. Malformed usage does not invalidate an answer (the accumulators' rule,
+    // docs/ARCHITECTURE.md): a count is taken only when it is a non-negative safe integer, so the field keeps what it had.
+    // Guards: (mutation: take a negative count; CompletionSchema then refuses the first answer as PROVIDER_INVALID_RESPONSE)
+    // and (mutation: take a count that is not an integer; likewise the second); both at once: (mutation: take any number).
+    const negative = sseText([messageStart({ input_tokens: -5, output_tokens: 1 }), ...blockEvents([textOf('Hi')]), ...messageEnd('end_turn', { output_tokens: -1 })]);
+    expect(await map(negative)).toEqual({ content: 'Hi', outcome: 'complete' });
+    const fractional = sseText([messageStart({ input_tokens: 10, output_tokens: 1 }), ...blockEvents([textOf('Hi')]), ...messageEnd('end_turn', { output_tokens: 1.5 })]);
+    expect(await map(fractional)).toEqual({ content: 'Hi', outcome: 'complete', usage: { inputTokens: 10, outputTokens: 1 } });
+  });
 });
 
 describe('the state refusal table (spec 5.3)', () => {
