@@ -1,5 +1,6 @@
 import { _electron as electron, expect, test } from '@playwright/test';
 import { createServer } from 'node:http';
+import { answerOllamaStatus } from './fixtures/ollama-status';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,6 +11,7 @@ test('Build reads, reviews an edit, applies, undoes and stops before an unapprov
   const project = join(root, 'Code project'); const data = join(root, 'data');
   await mkdir(project); await mkdir(data); await writeFile(join(project, 'hello.txt'), 'before\r\n');
   const server = createServer((request, response) => {
+    if (answerOllamaStatus(request, response)) return;
     let bytes = '';
     request.on('data', chunk => { bytes += String(chunk); });
     request.on('end', () => {
