@@ -1,0 +1,49 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 835,
+  "bodySha256": "5b6ceb11da3871e61302024901150f4889cf44c3713d3c79aab2e9cb8e522f4e",
+  "body": {
+    "model": "claude-opus-5-5",
+    "max_tokens": 32000,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Think carefully before acting. A city is chosen as follows: list the ten largest European capitals by population, reason step by step about which of them has the most rainy days per year, double-check your reasoning, and then call get_weather exactly once for the city you chose. Do not answer before calling the tool."
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

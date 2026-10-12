@@ -1,0 +1,55 @@
+{
+  "id": "U06-no-tool-math",
+  "prompt": "What is 2 + 2? Answer directly without using any tool.",
+  "status": 200,
+  "headers": {
+    "cache-control": "no-cache",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a494594d6f9d64f4-ATL",
+    "content-encoding": "gzip",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "text/event-stream",
+    "date": "Mon, 12 Oct 2026 07:21:38 GMT",
+    "server": "cloudflare",
+    "server-timing": "x-originResponse;dur=733",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-73e2dc64a8fb9f6ee688fda1d4f862c5-48c6a3c7e9595d51-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-ratelimit-remaining-requests": "9999",
+    "x-ratelimit-remaining-tokens": "12000000",
+    "x-ratelimit-requests": "10000",
+    "x-ratelimit-reset-requests": "0s",
+    "x-ratelimit-reset-tokens": "0s",
+    "x-ratelimit-tokens": "12000000",
+    "x-request-id": "req_011CfwwTVb3f8qFoFWpc3uNZ",
+    "x-robots-tag": "none"
+  },
+  "latencyMs": 1206,
+  "outcome": {
+    "usage": {
+      "inputTokens": 722,
+      "outputTokens": 12
+    },
+    "content": "2 + 2 = 4.",
+    "outcome": "complete"
+  },
+  "replay": {
+    "usage": {
+      "prompt_tokens": 722,
+      "completion_tokens": 12
+    },
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": "2 + 2 = 4.",
+          "refusal": null
+        },
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "schemaOk": [],
+  "cost": 0.001564
+}

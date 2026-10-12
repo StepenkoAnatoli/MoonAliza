@@ -1,0 +1,76 @@
+{
+  "id": "U18-compat-read-file",
+  "prompt": "Call read_file on README.md",
+  "status": 200,
+  "headers": {
+    "cache-control": "no-cache",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a49458e95f24663b-ATL",
+    "content-encoding": "gzip",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "text/event-stream",
+    "date": "Mon, 12 Oct 2026 07:21:22 GMT",
+    "server": "cloudflare",
+    "server-timing": "x-originResponse;dur=830",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-e68caf6aacf3f4ecd2900707e1000817-0d2b0dda742af5e3-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-ratelimit-remaining-requests": "9999",
+    "x-ratelimit-remaining-tokens": "12000000",
+    "x-ratelimit-requests": "10000",
+    "x-ratelimit-reset-requests": "0s",
+    "x-ratelimit-reset-tokens": "0s",
+    "x-ratelimit-tokens": "12000000",
+    "x-request-id": "req_011CfwwSKJdvTPpeJLAtD7ed",
+    "x-robots-tag": "none"
+  },
+  "latencyMs": 1447,
+  "outcome": {
+    "content": "",
+    "outcome": "tool_calls",
+    "toolCalls": [
+      {
+        "id": "toolu_01UAjF8Se6Wb3MVvHbbFX9kr",
+        "name": "read_file",
+        "input": {
+          "path": "README.md"
+        }
+      }
+    ],
+    "usage": {
+      "inputTokens": 400,
+      "outputTokens": 49
+    }
+  },
+  "replay": {
+    "usage": {
+      "prompt_tokens": 400,
+      "completion_tokens": 49
+    },
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": null,
+          "refusal": null,
+          "tool_calls": [
+            {
+              "id": "toolu_01UAjF8Se6Wb3MVvHbbFX9kr",
+              "type": "function",
+              "function": {
+                "name": "read_file",
+                "arguments": "{\"path\": \"README.md\"}"
+              }
+            }
+          ]
+        },
+        "finish_reason": "tool_calls"
+      }
+    ]
+  },
+  "schemaOk": [
+    true
+  ],
+  "cost": 0.00129
+}
