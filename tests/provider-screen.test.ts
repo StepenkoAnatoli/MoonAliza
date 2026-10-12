@@ -43,7 +43,8 @@ async function vaultWith(secrets: string[], options: { broken?: boolean } = {}) 
 const SECRET = 'sk-ant-api03-ScreenSecretValue0001';
 const ESCAPED = 'sk-ant-api03-Quote"And\\Backslash0002';
 const SPLIT = 'sk-ant-api03-SplitAcrossTwoBlocks0003';
-const SECRETS = [SECRET, ESCAPED, SPLIT];
+const TABBED = 'sk-ant-api03-Tab\tControl0004';
+const SECRETS = [SECRET, ESCAPED, SPLIT, TABBED];
 
 const call: ToolCall = { id: 'toolu_01', name: 'list_files', input: { path: '.' } };
 type Block = Record<string, unknown>;
@@ -121,7 +122,7 @@ test('a credential holding `"` or `\\` in a tool input of a step with no state f
   // review P2-IR-1). Guard: screen the calls by their JSON text only (mutation: drop the leaves check from step 1); the
   // call then passes with ESCAPED in its input, in a value and in a key.
   const redact = await vaultWith(SECRETS);
-  const inputs: Array<ToolCall['input']> = [{ command: `curl -H "Authorization: ${ESCAPED}"` }, { [ESCAPED]: 'x' }];
+  const inputs: Array<ToolCall['input']> = [{ command: `curl -H "Authorization: ${ESCAPED}"` }, { [ESCAPED]: 'x' }, { note: `token ${TABBED}` }];
   for (const input of inputs) {
     const step: Completion = { content: 'Running.', outcome: 'tool_calls', toolCalls: [{ id: 'c1', name: 'run_command', input }] };
     expect((await failure(screenCompletion(step, redact)))?.message, JSON.stringify(input)).toBe('PROVIDER_PROTOCOL_ERROR');
