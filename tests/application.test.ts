@@ -488,6 +488,34 @@ test('with history near the full budget, an anthropic run of two tool steps succ
   expect(requests[2]!.slice(0, requests[0]!.length)).toEqual(requests[0]);
 });
 
+test.each([
+  ['no provider state', undefined],
+  ['an appendOnly false state', false],
+] as const)('the reserve holds on every unfrozen step: after a first step with %s, step 2 freezes and the run fits', async (_label, first) => {
+  // Spec section 3 rules 2 and 5, DR-2 ("every unfrozen step trims history to half"). Guard (mutation): reserve on the
+  // first step only (`historyReserve: historyReserve && step === 0`); step 2 then refills history to the full budget,
+  // freezes on its state, and step 3 cannot fit that state and result: CONTEXT_LIMIT after two infer calls.
+  const { store, root } = fixture(); cloud(store, 'anthropic', { contextTokens: 20_512, outputTokens: 512 });
+  for (const name of ['a', 'b']) writeFileSync(join(root, `${name}.txt`), name.toUpperCase().repeat(12_000));
+  const requests: InferenceMessage[][] = []; let tools: Parameters<typeof estimateInput>[1] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages, _signal, offered) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]); tools = offered ?? [];
+    if (requests.length === 1) return readStep(1, 'a.txt', first === undefined ? undefined : { appendOnly: first, signature: 'Rmlyc3RTdGVw' });
+    if (requests.length === 2) return readStep(2, 'b.txt', { appendOnly: true, signature: 'U2lnbmF0dXJl'.repeat(400) });
+    return { content: 'Read both.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  seedHistory(store, session.id, 9);
+  const run = await runOnce(app, session.id, 'Read both files.');
+  expect(await failureOf(app, session.id)).toBeNull(); expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(3);
+  // Step 2, still unfrozen, is within half the input budget (20,000 / 2): it dropped another history turn to stay there.
+  expect(estimateInput(requests[1]!, tools)).toBeLessThanOrEqual(10_000);
+  expect(historyCount(requests[1]!, 'Read both files.')).toBeGreaterThan(0);
+  expect(historyCount(requests[1]!, 'Read both files.')).toBeLessThan(historyCount(requests[0]!, 'Read both files.'));
+  // Step 3 is frozen on step 2's request.
+  expect(requests[2]!.slice(0, requests[1]!.length)).toEqual(requests[1]);
+});
+
 test.each(['openai-compatible', 'ollama'] as const)('a %s run gets no reserve and still drops history mid-run', async kind => {
   // Guards (mutations): reserve for every kind (step 1 then keeps at most half the budget); freeze on every tool step
   // (history is then never dropped again, or the run fails).
