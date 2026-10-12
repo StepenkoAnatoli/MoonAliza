@@ -76,6 +76,10 @@ export interface StateRefusal {
 const BUILT_BY_STRINGIFY = 'none: the outcome builds `data` with JSON.stringify';
 const BUILT_OBJECT = 'none: the outcome builds the `{ content }` object itself';
 const extraField = (value: unknown) => ({ type: 'text', text: '', meta: value });
+/** Two extra fields, each within the bound alone, outside it only as one object (spec 5.3: "together, as one object"). */
+const twoExtraFields = (make: () => unknown) => ({ type: 'text', text: '', meta: make(), note: make() });
+const halfBytes = () => 'x'.repeat(70_000);
+const halfNodes = () => Array.from({ length: 6_000 }, () => 0);
 
 export const STATE_REFUSALS: readonly StateRefusal[] = [
   { name: '`data` that is not JSON', data: '{"content":[', stream: { none: BUILT_BY_STRINGIFY } },
@@ -103,4 +107,8 @@ export const STATE_REFUSALS: readonly StateRefusal[] = [
   { name: 'an extra field nested deeper than 32', data: state(thinking, extraField(nested(40)), toolUse), stream: { sse: toolTurn({ text: { start: extraField(nested(40)) } }), refusedIn: 'outcome' } },
   { name: 'an extra field holding more than 10,000 nodes', data: state(thinking, extraField(Array.from({ length: 10_000 }, () => 0)), toolUse), stream: { sse: toolTurn({ text: { start: extraField(Array.from({ length: 10_000 }, () => 0)) } }), refusedIn: 'outcome' } },
   { name: 'an extra field over 131,072 bytes', data: state(thinking, extraField('x'.repeat(131_072)), toolUse), stream: { sse: toolTurn({ text: { start: extraField('x'.repeat(131_072)) } }), refusedIn: 'outcome' } },
+  // 70,000 characters each: about 70,011 bytes alone, about 140,021 together.
+  { name: 'two extra fields over 131,072 bytes only together', data: state(thinking, twoExtraFields(halfBytes), toolUse), stream: { sse: toolTurn({ text: { start: twoExtraFields(halfBytes) } }), refusedIn: 'outcome' } },
+  // 6,000 elements each: 6,002 nodes alone, 12,003 together.
+  { name: 'two extra fields holding more than 10,000 nodes only together', data: state(thinking, twoExtraFields(halfNodes), toolUse), stream: { sse: toolTurn({ text: { start: twoExtraFields(halfNodes) } }), refusedIn: 'outcome' } },
 ];

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { inspect } from 'node:util';
 import { describe, expect, test } from 'vitest';
-import { PROVIDER_STATE_MAX } from '../src/engine/control';
+import { BoundedJsonObjectSchema, PROVIDER_STATE_MAX } from '../src/engine/control';
 import { ANTHROPIC_VERSION, anthropicHeaders, anthropicKind, anthropicOutcome, anthropicRetryDelayMs, encodeAnthropic, isAnthropicOverflow, readAnthropic, type AnthropicFold, type FoldedBlock } from '../src/main/anthropic';
 import type { Completion, InferenceMessage, InferenceProfile } from '../src/main/inference';
 import type { CheckedTranscript } from '../src/main/provider-kind';
@@ -627,6 +627,16 @@ describe('the state refusal table (spec 5.3)', () => {
     if (stream.refusedIn === 'reader') { expect(await message(read(stream.sse, { size: 65536 }))).toBe('PROVIDER_INVALID_RESPONSE'); return; }
     const fold = await read(stream.sse, { size: 65536 });
     expect(() => anthropicOutcome(fold, check())).toThrow('PROVIDER_INVALID_RESPONSE');
+  });
+
+  test.each(STATE_REFUSALS.filter(row => row.name.endsWith('only together')))('each extra field alone is within the bound, the two together are not: $name', row => {
+    // A fixture self-check: the row is refused only because a block's extra fields are bounded as one object.
+    // Guard: (mutation, in the fixture: 140,000 characters per field, which one field alone exceeds).
+    const block = (JSON.parse(row.data) as { content: Record<string, unknown>[] }).content[1]!;
+    const extra = Object.fromEntries(Object.entries(block).filter(([field]) => field !== 'type' && field !== 'text'));
+    expect(Object.keys(extra)).toEqual(['meta', 'note']);
+    expect(BoundedJsonObjectSchema.safeParse(extra).success).toBe(false);
+    for (const [field, value] of Object.entries(extra)) expect(BoundedJsonObjectSchema.safeParse({ [field]: value }).success).toBe(true);
   });
 
   test('a fold of 513 blocks built directly is refused by the outcome (512 are accepted)', () => {
