@@ -26,6 +26,7 @@ import { ProjectTickets } from './projects';
 import { createBridge } from './bridge';
 import { createPolicyRoute } from './policy-route';
 import { complete, validateEndpoint, type InferenceMessage } from './inference';
+import { screenCompletion } from './provider-screen';
 import { verifyOllamaLocality } from './ollama-locality';
 import { probeHardware } from '../models/hardware';
 import { inspectLocalRuntime } from '../models/local-runtime';
@@ -102,11 +103,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
       const grant = vault.grant({ ...binding, expiresAt: Date.now() + 125_000 });
       try { output = await vault.withSecret(grant, binding, invoke); } finally { vault.revokeContext(runId); }
     } else output = await invoke();
-    if (output.toolCalls) {
-      const encoded = JSON.stringify(output.toolCalls);
-      if (await vault.redact(encoded) !== encoded) throw new Error('PROVIDER_PROTOCOL_ERROR');
-    }
-    return { ...output, content: await vault.redact(output.content) };
+    // Tool calls or provider state holding a saved credential are refused; the content is redacted (provider-screen.ts).
+    return screenCompletion(output, text => vault.redact(text));
   }
 
   async function readGitHub(runId: string, input: GitHubInput, epoch: string) {
