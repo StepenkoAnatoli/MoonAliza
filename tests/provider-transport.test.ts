@@ -463,14 +463,6 @@ test('openai-responses has no adapter: NOT_IMPLEMENTED with no fetch (F-4)', asy
   expect(fetched).toBe(0);
 });
 
-test('anthropic has no part until U4 wires it: NOT_IMPLEMENTED with no fetch (F-4)', async () => {
-  // Temporary (More models Phase 2, U2): U4 adds anthropic's table entry and deletes this pin with it; its own
-  // complete() tests take over. Guard: the kind table (mutation R17: admit anthropic as a chat kind; it is then posted).
-  const { error, fetched } = await refusal({ profile: { ...chatProfile, kind: 'anthropic' }, messages: [{ role: 'user', content: 'hello' }] });
-  expect((error as Error | undefined)?.message).toBe('NOT_IMPLEMENTED');
-  expect(fetched).toBe(0);
-});
-
 test.each(['openai-compatible', 'ollama'] as const)('a Stop that lands while a %s answer is read wins over an answer the outcome refuses', async kind => {
   // The cancellation re-check sits after the read and before the outcome (more-models-phase2.md section 4: `part.read`,
   // the re-check, `part.outcome`). The answer reads cleanly and only its outcome refuses it (a call to a tool that was not

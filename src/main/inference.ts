@@ -4,6 +4,7 @@ import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, Inf
 import { IdSchema, type ToolCall, type ToolSpec } from '../shared';
 import { TokenUsageSchema, type TokenUsage } from '../shared/context';
 import { OllamaAccumulator, OpenAIAccumulator, readNdjson, readSse } from './provider-stream';
+import { anthropicKind } from './anthropic';
 import type { CheckedTranscript, KindPart } from './provider-kind';
 
 export type ProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama';
@@ -250,10 +251,11 @@ function chatOutcome(data: unknown, local: boolean, tools: readonly ToolSpec[], 
   return { ...usage, content, outcome: reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
 }
 
-/** The kinds complete() can send; a kind with no part (openai-responses, and anthropic until it is wired) is refused. */
+/** The kinds complete() can send; a kind with no part (openai-responses) is refused. */
 const kinds = new Map<ProviderKind, KindPart<unknown>>([
   ['openai-compatible', chatKind(false)],
   ['ollama', chatKind(true)],
+  ['anthropic', anthropicKind],
 ]);
 
 /**
