@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { inspect } from 'node:util';
 import { describe, expect, test } from 'vitest';
 import { BoundedJsonObjectSchema, PROVIDER_STATE_MAX } from '../src/engine/control';
-import { ANTHROPIC_VERSION, anthropicHeaders, anthropicKind, anthropicOutcome, anthropicRetryDelayMs, encodeAnthropic, isAnthropicOverflow, readAnthropic, type AnthropicFold, type FoldedBlock } from '../src/main/anthropic';
+import { ANTHROPIC_VERSION, anthropicHeaders, anthropicKind, anthropicOutcome, anthropicRetryDelayMs, encodeAnthropic, isAnthropicOverflow, parseAnthropicState, readAnthropic, type AnthropicFold, type FoldedBlock } from '../src/main/anthropic';
 import type { Completion, InferenceMessage, InferenceProfile } from '../src/main/inference';
 import type { CheckedTranscript } from '../src/main/provider-kind';
 import type { ToolCall, ToolSpec } from '../src/shared';
@@ -612,6 +612,19 @@ describe('the state refusal table (spec 5.3)', () => {
   test('the valid state the rows depart from is accepted by the encoder', () => {
     // The control for the rows below. Guard: (mutation, in the fixture: leave the tool_use block out of VALID_STATE_DATA).
     expect(JSON.parse(encode(refusalTranscript(VALID_STATE_DATA), [REFUSAL_TOOL])).messages[1].content).toEqual(JSON.parse(VALID_STATE_DATA).content);
+  });
+
+  test('the state schema accepts the valid state and returns its content array as parsed', () => {
+    // The control for the next test. Guard: (mutation: the schema refuses everything, which leaves every row below green).
+    expect(parseAnthropicState(VALID_STATE_DATA)).toEqual(JSON.parse(VALID_STATE_DATA).content);
+  });
+
+  test.each(STATE_REFUSALS)('the state schema refuses: $name', row => {
+    // Each row against the one schema directly (S-5), so a schema rule that the encoder's comparisons or the outcome's
+    // call checks also enforce is still proved. Guards: each rule of parseAnthropicState (mutations: the tool_use field
+    // rules removed, one at a time and together; the 1-block minimum; the 512-block maximum; the one-key top level; the
+    // thinking signature and redacted data rules; the extras bound).
+    expect(parseAnthropicState(row.data)).toBeUndefined();
   });
 
   test.each(STATE_REFUSALS)('the encoder refuses: $name', row => {
