@@ -168,7 +168,10 @@ function pause(ms: number, signal: AbortSignal, stop: AbortSignal): Promise<void
  */
 export async function post(fetcher: Fetcher, url: string, request: { headers: Record<string, string>; body: string; signal: AbortSignal; stop: AbortSignal; deadline: number; retry: boolean }, part: Pick<KindPart<unknown>, 'refusalStatuses' | 'isOverflow' | 'retryDelayMs'>): Promise<Response> {
   for (let retries = 0; ; retries += 1) {
-    const response = await fetcher(url, { method: 'POST', headers: request.headers, body: request.body, signal: request.signal, redirect: 'error' });
+    // credentials: 'omit' (INV-5): the session's cookies and saved HTTP sign-ins never ride on a chat request; the key
+    // travels only in the explicit Authorization header. It also withholds Windows-integrated sign-in and client
+    // certificates (more-models-phase2.md section 4, known limit); D10 checked it in Electron.
+    const response = await fetcher(url, { method: 'POST', headers: request.headers, body: request.body, signal: request.signal, redirect: 'error', credentials: 'omit' });
     if (response.ok) return response;
     const delay = request.retry && retries < 2 ? part.retryDelayMs?.(response, retries) : undefined;
     if (delay === undefined || !(delay >= 0) || Date.now() + delay >= request.deadline) throw new Error(await refusalCode(response, part));

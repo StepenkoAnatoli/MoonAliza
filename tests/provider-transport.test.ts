@@ -68,6 +68,9 @@ test('provider requests bind the destination and refuse automatic redirect follo
   const output = await complete(profile, [{ role: 'user', content: 'hello' }], { fetcher, secret: 'private-token', signal: new AbortController().signal });
   expect(requestUrl).toBe('https://model.example/v1/chat/completions');
   expect(requestInit?.redirect).toBe('error');
+  // The exact init (More models Phase 2, U2 commit 3; F-5): no session cookie or saved sign-in rides on a chat request.
+  // Guard: credentials: 'omit' in post() (mutation: drop it; the init then lacks the field).
+  expect(requestInit).toEqual({ method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer private-token' }, body: requestInit?.body, signal: expect.any(AbortSignal), redirect: 'error', credentials: 'omit' });
   expect(JSON.parse(String(requestInit?.body)).messages).toEqual([{ role: 'user', content: 'hello' }]);
   expect(output).toEqual({ content: 'A real response', outcome: 'complete' });
   expect(JSON.stringify(output)).not.toContain('private-token');
@@ -706,4 +709,11 @@ test('post() reads a refusal body only for the part\'s own statuses and asks the
   expect(await unread.outcome).toEqual({ error: 'PROVIDER_HTTP_400' });
   expect(unread.log).toEqual(['fetch 1 400', 'cancelled 1']);
   expect(isOverflow).toHaveBeenCalledTimes(2);
+});
+
+test('an Ollama request carries the same exact init, credentials omitted (F-5)', async () => {
+  // More models Phase 2, U2 commit 3. Guard: credentials: 'omit' in post() (mutation: drop it).
+  let requestInit: RequestInit | undefined;
+  await complete(ollamaProfile, [{ role: 'user', content: 'hello' }], { signal: signal(), fetcher: async (_url, init) => { requestInit = init; return answer('ollama'); } });
+  expect(requestInit).toEqual({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestInit?.body, signal: expect.any(AbortSignal), redirect: 'error', credentials: 'omit' });
 });
