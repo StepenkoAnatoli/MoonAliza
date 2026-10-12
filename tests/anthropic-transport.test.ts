@@ -284,3 +284,22 @@ describe('the state refusal table through complete() (F-8, F-11; spec 5.3)', () 
     expect(output).toMatchObject({ content: 'OK.', outcome: 'complete' });
   });
 });
+
+test('profile.test sends the profile\'s own outputTokens for anthropic and 32 for the other kinds, with retry: false (F-20)', () => {
+  // profile.test is a case inside Electron's ready handler and has no harness, so its call is pinned from its source, by
+  // whole lines. What the two arguments do is tested above through complete(): `outputTokens` becomes `max_tokens` (the
+  // live D1 request, 64), and `retry: false` makes a 503 one fetch that fails at once. Thinking counts toward max_tokens
+  // (E-13 l.48) and Fable 5.1 and Opus 5.5 always think, so 32 could end at max_tokens and fail the test; the profile's
+  // own value also checks its ceiling against the model's (D7: 1.0-1.3 s at 2,048 and 32,000 on all three 5.x models).
+  // The 25 s timeout and the success rule are unchanged (regression pins). Mutations: `outputTokens: 32` for every
+  // kind; drop `retry: false`; either way the pinned line is gone.
+  const source = readFileSync(new URL('../src/main/index.ts', import.meta.url), 'utf8');
+  const start = source.indexOf("case 'profile.test': {");
+  expect(start).toBeGreaterThan(-1);
+  const lines = source.slice(start, source.indexOf("case '", start + 1)).split('\n').map(line => line.trim());
+  expect(lines.filter(line => line.includes('complete('))).toEqual([
+    "const invoke = (secret?: string) => complete({ ...profile, outputTokens: profile.kind === 'anthropic' ? profile.outputTokens : 32 }, [{ role: 'user', content: 'Reply with OK.' }], { secret, fetcher, signal: controller.signal, retry: false });",
+  ]);
+  expect(lines).toContain('const timeout = setTimeout(() => controller.abort(), 25_000);');
+  expect(lines).toContain("if (output.outcome !== 'complete') throw new Error('PROVIDER_ERROR');");
+});

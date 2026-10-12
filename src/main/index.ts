@@ -274,7 +274,9 @@ if (ownsInstance) void app.whenReady().then(async () => {
         const controller = new AbortController(); const started = Date.now();
         const binding = { epoch: engine.epoch, purpose: 'provider-test' as const, contextId: request.clientRequestId, secretRef: profile.secretRef ?? '', profileRevisionId: profile.revisionId };
         const fetcher = (url: string, init: RequestInit) => (profile.locality === 'local' ? localSession : providerSession).fetch(url, init);
-        const invoke = (secret?: string) => complete({ ...profile, outputTokens: 32 }, [{ role: 'user', content: 'Reply with OK.' }], { secret, fetcher, signal: controller.signal });
+        // Thinking counts toward max_tokens and some Anthropic models always think, so 32 could end the test incomplete; the
+        // profile's own value also checks its ceiling. Never retried: a Test connection reports the first refusal (F-20).
+        const invoke = (secret?: string) => complete({ ...profile, outputTokens: profile.kind === 'anthropic' ? profile.outputTokens : 32 }, [{ role: 'user', content: 'Reply with OK.' }], { secret, fetcher, signal: controller.signal, retry: false });
         const timeout = setTimeout(() => controller.abort(), 25_000);
         try {
           const output = profile.secretRef ? await vault.withSecret(vault.grant({ ...binding, expiresAt: Date.now() + 30_000 }), binding, invoke) : await invoke();
