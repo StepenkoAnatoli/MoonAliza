@@ -4,7 +4,7 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-05 |
-| Last checkpoint | 2026-10-12 - Phase 2 U0 committed (`28395c5`); wave 1 launched |
+| Last checkpoint | 2026-10-12 - Phase 2 integrated, integration review fixed and re-reviewed; gate, PR and Windows CI next |
 | Engagement      | Full (provider adapters, downloads, signed catalogue, external services) |
 | Working branch  | `main-axuse`, restarted from `main` @ `b490e50` (PR #37 merge) |
 | Skills          | auto-build, lead-orchestrator, careful-coding, Research-Kit 0.9.5 |
@@ -17,14 +17,14 @@
 | 2 Requirements | DONE (Phase 1, Phase 2) | REQUIREMENTS-P1.md, REQUIREMENTS-P2.md | 2026-10-12 |
 | 3 Design | DONE (phase plan; Phases 1 and 2 in full) | docs/specification/more-models.md, docs/specification/more-models-phase2.md; DECISIONS-P2.md, BREAKDOWN-P2.md, DAY-ONE-P2.md, USER-DECISIONS-P2.md | 2026-10-12 |
 | 4 Mandate | DONE: user, 2026-10-11, "you have full access. continue"; the lead took the recommended option for each held question (no one approved them individually) | MANDATE.md | 2026-10-11 |
-| 5 Build | Phase 1 MERGED (PR #39, `05221ad`); Phase 2 design ACTIVE | units below | 2026-10-12 |
+| 5 Build | Phase 1 MERGED (PR #39, `05221ad`); Phase 2 INTEGRATED and REVIEWED on `main-axuse` | units below | 2026-10-12 |
 | 6 Harden | PENDING: break-test on `main` once Phase 2 merges (covering Phases 1-2), again before the final report. Phase 1 had the integration breaker in real Electron and a blind-spot sweep | - | - |
 | 7 Audit | PENDING: gap-audit with Stage 6's timing | - | - |
 | 8 Deliver and merge | PENDING | - | - |
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Phase 2 wave 2 running (workflow `mm-p2-wave2`, run `wf_6af35686-00a`): U4 in `wt/mm-p2-u4` off `3e88117`, then U5 on U4's accepted head. Next: integrate U4 and U5, the integration review (all four roles; reviewers read `e2e/`), docs (D-1, D-2), the pinned gate, the PR, Windows CI, merge.
+Phase 2: pinned Linux gate on the head, draft PR, Windows CI green on the exact head, merge (method merge), fast-forward `main-axuse`. Then the rename PR (Moonzila -> MoonAliza display name).
 
 ## Task statement
 User, 2026-10-04: "Can we add more models to moonzila?" then "add it as its own task after Task 5. Yes". User, 2026-10-05: "continue"; chose "More models" as the next task and "I'll add a new key" for research collection.
@@ -63,7 +63,7 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 | P2-U2 transport seam | `src/main/inference.ts` (except U0/U4 lines), `tests/provider-transport.test.ts` (except U0), the D10 harness (scratchpad) | INTEGRATED, REVIEWED (3 rounds: S2 x3, S3 x3; ACCEPT); D10: commit 3 stays | `4925675..72dff35` as `0337f69..ed70e78` on main-axuse | session model |
 | P2-U3 Anthropic adapter | `src/main/anthropic.ts`, `tests/anthropic.test.ts`, `tests/fixtures/anthropic-state-refusals.ts` | INTEGRATED, REVIEWED (3 rounds, then the live follow-up: U3-W1 closed, seven live recordings pinned byte for byte, ACCEPT) | `816c941..d19f842` as `90c7727..cc77893` on main-axuse | session model |
 | P2-U4 main wiring and profile option | `src/main/provider-screen.ts`, the kind table and `profile.test` in `src/main/inference.ts`/`index.ts`, `src/renderer/App.tsx`, README, `tests/provider-screen.test.ts`, `tests/anthropic-transport.test.ts`, `tests/workbench.test.tsx` | INTEGRATED, REVIEWED (1 round, ACCEPT, S4 x5); U4-R4 and U4-R5 fixed by the lead (`797123d`, `cd83bd3`), U4-R3 recorded for later | `b1e8550..bbc14aa` on main-axuse | session model |
-| P2-U5 Windows e2e | `e2e/anthropic.spec.ts`, `e2e/fixtures/anthropic-fake.ts`, the workbench block | INTEGRATED, REVIEWED (1 round, ACCEPT, S4 x3); U5-R2 fixed by the lead (`763f694`), U5-R1 recorded as built, U5-R3 recorded for later | `0e96f1f`, `2d3fa59` on main-axuse | session model |
+| P2-U5 Windows e2e | `e2e/anthropic.spec.ts`, `e2e/fixtures/anthropic-fake.ts`, the workbench block | INTEGRATED, REVIEWED (1 round, ACCEPT, S4 x3); U5-R2 fixed by the lead (`763f694`), U5-R1 recorded as built, U5-R3 fixed (`c540092`) | `0e96f1f`, `2d3fa59` on main-axuse | session model |
 
 ## Discovery (reports/discovery-1.json, five mappers and a critic, 2026-10-05)
 - Only `openai-compatible` and `ollama` run; `anthropic` and `openai-responses` are declared but throw NOT_IMPLEMENTED (`src/main/inference.ts:142-143`), and the profile form offers only the two that run (`src/renderer/App.tsx:266`). The plan's "already reaches many models through profiles (ollama, openai-compatible, openai-responses, anthropic)" overstates what works.
@@ -101,6 +101,14 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 | MM-2 | lead | process | a command the user rejected had already written `plan-4.json` into the shortlist corpus before the rejection; no collection ran (ledger unchanged at 38 entries) | the file was removed on 2026-10-10 and the decision is recorded in the corpus |
 | MM-3 | lead | process | two commit messages first stated wrong counts (17/3 instead of 18/2 unknowns; "four rows" instead of three rows and one half) | corrected before push from the contract's own rows |
 | MM-1 | discovery | docs | the plan's "More models" entry says four profile kinds reach models; two are unimplemented | FIXED: dated correction under the entry, with pointers to the discovery and the two research projects |
+| P2-SPEC-1 | integration review | S2 | hint/README "not yet checked against the live API" stale after the probes | FIXED `cd83bd3` |
+| P2-SPEC-2 | integration review | S2 | D-1/D-2 docs owed (As built, section 8, Recorded for later, AGENTS.md row, development status, HANDOFF, RUN.md, "have not run") | FIXED `8127c98`, `080795e`, `5d91a95`, this ledger |
+| P2-MUT-1 | integration review | S2 | nothing pinned that complete() hands post() the kind's own deadline | FIXED `48dd054` (mutation red) |
+| P2-SPEC-3 | integration review | S3 | workbench no-cookie assertion had no positive control | FIXED `c540092` |
+| P2-IR-1 | integration review | S3 | tool-call screen read JSON text only; an escaped secret passed in chat kinds | FIXED `23545c3`, `9113f3d` (red-first) |
+| P2-BRK-1 | integration review | S3 | short placeholder vault values fail Anthropic tool steps | KNOWN LIMIT (spec section 6, README); screen change recorded for later |
+| P2-SPEC-4, -5, BRK-2..6, IR-2..4, MUT-2, -3 | integration review | S4 | see `reports/p2-integration-review.json` | RECORDED (As built / Recorded for later) or FIXED (`5d91a95`: interim ARCHITECTURE clauses) |
+| RR-1..RR-5 | re-review of the fixes | S3/S4 | stale U5-R3 notes; this ledger; README placeholder sentence; small doc points; tab case | FIXED (this commit, `9113f3d`) |
 
 ## Log
 - 2026-10-05: started. Branch restarted from `main` (`main-axuse` held only merged history). Discovery workflow launched: five read-only mappers (profiles, catalogue, selection, existing research, specs and tests) and a completeness critic.
@@ -133,3 +141,4 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 - 2026-10-12: user: product name Selunara (the full check found CAUTION; the user's own USPTO search then found SÉLUNARA, serial 99190611, live, Class 41 coaching, which the Justia index had missed - recorded in the Selunara project); no extra cloud sessions (one session, two agents at a time on this 4-CPU container).
 - 2026-10-12: U3 live follow-up (`reports/p2-u3-live.json`): every live fact passed on the unchanged adapter; tests only (U3-W1, seven recordings byte-pinned, two review findings); ACCEPT. U3 integrated (18 commits; the commit gate refused the first pick because keeping our side of the ARCHITECTURE conflict left no ARCHITECTURE change staged beside a `src/` change; resolved by adding each commit's own ARCHITECTURE delta). U3 review S4 notes fixed (`3e88117`: `.gitattributes` keeps the live fixtures byte-exact; header; the probe report's padding description corrected). Checks on `3e88117`: typecheck, lint, 6 files 438 tests green. Wave 2 launched.
 - 2026-10-12: wave 2 returned (`reports/p2-wave2-workflow.json`, 4 agents): U4 and U5 each ACCEPT in one round, S4 notes only. Integrated and pushed through `2d3fa59`; `8127c98` adds the AGENTS.md provider-state row (D-2) and the development status. Integration review launched on `2d3fa59` (spec, breaker in real Electron, invariants, mutation; all read e2e/). The container restarted mid-review; the workflow was resumed from its journal (`wf_06c97f06-79e`). Lead docs while it runs: spec "As built (Phase 2)" and the Recorded-for-later items (`080795e`); U4-R5 hint wording (`cd83bd3`), U4-R4 inline style (`797123d`), U5-R2 guard names (`763f694`), each red-first where a test applies. Windows CI run 38263208706 on `2d3fa59` in progress; `763f694` pushed.
+- 2026-10-12: integration review returned (`reports/p2-integration-review.json`; spec, breaker in real Electron, invariants, mutation 124/128 killed; pinned gate at `2d3fa59`: 74 failed, all baseline). Three S2 and three S3 fixed red-first where code (`48dd054`, `23545c3`, `c540092`) or in docs (`cd83bd3`, `080795e`, `5d91a95`); P2-BRK-1 documented as a known limit. Refute-first re-review of `2d3fa59..5d91a95`: code fixes hold (mutations red, Electron probe verified), FIX for docs RR-1..RR-4 and one test case RR-5, all fixed here and in `9113f3d`.

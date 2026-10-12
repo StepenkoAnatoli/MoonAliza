@@ -689,7 +689,8 @@ l.830; contradiction 13), and it would not check the configured ceiling. *Known 
 an Anthropic tool step's text, thinking or tool input fails the step where other kinds redact the text;
 it is how tool calls are already treated. The match is a plain substring of every stored vault value, so
 a short placeholder key saved for another profile (`ollama`, `EMPTY`) that appears in a step's thinking
-or text, or equals a key of the state (`type`, `text`), fails every such step (integration review
+or text, or occurs in any key or string leaf of the state (`type`, `text`, `tool_use`, `direct`), fails every
+  such step; the same word in any kind's tool calls fails that step by the JSON-text rule, as before Phase 2 (integration review
 P2-BRK-1; README). (2) A thinking model that does not finish "Reply with OK."
 within 25 s fails Test connection although chat would work, with the generic text above; D7 measures
 it, and the remedy then is a per-kind test timeout or budget. (3) Test connection cannot say which
@@ -1142,8 +1143,9 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   rather than leaving it to U2, so no commit leaves it stale; U4's S-3 main-side pin (`bbc14aa`) landed
   after the registration that makes it reachable, and it passes on the code before U4 too, so it pins
   existing behaviour (U4-R2); `AnthropicHint` spaced its lines with an inline style (U4-R4, see below);
-  U5's local-session positive control reads the stored cookie (`cookies.get`) rather than sending a
-  probe (U5-R3), and its assertion was shown red with `credentials: 'omit'` removed; the `tools` half of
+  U5's local-session positive control read the stored cookie (`cookies.get`) rather than sending a
+  probe (U5-R3), and its assertion was shown red with `credentials: 'omit'` removed; a probe sent without
+  `omit` replaced it in `c540092` (P2-SPEC-3); the `tools` half of
   U5's `system`/`tools` equality was proven by the reviewer's own mutation (tools reversed on step 2),
   not the builder's (U5-R1).
 - Fixed after the integration review (`reports/p2-integration-review.json`): the hint's live-API sentence
@@ -1169,7 +1171,7 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   joined signal as `stop` (unobservable: no wait can end at or after the deadline), and two early exits in
   `toolCallsOutcome` (an unsigned thinking block, no `tool_use` block) that `parseAnthropicState` and
   `InferenceToolCallsSchema` enforce again with the same outcome.
-- The inference grant still lasts 125 s (`index.ts:102`), sized for 120 s, while an `anthropic` call and
+- The inference grant still lasts 125 s (`index.ts:103`), sized for 120 s, while an `anthropic` call and
   its retries can last 600 s; `withSecret` checks the grant on entry only, so the key stays in
   `Authorization` inside the callback, but the grant's expiry no longer bounds its use (P2-IR-4, F-22).
 - What the tests do not reach: the Anthropic e2e journey stops at "Trust and open" on Linux (the
@@ -1225,11 +1227,13 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   in Test connection whatever label is stored (P2-IR-2); size the inference grant from the kind's
   `timeoutMs` or check it before each retry (P2-IR-4); make the history reserve's trimming linear
   (P2-BRK-2, quadratic since before Phase 2); count the replayed content, not its escaped data string
-  (P2-BRK-6); add `e2e/` to `npm run lint` (P2-SPEC-5 (e)); confirm whether "128K output tokens" is
+  (P2-BRK-6); add `e2e/` to `npm run lint` (P2-SPEC-5 (e)); one `vault.redact` pass for both forms of the
+  tool calls, which now decrypts the vault twice per tool step (RR-5); a control to clear a saved key
+  (the form keeps it on a blank Edit, and nothing sends `clearCredential`); the README's "must be sent back
+  unchanged" against D5f, where this account accepted a changed system prompt with signed thinking: kept,
+  because Anthropic requires it for newer accounts and the design stays append-only (P2-SPEC-5 (c)); confirm whether "128K output tokens" is
   128,000 (Haiku's "64K" was 64,000) and cap the form's maximum response per kind (P2-SPEC-5 (a)).
 - Anthropic's compatible route was checked on Sonnet 5.5 only, with a reduced U-06 set (10 prompts);
   the full set (20 or more per model, Opus and Fable too) is Phase 4 input. Replaying re-serialized tool
   input was accepted with string arguments only; integer-like key order and number normalisation are
   not exercised.
-- U5's workbench fake: if it gains a 204 branch, replace the local-session positive control
-  (`cookies.get`) with a probe sent without `omit` (U5-R3).
