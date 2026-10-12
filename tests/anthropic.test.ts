@@ -736,6 +736,25 @@ describe('encodeAnthropic', () => {
     expect(encoded[2]).toEqual({ role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_b', content: 'two' }, { type: 'tool_result', tool_use_id: 'toolu_a', content: 'one' }] });
   });
 
+  test('ends a run of tool results at the next assistant step: two tool steps give two tool_result user messages, in order', () => {
+    // A multi-step run: step 1 calls one tool, step 2 calls two. Guard: a run ends at any message that is not a tool
+    // result (mutation: delete `results = undefined;`; the second run then joins the first run's user message, the
+    // request ends on an assistant message and is refused as INVALID_INFERENCE_REQUEST).
+    const first = call('toolu_a'); const second = call('toolu_b', { path: 'src' }); const third = call('toolu_c', { path: 'docs' });
+    const messages: InferenceMessage[] = [
+      { role: 'system', content: 'S' }, { role: 'user', content: 'Go' },
+      toolStep([useBlock(first)], [first]), result(first, 'one'),
+      toolStep([useBlock(second), useBlock(third)], [second, third]), result(second, 'two'), result(third, 'three'),
+    ];
+    expect(JSON.parse(encode(messages, [REFUSAL_TOOL])).messages).toEqual([
+      { role: 'user', content: 'Go' },
+      { role: 'assistant', content: [useBlock(first)] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_a', content: 'one' }] },
+      { role: 'assistant', content: [useBlock(second), useBlock(third)] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_b', content: 'two' }, { type: 'tool_result', tool_use_id: 'toolu_c', content: 'three' }] },
+    ]);
+  });
+
   test('sends a state\'s content array unchanged, extra block fields and key order included', () => {
     // Guard: the received blocks are sent, not rebuilt (mutation: rebuild each block from its documented fields only).
     const item = call('toolu_01');
