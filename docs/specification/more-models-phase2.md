@@ -12,9 +12,10 @@ and SL-E17: Anthropic's commercial terms and API data-retention page).
 "E-nn l.N" is line N of that row's capture, "SL-Enn l.N" a line of the shortlist row's capture. Code
 lines are at `3bba21c`.
 
-Anthropic's live probes (the Anthropic parts of wire U-18) have not run: no key reached the probe
-session. Nothing below depends on a probe; every fact only a probe can show is in "Day one" below, with
-the behaviour until then.
+Anthropic's live probes (the Anthropic parts of wire U-18) had not run when this was written: no key had
+reached the probe session. Nothing below depends on a probe; every fact only a probe can show is in "Day
+one" below, with the behaviour until then. They ran on 2026-10-12, after the build began; "As built
+(Phase 2)" records the outcomes.
 
 Two departures from the wire brief, each decided below: the slot does not go "through the wire-state
 store" (Decision step 1) in this phase, because nothing in Phase 2 reads state across runs (section 1);
@@ -686,7 +687,10 @@ against it and the 600 s timeout.
 *Set aside:* `min(outputTokens, 1024)`: 1,024 is only the legacy extended-thinking minimum (E-09
 l.830; contradiction 13), and it would not check the configured ceiling. *Known limit:* (1) a secret in
 an Anthropic tool step's text, thinking or tool input fails the step where other kinds redact the text;
-it is how tool calls are already treated. (2) A thinking model that does not finish "Reply with OK."
+it is how tool calls are already treated. The match is a plain substring of every stored vault value, so
+a short placeholder key saved for another profile (`ollama`, `EMPTY`) that appears in a step's thinking
+or text, or equals a key of the state (`type`, `text`), fails every such step (integration review
+P2-BRK-1; README). (2) A thinking model that does not finish "Reply with OK."
 within 25 s fails Test connection although chat would work, with the generic text above; D7 measures
 it, and the remedy then is a per-kind test timeout or budget. (3) Test connection cannot say which
 refusal it met (an over-maximum `max_tokens`, D7; a multi-workspace key, D9): naming one needs a public
@@ -761,7 +765,9 @@ native API and would not cover other servers.
 *Known limit:* (1) multi-workspace keys do not work, and the error they get is not captured (D9);
 (2) an `anthropic` profile saved through IPC before this phase with a loopback endpoint carries
 `local` and is now refused by `infer()` with INVALID_ENDPOINT (`index.ts:93-94`) until saved again;
-nothing is deleted, and the form never offered the kind.
+nothing is deleted, and the form never offered the kind. The engine's own local-only checks read the
+stored label, so such a run is admitted and stored before main refuses it, and Test connection uses
+the session the stored label picks (P2-IR-2, P2-SPEC-5 (d)); no byte leaves the machine.
 
 ### 8. Privacy and invariants
 
@@ -815,7 +821,8 @@ the `profile.test` warning for Ollama cloud); a `login` handler for proxy or ser
 
 ### Day one
 
-The Anthropic parts of wire U-18 have not run. Each item below needs the user's Anthropic key in a probe
+The Anthropic parts of wire U-18 had not run when this was written (they ran on 2026-10-12; outcomes in
+"As built (Phase 2)" and `docs/evidence/2026-10-12-anthropic-probes.md`). Each item below needs the user's Anthropic key in a probe
 session on the collector machine, synthetic prompts only, results to `docs/evidence/`, under a US$3
 spend cap (per-item estimates in `docs/orchestration/2026-10-05-more-models/DAY-ONE-P2.md`); D10 needs no vendor and runs at the end of wave 1,
 before U4 and U5 are briefed (section 4). The full
@@ -1139,6 +1146,32 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   probe (U5-R3), and its assertion was shown red with `credentials: 'omit'` removed; the `tools` half of
   U5's `system`/`tools` equality was proven by the reviewer's own mutation (tools reversed on step 2),
   not the builder's (U5-R1).
+- Fixed after the integration review (`reports/p2-integration-review.json`): the hint's live-API sentence
+  (P2-SPEC-1, U4-R5, `cd83bd3`); these notes (P2-SPEC-2); the tool-call screen now also reads the calls'
+  keys and string leaves, so a secret holding `"` or `\` cannot hide behind JSON escaping in any kind
+  (P2-IR-1, `23545c3`); a test that `complete()` hands `post()` the kind's own deadline (P2-MUT-1,
+  `48dd054`); a positive control for the workbench's no-cookie assertion (P2-SPEC-3, `c540092`).
+- Fail-closed cases the design did not spell out (P2-SPEC-4): `readAnthropic` refuses with
+  PROVIDER_INVALID_RESPONSE a data payload that is not an object with a string `type` (even under
+  `event: ping`), a `content_block_start` whose block has no string type, a delta on a known block whose
+  `type` is missing or not a string, and a non-null `stop_reason` that is not a string; a usage count that
+  is not a non-negative safe integer is ignored, and an input sum past the safe integers leaves usage
+  unset; a state whose data is not JSON is PROVIDER_PROTOCOL_ERROR at the screen. S-5's "only the owning
+  adapter parses it" has one other reader by design: main's screen parses any format's data to walk its
+  leaves (section 6).
+- Behaviour the breaker measured and left (P2-BRK-3, -4, -5, -6): the 600 s deadline, retries used up on
+  a 529 and an Electron stream cut all reach the user as the generic PROVIDER_ERROR text; a stream that
+  ends cleanly before any text block is an empty incomplete answer, stored and not shown (as for every
+  kind); a bare-CR stream fails (the Phase 1 `lines()` limit); the whole-replay estimate counts the
+  state's data as an escaped string, so thinking with many quotes or newlines is overestimated (the error
+  is conservative: a frozen run can stop early, never overflow).
+- Mutation (P2-MUT-2, -3): 124 of 128 mutations killed. Equivalent survivors: `complete()` passing the
+  joined signal as `stop` (unobservable: no wait can end at or after the deadline), and two early exits in
+  `toolCallsOutcome` (an unsigned thinking block, no `tool_use` block) that `parseAnthropicState` and
+  `InferenceToolCallsSchema` enforce again with the same outcome.
+- The inference grant still lasts 125 s (`index.ts:102`), sized for 120 s, while an `anthropic` call and
+  its retries can last 600 s; `withSecret` checks the grant on entry only, so the key stays in
+  `Authorization` inside the callback, but the grant's expiry no longer bounds its use (P2-IR-4, F-22).
 - What the tests do not reach: the Anthropic e2e journey stops at "Trust and open" on Linux (the
   Windows-only helper), so the whole journey, the workbench journey and the provider-session check on
   the run's two requests are seen only on Windows CI. The app itself has not sent a request to the live
@@ -1187,6 +1220,13 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   earlier answer was invented (D6, quoted in "As built"). Keeping a compact record of the tools a run
   used, or replaying its tool turns, is a quality change across every kind, decided with the
   persisting-state phase.
+- From the integration review: skip short or common vault values in the state and content screen
+  (P2-BRK-1, today a known limit); treat `anthropic` as external in the engine's local-only checks and
+  in Test connection whatever label is stored (P2-IR-2); size the inference grant from the kind's
+  `timeoutMs` or check it before each retry (P2-IR-4); make the history reserve's trimming linear
+  (P2-BRK-2, quadratic since before Phase 2); count the replayed content, not its escaped data string
+  (P2-BRK-6); add `e2e/` to `npm run lint` (P2-SPEC-5 (e)); confirm whether "128K output tokens" is
+  128,000 (Haiku's "64K" was 64,000) and cap the form's maximum response per kind (P2-SPEC-5 (a)).
 - Anthropic's compatible route was checked on Sonnet 5.5 only, with a reduced U-06 set (10 prompts);
   the full set (20 or more per model, Opus and Fable too) is Phase 4 input. Replaying re-serialized tool
   input was accepted with string arguments only; integer-like key order and number normalisation are

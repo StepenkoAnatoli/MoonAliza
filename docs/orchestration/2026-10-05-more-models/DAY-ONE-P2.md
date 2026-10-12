@@ -1,6 +1,10 @@
 # Phase 2 day one: facts only a live Anthropic probe can confirm
 
-The Anthropic parts of wire U-18 have not run: the probe session of 2026-10-11 found no Anthropic key in
+Outcome (2026-10-12): the probes ran with the key under `MOONZILA_ANTHROPIC_API_KEY`; results in
+`docs/evidence/2026-10-12-anthropic-probes.md`, summarised in the spec's "As built (Phase 2)". The rest of
+this file is the plan as written before they ran.
+
+The Anthropic parts of wire U-18 had not run: the probe session of 2026-10-11 found no Anthropic key in
 its environment (RUN.md log), and the probes wait on the name of the variable the user saved the key
 under. This build session sends no prompt to any vendor (Mandate stop-list). Phase 2 is built and merged
 against fakes made from the captures (Mandate decision 7); nothing in the design depends on a probe's
