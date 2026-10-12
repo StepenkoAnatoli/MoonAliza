@@ -13,9 +13,10 @@ test('trusted project, encrypted profile, real IPC inference and durable history
   const data = join(directory, 'app-data'); await mkdir(data);
   // One status request per model step, before the chat request (the locality check runs in the real app).
   let statusRequests = 0; let chatRequests = 0;
-  const chatHeaders: Array<{ authorization?: string; cookie?: string }> = [];
+  const chatHeaders: Array<{ authorization?: string; cookie?: string }> = []; const probeCookies: Array<string | undefined> = [];
   const server = createServer((request, response) => {
     if (answerOllamaStatus(request, response)) { statusRequests++; return; }
+    if (request.method === 'GET' && request.url === '/cookie-probe') { probeCookies.push(request.headers.cookie); response.writeHead(204).end(); return; }
     if (request.url !== '/api/chat') { response.writeHead(404).end(); return; }
     chatRequests++; chatHeaders.push({ authorization: request.headers.authorization, cookie: request.headers.cookie });
     let content = '';
@@ -63,6 +64,10 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     const origin = `http://127.0.0.1:${port}`;
     await app.evaluate(async ({ session }, url) => { await session.fromPartition('moonaliza-local').cookies.set({ url, name: 'moonzila_e2e', value: 'local-session-cookie' }); }, origin);
     expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-local').cookies.get({ url })).map(cookie => cookie.name), origin)).toEqual(['moonzila_e2e']);
+    // Positive control: the same session sends that cookie to this origin when a request does not omit credentials, so
+    // the assertion below checks a cookie that would otherwise ride along (integration review P2-SPEC-3).
+    expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-local').fetch(url)).status, `${origin}/cookie-probe`)).toBe(204);
+    expect(probeCookies).toEqual(['moonzila_e2e=local-session-cookie']);
     await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByText('Fixture model response', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
