@@ -1,0 +1,53 @@
+{
+  "topic": "Can the MoonAliza Electron desktop app sign users in to GitHub (OAuth device flow or another desktop-suited flow), to Claude with a Claude.ai subscription account, and to OpenAI Codex with Sign in with ChatGPT, and use those sign-ins for repository access and model calls - or must third-party apps use API keys",
+  "notes": "Budget: at most 8 Firecrawl credits for the whole project (operator instruction, 2026-10-12). Owner pages named directly, no searches (a search costs more than a page and the owner pages are known). Run 1 collects the 7 pages below; run 2 adds the GitHub REST rate-limits page as the 8th page only if run 1 cost exactly 1 credit per page (checked with --status / doctor's balance between runs). Starting balance 290 credits. Run 1 (2026-10-12) collected 7 pages for exactly 7 credits (290 -> 283), so run 2 collects the REST rate-limits page; maxScrapes lowered to 1 for run 2 so the 7 cached pages cannot be re-fetched.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 1,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
+      "type": "P",
+      "why": "U-1, U-4: GitHub's OAuth App authorization flows - the device flow, how it is enabled, its polling and rate limits, and the web flow's loopback redirect for desktop apps"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps",
+      "type": "P",
+      "why": "U-2: which OAuth scope grants read access to private repositories, and whether a read-only private-repo scope exists"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app",
+      "type": "P",
+      "why": "U-1, U-3: GitHub App user access tokens - device flow for GitHub Apps, token expiry, refresh tokens"
+    },
+    {
+      "url": "https://code.claude.com/docs/en/legal-and-compliance",
+      "type": "P",
+      "why": "U-5: Anthropic's statement on authentication and credential use - whether third-party products may offer Claude.ai login or use Free/Pro/Max credentials"
+    },
+    {
+      "url": "https://code.claude.com/docs/en/agent-sdk/overview",
+      "type": "P",
+      "why": "U-5, U-6: Agent SDK authentication - API key requirement and any statement on claude.ai login in third-party products"
+    },
+    {
+      "url": "https://developers.openai.com/codex/auth",
+      "type": "P",
+      "why": "U-7: how Codex signs in with ChatGPT versus an API key, and any statement on third-party use of ChatGPT sign-in"
+    },
+    {
+      "url": "https://openai.com/policies/row-terms-of-use/",
+      "type": "P",
+      "why": "U-8: OpenAI's consumer Terms of Use - account sharing, automated access, and whether ChatGPT plan access may be used through third-party software"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "type": "P",
+      "why": "U-4: primary REST API rate limit for requests made with an OAuth app token or a GitHub App user access token (run 2, the 8th and last page of the 8-credit budget; run 1 cost exactly 7 credits, 290 -> 283)"
+    }
+  ]
+}
