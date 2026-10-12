@@ -1,0 +1,402 @@
+{
+  "summary": "Build the MoonAliza rename in four commits, review it refute-first from three angles, fix up to two rounds",
+  "agentCount": 6,
+  "logs": [
+    "builder returned",
+    "round 1: 3 blocking findings; verdicts ACCEPT, ACCEPT, FIX",
+    "round 2: 0 blocking findings remain"
+  ],
+  "result": {
+    "build": "The four commits are on `build/rename` in `/home/user/task5-handoff/wt/rename`. Nothing was pushed. Each commit passed its own checks, and the Linux full suite after commits 1 and 3 had exactly the 74 known failures and no new ones. To fix a revert conflict, I re-made commits 2–4 once (see \"What I got wrong\"). The earlier, unpushed shas were `7a1ad6a`, `ed1d219` and `a0fe48d`.\n\n## Commits (build/rename, on top of 0d2e965)\n1. `71e8490` rename(app): the product says MoonAliza again - UI, prompts, User-Agents, serviceName, comments, composer selectors (39 files)\n2. `c5b740c` rename(packaging): productName, package name and author go back to the released MoonAliza values (10 files)\n3. `5c0ec78` test(rename): test-only identifiers and test data go back to MoonAliza spelling, in coupled sets (59 files)\n4. `999e26c` docs(rename): current docs say MoonAliza, falsified records restored, decision 14, upgrade note (31 files, including this run's `RUN.md`)\n\nEvery commit uses the StepenkoAnatoli no-reply identity, has the five-part message and ends with the two required trailers. The research gate printed \"allow\" on every commit, and `--no-verify` was never used.\n\n## Commands and results\nAll run with Node 24.21.0, cwd `/home/user/task5-handoff/wt/rename`, default TMPDIR (as in `gate.sh`).\n\n- **Every commit:** `npm run typecheck`, `npm run lint`, `npx eslint e2e` and `node scripts/check-handoff.mjs` all exit 0.\n- **Commit 1 test files:** workbench, application, research-panel, research-panel-cancel-review, research-review-engine and research-panel-purge: 221 passed.\n- **Commit 2 test files:** `tests/check-fuses.test.ts` and `tests/handoff.test.ts`: 22 passed.\n- **Commit 4:** `tests/handoff.test.ts`: 3 passed.\n- **Full suite after commits 1 and 3** (`npx vitest run --reporter=json`, compared with `compare.py`):\n  - 1542 tests: 1462 passed, 74 failed, 6 skipped (Windows-only).\n  - The 74 failures are exactly the baseline. No new failure, no file without results.\n  - After commit 3, no new `moonaliza-`/`moonzila-` folders were left in the temp directory.\n  - The final commit 3 tree differs from the one the suite ran on only in `docs/ARCHITECTURE.md`.\n- **Revert test:**\n  - `git merge-tree --write-tree --merge-base=<c> HEAD <c>^` reports 0 conflicts for each of the four commits.\n  - `git revert --no-commit` of commit 1 alone, and of commit 2 alone: typecheck passes and the touched tests pass (149 passed). Both were aborted afterwards.\n- **Restored text:** 54 lines in commit 3 and 85 in commit 4 equal their `e7cdd4a^` line exactly. The other changed lines are text written after October 4, or new notes.\n\n## Guard proofs\nOne side of each group was reverted, then restored byte for byte.\n- **Composer label:**\n  - Only the `tests/workbench.test.tsx` selectors reverted: 6 tests red.\n  - Only `App.tsx:235` reverted: the same 6 red.\n- **Data-use hint:** only the test copy reverted, or only `App.tsx:259` reverted: 2 red.\n- **Engine failure texts:**\n  - Test copy at `application.test.ts:79`: 1 red.\n  - Test copy at `:292`: 1 red.\n  - Test copy at `:360`: 2 red.\n  - Source only (`application.ts:45` and `:414`): 4 red.\n- **Research panel:**\n  - `research-panel.test.tsx:119`: 1 red.\n  - `:429` and `:456`: 2 red.\n  - `research-panel-cancel-review.test.tsx:33`: 1 red.\n  - `ResearchPanel.tsx` only: 2 red.\n  - `research-text.ts:143` only: 2 red.\n- **System prompt and `anthropic-fake.ts`:** e2e needs Windows, so I ran the real fake in Node with tsx, taking the prompt from `application.ts`. The renamed fake refuses the old prompt with \"the system prompt is not the Ask-mode prompt\"; the old fake refuses the new prompt the same way. Matching pairs are accepted.\n- **productName:**\n  - `check-fuses.test.ts:174` not renamed: 1 red.\n  - `electron-builder.yml` left at Moonzila: 2 red.\n  - `windows.yml` paths not renamed: 2 red.\n  - `check-fuses.mjs` default path not renamed: 1 red.\n- **Bridge messages (no guard):** reverting `bridge.ts`, or its mocked copies in `research-panel.test.tsx`, stays green, because the asserts use regexes without the name.\n- **Commit 3 couplings:**\n  - `provider-transport.test.ts:365` reverted alone: the 3 byte-exact request snapshots go red.\n  - `file-read.test.ts:187` reverted alone: 3 red.\n  - github-tls pair: with a mutation that removes the fake's start-failure cleanup, matched prefixes turn the leak test red; with only the fixture renamed, the same mutation stays green. The mutation left two temp folders, which I removed.\n  - The e2e-only couplings (collector global, cookie, github-reading text, marker ids) were checked by reading only.\n- **No test at all:** window title, brand, User-Agents, `serviceName`, the folder-free prompt, and the package.json/package-lock.json name pair.\n\n## Remaining occurrences (20 lines)\nFrom `git grep -n -I -i moonzila -- . ':!docs/orchestration' ':!docs/research' ':!docs/evidence'`. Code paths (src, scripts, tests, e2e, .github, packaging files) have none.\n\n**R-10 keeps (dated records):**\n- `HANDOFF.md:25` – the dated October 3 paragraph, including its `Moonzila.exe` sentence.\n- `decisions.md:17` – decision 12 (R-10/R-12).\n- `decisions.md:21` – decision 13's `Moonzila.exe` (R-12).\n- `more-models.md:3` – October 4 user request.\n- `operate-mode.md:5` and `:13` – October 3 request and rename record.\n- `2026-10-02-research-jobs.md`:\n  - `:251` – e3e55d5 progress line.\n  - `:352` – PR #31 watch.\n  - `:401` – October 4 request.\n  - `:420` – the current naming decision.\n  - `:432`, `:435`, `:437`, `:438` – October 4 request and \"What is fixed by the request\".\n  - `:440` – October 12, \"Selenic, formerly Moonzila\".\n\n**New sentences that name the old name on purpose:**\n- `decisions.md:23` – decision 14 (R-12).\n- `README.md:32` – the upgrade note (R-5).\n- `HANDOFF.md:27` – superseding note (R-12, R-13, and the `MOONZILA_ANTHROPIC_API_KEY` mention under R-10).\n- `docs/ARCHITECTURE.md:48` – rename history (R-10/R-13).\n- `docs/development-status.md:13` – \"shown as Moonzila (decision 12)\" (R-10).\n\nThe brief says every remaining line should be an R-10 keep. Those last five lines are new text under R-5, R-12 and R-13, not old records.\n\n## DECISIONS items not applied as written, or judgement calls\n1. **R-11 evidence file:** `docs/evidence/model-store-runtime.json` already equals its `e7cdd4a^` bytes (5082167 restored it), so there was nothing to change.\n2. **Exe-path docs in commit 2:** commit 2's \"docs that name the exe path\" covered only `research-journeys.md`. `HANDOFF.md:25`, decision 13 and `research-jobs.md:251` are dated, so I kept them. HANDOFF gets a superseding note in commit 4 that says the workflow now expects `MoonAliza.exe`.\n3. **R-10 boundary in the research-jobs plan:**\n   - I kept `:435` and `:437` with the dated October 4 request they belong to. The scout had marked them for renaming; the lead may prefer to rename them.\n   - I renamed `:416` and `:460`, which are undated plan prose.\n   - I kept `operate-mode.md:5`, a dated October 3 request, although the scout proposed renaming it.\n4. **`README.md:24`:** the whole line changed in commit 1, because the Anthropic hint quote shares the line with three other product names and a line cannot be split between commits.\n5. **`verify-research-kit.ts`:** its console line (not a comment) went into commit 2 with the other scripts.\n6. **Forward reference:** commit 1's ARCHITECTURE paragraph names decision 14, which only lands in commit 4. Reverting commit 4 alone would leave that reference dangling.\n7. **development-status wording:** in the undated product-name sentence I changed \"Verification for this change\" to \"Verification for the October 3 change\", so it is clear which change it means.\n8. **Bridge-message group:** DECISIONS lists it as a lockstep group, but no test can detect drift there. Adding a guard would be a separate test change.\n\n**Not run:** Windows CI, the e2e journeys, the packaged build, and the installer upgrade behaviour (R-5). The README note says this was read from the installer scripts and not yet tried on Windows.\n\n## What I got wrong\n- **Mistake:** commit 2's \"Packaged names\" paragraph was first inserted right after \"Packaged code loading\". Because of that, reverting commit 1 alone conflicted in `docs/ARCHITECTURE.md`.\n- **Where:** `docs/ARCHITECTURE.md`, in the first version of commit 2 (`7a1ad6a`, never pushed).\n- **Impact:** `git revert` of commit 1 alone stopped with a content conflict, which breaks the revert test. No code was affected and nothing had been delivered.\n- **Cause:** git placed the inserted paragraph directly before the review-run line, which commit 1 changes, so the two changes touched.\n- **Fix:** I moved the paragraph to before \"Desktop verification\", whose neighbouring lines no other commit changes. I re-made commits 2–4 on `71e8490` and pointed `build/rename` at the new head. Against the old commits, only the paragraph's position and the commit ids in `RUN.md` differ.\n- **Verified:** `merge-tree` shows 0 conflicts for each of the four commits. Actually reverting commit 1 alone, and commit 2 alone, keeps typecheck and the touched tests green. `check-handoff` and `tests/handoff.test.ts` pass on each re-made commit.\n\nContract and scout report: `/home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md`, `.../reports/scout.json`. Updated run ledger: `.../RUN.md`. Scratch scripts, logs and suite JSON are in `/tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/rename/` (`c1.py`–`c4.py`, `guard.sh`, `probe-fake.mts`, `full-c1.json`, `full-c3.json`, `guards/*.log`).",
+    "history": [
+      {
+        "round": 1,
+        "reviews": [
+          {
+            "verdict": "ACCEPT",
+            "findings": [
+              {
+                "id": "F1",
+                "severity": "S4",
+                "problem": "Commit 1 (71e8490) rewrites docs/ARCHITECTURE.md:48 (line 46 before c5b740c) to say that the package name, productName and author, and the test-only identifiers, are 'MoonAliza again'. Those changes only land in commits 2 (c5b740c) and 3 (5c0ec78). So in the commit-1 tree, or after reverting c5b740c or 5c0ec78 alone, the architecture map claims something the tree contradicts. The builder disclosed only the forward link to decision 14.",
+                "evidence": "git show 71e8490 -- docs/ARCHITECTURE.md adds: 'it also changed ... the package `name`, `productName` and `author` (so the exe, installer, install folder and shortcut names) and test-only identifiers, and each of these is MoonAliza again'. At 71e8490, package.json still reads \"name\": \"moonzila\" and the tests still use moonzila- prefixes. The builder's report item 6 mentions only the decision-14 link. merge-tree shows no revert conflicts, so this is a docs-accuracy issue only. The final tree is correct.",
+                "fix": "Either drop the packaging and test-identifier clause from commit 1's sentence (commit 2's 'Packaged names' paragraph already covers packaging, and decision 14 lists the test identifiers), or keep it and say in the PR description that this paragraph describes the whole series. Fixing it is optional: the merged result is accurate."
+              },
+              {
+                "id": "F2",
+                "severity": "S4",
+                "problem": "Two equivalent paragraphs from e7cdd4a are handled differently. HANDOFF.md:25 is kept in the present tense with a superseding note at :27. development-status.md:13, an equally undated present-tense statement of decision 12, is rewritten to the current name. As a result the start-here document still opens that topic with two sentences that are now false ('The product is now called **Moonzila**', 'The Windows workflow expects `release/win-unpacked/Moonzila.exe`'), corrected only by the next paragraph. The builder calls :25 a 'dated October 3 paragraph', but its text carries no date. The note that corrects the exe path is in commit 4, although DECISIONS puts 'docs that name the exe path' in commit 2. The builder disclosed this as judgement call 2.",
+                "evidence": "git grep at build/rename: HANDOFF.md:25 'The product is now called **Moonzila** ... The Windows workflow expects `release/win-unpacked/Moonzila.exe`'; HANDOFF.md:27 'Superseded October 12 ...' (added in 999e26c). development-status.md:13 was rewritten in 999e26c. git log -L25,25:HANDOFF.md shows the line was written by e7cdd4a and 5082167.",
+                "fix": "Lead's call. It is acceptable as it stands, because the superseding note follows directly, as the scout suggested for HANDOFF:25. If the lead prefers consistency, handle both paragraphs the same way."
+              },
+              {
+                "id": "F3",
+                "severity": "S4",
+                "problem": "R-10 boundary calls the lead should confirm. In the research-jobs plan, lines :435 and :437 (bullets under the October 4 self-unblocking request) and line :401's second sentence ('Today Moonzila already reaches many models...') are kept. operate-mode.md:5 is kept, although the scout proposed renaming it. more-models.md:9 ('## Where MoonAliza starts (discovery, October 5)'), a similar dated descriptive heading, was renamed. Each choice can be defended under R-10/R-9, and the builder flagged the plan and operate-mode ones.",
+                "evidence": "git log -L shows plan :432/:435/:437 written in 2567d42 (Oct 4), :438 in c2494b3 (Oct 4), :401 in f1a05a1 (Oct 4), and operate-mode.md:5 in 07f030c (Oct 4). 999e26c renamed more-models.md:9.",
+                "fix": "No change is needed unless the lead wants the 'What is fixed by the request' bullets treated as current plan prose, in which case rename :435 and :437 only."
+              },
+              {
+                "id": "F4",
+                "severity": "S4",
+                "problem": "The brief asks that every remaining line be an R-10 keep. Five remaining lines are new sentences that name the old name on purpose: decisions.md:23 (decision 14), README.md:32 (the R-5 note), HANDOFF.md:27, docs/ARCHITECTURE.md:48 and docs/development-status.md:13. R-5, R-12 and R-13 require them, and they are accurate history. The builder reported this openly.",
+                "evidence": "The grep returns 20 lines. 15 are dated records that check out under R-10/R-12 (each traced with git log -L). The other 5 are the new history sentences listed above.",
+                "fix": "None. The lead should accept these as intended, or reword the brief's rule."
+              },
+              {
+                "id": "F5",
+                "severity": "S4",
+                "problem": "R-5 also asks for the upgrade note in the PR, which does not exist yet. The scout's critic added that the upgrade notes should name the uninstaller file 'Uninstall Moonzila.exe' and the stored ShortcutName. The README note does not mention them.",
+                "evidence": "DECISIONS R-5 says 'a note in the PR and README'. scout.json critic.missedOccurrences[1] proposes listing them 'in the PR's upgrade notes'.",
+                "fix": "When the lead opens the PR, include the R-5 note in the description, with the uninstaller and ShortcutName detail."
+              },
+              {
+                "id": "F6",
+                "severity": "S4",
+                "problem": "development-status.md:13 changes more than the name. 'Verification for this change' becomes 'Verification for the October 3 change' in a sentence that records verification of the earlier rename. The new wording is accurate and the builder disclosed it (judgement call 7).",
+                "evidence": "git show 999e26c -- docs/development-status.md, hunk at line 13.",
+                "fix": "None needed. Note it in the PR."
+              }
+            ],
+            "checked": [
+              "git log --oneline 0d2e965..build/rename -> exactly 4 commits, 71e8490, c5b740c, 5c0ec78 and 999e26c, in the DECISIONS order. build/rename = HEAD = 999e26c. The worktree is clean (only the untracked .build and node_modules symlinks). Stash is empty.",
+              "git show --stat on each commit: 39 / 10 / 59 / 31 files, matching the builder's report.",
+              "(a) git grep -n -I -i moonzila -- . ':!docs/orchestration' ':!docs/research' ':!docs/evidence' -> 20 lines, the same as the builder listed. Each one was traced with git log -L: 15 are dated records under R-10/R-12 (decision 12 and decision 13, HANDOFF:25, more-models:3, operate-mode:5 and :13, plan :251, :352, :401, :420, :432, :435, :437, :438, :440). 5 are new history sentences required by R-5, R-12 and R-13. There are no hits in src, scripts, tests, e2e, .github or the packaging files.",
+              "git grep -a -l -i moonzila (binary-inclusive) -> only the same 8 docs files. git ls-tree -r --name-only | grep -i moonzila -> no file names.",
+              "Every file that named Moonzila at 0d2e965 (121 files outside the excluded dirs) is in the changed set. The only changed file that did not name Moonzila is this run's RUN.md.",
+              "(b) git diff --stat 0d2e965..build/rename -- docs/orchestration -> only docs/orchestration/2026-10-12-moonaliza-rename/RUN.md. -- docs/research, docs/evidence, tests/fixtures/anthropic-live, docs/handoff, docs/releases and research -> empty. git diff --numstat shows no binary file changed. The only file under tests/fixtures that changed is github-tls.ts.",
+              "git diff e7cdd4a^ 0d2e965 -- docs/evidence/model-store-runtime.json -> empty, so the file already equals its pre-rename bytes and R-11 needs no change there, as the builder said.",
+              "e7cdd4a and 5082167 touched only docs/evidence/model-store-runtime.json among the record dirs.",
+              "(c) A script over git show -U0 e7cdd4a checked the 214 lines e7cdd4a changed outside the record dirs. 208 equal their e7cdd4a^ text at build/rename. 6 were rewritten later for other reasons and now read MoonAliza (windows.yml MOONALIZA_TEST_EXECUTABLE now under release-e2e, engine.ts this.fork, ResearchPanel cancel text, research-text POLICY_CHANGED, the dev-status title, the research-review Q8 line that was removed). 0 still read Moonzila.",
+              "The same check over the main-axuse merge 7218397: 206 of 209 renamed lines are restored, and the 3 others were rewritten later.",
+              "git diff e7cdd4a^ build/rename for 2026-09-24-moonaliza.md, github-url-reading.md, managed-provider.md, managed-scheduler.md and windows-ci.md -> no differences.",
+              "decisions.md differs from e7cdd4a^ only by decisions 12 and 13 (unchanged since 0d2e965), the added superseding note and decision 14. Line 3 is restored.",
+              "The research-jobs plan's 'App name (decided October 2: keep MoonAliza)' section is identical to e7cdd4a^. The five cwd lines /home/user/moonaliza (67, 72, 100, 115, 159), HANDOFF:83 ('keeps the name MoonAliza'), HANDOFF:15 (cd MoonAliza) and the dev-status October 2 checkpoint lines are restored.",
+              "Substitution purity: a script paired the -/+ lines of every hunk in each commit. Commits 1-3 are pure Moonzila->MoonAliza / moonzila->moonaliza / MOONZILA->MOONALIZA substitutions (118, 21 and 89 lines), except the ARCHITECTURE paragraphs. Commit 4 has 110 pure lines plus 9 added or rewritten hunks: the HANDOFF note, the README note, dev-status:13, RUN.md, the decision 12 note, decision 14 and the operate-mode note.",
+              "Commit 4: 85 added lines equal an e7cdd4a^ line. I reviewed the other 39 one by one: notes, decision 14, and renames of undated prose written after October 4 (more-models-phase2, more-models, operate-mode, the operate-mode plan, plan :416 and :460). None of them is a dated user request or decision. Commit 3: 54 of its lines equal an e7cdd4a^ line, as the builder reported.",
+              "(d) Decision 12's text is unchanged, with only the indented line 'Superseded by decision 14 (2026-10-12).' added as part of item 12. Decision 13 is unchanged.",
+              "Decision 14's claims were checked against the tree: the User-Agents (github.ts:16, research-import.ts:43), serviceName (engine.ts:41), the window title (index.html <title>, index.ts:305), the brand, the three prompts, App.tsx:158, productName, name and author. Every tag v0.6.0-dev.1..v0.8.1-dev.1 shipped name moonaliza, productName MoonAliza and author MoonAliza (git show <tag>:package.json and :electron-builder.yml). appId, app.setName, MoonAlizaHost.exe and the activation domain string are unchanged. MOONZILA_ANTHROPIC_API_KEY occurs only in docs/evidence probe scripts plus the new HANDOFF and decision 14 mentions.",
+              "(e) Lockstep groups: 'Message MoonAliza' is added 40 times in 71e8490 (App.tsx 1, e2e 17, workbench.test.tsx 21, check-live-provider 1). The 4 'You are MoonAliza' lines (application.ts 355 and 356, research-review.ts 83, anthropic-fake.ts 158) are in 71e8490. The exact-text specs (more-models:68, phase2 133/665/719/730, research-review-ui 92/94/151) and README:24 are in 71e8490. Packaging plus check-fuses, the windows.yml paths and the research-journeys exe paths are in c5b740c. The collector global (collector-network.cjs, research-journeys.spec.ts, research-journeys.md:23/37), the github-tls prefix pair, the provider-transport 365/372/373 group and the file-read 187/191 group are in 5c0ec78.",
+              "git merge-tree --write-tree --merge-base=<c> build/rename <c>^ for each of the four commits -> rc=0 and 0 conflicts each (git 2.43.0).",
+              "(f) Spelling over added lines: only MoonAliza (305), moonaliza (92) and MOONALIZA (4) appear, plus intentional Moonzila mentions. No Moonaliza or MoonALiza. The one 'moonAliza' in the tree (docs/specification/proposals/...integration.txt:474) predates this branch and was not touched.",
+              "Commit metadata: author and committer are StepenkoAnatoli <318295322+StepenkoAnatoli@users.noreply.github.com> on all 4 commits. Each message has the five parts and ends with the two trailers. A grep for model names in the messages finds only the trailer lines.",
+              "node scripts/check-handoff.mjs (Node 24.21.0, cwd /home/user/task5-handoff/wt/rename) -> exit 0, {sourceFiles:81, included:76, linksChecked:117}.",
+              "Did not run: the full test suite (assigned to another reviewer), typecheck, lint, e2e or Windows CI."
+            ]
+          },
+          {
+            "verdict": "ACCEPT",
+            "findings": [
+              {
+                "id": "F1",
+                "severity": "S4",
+                "problem": "One lockstep group has no guard: the bridge messages and their test copies. bridge.ts DOCUMENT_UNSAFE, DOCUMENT_REDACTION_UNAVAILABLE and RESEARCH_KIT_UNAVAILABLE can drift from their mocked copies in tests/research-panel.test.tsx without any test noticing. The builder disclosed this, and the group does sit in one commit as DECISIONS requires.",
+                "evidence": "Mutation bridge-src: all 4 MoonAliza occurrences in src/main/bridge.ts set to Moonzila, then research-panel, bridge and research-panel-cancel-review tests run: 78 passed. Mutation bridge-tests: the research-panel.test.tsx:286 mocked copy reverted alone: 65 passed. The asserts at research-panel.test.tsx:289 and :355 match the name-free regexes /cannot check this document for saved keys/ and /will not read through/, and tests/bridge.test.ts never names these codes. Both mutations were restored with git checkout, and the tree was clean afterwards.",
+                "fix": "Optional follow-up, not this PR: add an exact-text assertion, for example one that imports the bridge's public message for each code, or a renderer test that compares the full string. That way the next copy drift goes red. Changing the shape of a test is outside this rename's scope (like the name-free selector that R-8 set aside)."
+              },
+              {
+                "id": "F2",
+                "severity": "S4",
+                "problem": "package.json productName is not pinned to electron-builder.yml productName, and the builder's 'no test at all' list leaves this out. It names only the package.json/package-lock.json name pair.",
+                "evidence": "Mutation productname-pkgjson: package.json \"productName\": \"MoonAliza\" set to \"Moonzila\" alone, then tests/check-fuses.test.ts and tests/handoff.test.ts run: 22 passed (vitest exit 0). By contrast, electron-builder.yml productName reverted alone gives 2 red (the test pins only the yml value).",
+                "fix": "Mention it in the PR's untested list. Optionally add a one-line check in tests/check-fuses.test.ts that package.json productName equals electron-builder.yml productName."
+              },
+              {
+                "id": "F3",
+                "severity": "S4",
+                "problem": "The docs/ARCHITECTURE.md rename paragraph is written in commit 1 (line 48), and it describes the whole series, not commit 1 alone. It cites decision 14, which arrives only in commit 4. It says the package name, productName, author and test identifiers are 'each ... MoonAliza again', which is true only after commits 2 and 3. So at commit 1, or after reverting commit 2, 3 or 4 alone, that paragraph is inaccurate. Nothing breaks: check-handoff passes because the link targets decisions.md, which exists. The builder disclosed only the decision-14 forward reference (judgement item 6).",
+                "evidence": "git show 71e8490 -- docs/ARCHITECTURE.md: '+The product is named MoonAliza ([decision 14]...)... the package `name`, `productName` and `author` ... and test-only identifiers, and each of these is MoonAliza again.' At 71e8490, package.json still says name moonzila and productName Moonzila (c5b740c changes them). In the detached worktree at 71e8490, check-handoff exits 0.",
+                "fix": "Accept as is (the brief asked for the line-46 rename sentence in commit 1, because the commit gate requires ARCHITECTURE.md). Alternatively, state in the commit-1 report that the paragraph describes the full series."
+              }
+            ],
+            "checked": [
+              "Orientation: cwd /home/user/task5-handoff/wt/rename, Node v24.21.0, HEAD 999e26c = build/rename, range 0d2e965..999e26c = 71e8490, c5b740c, 5c0ec78, 999e26c. Tree clean apart from the node_modules and .build symlinks. No other vitest process was running before the full suite.",
+              "npm run typecheck: exit 0. npm run lint: exit 0. npx eslint e2e: exit 0 (all at HEAD).",
+              "Full suite, run once alone: npx vitest run --reporter=json --outputFile=.../scratchpad/rename-review-tests.json. Then compare.py: 1542 tests, 1462 passed, 74 failed, 6 pending. All 74 failures are in the baseline (74 of 74); new failures: []; files without results: []. The 6 skips are Windows-only (guarded-fs-semantics, research-purge Windows, research-review-native).",
+              "Temp leftovers after the suite: 421 moonaliza-/moonzila- folders in /tmp, all older than this review (find -newer gives 0 new).",
+              "Contract coverage: for e7cdd4a and 5082167, every removed (pre-rename) line was checked by script against HEAD. Only 6 e7cdd4a^ lines are absent at HEAD, and each was legitimately rewritten after October 4 (windows.yml release-e2e path, development-status title, research-review.md Q8, engine.ts serviceName now via this.fork, ResearchPanel cancelled line, research-text POLICY_CHANGED).",
+              "git grep -n -I -i 'moonzila|monnzila' outside docs/orchestration, docs/research and docs/evidence: exactly the 20 lines the builder lists (15 R-10 keeps plus 5 intentional new notes). No hits in src, scripts, tests, e2e, .github or the packaging files. No miscapitalised MoonAliza variants in current files. No changes under docs/orchestration (except this run's RUN.md), docs/research, docs/evidence, tests/fixtures/anthropic-live, zips or goldens.",
+              "Mutation composer-src (App.tsx label reverted alone): tests/workbench.test.tsx gives 6 failed, 7 passed. Restored with git checkout; clean.",
+              "Mutation composer-tests (21 getByLabelText selectors reverted alone): 6 failed, 7 passed. Restored; clean.",
+              "Ask-mode prompt vs e2e/fixtures/anthropic-fake.ts: a temporary untracked probe drove the REAL engine (Application, ask mode, project p1), captured its system message, and posted it to the REAL fake (startAnthropicFake) as a Test connection followed by step 1. At HEAD: test 200, step1 200, refusals []. With the application.ts prompt alone reverted to Moonzila: step1 400, refusal 'step1: the system prompt is not the Ask-mode prompt'. With only the fake's startsWith check (line 158) reverted: the same refusal. Both restored with git checkout and the probe file deleted.",
+              "productName group: electron-builder.yml productName reverted alone: 2 red. check-fuses.test.ts:174 reverted alone: 1 red. windows.yml's 3 exe paths reverted alone: 2 red. check-fuses.mjs default path reverted alone: 1 red. package.json productName reverted alone: 22 passed, no guard (F2). Each restored; clean.",
+              "Bridge messages: bridge.ts reverted alone gives 78 passed (research-panel, bridge, research-panel-cancel-review tests); the test copy reverted alone gives 65 passed. No guard (F1). Restored; clean.",
+              "Exact-text group, tests/application.test.ts. Source FROZEN_CONTEXT_LIMIT: 2 red. Source PROVIDER_PROTOCOL_ERROR: 1 red. Source LOCAL_MODEL_UNVERIFIED: 1 red. Test copy :79: 1 red. Test copy :292: 1 red. Test copy :360: 2 red. Each restored; clean.",
+              "Context-budget margin: the Ask/Build system prompt was padded by +1, 2, 4, 8, 16, 32, 64, 128, 256, 512 and 1024 bytes, and tests/application.test.ts run each time: 41 of 41 passed at every padding, so the 1-byte-longer name is far inside the margin of the threeReads (5_787) and frozen CONTEXT_LIMIT (5_142) tests. Restored each time.",
+              "Windows-only e2e reading: getByLabel('Message MoonAliza') equals the App.tsx label, and no other label contains it. research-journeys getByText equals GITHUB_KEEPS_RUNNING. The collector-network global __moonalizaE2eCollectorNetwork matches between the preload, the spec and research-journeys.md. The cookie moonaliza_e2e is consistent across set, read-back and probe (workbench.spec, anthropic.spec). The github-reading README text matches the fake model's check. The github-tls fixture prefix and the leak filter both use 'moonaliza-github-tls-'. SIGNATURE_MARKER, TOOL_ID and the msg ids are constants. MOONALIZA_TEST_EXECUTABLE points at release-e2e/win-unpacked/MoonAliza.exe, which package:win-e2e builds from the same productName. No title, brand or author-label assertions exist in e2e.",
+              "Per-commit standalone checks, each in a detached worktree /home/user/task5-handoff/wt/rename-c<n> with node_modules and .build symlinked: typecheck, lint, eslint e2e and check-handoff all exit 0. c1 71e8490: the 6 touched test files, 221 passed. c2 c5b740c: check-fuses and handoff, 22 passed. c3 5c0ec78: all 44 touched test files, 801 tests, 66 failed, all in the baseline, new failures []. c4 999e26c: handoff, 3 passed. Each tree stayed clean, and all four worktrees were removed (git worktree list shows only rename among them).",
+              "Revert test: git merge-tree --write-tree --merge-base=<c> HEAD <c>^ shows 0 conflicts for each of the 4 commits.",
+              "Commit metadata: all 4 commits have StepenkoAnatoli no-reply author and committer, the five-part message, and the two trailers. No model identifiers were added beyond the trailers (the Claude Fable 5.1 mentions are pre-existing product data-use text).",
+              "Docs: decision 12 got a one-line 'Superseded by decision 14' paragraph, its text unchanged. Decision 14 is added and decision 13 left as written. HANDOFF and operate-mode get superseding notes. The README R-5 note is stated as not yet tried on Windows. HANDOFF 'cd MoonAliza' matches the MoonAliza.git clone. research-collection.md is read by research-panel.test only for failure codes, so it carries no name dependency.",
+              "Final state: /home/user/task5-handoff/wt/rename at 999e26c, git status shows only the untracked node_modules and .build symlinks. Nothing pushed, no --no-verify, /home/user/moonaliza and other worktrees not modified (only read through the node_modules/.build symlinks)."
+            ]
+          },
+          {
+            "verdict": "FIX",
+            "findings": [
+              {
+                "id": "F1",
+                "severity": "S2",
+                "problem": "The README upgrade note (README.md:32), repeated in decision 14 (docs/specification/decisions.md:23), says as plain fact that an interactive upgrade puts the app in `%LOCALAPPDATA%\\Programs\\Moonzila\\MoonAliza\\`. The installer templates do not support that path in general, and the note never says 'expected' (R-5 requires it). The closing 'it has not yet been tried on Windows' does not label which claims are expected. The 'keeps your data' claim also depends on Electron runtime behaviour, which the scout marked as expected, not run: setName before userData.",
+                "evidence": "electron-builder 26.15.3 templates. multiUser.nsh setInstallModePerUser sets $INSTDIR from HKCU `Software\\${APP_GUID}` InstallLocation; APP_GUID is UUID v5 of appId (NsisTarget.js:157), so it is unchanged. assistedInstaller.nsh instFilesPre does `${StrContains} $0 \"${APP_FILENAME}\" $INSTDIR` and appends `\\MoonAliza` only when the path does not already contain 'MoonAliza'. So a Moonzila build installed interactively over a released MoonAliza install went to `...\\Programs\\MoonAliza\\Moonzila`, because 'Moonzila' is not in the old path. A MoonAliza installer then finds 'MoonAliza' in that path and stays in `...\\Programs\\MoonAliza\\Moonzila\\`. That case is likely: the user's PC has `C:\\Users\\PC\\AppData\\Local\\Programs\\MoonAliza\\MoonAliza.exe` (docs/handoff/outputs/MoonAliza-build-notes.md:9), and the scout noted 'The earlier MoonAliza-to-Moonzila rename had the same nesting effect' (scout.json:512). The install-mode page is also offered (perMachine false, so INSTALL_MODE_PER_ALL_USERS is undefined; NsisTarget.js:439-446), so per-machine or custom-folder installs nest elsewhere. DECISIONS R-5 has the same simplification.",
+                "fix": "Rephrase in README.md:32, decision 14 and the PR note, marked as expected (read from the templates, not run). Suggested text: an interactive upgrade installs into the folder the Moonzila build used, with `\\MoonAliza` appended unless that path already contains MoonAliza. For example, `%LOCALAPPDATA%\\Programs\\Moonzila\\MoonAliza\\` after a fresh Moonzila install, or `%LOCALAPPDATA%\\Programs\\MoonAliza\\Moonzila\\` when the Moonzila build was installed over a release. Also mark 'keeps your data' as expected, because it rests on setName('MoonAliza') deciding userData."
+              },
+              {
+                "id": "F2",
+                "severity": "S2",
+                "problem": "README.md:32 says 'To avoid both, uninstall the Moonzila build first, then install MoonAliza'. Uninstalling first avoids only the nested folder. Taskbar pins and shortcuts that point at Moonzila.exe stop working whichever route is taken, because the exe becomes MoonAliza.exe.",
+                "evidence": "uninstaller.nsh: `RMDir /r $INSTDIR` deletes Moonzila.exe. Unless keep-shortcuts is set, it runs `WinShell::UninstShortcut` and `Delete` on $oldDesktopLink and $oldStartMenuLink (Moonzila.lnk; common.nsh setLinkVars). On the interactive upgrade route, setIsTryToKeepShortcuts is false (installUtil.nsh, allowToChangeInstallationDirectory and not isUpdated). So the old uninstaller removes Moonzila.lnk, and addStartMenuLink/addDesktopLink create MoonAliza.lnk. Only pins and user-made shortcuts break, and they break on both routes. The scout agrees: 'Taskbar pins or custom shortcuts that point at Moonzila.exe will break, because the exe is renamed' (scout.json:513). R-5 does not claim that uninstalling first avoids this.",
+                "fix": "Change the sentence to say that uninstalling first avoids the nested folder only. Either way (expected), taskbar pins and shortcuts you made to Moonzila.exe stop working and need to be pinned again. The installer's own Start-menu and desktop shortcuts are replaced with MoonAliza ones."
+              },
+              {
+                "id": "F3",
+                "severity": "S3",
+                "problem": "The upgrade note does not mention the updater-cache folder a Moonzila-era install leaves behind. The reviewer brief names this item, and the scout flagged it.",
+                "evidence": "installer.nsh:93 runs `copyFile \"$EXEPATH\" \"$LOCALAPPDATA\\${APP_INSTALLER_STORE_FILE}\"`. APP_INSTALLER_STORE_FILE is `${updaterCacheDirName}\\installer.exe` (NsisTarget.js:502), and updaterCacheDirName is `sanitizedName.toLowerCase() + \"-updater\"` (appInfo.js:126-127). No template deletes it: uninstaller.nsh has no reference. With the package name back to moonaliza, a Moonzila-era machine keeps `%LOCALAPPDATA%\\moonzila-updater\\installer.exe` after either the upgrade or the uninstall route. That file is a full installer copy; 0.6's was 122,553,165 bytes (docs/releases/0.6.0-dev.1.md:13). The scout recorded the orphan (scout.json:515), and R-4 gives the updater cache as the reason to restore the name.",
+                "fix": "Add one clause to the README note and the PR note: `%LOCALAPPDATA%\\moonzila-updater` is left behind and can be deleted (expected)."
+              },
+              {
+                "id": "N1",
+                "severity": "S4",
+                "problem": "The dates of the Moonzila period disagree across documents, and the two that say October 3 do not match git.",
+                "evidence": "docs/ARCHITECTURE.md:48 says 'from 2026-10-03 to 2026-10-12 it was shown as Moonzila'; docs/development-status.md:13 says 'from October 3'; HANDOFF.md:27 says 'The October 3 rename'. Decision 14 says 'October 3-4 rename' and 'October 4 to 12', and README.md:32 says 'between October 4 and October 12'. Git: e7cdd4a was authored 2026-10-04 00:04 UTC with the spelling 'Monnzila'. PR #31 merged as 05dfee1 at 2026-10-04 00:31 UTC, still 'Monnzila'. The 'Moonzila' spelling (5082167, 01:42 UTC) was not part of PR #31's merge. October 3 is the date of the request, not of the change. Main also keeps building Moonzila until this PR merges, so the README's 'October 12' end date only holds if it merges that day.",
+                "fix": "Say 'from October 4 (requested October 3)', or 'October 4 until this change', in ARCHITECTURE and development-status, and optionally note the brief 'Monnzila' spelling."
+              },
+              {
+                "id": "N2",
+                "severity": "S4",
+                "problem": "docs/ARCHITECTURE.md:44 says the check-fuses default path and the workflow path are 'both pinned by tests/check-fuses.test.ts against productName'. Only the workflow paths are derived from productName; the default path is pinned to a fixed string.",
+                "evidence": "tests/check-fuses.test.ts:180 and :222-230 build the workflow paths from `${productName}`. :238-245 compare the default path with the fixed string 'release/win-unpacked/MoonAliza.exe'. Changing productName and line 174 together would leave the default-path test green.",
+                "fix": "Reword: the workflow paths are checked against productName, and the default path is pinned to the same literal name."
+              },
+              {
+                "id": "N3",
+                "severity": "S4",
+                "problem": "Commit 71e8490 writes the ARCHITECTURE.md:48 rename paragraph, which states that the package name, productName, author and test identifiers are MoonAliza again, and cites decision 14. At 71e8490 those statements are false: commits c5b740c, 5c0ec78 and 999e26c make them true. Reverting c5b740c or 5c0ec78 alone would leave them false. The builder reported only the decision-14 forward reference.",
+                "evidence": "`git show 71e8490 -- docs/ARCHITECTURE.md`. At 71e8490, package.json still says moonzila (the change is in c5b740c). The legacy `git merge-tree <c> build/rename <c>^` shows no conflict markers for any of the four commits, so the revert is textually clean.",
+                "fix": "Optional: move the packaging clause into c5b740c's ARCHITECTURE hunk, which that commit already stages, or accept and note it in the PR."
+              },
+              {
+                "id": "N4",
+                "severity": "S4",
+                "problem": "HANDOFF.md:27 says 'The identifiers listed above never changed', and the list at :25 includes 'fixture identities'. This series renames fixture identities. They were created as Moonzila after October 4, but 'never' reads as covering now.",
+                "evidence": "In 5c0ec78, e2e/fixtures/anthropic-fake.ts has its signature marker, tool id and message ids renamed, and tests/fixtures/github-tls.ts has its CA name and prefix renamed. Decision 14 lists these as renamed test-only identifiers.",
+                "fix": "Say that the identifiers listed above were not changed by either rename, and that test fixtures created as Moonzila now use the MoonAliza spelling."
+              }
+            ],
+            "checked": [
+              "git log --format '%h %an <%ae>' 0d2e965..build/rename: 4 commits (71e8490, c5b740c, 5c0ec78, 999e26c). Author and committer on all four are StepenkoAnatoli <318295322+StepenkoAnatoli@users.noreply.github.com>.",
+              "Commit messages (git log -1 --format=%B per commit): each has What changed / Why / What it touched / What you verified (verified, untested, expected) / What you got wrong ('nothing to report' on 71e8490, 5c0ec78 and 999e26c; six fields on c5b740c). Each ends with exactly the two trailer lines. Grepping for opus|sonnet|haiku|claude|fable|gpt matched only the trailers.",
+              "Model identifiers in the added diff lines: only 'Claude Fable 5.1' in the existing Anthropic data-use hint (README.md:24, App.tsx ANTHROPIC_DATA_USE). That is product text, not attribution.",
+              "Packaging: git show v0.8.1-dev.1 / e7cdd4a^ / build/rename of package.json, package-lock.json and electron-builder.yml. name moonaliza, productName MoonAliza and author MoonAliza are identical to all four release tags. package-lock lines 1-10 are identical to v0.8.1-dev.1. appId is com.moonaliza.desktop at every ref. src/main/index.ts:34 still has app.setName('MoonAliza') before getPath('userData') at :50 (the only userData read in src).",
+              "Exe paths: git grep win-unpacked and *.exe outside records. windows.yml:38, 48 and 53, scripts/check-fuses.mjs:5 and :31, tests/check-fuses.test.ts:174-245, research-journeys.md:15 and :39, ARCHITECTURE.md:44 and HANDOFF.md:27 all say MoonAliza.exe. Moonzila.exe remains only in dated records (HANDOFF.md:25, decision 13, plan :251).",
+              "Remaining Moonzila: git grep -n -I -i moonzila outside docs/orchestration, docs/research and docs/evidence gives exactly 20 lines, matching the builder's list. There is no Monnzila outside decision 12, and no Moonzila under src, scripts, tests, e2e, .github or the packaging files.",
+              "Restoration (python3 -I scratchpad/review1/restored.py): every line e7cdd4a removed from docs is present at HEAD, except two that were edited later (the development-status title, research-review.md Q8). Name tokens in src, scripts, tests, e2e and packaging at HEAD contain every e7cdd4a^ token; the only differences are additions in code written after October 4.",
+              "New-text audit (scratchpad/review1/newlines.py): changed doc lines that are not e7cdd4a^ text are the notes, decision 14, and renames in post-October-4 text. The README Anthropic hint and note equal App.tsx exactly (python check: True).",
+              "NSIS templates and sources read, not run (node_modules/app-builder-lib 26.15.3): assistedInstaller.nsh (instFilesPre StrContains), multiUser.nsh (InstallLocation from HKCU Software\\<APP_GUID>), multiUserUi.nsh, installSection.nsh, include/installer.nsh (registryAddInstallInfo, shortcut macros, the updater-cache copy at :93), include/installUtil.nsh (uninstallOldVersion with /KEEP_APP_DATA --updated, keep-shortcuts off for interactive runs), uninstaller.nsh (app data deleted only with DELETE_APP_DATA_ON_UNINSTALL or --delete-app-data, then only APP_FILENAME, product or package name folders), common.nsh setLinkVars, include/StrContains.nsh, out/targets/nsis/NsisTarget.js (GUID v5 of appId, APP_FILENAME, UNINSTALL_DISPLAY_NAME, COMPANY_NAME, APP_INSTALLER_STORE_FILE, per-machine defines), targetUtil.js, appInfo.js (updaterCacheDirName, companyName), winPackager.js (exe CompanyName). Installer file name pattern: '${productName} Setup ${version}.${ext}'.",
+              "History: e7cdd4a authored 2026-10-04 00:04 UTC ('Monnzila'). PR #31 merged as 05dfee1 at 2026-10-04 00:31 UTC. 5082167 (Moonzila, 01:42 UTC) is not in PR #31's merge. e7cdd4a is not an ancestor of v0.8.1-dev.1, and the four tags are dated 2026-09-30 to 2026-10-01.",
+              "Revert test (legacy read-only git merge-tree <c> build/rename <c>^ for each commit): no conflict markers for any of the four commits.",
+              "node scripts/check-handoff.mjs with Node v24.21.0, cwd /home/user/task5-handoff/wt/rename: exit 0 (81 source files, 117 links checked).",
+              "Counts: 55 temporary-folder prefix lines and 89 added lines in 5c0ec78; 17 e2e getByLabel('Message MoonAliza') and 21 getByLabelText lines in tests/workbench.test.tsx. These match the commit messages.",
+              "Not run, as instructed: the full test suite, Windows CI, e2e, packaging, and the installer upgrade."
+            ]
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "fixer": "All three findings are real and fixed in one new commit, `5ed9b89` on build/rename (no amend, no push, no `--no-verify`). The full suite shows no new failure against the 74-failure baseline.\n\n**Per finding**\n- **F1: FIXED (5ed9b89).** I checked the evidence against the electron-builder 26.15.3 templates and it holds:\n  - The folder page is prefilled from HKCU `Software\\${APP_GUID}` InstallLocation (multiUser.nsh:26-28), and APP_GUID is UUID v5 of the unchanged appId (NsisTarget.js:157).\n  - `instFilesPre` adds `\\MoonAliza` only when the path doesn't already contain it (assistedInstaller.nsh:33-38).\n  - The install-mode page is shown because perMachine is false (assistedInstaller.nsh:18-19).\n  - So a Moonzila build that was installed over a release stays in `...\\Programs\\MoonAliza\\Moonzila\\`.\n\n  README.md:32 now says everything after its first sentence is expected, read from the templates and from `app.setName('MoonAliza')`, not tried on Windows. It states the general rule with both example folders, and it says \"keeps your data\" rests on `setName` and on the Moonzila uninstaller leaving `%APPDATA%\\MoonAliza` in place. Decision 14 (docs/specification/decisions.md:23) says the same and is marked \"all of it expected\".\n- **F2: FIXED (5ed9b89).** Evidence holds: uninstaller.nsh:187 deletes Moonzila.exe on both routes, and :190-199 remove the Moonzila shortcuts the installer created. Keep-shortcuts is off on an interactive upgrade (installUtil.nsh:86-93), and installSection.nsh:68-69 then creates MoonAliza shortcuts. The note now says uninstalling first avoids only the nested folder. Either way, pins and shortcuts you made to `Moonzila.exe` stop working, and the installer's own shortcuts are replaced with MoonAliza ones.\n- **F3: FIXED (5ed9b89).** Evidence holds: installer.nsh:93 copies the installer to `%LOCALAPPDATA%\\<name>-updater\\installer.exe` (NsisTarget.js:502, appInfo.js:126-127), and no template removes it. The README note and decision 14 now say `%LOCALAPPDATA%\\moonzila-updater` is left behind, and the README adds that it can be deleted.\n\n**Not done, for the lead**\n- **PR note:** there is no PR or PR-body file in the repository yet, so there was nothing to edit. Suggested text: \"Moonzila-era dev/CI installs (expected, read from electron-builder 26.15.3's NSIS templates, not run on Windows): an interactive upgrade installs into the folder the Moonzila build used, with `\\MoonAliza` appended unless that path already contains MoonAliza (`%LOCALAPPDATA%\\Programs\\Moonzila\\MoonAliza\\` after a fresh Moonzila install, `%LOCALAPPDATA%\\Programs\\MoonAliza\\Moonzila\\` when it was installed over a release). Uninstalling first avoids only that nesting. Either way, pins and user-made shortcuts to `Moonzila.exe` break, the installer's own shortcuts are replaced, data in `%APPDATA%\\MoonAliza` is kept (it rests on `app.setName('MoonAliza')`), and `%LOCALAPPDATA%\\moonzila-updater` is left behind and can be deleted.\"\n- **DECISIONS.md R-5** has the same simplification. I left it alone because it is the lead's dated contract under docs/orchestration.\n- **RUN.md** has no log line for this fix round.\n- **Uncovered edge case:** a build made in the 1h38m \"Monnzila\" window on October 4 (between `e7cdd4a` and `5082167`) would leave `monnzila-updater` and `Monnzila` paths, which the note does not cover.\n\n**Commands run** (Node v24.21.0, cwd /home/user/task5-handoff/wt/rename)\n- `npm run typecheck`, `npm run lint`, `npx eslint e2e`: all exit 0.\n- `node scripts/check-handoff.mjs`: passes, 117 links checked (it reads README.md's links).\n- `npx vitest run tests/handoff.test.ts`: 3 passed.\n- Full `npx vitest run --reporter=json` plus compare.py (checked first that no other suite was running): 1542 tests, 1462 passed, 74 failed, 6 skipped. All 74 failures are in the baseline, with no new failure and no baseline name now passing.\n- `git grep -n -I -i moonzila` outside docs/orchestration, docs/research and docs/evidence: the same 20 lines before and after the commit. README.md:32 and decisions.md:23 name Moonzila more often now, each on purpose.\n- Commit gate printed \"research gate: allow - the gate passes\". `git merge-tree` simulating a revert of 5ed9b89 alone: clean.\n- No lockstep group is involved: no test pins this text, and both copies of the note changed in the same commit.\n\n**What I got wrong**\n- **Mistake:** the note I wrote in 999e26c stated one folder as fact for every install. It also said uninstalling first avoids broken pins, left out the updater cache, and marked only its closing clause as \"not tried on Windows\".\n- **Where:** README.md:32 and decisions.md:23.\n- **Impact:** a reader would look for the app in the wrong folder after a Moonzila-over-release install, and would expect pins to survive the uninstall-first route. Nothing was merged or pushed.\n- **Cause:** I copied the scout's single-scenario sentence and R-5 without re-reading `instFilesPre` and the uninstaller.\n- **Fix:** 5ed9b89.\n- **Verified:** I re-read the templates and ran the commands above.\n- **Also fixed this round:** my first commit-message draft said 22 remaining lines; the count is 20, and I corrected it before committing.",
+        "rereview": {
+          "verdict": "ACCEPT",
+          "findings": [
+            {
+              "id": "R2-1",
+              "severity": "S4",
+              "problem": "The README note's first sentence still says, as fact, that 'Developer and CI installers built between October 4 and October 12, 2026 were named Moonzila'. A build made while main read 'Monnzila' would install Monnzila.exe, use `%LOCALAPPDATA%\\Programs\\Monnzila` and leave `%LOCALAPPDATA%\\monnzila-updater` behind. The note does not cover that case. The fixer raised this edge case for the lead.",
+              "evidence": "e7cdd4a set name 'monnzila' and productName 'Monnzila'. PR #31 merged it at 05dfee1 (00:31 UTC, Oct 4), and 5082167 changed the spelling at 01:42 UTC. `git log --ancestry-path e7cdd4a..5082167` lists more than 15 commits in that window. In .github/workflows/windows.yml at 05dfee1, 4dc43ae and 52353b1, `npm run package:win` runs only on workflow_dispatch, so a Monnzila installer could only come from a manual dispatch or a local build in a window of about 70 minutes. The likelihood is low.",
+              "fix": "Optional: add 'or Monnzila, for a build from early October 4' to the first sentence, or record it in the PR note. It is not blocking."
+            },
+            {
+              "id": "R2-2",
+              "severity": "S4",
+              "problem": "The PR note that F1, F2 and F3 asked for does not exist yet, because there is no PR. DECISIONS.md R-5 still carries the old simplification: one nesting folder, and 'uninstall then install keeps the app data' with no mention that pins break either way. The lead's contract now says less than README.md:32 and decision 14.",
+              "evidence": "`git diff --stat 999e26c HEAD` changes only README.md and docs/specification/decisions.md. DECISIONS.md:24 R-5 reads 'an interactive upgrade nests the app in `...\\Programs\\Moonzila\\MoonAliza\\` and taskbar pins to `Moonzila.exe` break; uninstall then install keeps the app data'. I checked the fixer's suggested PR text against the templates and it is accurate.",
+              "fix": "Lead: put the fixer's suggested text into the PR body when the PR is opened. Decide whether a dated RUN.md line should record that R-5 was refined, since R-10 forbids rewriting docs/orchestration. It is not blocking."
+            },
+            {
+              "id": "R2-3",
+              "severity": "S4",
+              "problem": "'Installed interactively over the Moonzila build, MoonAliza goes into the folder the Moonzila build used' describes what happens when the user accepts the default. The directory page only prefills that folder (multiUser.nsh:26-28) and the user can change it. A silent `/S` run shows no pages, so instFilesPre never runs and the app stays in the old folder without nesting. The note is scoped to 'interactively', so it is not wrong.",
+              "evidence": "assistedInstaller.nsh:25-38: the MUI_PAGE_DIRECTORY page is shown unless the run is an update, and instFilesPre is the PRE callback of the instfiles page. In the scout's own reading (scout.json:512), 'A silent /S run shows no pages and keeps the old folder.' src never imports electron-updater (grep for autoUpdater/checkForUpdates in src finds nothing), so no automatic silent-update route exists.",
+              "fix": "Optional wording: 'offers the folder the Moonzila build used, ...'. It is not blocking."
+            }
+          ],
+          "checked": [
+            "HEAD is 5ed9b89 on build/rename and the working tree is clean apart from the untracked .build and node_modules. The fix commit changes only README.md:32 and docs/specification/decisions.md:23 (`git diff --stat 999e26c HEAD`).",
+            "F1 FIXED. I re-read the electron-builder 26.15.3 templates in node_modules/app-builder-lib. multiUser.nsh:21-28 prefills $INSTDIR from HKCU Software\\${APP_GUID} InstallLocation. NsisTarget.js:157 sets guid to UUID v5 of appId; appId is com.moonaliza.desktop in every commit (e7cdd4a^, e7cdd4a, 5082167, HEAD). assistedInstaller.nsh:33-38 has instFilesPre append \\${APP_FILENAME} only when it is not already in $INSTDIR. APP_FILENAME is productFilename (targetUtil.js:40-41; oneClick is false). I traced both examples: a fresh Moonzila install ends in ...\\Programs\\Moonzila\\MoonAliza; Moonzila installed over a release ends in ...\\Programs\\MoonAliza\\Moonzila. The README now says 'the rest of this paragraph is expected, not yet tried on Windows', which covers the data claim, and decision 14 says 'all of it expected'.",
+            "F1 data claim: src/main/index.ts:34 calls app.setName('MoonAliza') before getPath('userData') at :50. Both 5082167 and e7cdd4a have the same call at :26, before :40. deleteAppDataOnUninstall is false, so DELETE_APP_DATA_ON_UNINSTALL is undefined and uninstaller.nsh:216-248 deletes nothing. If it did delete, the targets would be APP_FILENAME, APP_PRODUCT_FILENAME and APP_PACKAGE_NAME (Moonzila/moonzila), not MoonAliza. electron-builder is 26.15.3 in package.json and package-lock at 5082167, 0d2e965 and HEAD.",
+            "F2 FIXED. installSection.nsh:52 runs uninstallOldVersion before installApplicationFiles (:66). installUtil.nsh:206 always passes --updated. setIsTryToKeepShortcuts (installUtil.nsh:86-93) is false when the run is not an update and allowToChangeInstallationDirectory is set, so --keep-shortcuts is not passed. uninstaller.nsh:187 runs RMDir /r $INSTDIR, which removes Moonzila.exe, and :190-206 delete $oldDesktopLink and $oldStartMenuLink (Moonzila.lnk via the registry ShortcutName, common.nsh:84-100). installer.nsh:189-247 then creates MoonAliza.lnk because keepShortcuts is 'false'. The note now says that uninstalling first avoids only the nesting.",
+            "F3 FIXED. installer.nsh:93 copyFile goes to $LOCALAPPDATA\\${APP_INSTALLER_STORE_FILE}. It is reached because USE_NSIS_BUILT_IN_COMPRESSOR is false (NsisTarget.js:29, :208), so APP_BUILD_DIR is undefined and the build is not a web installer. APP_INSTALLER_STORE_FILE is updaterCacheDirName\\installer.exe (NsisTarget.js:502), and appInfo.js:126-127 builds updaterCacheDirName from the lowercased name plus '-updater', which gives moonzila-updater (name 'moonzila' at 5082167). No uninstaller line removes it. Both the README and decision 14 mention it.",
+            "Only these two copies of the note exist: grep for Programs\\Moonzila, moonzila-updater and 'interactive upgrade' outside docs/orchestration.",
+            "Fixer's rejections and deferrals: the PR note has nowhere to go yet; R-5 is the lead's dated contract under R-10; the RUN.md line is lead work. All are justified, and I listed them as S4 for the lead.",
+            "Full suite, run alone (no other vitest process running), with Node v24.21.0 and cwd /home/user/task5-handoff/wt/rename: `npx vitest run --reporter=json`, then compare.py. 1542 tests: 1462 passed, 74 failed, 6 skipped (Windows only). All 74 failures are in the baseline; there are no new failures, no baseline names now passing, and no files without results.",
+            "npm run typecheck exit 0; npm run lint exit 0; npx eslint e2e exit 0; node scripts/check-handoff.mjs exit 0 (117 links checked).",
+            "Remaining-occurrence grep: `git grep -n -I -i moonzila` outside docs/orchestration, docs/research and docs/evidence gives 20 lines in 8 files, the same as at 999e26c. The variant grep for monnzila and moon[ _.-]+zila finds only decision 12's dated 'Monnzila' sentence."
+          ]
+        }
+      }
+    ],
+    "remainingBlocking": []
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Review"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Fix"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "aaca8bcd2e25d0eec",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791825899024,
+      "queuedAt": 1791825899017,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "cd /home/user/task5-handoff/wt/rename && git grep -n -I -i …",
+      "promptPreview": "Repository worktree: /home/user/task5-handoff/wt/rename (branch build/rename, based on 0d2e965; MoonAliza Electron/TypeScript desktop app). The contract is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md (R-1..R-14 and the four-commit split); the scout's classification of every occurrence is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-1…",
+      "promptFramed": true,
+      "lastProgressAt": 1791828818623,
+      "tokens": 425285,
+      "toolCalls": 141,
+      "durationMs": 2919597,
+      "resultPreview": "The four commits are on `build/rename` in `/home/user/task5-handoff/wt/rename`. Nothing was pushed. Each commit passed its own checks, and the Linux full suite after commits 1 and 3 had exactly the 74 known failures and no new ones. To fix a revert conflict, I re-made commits 2–4 once (see \"What I got wrong\"). The earlier, unpushed shas were `7a1ad6a`, `ed1d219` and `a0fe48d`.\n\n## Commits (build/r…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "review-r1:completeness",
+      "phaseIndex": 2,
+      "phaseTitle": "Review",
+      "agentId": "a2bcdaf4c84afdf05",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791828823891,
+      "queuedAt": 1791828823825,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "ACCEPT",
+      "promptPreview": "Repository worktree: /home/user/task5-handoff/wt/rename (branch build/rename, based on 0d2e965; MoonAliza Electron/TypeScript desktop app). The contract is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md (R-1..R-14 and the four-commit split); the scout's classification of every occurrence is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-1…",
+      "promptFramed": true,
+      "lastProgressAt": 1791829449186,
+      "tokens": 261565,
+      "toolCalls": 74,
+      "durationMs": 625294,
+      "resultPreview": "{\"verdict\":\"ACCEPT\",\"findings\":[{\"id\":\"F1\",\"severity\":\"S4\",\"problem\":\"Commit 1 (71e8490) rewrites docs/ARCHITECTURE.md:48 (line 46 before c5b740c) to say that the package name, productName and author, and the test-only identifiers, are 'MoonAliza again'. Those changes only land in commits 2 (c5b740c) and 3 (5c0ec78). So in the commit-1 tree, or after reverting c5b740c or 5c0ec78 alone, the archite…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "review-r1:tests",
+      "phaseIndex": 2,
+      "phaseTitle": "Review",
+      "agentId": "a63da3590c5d7f012",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791828823891,
+      "queuedAt": 1791828823826,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "ACCEPT",
+      "promptPreview": "Repository worktree: /home/user/task5-handoff/wt/rename (branch build/rename, based on 0d2e965; MoonAliza Electron/TypeScript desktop app). The contract is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md (R-1..R-14 and the four-commit split); the scout's classification of every occurrence is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-1…",
+      "promptFramed": true,
+      "lastProgressAt": 1791831111191,
+      "tokens": 303474,
+      "toolCalls": 109,
+      "durationMs": 2286544,
+      "resultPreview": "{\"verdict\":\"ACCEPT\",\"findings\":[{\"id\":\"F1\",\"severity\":\"S4\",\"problem\":\"One lockstep group has no guard: the bridge messages and their test copies. bridge.ts DOCUMENT_UNSAFE, DOCUMENT_REDACTION_UNAVAILABLE and RESEARCH_KIT_UNAVAILABLE can drift from their mocked copies in tests/research-panel.test.tsx without any test noticing. The builder disclosed this, and the group does sit in one commit as DECI…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "review-r1:packaging-records",
+      "phaseIndex": 2,
+      "phaseTitle": "Review",
+      "agentId": "a26451056ab702aaf",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791829451346,
+      "queuedAt": 1791828823827,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "FIX",
+      "promptPreview": "Repository worktree: /home/user/task5-handoff/wt/rename (branch build/rename, based on 0d2e965; MoonAliza Electron/TypeScript desktop app). The contract is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md (R-1..R-14 and the four-commit split); the scout's classification of every occurrence is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-1…",
+      "promptFramed": true,
+      "lastProgressAt": 1791830115500,
+      "tokens": 291007,
+      "toolCalls": 66,
+      "durationMs": 664151,
+      "resultPreview": "{\"verdict\":\"FIX\",\"findings\":[{\"id\":\"F1\",\"severity\":\"S2\",\"problem\":\"The README upgrade note (README.md:32), repeated in decision 14 (docs/specification/decisions.md:23), says as plain fact that an interactive upgrade puts the app in `%LOCALAPPDATA%\\\\Programs\\\\Moonzila\\\\MoonAliza\\\\`. The installer templates do not support that path in general, and the note never says 'expected' (R-5 requires it). Th…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "fix-r2",
+      "phaseIndex": 3,
+      "phaseTitle": "Fix",
+      "agentId": "ab2a213ae5498c7aa",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791831113731,
+      "queuedAt": 1791831113722,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "cd /home/user/task5-handoff/wt/rename && git log -1 --forma…",
+      "promptPreview": "Repository worktree: /home/user/task5-handoff/wt/rename (branch build/rename, based on 0d2e965; MoonAliza Electron/TypeScript desktop app). The contract is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md (R-1..R-14 and the four-commit split); the scout's classification of every occurrence is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-1…",
+      "promptFramed": true,
+      "lastProgressAt": 1791832141465,
+      "tokens": 186986,
+      "toolCalls": 49,
+      "durationMs": 1027733,
+      "resultPreview": "All three findings are real and fixed in one new commit, `5ed9b89` on build/rename (no amend, no push, no `--no-verify`). The full suite shows no new failure against the 74-failure baseline.\n\n**Per finding**\n- **F1: FIXED (5ed9b89).** I checked the evidence against the electron-builder 26.15.3 templates and it holds:\n  - The folder page is prefilled from HKCU `Software\\${APP_GUID}` InstallLocation…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "rereview-r2",
+      "phaseIndex": 3,
+      "phaseTitle": "Fix",
+      "agentId": "a035c9bdd3a553544",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791832144221,
+      "queuedAt": 1791832144211,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "ACCEPT",
+      "promptPreview": "Repository worktree: /home/user/task5-handoff/wt/rename (branch build/rename, based on 0d2e965; MoonAliza Electron/TypeScript desktop app). The contract is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-10-12-moonaliza-rename/DECISIONS.md (R-1..R-14 and the four-commit split); the scout's classification of every occurrence is /home/user/task5-handoff/wt/rename/docs/orchestration/2026-1…",
+      "promptFramed": true,
+      "lastProgressAt": 1791833055296,
+      "tokens": 176959,
+      "toolCalls": 41,
+      "durationMs": 911073,
+      "resultPreview": "{\"verdict\":\"ACCEPT\",\"findings\":[{\"id\":\"R2-1\",\"severity\":\"S4\",\"problem\":\"The README note's first sentence still says, as fact, that 'Developer and CI installers built between October 4 and October 12, 2026 were named Moonzila'. A build made while main read 'Monnzila' would install Monnzila.exe, use `%LOCALAPPDATA%\\\\Programs\\\\Monnzila` and leave `%LOCALAPPDATA%\\\\monnzila-updater` behind. The note do…"
+    }
+  ],
+  "totalTokens": 1645276,
+  "totalToolCalls": 480
+}
