@@ -4,6 +4,7 @@
 // process.env.MOONZILA_ANTHROPIC_API_KEY and is placed only in the request header; every saved
 // header is redacted.
 import { createHash } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -26,7 +27,7 @@ export function ledger() {
 export function spent() {
   return ledger().rows.reduce((sum, row) => sum + row.cost, 0);
 }
-function book(row) {
+export function book(row) {
   const l = ledger();
   l.rows.push(row);
   writeFileSync(LEDGER, JSON.stringify(l, null, 2) + '\n');

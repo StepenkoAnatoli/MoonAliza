@@ -106,6 +106,11 @@ const steps = {
     }
     await send({ id: 'D7-32000-sonnet', model: SONNET, body: nativeBody({ model: SONNET, maxTokens: 32000, messages: OK }), worstInput: 2000 });
   },
+  async '5b'() {
+    // Conditional D7 items: 32,000 on Opus 5.5, then Fable 5.1, each only while the cap covers its worst case.
+    await send({ id: 'D7-32000-opus', model: OPUS, body: nativeBody({ model: OPUS, maxTokens: 32000, messages: OK }), worstInput: 2000 });
+    await send({ id: 'D7-32000-fable', model: FABLE, body: nativeBody({ model: FABLE, maxTokens: 32000, messages: OK }), worstInput: 2000 });
+  },
   async 6() {
     const prompt = 'Think carefully before acting. A city is chosen as follows: list the ten largest European capitals by population, '
       + 'reason step by step about which of them has the most rainy days per year, double-check your reasoning, and then call get_weather '

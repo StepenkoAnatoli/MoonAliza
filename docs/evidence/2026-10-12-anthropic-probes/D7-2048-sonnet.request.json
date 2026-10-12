@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 117,
+  "bodySha256": "c8b7175c0b90a06a4af5c48b4ab03f25e2c5f1a96a3504d8355e1436c235d984",
+  "body": {
+    "model": "claude-sonnet-5-5",
+    "max_tokens": 2048,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply with OK."
+      }
+    ],
+    "stream": true
+  }
+}
