@@ -12,3 +12,6 @@ tests/fixtures/research-kit/*.zip -text
 tests/fixtures/*.sql text eol=lf
 # Live Anthropic recordings (2026-10-12): byte-exact fixtures, pinned by sha256; keep their LF line ends and padding.
 tests/fixtures/anthropic-live/** -text -whitespace
+# The probe evidence those fixtures copy: each response body byte for byte as received (LF only; meta.json's
+# responseBytes), so the copies above stay equal to their originals on a core.autocrlf=true checkout too.
+docs/evidence/2026-10-12-anthropic-probes/** -text -whitespace
