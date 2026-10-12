@@ -1,0 +1,57 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 1148,
+  "bodySha256": "d1b33bfe0f4fb092e5543ee57961eab69e248af10a62dbe7adfc12f85d1d54bc",
+  "body": {
+    "model": "claude-sonnet-5-5",
+    "max_tokens": 4096,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Think step by step: is 391 a prime number? If it is, call get_weather for Paris, otherwise for Rome. Then, after thinking about the result, tell me in one sentence whether I need an umbrella."
+      },
+      {
+        "role": "assistant",
+        "content": "391 = 17 × 23, so it isn't prime, and I checked Rome. The weather tool returned data for Paris (18 °C, cloudy), not Rome, so I don't have Rome's actual conditions. Going by that Paris result, which may not apply, it's cloudy with no rain reported, so you probably don't need an umbrella. I can retry the Rome lookup if you want to be sure."
+      },
+      {
+        "role": "user",
+        "content": "Call get_time and tell me the time."
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

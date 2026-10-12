@@ -2,8 +2,14 @@ import { existsSync, mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
+import { EventSchema } from '../src/shared/events';
 import { Store } from '../src/engine/store';
 import { Application } from '../src/engine/application';
+import { estimateInput } from '../src/engine/context';
+import { reviewWorkspacePath } from '../src/engine/research-review';
+import type { Completion, InferenceMessage } from '../src/main/inference';
+import type { ProviderState } from '../src/engine/control';
+import type { Run } from '../src/shared';
 
 const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(store => store.close()); roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })); });
@@ -237,4 +243,375 @@ test.each([
   expect(result.error).toBe(expectedCode);
   expect(store.latestRunEvent(session.id, 'tool.failed')).toMatchObject({ error: { code: expectedCode, message: result.message } });
   expect(result.message).not.toContain(store.getProject('p1')!.rootPath);
+});
+
+// More models Phase 2, U0 (docs/specification/more-models-phase2.md sections 1, 2 and 8; REQUIREMENTS-P2 F-1, F-2, S-2, T-6).
+// The markers are base64-alphabet only, so JSON never escapes them at any depth, and they sit only in the state's thinking
+// text and signature: its text and tool_use input become the stored content and calls by design. The state is under 1 KiB,
+// so a row holding it fits on one page and a scan cannot miss a marker split across overflow pages.
+const THINKING_MARKER = 'VGhpbmtpbmdNYXJrZXJQaGFzZTJVMA';
+const SIGNATURE_MARKER = 'U2lnbmF0dXJlTWFya2VyUGhhc2UyVTA';
+const markedState = {
+  format: 'anthropic-messages@1', appendOnly: true,
+  data: JSON.stringify({ content: [{ type: 'thinking', thinking: THINKING_MARKER, signature: SIGNATURE_MARKER }, { type: 'tool_use', id: 'state-list', name: 'list_files', input: { path: '.' } }] }),
+};
+
+test('a tool step\'s provider state goes back on the next step of its run and never reaches disk, events or session.read', async () => {
+  // Guards: the strip in message() (mutation: store the value as given); the carry at the tool step (mutation: build the
+  // assistant message without providerState); the scan itself (mutation: copy the state into the message.created
+  // payload's content string, which EventSchema still accepts - the scan must go red).
+  const { store, root } = fixture(); const published: unknown[] = []; let steps = 0;
+  const app = new Application(store, { publish(event) { published.push(event); }, async infer(_run, messages) {
+    steps++;
+    if (steps === 1) return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'state-list', name: 'list_files', input: { path: '.' } }], providerState: markedState };
+    const assistant = messages.find(message => message.role === 'assistant' && message.toolCalls?.length);
+    expect(assistant?.providerState).toEqual(markedState);
+    return { content: 'Listed.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const { run } = await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'List the files.' }, 'start')) as { run: { id: string } };
+  await app.whenIdle();
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(steps).toBe(2);
+  for (const name of ['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm']) {
+    const file = join(root, name); if (!existsSync(file)) continue;
+    const bytes = readFileSync(file);
+    expect(bytes.includes(Buffer.from(THINKING_MARKER)), name).toBe(false);
+    expect(bytes.includes(Buffer.from(SIGNATURE_MARKER)), name).toBe(false);
+  }
+  const read = JSON.stringify(await app.handle(request('session.read', { sessionId: session.id }, 'read')));
+  for (const text of [read, JSON.stringify(published)]) {
+    expect(text).not.toContain(THINKING_MARKER); expect(text).not.toContain(SIGNATURE_MARKER); expect(text).not.toContain('providerState');
+  }
+  const created = published.filter(event => (event as { type?: string }).type === 'message.created');
+  expect(created.length).toBeGreaterThan(0);
+  for (const event of created) expect(EventSchema.safeParse(event).success).toBe(true);
+});
+
+test('a protocol refusal from main, and the engine\'s own unoffered-call check, end the run with the widened message', async () => {
+  // Spec section 6 and REQUIREMENTS-P2 F-23: one shared text for every cause of PROVIDER_PROTOCOL_ERROR, never retried.
+  const widened = 'The provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.';
+  for (const infer of [
+    async () => { throw new Error('PROVIDER_PROTOCOL_ERROR'); },
+    async () => ({ content: '', outcome: 'tool_calls' as const, toolCalls: [{ id: 'unoffered', name: 'not_a_tool', input: {} }] }),
+  ]) {
+    const { store } = fixture();
+    const app = new Application(store, { publish() {}, infer });
+    const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+    await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'hello' }, 'start'));
+    await app.whenIdle();
+    const result = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { failure: { code: string; message: string; retry: string } };
+    expect(result.failure).toEqual({ code: 'PROVIDER_PROTOCOL_ERROR', message: widened, retry: 'never' });
+  }
+});
+
+
+// More models Phase 2, U1: local-only policy for an `anthropic` profile (docs/specification/more-models-phase2.md
+// section 8; REQUIREMENTS-P2 S-3). Regression pins of today's behaviour: an `anthropic` revision is always `external`
+// (spec section 7), and the existing admission, abort and revision checks keep it from sending a byte under local-only.
+function cloud(store: Store, kind: 'anthropic' | 'openai-compatible', budget: { contextTokens: number; outputTokens: number } = { contextTokens: 8192, outputTokens: 512 }) {
+  const project = store.getProject('p1')!; const saved = store.getProfile('profile1')!;
+  store.putProject({ ...project, policy: { revision: 1, inference: 'cloud-allowed', research: 'off' } });
+  store.putProfile({ ...saved, kind, endpoint: kind === 'anthropic' ? 'https://api.anthropic.com/v1' : 'https://provider.example/v1', locality: 'external', ...budget, revisionId: `${kind}-revision`, revision: 2 });
+}
+
+test.each([
+  ['a local-only session', null],
+  ['a session in a local-only project', 'p1'],
+] as const)('an external anthropic revision is refused at run.start in %s, before any inference', async (_name, projectId) => {
+  // S-3 (a). Guard (mutation): run.start skips assertConversationPolicy (application.ts, `run.start`); the run is then
+  // admitted, so run.start no longer rejects (execute's own check fails it later, still without calling infer).
+  const { store } = fixture(); const saved = store.getProfile('profile1')!;
+  store.putProfile({ ...saved, kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', locality: 'external', revisionId: 'anthropic-revision', revision: 2 });
+  let calls = 0; const app = new Application(store, { publish() {}, async infer() { calls++; return { content: 'bad', outcome: 'complete' }; } });
+  const { session } = await app.handle(request('session.create', { projectId }, 'create')) as { session: { id: string; policy: { inference: string } } };
+  if (projectId === null) expect(session.policy.inference).toBe('local-only');
+  await expect(app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'private' }, 'start'))).rejects.toThrow('CLOUD_NOT_ALLOWED');
+  await app.whenIdle();
+  expect(calls).toBe(0); expect(store.listRuns(session.id)).toHaveLength(0); expect(store.listMessages(session.id)).toHaveLength(0);
+});
+
+test.each(['session', 'project'] as const)('a switch to local-only by %s.policy.update during an anthropic run cancels it with no further inference', async scope => {
+  // S-3 (b). Two protections each cancel the run alone: the update's abort (session.policy.update) or cancelProject
+  // (project.policy.update), and the revision comparison in assertConversationPolicy (policy.ts), reached when infer
+  // returns. Guard (mutation): remove both; the run then fails with CLOUD_NOT_ALLOWED, reported as PROVIDER_ERROR.
+  const { store } = fixture(); cloud(store, 'anthropic'); let calls = 0; const published: Array<{ type: string }> = [];
+  let sessionId = '';
+  const app: Application = new Application(store, { publish(event) { published.push(event); }, async infer() {
+    calls++;
+    if (scope === 'session') await app.handle(request('session.policy.update', { sessionId, expectedRevision: 0, inference: 'local-only' }, 'switch'));
+    else await app.handle(request('project.policy.update', { projectId: 'p1', expectedRevision: 1, policy: { inference: 'local-only', research: 'off' } }, 'switch'));
+    return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'after-switch', name: 'list_files', input: { path: '.' } }] };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  sessionId = session.id;
+  const { run } = await app.handle(request('run.start', { sessionId, profileId: 'profile1', mode: 'ask', prompt: 'List the files.' }, 'start')) as { run: { id: string } };
+  await app.whenIdle();
+  expect(calls).toBe(1);
+  expect(store.getRun(run.id)?.status).toBe('cancelled');
+  const types = store.events(run.id, 0, 1000).events.map(event => event.type);
+  expect(types).toContain('run.cancelled'); expect(types).not.toContain('run.failed'); expect(types).not.toContain('tool.started');
+  expect(published.some(event => event.type === 'tool.started')).toBe(false);
+  expect(store.listMessages(session.id).filter(message => message.role === 'tool')).toHaveLength(0);
+});
+
+// More models Phase 2, U1: append-only Anthropic runs (more-models-phase2.md section 3; REQUIREMENTS-P2 F-15, F-16, T-3).
+// The states are built for these tests in the anthropic-messages@1 shape (the engine never parses them); markers are
+// base64-alphabet only.
+const FROZEN_TEXT = 'This task outgrew the selected model\'s context budget. This provider needs the earlier steps of a task sent back unchanged, so Moonzila could not shorten them while the task ran. Saved messages and any applied changes remain available; commands are not retried. Split the task into smaller requests, or open Model profiles to check the model\'s supported context and response reserve.';
+const TODAY_TEXT = 'This request exceeds the selected model\'s context budget after reducing saved tool excerpts. Open Model profiles to check the model\'s supported context and response reserve, shorten the request, or start a fresh conversation. Saved messages and any applied changes remain available; commands are not retried.';
+const plainQuotes = (text: string) => text.replace(/’/g, "'");
+function thinkingState(appendOnly: boolean, signature: string, call: { id: string; path: string }, text: string): ProviderState {
+  return { format: 'anthropic-messages@1', appendOnly, data: JSON.stringify({ content: [{ type: 'thinking', thinking: '', signature }, { type: 'text', text }, { type: 'tool_use', id: call.id, name: 'read_file', input: { path: call.path } }] }) };
+}
+function readStep(step: number, path: string, state?: { appendOnly: boolean; signature: string }): Completion {
+  const call = { id: `read-${step}`, path }; const content = `Reading ${path}.`;
+  return { content, outcome: 'tool_calls', toolCalls: [{ id: call.id, name: 'read_file', input: { path } }], ...(state ? { providerState: thinkingState(state.appendOnly, state.signature, call, content) } : {}) };
+}
+/** Earlier conversation in the run's session: whole turns of `size`-character messages, saved before the run. */
+function seedHistory(store: Store, sessionId: string, turns: number, size = 2000) {
+  const at = new Date().toISOString();
+  for (let n = 0; n < turns; n++) for (const role of ['user', 'assistant'] as const) store.appendMessage({ id: `history-${n}-${role}`, sessionId, role, content: `${role} ${n} `.padEnd(size, role[0]), createdAt: at });
+}
+const historyCount = (messages: InferenceMessage[], prompt: string) => messages.findIndex(message => message.role === 'user' && message.content === prompt) - 1;
+const resultPreview = (message: InferenceMessage) => JSON.parse(message.content).preview as string;
+async function runOnce(app: Application, sessionId: string, prompt: string, id = 'start') {
+  const { run } = await app.handle(request('run.start', { sessionId, profileId: 'profile1', mode: 'ask', prompt }, id)) as { run: { id: string } };
+  await app.whenIdle(); return run;
+}
+async function failureOf(app: Application, sessionId: string) {
+  return (await app.handle(request('session.read', { sessionId }, `read-${Math.random()}`)) as { failure: { code: string; message: string; retry: string } | null }).failure;
+}
+/**
+ * Three tool steps reading files larger than the 3,072-byte excerpt, then an answer. `states[k]` is step k+1's
+ * `appendOnly`, or undefined for a step whose completion carries no provider state.
+ */
+async function threeReads(states: ReadonlyArray<boolean | undefined>) {
+  // Input budget 5,275 estimated tokens: a request holds two results at the excerpt but not three, so later steps cut.
+  const { store, root } = fixture(); cloud(store, 'anthropic', { contextTokens: 5_787, outputTokens: 512 });
+  for (const name of ['a', 'b', 'c']) writeFileSync(join(root, `${name}.txt`), name.toUpperCase().repeat(12_000));
+  const requests: InferenceMessage[][] = []; const sent: Completion[] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]);
+    const step = requests.length;
+    if (step > 3) return { content: 'Read all three.', outcome: 'complete' };
+    const appendOnly = states[step - 1];
+    const output = readStep(step, `${'abc'[step - 1]}.txt`, appendOnly === undefined ? undefined : { appendOnly, signature: `U2lnbmF0dXJl${step}` });
+    sent.push(output); return output;
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const run = await runOnce(app, session.id, 'Read the three files.');
+  return { store, run, requests, sent, sessionId: session.id };
+}
+/** Requests 2 to 4 are each the previous request unchanged, compared as JSON message by message, then that step's call and result. */
+function expectEachRequestAppends(requests: InferenceMessage[][], sent: Completion[]) {
+  for (let k = 0; k < 3; k++) {
+    const [before, after] = [requests[k]!, requests[k + 1]!];
+    expect(after).toHaveLength(before.length + 2);
+    expect(after.slice(0, before.length).map(message => JSON.stringify(message))).toEqual(before.map(message => JSON.stringify(message)));
+    expect(after[before.length]).toEqual({ role: 'assistant', content: sent[k]!.content, toolCalls: sent[k]!.toolCalls, providerState: sent[k]!.providerState });
+    expect(after[before.length + 1]).toMatchObject({ role: 'tool', toolCallId: `read-${k + 1}`, toolName: 'read_file' });
+  }
+}
+
+test('once frozen, each request is the previous request plus the previous assistant message and its results', async () => {
+  // T-3. Guard (mutation): assemble frozen steps with assembleContext, so its result-cutting loop runs under the freeze
+  // (the already-sent first result is then cut at step 3 and the prefix changes).
+  const { store, run, requests, sent, sessionId } = await threeReads([true, true, true]);
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
+  expectEachRequestAppends(requests, sent);
+  // The budget forced cuts: the first result kept its excerpt once sent; the later ones were cut before they were sent.
+  expect(requests[3]!.filter(message => message.role === 'tool').map(message => resultPreview(message).length)).toEqual([3072, 0, 0]);
+  // The saved results are whole: only the requests carry excerpts.
+  expect(store.listMessages(sessionId).filter(message => message.role === 'tool').map(message => message.content.length > 12_000)).toEqual([true, true, true]);
+});
+
+test.each([
+  ['appendOnly false states', false],
+  ['no provider state', undefined],
+] as const)('the freeze holds for the rest of the run when later steps carry %s', async (_label, later) => {
+  // T-3, spec section 3 rule 3 ("frozen for its remaining steps"; spec 5.4: a later tool_use step without thinking is
+  // appendOnly false). Guard (mutation): `frozen = output.providerState?.appendOnly === true`, which unfreezes the run at
+  // step 2; a later request then goes back through assembleContext, which cuts the already-sent first result.
+  const { store, run, requests, sent } = await threeReads([true, later, later]);
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
+  expectEachRequestAppends(requests, sent);
+  // The budget binds from step 3 on: the already-sent first result kept its excerpt, the later ones were cut unsent.
+  expect(requests[3]!.filter(message => message.role === 'tool').map(message => resultPreview(message).length)).toEqual([3072, 0, 0]);
+});
+
+test('appendOnly false states keep today\'s trimming: an already-sent result is cut at a later step', async () => {
+  // Guard (mutation): freeze on any provider state; the first result then stays at its excerpt and the second is cut.
+  const { store, run, requests } = await threeReads([false, false, false]);
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
+  expect(resultPreview(requests[1]![3]!)).toHaveLength(3072);
+  expect(requests[2]!.filter(message => message.role === 'tool').map(message => resultPreview(message).length)).toEqual([0, 3072]);
+});
+
+test('a frozen step that does not fit after cutting only its unsent results ends with CONTEXT_LIMIT and the frozen message', async () => {
+  // Guards (mutations): assemble frozen steps with assembleContext (the sent first result is then cut too, the request
+  // fits and infer is called a third time); choose the failure text without the frozen flag (today's text).
+  const { store, root } = fixture(); cloud(store, 'anthropic', { contextTokens: 5_142, outputTokens: 512 });
+  for (const name of ['a', 'b']) writeFileSync(join(root, `${name}.txt`), name.toUpperCase().repeat(12_000));
+  let calls = 0; const contexts: Array<{ estimatedInputTokens: number; inputBudgetTokens: number; compactedToolResults: number }> = [];
+  const app = new Application(store, { publish(event) { if (event.type === 'context.updated') contexts.push(event.payload as never); }, async infer() {
+    calls++;
+    if (calls === 1) return readStep(1, 'a.txt', { appendOnly: true, signature: 'U2lnbmF0dXJlMQ' });
+    if (calls === 2) return readStep(2, 'b.txt', { appendOnly: true, signature: 'U2lnbmF0dXJl'.repeat(170) });
+    return { content: 'unreachable', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const run = await runOnce(app, session.id, 'Read both files.');
+  expect(calls).toBe(2); expect(store.getRun(run.id)?.status).toBe('failed');
+  const failure = await failureOf(app, session.id);
+  expect(failure?.code).toBe('CONTEXT_LIMIT'); expect(plainQuotes(failure!.message)).toBe(FROZEN_TEXT); expect(failure?.retry).toBe('never');
+  expect(contexts.at(-1)!.estimatedInputTokens).toBeGreaterThan(contexts.at(-1)!.inputBudgetTokens);
+});
+
+test('with history near the full budget, an anthropic run of two tool steps succeeds because of the reserve', async () => {
+  // Guard (mutation): reserve 0 (assembleContext without historyReserve); step 1 then keeps history up to the full budget
+  // and step 2, frozen, cannot fit its first step's state and result: CONTEXT_LIMIT before the second infer call.
+  const { store, root } = fixture(); cloud(store, 'anthropic', { contextTokens: 20_512, outputTokens: 512 });
+  for (const name of ['a', 'b']) writeFileSync(join(root, `${name}.txt`), name.toUpperCase().repeat(12_000));
+  const requests: InferenceMessage[][] = []; let tools: Parameters<typeof estimateInput>[1] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages, _signal, offered) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]); tools = offered ?? [];
+    if (requests.length === 1) return readStep(1, 'a.txt', { appendOnly: true, signature: 'U2lnbmF0dXJl'.repeat(500) });
+    if (requests.length === 2) return readStep(2, 'b.txt', { appendOnly: true, signature: 'U2lnbmF0dXJl'.repeat(500) });
+    return { content: 'Read both.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  seedHistory(store, session.id, 9);
+  const run = await runOnce(app, session.id, 'Read both files.');
+  expect(await failureOf(app, session.id)).toBeNull(); expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(3);
+  expect(historyCount(requests[0]!, 'Read both files.')).toBeGreaterThan(0);
+  expect(estimateInput(requests[0]!, tools)).toBeLessThanOrEqual(10_000);
+  expect(requests[2]!.slice(0, requests[0]!.length)).toEqual(requests[0]);
+});
+
+test.each([
+  ['no provider state', undefined],
+  ['an appendOnly false state', false],
+] as const)('the reserve holds on every unfrozen step: after a first step with %s, step 2 freezes and the run fits', async (_label, first) => {
+  // Spec section 3 rules 2 and 5, DR-2 ("every unfrozen step trims history to half"). Guard (mutation): reserve on the
+  // first step only (`historyReserve: historyReserve && step === 0`); step 2 then refills history to the full budget,
+  // freezes on its state, and step 3 cannot fit that state and result: CONTEXT_LIMIT after two infer calls.
+  const { store, root } = fixture(); cloud(store, 'anthropic', { contextTokens: 20_512, outputTokens: 512 });
+  for (const name of ['a', 'b']) writeFileSync(join(root, `${name}.txt`), name.toUpperCase().repeat(12_000));
+  const requests: InferenceMessage[][] = []; let tools: Parameters<typeof estimateInput>[1] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages, _signal, offered) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]); tools = offered ?? [];
+    if (requests.length === 1) return readStep(1, 'a.txt', first === undefined ? undefined : { appendOnly: first, signature: 'Rmlyc3RTdGVw' });
+    if (requests.length === 2) return readStep(2, 'b.txt', { appendOnly: true, signature: 'U2lnbmF0dXJl'.repeat(400) });
+    return { content: 'Read both.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  seedHistory(store, session.id, 9);
+  const run = await runOnce(app, session.id, 'Read both files.');
+  expect(await failureOf(app, session.id)).toBeNull(); expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(3);
+  // Step 2, still unfrozen, is within half the input budget (20,000 / 2): it dropped another history turn to stay there.
+  expect(estimateInput(requests[1]!, tools)).toBeLessThanOrEqual(10_000);
+  expect(historyCount(requests[1]!, 'Read both files.')).toBeGreaterThan(0);
+  expect(historyCount(requests[1]!, 'Read both files.')).toBeLessThan(historyCount(requests[0]!, 'Read both files.'));
+  // Step 3 is frozen on step 2's request.
+  expect(requests[2]!.slice(0, requests[1]!.length)).toEqual(requests[1]);
+});
+
+test.each(['openai-compatible', 'ollama'] as const)('a %s run gets no reserve and still drops history mid-run', async kind => {
+  // Guards (mutations): reserve for every kind (step 1 then keeps at most half the budget); freeze on every tool step
+  // (history is then never dropped again, or the run fails).
+  const { store, root } = fixture();
+  if (kind === 'openai-compatible') cloud(store, kind, { contextTokens: 20_512, outputTokens: 512 });
+  else store.putProfile({ ...store.getProfile('profile1')!, contextTokens: 20_512, revisionId: 'ollama-revision', revision: 2 });
+  writeFileSync(join(root, 'a.txt'), 'A'.repeat(12_000));
+  const requests: InferenceMessage[][] = []; let tools: Parameters<typeof estimateInput>[1] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages, _signal, offered) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]); tools = offered ?? [];
+    return requests.length === 1 ? readStep(1, 'a.txt') : { content: 'Read it.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  seedHistory(store, session.id, 9);
+  const run = await runOnce(app, session.id, 'Read the file.');
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(2);
+  expect(estimateInput(requests[0]!, tools)).toBeGreaterThan(10_000);
+  expect(historyCount(requests[1]!, 'Read the file.')).toBeLessThan(historyCount(requests[0]!, 'Read the file.'));
+});
+
+test('a tool-free anthropic run gets no history reserve', async () => {
+  // Guard (mutation): reserve every prefix-bound run, tools or not; step 1 then keeps at most half the budget.
+  const { store } = fixture(); cloud(store, 'anthropic', { contextTokens: 20_512, outputTokens: 512 });
+  const requests: InferenceMessage[][] = []; const offered: unknown[] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages, _signal, tools) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]); offered.push(tools);
+    return { content: 'Answer.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: null }, 'create')) as { session: { id: string } };
+  await app.handle(request('session.policy.update', { sessionId: session.id, expectedRevision: 0, inference: 'cloud-allowed' }, 'cloud'));
+  seedHistory(store, session.id, 9);
+  const run = await runOnce(app, session.id, 'Summarize.');
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(offered).toEqual([[]]);
+  expect(estimateInput(requests[0]!, [])).toBeGreaterThan(10_000);
+});
+
+test('a later run\'s first request carries no provider state, and the earlier answer only as text', async () => {
+  // F-15. Guard (mutation): carry the previous run's `current` into the next run's history.
+  const { store } = fixture(); cloud(store, 'anthropic');
+  const requests: InferenceMessage[][] = [];
+  const app = new Application(store, { publish() {}, async infer(_run, messages) {
+    requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]);
+    if (requests.length === 1) return { ...readStep(1, '.', { appendOnly: true, signature: 'Rmlyc3RSdW5TaWduYXR1cmU' }), toolCalls: [{ id: 'read-1', name: 'list_files', input: { path: '.' } }] };
+    return { content: requests.length === 2 ? 'First answer.' : 'Second answer.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  await runOnce(app, session.id, 'First question.', 'first');
+  expect(requests[1]!.some(message => message.providerState)).toBe(true);
+  await runOnce(app, session.id, 'Second question.', 'second');
+  const next = requests[2]!;
+  expect(JSON.stringify(next)).not.toContain('providerState'); expect(JSON.stringify(next)).not.toContain('Rmlyc3RSdW5TaWduYXR1cmU');
+  expect(next.slice(1)).toEqual([{ role: 'user', content: 'First question.' }, { role: 'assistant', content: 'First answer.' }, { role: 'user', content: 'Second question.' }]);
+});
+
+test.each([
+  ['a frozen run', { appendOnly: true }, FROZEN_TEXT],
+  ['a run whose state is not appendOnly', { appendOnly: false }, TODAY_TEXT],
+  ['a run without provider state', undefined, TODAY_TEXT],
+] as const)('a provider overflow in %s ends with CONTEXT_LIMIT and its message', async (_name, state, text) => {
+  // F-16. Guards (mutations): choose the failure text without the frozen flag (the frozen case goes red); use the frozen
+  // text for every CONTEXT_LIMIT (the other cases go red).
+  const { store } = fixture(); cloud(store, 'anthropic'); let calls = 0;
+  const app = new Application(store, { publish() {}, async infer() {
+    if (++calls === 1) return { ...readStep(1, '.', state ? { ...state, signature: 'T3ZlcmZsb3dTaWc' } : undefined), toolCalls: [{ id: 'read-1', name: 'list_files', input: { path: '.' } }] };
+    throw new Error('CONTEXT_LIMIT');
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const run = await runOnce(app, session.id, 'List the files.');
+  expect(calls).toBe(2); expect(store.getRun(run.id)?.status).toBe('failed');
+  const failure = await failureOf(app, session.id);
+  expect(failure?.code).toBe('CONTEXT_LIMIT'); expect(plainQuotes(failure!.message)).toBe(text);
+});
+
+test('a frozen review run that overflows keeps REVIEW_CONTEXT_LIMIT and the review message', async () => {
+  // F-16. Guard (mutation): apply the frozen text to review runs too.
+  const root = mkdtempSync(join(tmpdir(), 'moonzila-app-review-')); roots.push(root);
+  const data = join(root, 'data'); const project = join(root, 'project'); mkdirSync(data); mkdirSync(project);
+  const store = new Store(join(data, 'state.sqlite')); stores.push(store);
+  const at = new Date().toISOString();
+  store.putProject({ id: 'p1', rootPath: project, pathLabel: project, name: 'Example', trusted: true, trustRevision: 1, policy: { revision: 1, inference: 'cloud-allowed', research: 'public-technical' }, missing: false, createdAt: at });
+  store.putProfile({ id: 'profile1', name: 'Anthropic', kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', model: 'test', contextTokens: 32_768, outputTokens: 512, locality: 'external', revision: 1, revisionId: 'v1', createdAt: at, updatedAt: at });
+  store.createResearch({ id: 'j1', projectId: 'p1', topic: 'Context limits', inputs: { queries: [], urls: [], preferDomains: [], depth: 'quick', maxPages: 8 }, clientRef: 'mz-j1', researchLevel: 'public-technical', policyRevision: 1, trustRevision: 1 }, { actor: 'user' });
+  const advance = (to: 'dispatching' | 'collecting' | 'collected', patch: Record<string, unknown>) => store.transitionResearch({ researchId: 'j1', expectedRevision: store.getResearch('j1')!.revision, to, actor: 'main', cause: 'TEST_STEP', patch: patch as never });
+  advance('dispatching', { target: { collectorRevision: 1, repository: 'owner/collector', workflow: 'collect.yml', ref: 'main' } });
+  advance('collecting', { workflowRunId: '41' });
+  advance('collected', { verification: { artifactSha256: 'a'.repeat(64), artifactBytes: 18127, validatorRevision: 'b'.repeat(40), nodeSha256: 'c'.repeat(64), state: 'REVIEW_IN_PROGRESS', jobRevision: 3, projectRevision: 1, repository: 'owner/collector', ref: 'main', workflow: 'collect.yml', commit: 'd'.repeat(40), runAttempt: 1, workflowRunId: '41', clientRef: 'mz-j1', downloadDigest: 'unverified' } });
+  const workspace = reviewWorkspacePath(data, 'j1'); mkdirSync(join(workspace, 'research'), { recursive: true }); writeFileSync(join(workspace, 'research', 'BRIEF.md'), 'not drafted\n');
+  let calls = 0; const events: Array<{ type: string; payload: unknown }> = [];
+  const app = new Application(store, { publish(event) { events.push(event); }, async infer() {
+    if (++calls === 1) return { ...readStep(1, '.', { appendOnly: true, signature: 'UmV2aWV3U2lnbmF0dXJl' }), toolCalls: [{ id: 'read-1', name: 'list_files', input: { path: '.' } }] };
+    throw new Error('CONTEXT_LIMIT');
+  } }, { dataDirectory: data });
+  const { run } = await app.beginReview({ requestId: 'begin-1', researchId: 'j1', profileId: 'profile1', workspace: 'fresh' }) as { run: Run };
+  await app.whenIdle();
+  expect(calls).toBe(2); expect(store.getRun(run.id)?.status).toBe('failed');
+  expect(store.getResearch('j1')).toMatchObject({ status: 'not_ready', failure: 'REVIEW_CONTEXT_LIMIT' });
+  const failed = store.events(run.id, 0, 1000).events.find(event => event.type === 'run.failed')!;
+  expect(failed.payload).toEqual({ error: { code: 'REVIEW_NOT_READY', message: 'The research review exceeded the selected model’s context budget. The research job is not ready.', retry: 'never' } });
 });

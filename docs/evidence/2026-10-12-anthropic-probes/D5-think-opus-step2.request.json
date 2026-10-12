@@ -1,0 +1,98 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 2313,
+  "bodySha256": "6fb292e533e16794c9b87fd333781d67d9ff1f62570c05f27d3493368310aedf",
+  "body": {
+    "model": "claude-opus-5-5",
+    "max_tokens": 4096,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Think step by step before using any tool: which is larger, 17 x 23 or 19 x 21? If the first is larger, call get_weather for Paris, otherwise for Rome. Also call get_time. Then answer in one sentence."
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "",
+            "signature": "CAQShAUKEAgSGAI4AUIIdGhpbmtpbmcSDBIwoe8U9/NDCfY5uBoM7emTQkqufPNc50BdIjBP5ti+D1/y4HbSMizfFYKUIm6MZ9ucm8FthcpoQ64LB+L3ZG7WrPjZIsQk8/8xXVEqoQT7UZSQFEN4s0p3QRMXjVRRvEy60+DdTO8JbylJN/2SPcTvEiidSXBAuW23csm3lzuoY+lBsL9bRMvwVC1yomZClvwclic7m3rwaKBm9H5KTglRAcz6y76+/bd6KFkZ0k7rdA5qF20yU11f+2EtXrv/fqmWrY6BpcifkRlC3/6y8T27bd5+hqwvSPAqqqlCIyLtkZ1DzxTzTjMNPXDH9U0PRHakVJsSBvO7G+zkNDVmh2VC0uGmn9yMSV5Y0fqHgt9oqow6MEgnn1XPvM04yLG/ux0FvVnaSRBAro/AczYNns6o3f2k8DAvhl+JxSF8VzHNeqhY0t3OhIkS+gHQh47x5Y4xqkWnHr3XQSNGTXfMvYOG3OY6in2dKJ+mhJ9IUjg83IhbvebybqHJLVH+00aoBM9orWBBcKWFOLir/PclOfjzix2J4tZpJ7A1oN9RKJ7DCjKTa+3+CO4HQYBrV/2gz2SzEeoEgzpW5wQtCZ+jsH8pyoUpoO3wihZOWk/A6K0TsHa1bi91J9+px+c0OTdQeFGvE0j1sKJwaxBXndKKECbAQ5f13btXl6H3RJ+dP2l5KBDkG/eW20euZoP0q0cGj/bAuy/d8jCHrTESXSG4RPzNDNXOx6cLSP0QGo+387vUmVwa1PsN3ESgZe11pfum3xKRsRjLV4XJlXnFQLZ0KuFTnHKZLbFNzUM07MrWTKF4lSbu5rHpbGtCkYiFDpkHoxgB"
+          },
+          {
+            "type": "text",
+            "text": "First, the math: 17 × 23 = 391 and 19 × 21 = 399. The second product is larger, so I'll get the weather for Rome, and I'll get the time at the same time."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_0124eHhzDB4PAmsvk93kLRg2",
+            "name": "get_weather",
+            "input": {
+              "city": "Rome"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01WDoU22CwZp5gjjKgv3XR5x",
+            "name": "get_time",
+            "input": {},
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_0124eHhzDB4PAmsvk93kLRg2",
+            "content": "Paris: 18 C, cloudy."
+          },
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01WDoU22CwZp5gjjKgv3XR5x",
+            "content": "14:05 UTC"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

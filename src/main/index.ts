@@ -26,6 +26,7 @@ import { ProjectTickets } from './projects';
 import { createBridge } from './bridge';
 import { createPolicyRoute } from './policy-route';
 import { complete, validateEndpoint, type InferenceMessage } from './inference';
+import { screenCompletion } from './provider-screen';
 import { verifyOllamaLocality } from './ollama-locality';
 import { probeHardware } from '../models/hardware';
 import { inspectLocalRuntime } from '../models/local-runtime';
@@ -102,11 +103,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
       const grant = vault.grant({ ...binding, expiresAt: Date.now() + 125_000 });
       try { output = await vault.withSecret(grant, binding, invoke); } finally { vault.revokeContext(runId); }
     } else output = await invoke();
-    if (output.toolCalls) {
-      const encoded = JSON.stringify(output.toolCalls);
-      if (await vault.redact(encoded) !== encoded) throw new Error('PROVIDER_PROTOCOL_ERROR');
-    }
-    return { ...output, content: await vault.redact(output.content) };
+    // Tool calls or provider state holding a saved credential are refused; the content is redacted (provider-screen.ts).
+    return screenCompletion(output, text => vault.redact(text));
   }
 
   async function readGitHub(runId: string, input: GitHubInput, epoch: string) {
@@ -276,7 +274,9 @@ if (ownsInstance) void app.whenReady().then(async () => {
         const controller = new AbortController(); const started = Date.now();
         const binding = { epoch: engine.epoch, purpose: 'provider-test' as const, contextId: request.clientRequestId, secretRef: profile.secretRef ?? '', profileRevisionId: profile.revisionId };
         const fetcher = (url: string, init: RequestInit) => (profile.locality === 'local' ? localSession : providerSession).fetch(url, init);
-        const invoke = (secret?: string) => complete({ ...profile, outputTokens: 32 }, [{ role: 'user', content: 'Reply with OK.' }], { secret, fetcher, signal: controller.signal });
+        // Thinking counts toward max_tokens and some Anthropic models always think, so 32 could end the test incomplete; the
+        // profile's own value also checks its ceiling. Never retried: a Test connection reports the first refusal (F-20).
+        const invoke = (secret?: string) => complete({ ...profile, outputTokens: profile.kind === 'anthropic' ? profile.outputTokens : 32 }, [{ role: 'user', content: 'Reply with OK.' }], { secret, fetcher, signal: controller.signal, retry: false });
         const timeout = setTimeout(() => controller.abort(), 25_000);
         try {
           const output = profile.secretRef ? await vault.withSecret(vault.grant({ ...binding, expiresAt: Date.now() + 30_000 }), binding, invoke) : await invoke();

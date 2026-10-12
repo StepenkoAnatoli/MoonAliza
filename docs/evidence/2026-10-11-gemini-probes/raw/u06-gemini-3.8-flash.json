@@ -1,0 +1,1435 @@
+{
+  "summary": {
+    "model": "gemini-3.8-flash",
+    "turns": 21,
+    "answered200": 0,
+    "product": {
+      "toolTurnsPassed": 0,
+      "toolTurns": 16,
+      "noCallCorrect": 0,
+      "noCallWronglyCalled": 0,
+      "noCallTurns": 5,
+      "outcomes": {
+        "PROVIDER_HTTP_429": 21
+      }
+    },
+    "wire": {
+      "toolTurnsPassed": 0,
+      "toolTurns": 16,
+      "noCallWronglyCalled": 0,
+      "finishReasons": {},
+      "callsWithIndex": 0,
+      "calls": 0,
+      "callsWithExtraContent": 0
+    }
+  },
+  "rows": [
+    {
+      "id": 1,
+      "kind": "single",
+      "prompt": "Call read_file on README.md",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-1#1",
+          "startedAt": "2026-10-12T00:06:41.182Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Call read_file on README.md\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "591",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:06:41 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=112",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 246,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h53m18.474672728s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85998s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h53m18.474672728s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85998s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85998s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "single",
+      "prompt": "Open src/app.ts and show me what is in it.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-2#1",
+          "startedAt": "2026-10-12T00:06:48.435Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Open src/app.ts and show me what is in it.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:06:48 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=103",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 129,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h53m11.331957418s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85991s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h53m11.331957418s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85991s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85991s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "single",
+      "prompt": "List the files in the docs directory.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-3#1",
+          "startedAt": "2026-10-12T00:06:55.570Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the files in the docs directory.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "588",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:06:55 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=86",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 113,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h53m4.213239502s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85984s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h53m4.213239502s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85984s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1373,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85984s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "single",
+      "prompt": "List everything under src, recursively.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-4#1",
+          "startedAt": "2026-10-12T00:07:02.690Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List everything under src, recursively.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:02 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=97",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 137,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m57.068130453s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85977s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m57.068130453s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85977s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85977s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "single",
+      "prompt": "Create a file named notes.txt containing the text hello world.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-5#1",
+          "startedAt": "2026-10-12T00:07:09.834Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Create a file named notes.txt containing the text hello world.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:10 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=84",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 101,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m49.957374608s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85969s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m49.957374608s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85969s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85969s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "single",
+      "prompt": "Read the file config/settings.json.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-6#1",
+          "startedAt": "2026-10-12T00:07:16.941Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read the file config/settings.json.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:17 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=74",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 106,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m42.847358831s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85962s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m42.847358831s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85962s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85962s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "two",
+      "prompt": "Read package.json and tsconfig.json. Call read_file for both in this turn.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-7#1",
+          "startedAt": "2026-10-12T00:07:24.053Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read package.json and tsconfig.json. Call read_file for both in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:24 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=106",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 132,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m35.708133092s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85955s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m35.708133092s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85955s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85955s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "two",
+      "prompt": "List the src directory and read README.md, both in this same turn.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-8#1",
+          "startedAt": "2026-10-12T00:07:31.196Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List the src directory and read README.md, both in this same turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:31 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=82",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 101,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m28.597468001s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85948s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m28.597468001s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85948s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85948s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "two",
+      "prompt": "Read a.txt and b.txt in parallel.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-9#1",
+          "startedAt": "2026-10-12T00:07:38.304Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Read a.txt and b.txt in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:38 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=76",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 100,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m21.491184568s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85941s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m21.491184568s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85941s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85941s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "two",
+      "prompt": "Write 'one' to one.txt and 'two' to two.txt in this turn.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-10#1",
+          "startedAt": "2026-10-12T00:07:45.412Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Write 'one' to one.txt and 'two' to two.txt in this turn.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:45 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=79",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 108,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m14.373333589s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85934s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m14.373333589s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85934s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85934s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "two",
+      "prompt": "List both the tests and the scripts directories now, in parallel.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-11#1",
+          "startedAt": "2026-10-12T00:07:52.526Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"List both the tests and the scripts directories now, in parallel.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:52 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=80",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 108,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m7.259008648s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85927s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m7.259008648s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85927s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1373,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85927s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "nested",
+      "prompt": "Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-12#1",
+          "startedAt": "2026-10-12T00:07:59.639Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search the code for TODO, case-sensitive, only in *.ts and *.tsx files, at most 20 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:07:59 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=92",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 133,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m0.138716921s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85920s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h52m0.138716921s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85920s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1373,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85920s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "nested",
+      "prompt": "Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-13#1",
+          "startedAt": "2026-10-12T00:08:06.778Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Find occurrences of 'fetch(' ignoring case in **/*.js files; return no more than 5 matches.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:06 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=74",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 104,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m53.010375358s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85913s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m53.010375358s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85913s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85913s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "nested",
+      "prompt": "Search for the word deprecated, case-insensitive, in *.md, *.txt and *.rst files.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-14#1",
+          "startedAt": "2026-10-12T00:08:13.888Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search for the word deprecated, case-insensitive, in *.md, *.txt and *.rst files.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:14 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=79",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 101,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m45.903304389s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85905s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m45.903304389s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85905s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85905s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "nested",
+      "prompt": "Look for 'class Engine' case-sensitively in src/**/*.ts, limit 10.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-15#1",
+          "startedAt": "2026-10-12T00:08:20.995Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Look for 'class Engine' case-sensitively in src/**/*.ts, limit 10.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:21 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=85",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 123,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m38.774552709s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85898s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m38.774552709s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85898s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85898s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "nested",
+      "prompt": "Search for 'password' case-insensitively across *.env.example files, max 3 results.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-16#1",
+          "startedAt": "2026-10-12T00:08:28.125Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Search for 'password' case-insensitively across *.env.example files, max 3 results.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:28 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=91",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 110,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m31.656376264s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85891s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m31.656376264s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85891s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85891s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "none",
+      "prompt": "What is 17 times 3? Answer directly; do not use any tool.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-17#1",
+          "startedAt": "2026-10-12T00:08:35.242Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"What is 17 times 3? Answer directly; do not use any tool.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:35 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=88",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 130,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m24.519540307s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85884s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m24.519540307s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85884s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85884s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "none",
+      "prompt": "Say hello in French.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-18#1",
+          "startedAt": "2026-10-12T00:08:42.377Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Say hello in French.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:42 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=89",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 111,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m17.40537507s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85877s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m17.40537507s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85877s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1373,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85877s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "kind": "none",
+      "prompt": "In one sentence, what is a JSON object?",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-19#1",
+          "startedAt": "2026-10-12T00:08:49.493Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"In one sentence, what is a JSON object?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:49 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=94",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 138,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m10.263622343s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85870s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m10.263622343s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.8-flash\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85870s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85870s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "kind": "none",
+      "prompt": "Without reading any file, suggest a good name for a variable that counts retries.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-20#1",
+          "startedAt": "2026-10-12T00:08:56.636Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Without reading any file, suggest a good name for a variable that counts retries.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "589",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:08:56 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=77",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 109,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m3.146616543s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85863s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h51m3.146616543s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85863s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1373,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85863s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "kind": "none",
+      "prompt": "Thanks, that is all for now.",
+      "status": 429,
+      "attempts": 1,
+      "product": {
+        "threw": "PROVIDER_HTTP_429",
+        "calls": [],
+        "pass": false,
+        "wronglyCalled": false
+      },
+      "wire": {
+        "finishReasons": [],
+        "calls": [],
+        "argsParseAndValidate": false,
+        "pass": false,
+        "wronglyCalled": false,
+        "text": ""
+      },
+      "exchanges": [
+        {
+          "label": "u06-gemini-3.8-flash-21#1",
+          "startedAt": "2026-10-12T00:09:03.751Z",
+          "request": {
+            "method": "POST",
+            "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "headers": {
+              "Content-Type": "application/json",
+              "Authorization": "<redacted>"
+            },
+            "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a coding assistant with file tools. Use a tool only when the user's request needs file access; otherwise answer in text.\"},{\"role\":\"user\",\"content\":\"Thanks, that is all for now.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"list_dir\",\"description\":\"List the entries of a project directory.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"write_file\",\"description\":\"Create or replace a text file in the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"],\"additionalProperties\":false}}},{\"type\":\"function\",\"function\":{\"name\":\"search_code\",\"description\":\"Search project files for text.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\"},\"options\":{\"type\":\"object\",\"properties\":{\"caseSensitive\":{\"type\":\"boolean\"},\"globs\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"maxResults\":{\"type\":\"integer\"}},\"required\":[\"caseSensitive\",\"globs\"],\"additionalProperties\":false}},\"required\":[\"query\",\"options\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+          },
+          "status": 429,
+          "responseHeaders": {
+            "content-encoding": "gzip",
+            "content-length": "590",
+            "content-type": "application/json; charset=UTF-8",
+            "date": "Mon, 12 Oct 2026 00:09:03 GMT",
+            "server": "scaffolding on HTTPServer2",
+            "server-timing": "gfet4t7; dur=96",
+            "vary": "Origin,X-Origin,Referer",
+            "x-content-type-options": "nosniff",
+            "x-frame-options": "SAMEORIGIN",
+            "x-xss-protection": "0"
+          },
+          "chunks": [
+            {
+              "ms": 118,
+              "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h50m56.023510152s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85856s\"\n      }\n    ]\n  }\n}\n]"
+            }
+          ],
+          "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 23h50m56.023510152s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.8-flash\"\n            },\n            \"quotaValue\": \"20\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"85856s\"\n      }\n    ]\n  }\n}\n]",
+          "framing": {
+            "bytes": 1374,
+            "crlf": 0,
+            "lf": 36,
+            "cr": 0,
+            "commentLines": 0,
+            "dataLines": 0,
+            "eventLines": 0,
+            "doneMarker": false,
+            "lastBytes": "\"     {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"85856s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+          }
+        }
+      ]
+    }
+  ]
+}

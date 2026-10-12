@@ -1,0 +1,90 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-opus-5-5","id":"msg_011CfwwG4iX8cXDMcKSs4nrF","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":528,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":8,"service_tier":"standard","inference_geo":"global"},"diagnostics":null}      }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}}
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":""}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"CAQShAUKEAgSGAI4AUIIdGhpbmtpbmcSDBIwoe8U9/NDCfY5uBoM7emTQkqufPNc50BdIjBP5ti+D1/y4HbSMizfFYKUIm6MZ9ucm8FthcpoQ64LB+L3ZG7WrPjZIsQk8/8xXVEqoQT7UZSQFEN4s0p3QRMXjVRRvEy60+DdTO8JbylJN/2SPcTvEiidSXBAuW23csm3lzuoY+lBsL9bRMvwVC1yomZClvwclic7m3rwaKBm9H5KTglRAcz6y76+/bd6KFkZ0k7rdA5qF20yU11f+2EtXrv/fqmWrY6BpcifkRlC3/6y8T27bd5+hqwvSPAqqqlCIyLtkZ1DzxTzTjMNPXDH9U0PRHakVJsSBvO7G+zkNDVmh2VC0uGmn9yMSV5Y0fqHgt9oqow6MEgnn1XPvM04yLG/ux0FvVnaSRBAro/AczYNns6o3f2k8DAvhl+JxSF8VzHNeqhY0t3OhIkS+gHQh47x5Y4xqkWnHr3XQSNGTXfMvYOG3OY6in2dKJ+mhJ9IUjg83IhbvebybqHJLVH+00aoBM9orWBBcKWFOLir/PclOfjzix2J4tZpJ7A1oN9RKJ7DCjKTa+3+CO4HQYBrV/2gz2SzEeoEgzpW5wQtCZ+jsH8pyoUpoO3wihZOWk/A6K0TsHa1bi91J9+px+c0OTdQeFGvE0j1sKJwaxBXndKKECbAQ5f13btXl6H3RJ+dP2l5KBDkG/eW20euZoP0q0cGj/bAuy/d8jCHrTESXSG4RPzNDNXOx6cLSP0QGo+387vUmVwa1PsN3ESgZe11pfum3xKRsRjLV4XJlXnFQLZ0KuFTnHKZLbFNzUM07MrWTKF4lSbu5rHpbGtCkYiFDpkHoxgB"}  }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0 }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"First"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", the"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" math: 17 × 23"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" = 391 and 19"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" × 21 = 399"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":". The second"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" product is lar"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ger, so I'll get"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" the weather for Rome,"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" and I'll get the time"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" at the same time."}              }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1       }
+
+event: content_block_start
+data: {"type":"content_block_start","index":2,"content_block":{"type":"tool_use","id":"toolu_0124eHhzDB4PAmsvk93kLRg2","name":"get_weather","input":{},"caller":{"type":"direct"}}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":""}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":"{\"city\""}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":": \"Rome"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":"\"}"}               }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":2}
+
+event: content_block_start
+data: {"type":"content_block_start","index":3,"content_block":{"type":"tool_use","id":"toolu_01WDoU22CwZp5gjjKgv3XR5x","name":"get_time","input":{},"caller":{"type":"direct"}}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":3,"delta":{"type":"input_json_delta","partial_json":""}          }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":3          }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":528,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":166,"output_tokens_details":{"thinking_tokens":32}}        }
+
+event: message_stop
+data: {"type":"message_stop"      }
+

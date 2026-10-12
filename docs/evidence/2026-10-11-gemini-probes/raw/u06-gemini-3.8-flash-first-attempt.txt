@@ -1,0 +1,8 @@
+gemini-3.8-flash 1 single 503 product PROVIDER_HTTP_503 fail | wire  - fail
+gemini-3.8-flash 2 single 503 product PROVIDER_HTTP_503 fail | wire  - fail
+gemini-3.8-flash 3 single 200 product PROVIDER_INVALID_RESPONSE fail | wire stop list_dir PASS
+gemini-3.8-flash 4 single 200 product PROVIDER_INVALID_RESPONSE fail | wire stop list_dir PASS
+gemini-3.8-flash 5 single 429 product PROVIDER_HTTP_429 fail | wire  - fail
+gemini-3.8-flash 6 single 429 product PROVIDER_HTTP_429 fail | wire  - fail
+gemini-3.8-flash 7 two 429 product PROVIDER_HTTP_429 fail | wire  - fail
+gemini-3.8-flash 8 two 429 product PROVIDER_HTTP_429 fail | wire  - fail

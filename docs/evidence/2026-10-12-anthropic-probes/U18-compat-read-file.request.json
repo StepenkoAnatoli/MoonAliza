@@ -1,0 +1,46 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/chat/completions",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer <redacted>"
+  },
+  "body": {
+    "model": "claude-sonnet-5-5",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a coding assistant. Use the tools when they are needed."
+      },
+      {
+        "role": "user",
+        "content": "Call read_file on README.md"
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 text file from the project.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      }
+    ],
+    "max_completion_tokens": 1024,
+    "stream_options": {
+      "include_usage": true
+    },
+    "stream": true
+  }
+}

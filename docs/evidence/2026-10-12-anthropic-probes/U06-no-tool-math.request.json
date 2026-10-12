@@ -1,0 +1,123 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/chat/completions",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer <redacted>"
+  },
+  "body": {
+    "model": "claude-sonnet-5-5",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a coding assistant. Use the tools when they are needed."
+      },
+      {
+        "role": "user",
+        "content": "What is 2 + 2? Answer directly without using any tool."
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "description": "Read a UTF-8 text file from the project.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "list_dir",
+          "description": "List the entries of a project directory.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "write_file",
+          "description": "Write a UTF-8 text file in the project.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "search",
+          "description": "Search the project for text.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "case_sensitive": {
+                    "type": "boolean"
+                  },
+                  "globs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "case_sensitive",
+                  "globs"
+                ]
+              }
+            },
+            "required": [
+              "query",
+              "options"
+            ]
+          }
+        }
+      }
+    ],
+    "max_completion_tokens": 1024,
+    "stream_options": {
+      "include_usage": true
+    },
+    "stream": true
+  }
+}

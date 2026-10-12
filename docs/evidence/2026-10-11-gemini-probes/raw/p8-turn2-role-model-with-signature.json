@@ -1,0 +1,44 @@
+{
+  "label": "p8-turn2-role-model-with-signature#1",
+  "startedAt": "2026-10-11T22:15:21.344Z",
+  "request": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "<redacted>"
+    },
+    "body": "{\"model\":\"gemini-3.8-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"Call read_file on README.md\"},{\"role\":\"model\",\"content\":\"\",\"tool_calls\":[{\"id\":\"call_80220\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\"},\"extra_content\":{\"google\":{\"thought_signature\":\"EvoBCvcBAWkUfROG+T+bAnDgiRjrEo3eFEnDAR3NEFR6kJzfEq+LPwX1PkR8ZS+z+J3OB90k6lZZq0UTrjhd31YLOxScHmOgr97vcUe/OQSOKDTaXLVJPtROFx8E/VOe9zLWNvmdGkW/QX/d2IvBAPue3wSvZ9kAovutesV80if+j9ZHALTX7/9g9mGbgkCuqTirCCMnpx5N9npOWY8EmG/2N3Ynk3QU6QegQXqVC+2nh8UMYKEQWxpINOF/xNl4sW2HgHj912eqGF75GN0G0wf1owkUCaiIsJGLnnfE2g5LKqD4KGXQhrg1DWx2sjR+0URQN8w/8mXqAGjUTw==\"}}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_80220\",\"content\":\"# Demo project\\nThis is a synthetic README used for a wire probe.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\",\"description\":\"Project-relative path\"}},\"required\":[\"path\"],\"additionalProperties\":false}}}],\"max_completion_tokens\":8192,\"stream_options\":{\"include_usage\":true},\"stream\":true}"
+  },
+  "status": 400,
+  "responseHeaders": {
+    "content-encoding": "gzip",
+    "content-length": "110",
+    "content-type": "application/json; charset=UTF-8",
+    "date": "Sun, 11 Oct 2026 22:15:21 GMT",
+    "server": "scaffolding on HTTPServer2",
+    "server-timing": "gfet4t7; dur=4",
+    "vary": "Origin,X-Origin,Referer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "SAMEORIGIN",
+    "x-xss-protection": "0"
+  },
+  "chunks": [
+    {
+      "ms": 19,
+      "text": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Invalid role: model\",\n    \"status\": \"INVALID_ARGUMENT\"\n  }\n}\n]"
+    }
+  ],
+  "body": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Invalid role: model\",\n    \"status\": \"INVALID_ARGUMENT\"\n  }\n}\n]",
+  "framing": {
+    "bytes": 111,
+    "crlf": 0,
+    "lf": 7,
+    "cr": 0,
+    "commentLines": 0,
+    "dataLines": 0,
+    "eventLines": 0,
+    "doneMarker": false,
+    "lastBytes": "\"[{\\n  \\\"error\\\": {\\n    \\\"code\\\": 400,\\n    \\\"message\\\": \\\"Invalid role: model\\\",\\n    \\\"status\\\": \\\"INVALID_ARGUMENT\\\"\\n  }\\n}\\n]\""
+  }
+}

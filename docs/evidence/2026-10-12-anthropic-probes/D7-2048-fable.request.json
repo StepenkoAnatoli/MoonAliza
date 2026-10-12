@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 116,
+  "bodySha256": "b1be599e4014f3cb7de9627c2c6fae747e8b5fa08d61eb64a4229aa20ae01469",
+  "body": {
+    "model": "claude-fable-5-1",
+    "max_tokens": 2048,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply with OK."
+      }
+    ],
+    "stream": true
+  }
+}

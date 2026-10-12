@@ -1,0 +1,142 @@
+{
+  "id": "D5-sonnet-step1",
+  "model": "claude-sonnet-5-5",
+  "auth": "bearer",
+  "status": 200,
+  "headers": {
+    "anthropic-organization-id": "<redacted-id>",
+    "anthropic-ratelimit-input-tokens-limit": "10000000",
+    "anthropic-ratelimit-input-tokens-remaining": "10000000",
+    "anthropic-ratelimit-input-tokens-reset": "2026-10-12T07:18:13Z",
+    "anthropic-ratelimit-output-tokens-limit": "2000000",
+    "anthropic-ratelimit-output-tokens-remaining": "2000000",
+    "anthropic-ratelimit-output-tokens-reset": "2026-10-12T07:18:13Z",
+    "anthropic-ratelimit-requests-limit": "10000",
+    "anthropic-ratelimit-requests-remaining": "9999",
+    "anthropic-ratelimit-requests-reset": "2026-10-12T07:18:13Z",
+    "anthropic-ratelimit-tokens-limit": "12000000",
+    "anthropic-ratelimit-tokens-remaining": "12000000",
+    "anthropic-ratelimit-tokens-reset": "2026-10-12T07:18:13Z",
+    "anthropic-workspace-id": "<redacted-id>",
+    "cache-control": "no-cache",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a494544be989a1cc-ATL",
+    "content-encoding": "gzip",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "text/event-stream; charset=utf-8",
+    "date": "Mon, 12 Oct 2026 07:18:13 GMT",
+    "request-id": "req_011CfwwCPAfv59ayyL36ctp1",
+    "server": "cloudflare",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-51282802f9c5a291b48072417cee180b-f0346e83cefd53ae-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-robots-tag": "none"
+  },
+  "latencyMs": {
+    "headers": 874,
+    "total": 1426
+  },
+  "responseBytes": 2230,
+  "isSse": true,
+  "usage": {
+    "input_tokens": 482,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 73
+  },
+  "cost": 0.001694,
+  "costBasis": "usage",
+  "worstCase": 0.04496,
+  "retries": [],
+  "facts": {
+    "crlf": false,
+    "lfOnly": true,
+    "eventOrder": [
+      "message_start",
+      "content_block_start",
+      "ping",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_stop",
+      "content_block_start",
+      "content_block_delta",
+      "content_block_stop",
+      "message_delta",
+      "message_stop"
+    ],
+    "pings": [
+      2
+    ],
+    "eventsWithoutName": 0,
+    "nameMismatch": 0,
+    "unknownEventTypes": [],
+    "deltaTypes": {
+      "input_json_delta": 5
+    },
+    "blockTypes": [
+      "tool_use",
+      "tool_use"
+    ],
+    "signatureDeltasPerBlock": {},
+    "bytesAfterMessageStop": 0,
+    "fallbackBlock": false,
+    "stopReason": "tool_use",
+    "stopDetails": null,
+    "usageEvents": [
+      {
+        "event": "message_start",
+        "usage": {
+          "input_tokens": 482,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 16,
+          "service_tier": "standard",
+          "inference_geo": "global"
+        }
+      },
+      {
+        "event": "message_delta",
+        "usage": {
+          "input_tokens": 482,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 73,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          }
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Jut2uR3SWoTWtTmEp7tPqV",
+        "name": "get_weather",
+        "input": {
+          "city": "Paris"
+        },
+        "caller": {
+          "type": "direct"
+        },
+        "_rawPartialJson": "{\"city\": \"Paris\"}"
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01R4HdVPxknGv2Mtowd32iHQ",
+        "name": "get_time",
+        "input": {},
+        "caller": {
+          "type": "direct"
+        },
+        "_rawPartialJson": ""
+      }
+    ]
+  }
+}

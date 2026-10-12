@@ -1,0 +1,46 @@
+[
+  {
+    "role": "user",
+    "content": "Call get_weather for Paris and call get_time, then tell me both results in one sentence."
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_011uzHBiCYTEGytk6oJzpSA6",
+        "name": "get_weather",
+        "input": {
+          "city": "Paris"
+        },
+        "caller": {
+          "type": "direct"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01GvQZwqRsUukqpsHQXke3cY",
+        "name": "get_time",
+        "input": {},
+        "caller": {
+          "type": "direct"
+        }
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_011uzHBiCYTEGytk6oJzpSA6",
+        "content": "Paris: 18 C, cloudy."
+      },
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01GvQZwqRsUukqpsHQXke3cY",
+        "content": "14:05 UTC"
+      }
+    ]
+  }
+]

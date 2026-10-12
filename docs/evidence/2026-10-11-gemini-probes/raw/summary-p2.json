@@ -1,0 +1,76 @@
+{
+  "p2": {
+    "model": "gemini-3.5-flash-lite",
+    "documentedInputTokenLimit": 1048576,
+    "targetTokens": 1572864,
+    "calibration": {
+      "sampleChars": 200000,
+      "sampleTokens": 43183
+    },
+    "promptChars": 7284698,
+    "promptBytes": 7284698,
+    "countTokensOfFullPrompt": {
+      "status": 200,
+      "body": "{\n  \"totalTokens\": 1576157,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 1576157\n    }\n  ]\n}"
+    },
+    "compat": {
+      "completeThrew": "INVALID_INFERENCE_REQUEST"
+    },
+    "nativeGenerate": {
+      "status": 429,
+      "body": "{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 250000, model: gemini-3.5-flash-lite\\nPlease retry in 6.433785762s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count\",\n            \"quotaId\": \"GenerateContentInputTokensPerModelPerMinute-FreeTier\",\n            \"quotaDimensions\": {\n              \"model\": \"gemini-3.5-flash-lite\",\n              \"location\": \"global\"\n            },\n            \"quotaValue\": \"250000\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"6s\"\n      }\n    ]\n  }\n}\n"
+    },
+    "nativeStream": {
+      "status": 429,
+      "body": "{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 250000, model: gemini-3.5-flash-lite\\nPlease retry in 36.045927618s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count\",\n            \"quotaId\": \"GenerateContentInputTokensPerModelPerMinute-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.5-flash-lite\"\n            },\n            \"quotaValue\": \"250000\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"36s\"\n      }\n    ]\n  }\n}\n"
+    },
+    "compatRaw": {
+      "label": "p2-compat-raw#1",
+      "startedAt": "2026-10-11T22:52:28.990Z",
+      "request": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "<redacted>"
+        },
+        "body": {
+          "omitted": "request body too large to record; generator in the probe script",
+          "bytes": 7284858,
+          "prefix": "{\"model\":\"gemini-3.5-flash-lite\",\"messages\":[{\"role\":\"user\",\"content\":\"Summarise the following text in one sentence.\\n\\nember yarrow. kelp sable amber. yarrow ember amber cedar yarrow amber. cedar willow onyx marble willow kelp cedar willow onyx sable. sable yarrow granite yarrow granite. cedar marble granite yarrow yarrow quartz cedar kelp iris marble yarrow willow umber willow onyx. quartz amber cedar amber iris granite quartz amber sable. kelp granite cedar cedar ember marble quartz quartz kelp amber onyx. kelp iris cedar granite marble umber umber marble. yarrow cedar granite onyx. marble "
+        }
+      },
+      "status": 429,
+      "responseHeaders": {
+        "content-encoding": "gzip",
+        "content-length": "594",
+        "content-type": "application/json; charset=UTF-8",
+        "date": "Sun, 11 Oct 2026 22:52:29 GMT",
+        "server": "scaffolding on HTTPServer2",
+        "server-timing": "gfet4t7; dur=197",
+        "vary": "Origin,X-Origin,Referer",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN",
+        "x-xss-protection": "0"
+      },
+      "chunks": [
+        {
+          "ms": 267,
+          "text": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 250000, model: gemini-3.5-flash-lite\\nPlease retry in 30.718565359s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count\",\n            \"quotaId\": \"GenerateContentInputTokensPerModelPerMinute-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.5-flash-lite\"\n            },\n            \"quotaValue\": \"250000\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"30s\"\n      }\n    ]\n  }\n}\n]"
+        }
+      ],
+      "body": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 250000, model: gemini-3.5-flash-lite\\nPlease retry in 30.718565359s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_input_token_count\",\n            \"quotaId\": \"GenerateContentInputTokensPerModelPerMinute-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.5-flash-lite\"\n            },\n            \"quotaValue\": \"250000\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"30s\"\n      }\n    ]\n  }\n}\n]",
+      "framing": {
+        "bytes": 1404,
+        "crlf": 0,
+        "lf": 36,
+        "cr": 0,
+        "commentLines": 0,
+        "dataLines": 0,
+        "eventLines": 0,
+        "doneMarker": false,
+        "lastBytes": "\",\\n      {\\n        \\\"@type\\\": \\\"type.googleapis.com/google.rpc.RetryInfo\\\",\\n        \\\"retryDelay\\\": \\\"30s\\\"\\n      }\\n    ]\\n  }\\n}\\n]\""
+      }
+    }
+  }
+}

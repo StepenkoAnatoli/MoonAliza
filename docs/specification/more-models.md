@@ -22,7 +22,7 @@ One draft pull request per phase, each merged under the AGENTS.md merge checks.
 | Phase | Content | Rests on |
 |-------|---------|----------|
 | 1 | Stream robustness for every OpenAI-shaped vendor; fail-closed locality for a user-run Ollama | wire brief, design points 3 and 8; Decision step 1 (first build step) |
-| 2 | The per-message provider-state slot, a per-kind request builder, and the Anthropic Messages adapter with its profile option | wire brief, design points 1, 2, 4-7; Decision step 2 |
+| 2 | The per-message provider-state slot, a per-kind request builder, and the Anthropic Messages adapter with its profile option ([design](more-models-phase2.md)) | wire brief, design points 1, 2, 4-7; Decision step 2 |
 | 3 | The OpenAI Responses adapter (and with it gpt-6.1-sol with tools) | wire brief, Decision step 3; shortlist design point 2 |
 | 4 | Fixes to the existing kind (DeepSeek, Mistral, OpenRouter, Gemini 3 `extra_content`) and the dated cloud presets with their data-use classes | wire brief, Decision step 4; shortlist Decision, first build step. Needs the user's vendor keys for the day-one probes (wire U-18, shortlist U-06) |
 | 5 | The Gemini native adapter (generateContent) | wire brief, Decision step 5 |
@@ -129,8 +129,8 @@ Recorded from the build, the unit reviews and the integration review
   reading `src/main/index.ts` as text, and the behavioural tests call a helper that copies that order;
   an `infer()` harness was set aside. Electron's credential and cache behaviour was shown with the
   integration review's Electron harness; the unit tests run on Node's fetch and pin the request instead.
-  The Windows e2e run is the one place the real app is seen doing it: every fake Ollama answers
-  `/api/status` with cloud disabled (`e2e/fixtures/ollama-status.ts`), and `e2e/workbench.spec.ts` asserts
+  The Windows e2e run is the one place the real app is seen doing it: every fake Ollama a local-only
+  run reaches answers `/api/status` with cloud disabled (`e2e/fixtures/ollama-status.ts`), and `e2e/workbench.spec.ts` asserts
   one status request before its one chat request.
 - Fixtures not copied from a capture, each marked in its test: the `id:`/`retry:` lines (no captured
   stream uses them), the message text in the Mistral `model_length` test, and the `404 page not found`

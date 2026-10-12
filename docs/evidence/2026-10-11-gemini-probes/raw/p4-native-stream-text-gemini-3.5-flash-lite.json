@@ -1,0 +1,176 @@
+{
+  "label": "p4-text-gemini-3.5-flash-lite#1",
+  "startedAt": "2026-10-11T22:13:47.500Z",
+  "request": {
+    "method": "POST",
+    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent?alt=sse",
+    "headers": {
+      "Content-Type": "application/json",
+      "x-goog-api-key": "<redacted>"
+    },
+    "body": "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Write five short sentences about the Moon, one per line.\"}]}],\"generationConfig\":{\"maxOutputTokens\":8192}}"
+  },
+  "status": 200,
+  "responseHeaders": {
+    "content-disposition": "attachment",
+    "content-type": "text/event-stream",
+    "date": "Sun, 11 Oct 2026 22:13:48 GMT",
+    "server": "scaffolding on HTTPServer2",
+    "server-timing": "gfet4t7; dur=511",
+    "transfer-encoding": "chunked",
+    "vary": "Origin,X-Origin,Referer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "SAMEORIGIN",
+    "x-xss-protection": "0"
+  },
+  "chunks": [
+    {
+      "ms": 534,
+      "text": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"The Moon is Earth's only natural satellite.\\nIt shines\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 13,\"totalTokenCount\": 26,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\n"
+    },
+    {
+      "ms": 618,
+      "text": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \" brightly by reflecting light from the Sun.\\nIts surface is covered in craters, plains, and dust.\\nGravity on\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 37,\"totalTokenCount\": 50,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\n"
+    },
+    {
+      "ms": 671,
+      "text": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \" the Moon is much weaker than on Earth.\\nTwelve astronauts have walked on its surface.\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 55,\"totalTokenCount\": 68,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\n"
+    },
+    {
+      "ms": 675,
+      "text": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"\",\"thoughtSignature\": \"EmAKXgFpFH0Tt/B3Uf0JyEakpS94+WrUBDSu2qouU61MTIcPZpsHUxLANe6CWwgPuWHrm4zhW7ib6gwCeL9rMS0fUcWChMM2Rfb0bkcK6nztC2yE3DUkE/RM46HSrSLxa7o=\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 55,\"totalTokenCount\": 68,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\n"
+    }
+  ],
+  "body": "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"The Moon is Earth's only natural satellite.\\nIt shines\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 13,\"totalTokenCount\": 26,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \" brightly by reflecting light from the Sun.\\nIts surface is covered in craters, plains, and dust.\\nGravity on\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 37,\"totalTokenCount\": 50,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \" the Moon is much weaker than on Earth.\\nTwelve astronauts have walked on its surface.\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 55,\"totalTokenCount\": 68,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"\",\"thoughtSignature\": \"EmAKXgFpFH0Tt/B3Uf0JyEakpS94+WrUBDSu2qouU61MTIcPZpsHUxLANe6CWwgPuWHrm4zhW7ib6gwCeL9rMS0fUcWChMM2Rfb0bkcK6nztC2yE3DUkE/RM46HSrSLxa7o=\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 13,\"candidatesTokenCount\": 55,\"totalTokenCount\": 68,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 13}],\"serviceTier\": \"standard\"},\"modelVersion\": \"gemini-3.5-flash-lite\",\"responseId\": \"GwrMapnpJqD6-8YPz6fssQo\"}\r\n\r\n",
+  "framing": {
+    "bytes": 1839,
+    "crlf": 8,
+    "lf": 0,
+    "cr": 0,
+    "commentLines": 0,
+    "dataLines": 4,
+    "eventLines": 0,
+    "doneMarker": false,
+    "lastBytes": "\"t\\\": 13}],\\\"serviceTier\\\": \\\"standard\\\"},\\\"modelVersion\\\": \\\"gemini-3.5-flash-lite\\\",\\\"responseId\\\": \\\"GwrMapnpJqD6-8YPz6fssQo\\\"}\\r\\n\\r\\n\""
+  },
+  "events": [
+    {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "The Moon is Earth's only natural satellite.\nIt shines"
+              }
+            ],
+            "role": "model"
+          },
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13,
+        "candidatesTokenCount": 13,
+        "totalTokenCount": 26,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-3.5-flash-lite",
+      "responseId": "GwrMapnpJqD6-8YPz6fssQo"
+    },
+    {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": " brightly by reflecting light from the Sun.\nIts surface is covered in craters, plains, and dust.\nGravity on"
+              }
+            ],
+            "role": "model"
+          },
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13,
+        "candidatesTokenCount": 37,
+        "totalTokenCount": 50,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-3.5-flash-lite",
+      "responseId": "GwrMapnpJqD6-8YPz6fssQo"
+    },
+    {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": " the Moon is much weaker than on Earth.\nTwelve astronauts have walked on its surface."
+              }
+            ],
+            "role": "model"
+          },
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13,
+        "candidatesTokenCount": 55,
+        "totalTokenCount": 68,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-3.5-flash-lite",
+      "responseId": "GwrMapnpJqD6-8YPz6fssQo"
+    },
+    {
+      "candidates": [
+        {
+          "content": {
+            "parts": [
+              {
+                "text": "",
+                "thoughtSignature": "EmAKXgFpFH0Tt/B3Uf0JyEakpS94+WrUBDSu2qouU61MTIcPZpsHUxLANe6CWwgPuWHrm4zhW7ib6gwCeL9rMS0fUcWChMM2Rfb0bkcK6nztC2yE3DUkE/RM46HSrSLxa7o="
+              }
+            ],
+            "role": "model"
+          },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 13,
+        "candidatesTokenCount": 55,
+        "totalTokenCount": 68,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 13
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "modelVersion": "gemini-3.5-flash-lite",
+      "responseId": "GwrMapnpJqD6-8YPz6fssQo"
+    }
+  ]
+}

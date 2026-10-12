@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 126,
+  "bodySha256": "d9e11b814591727818782060bb16719e7121ef09e3ae97cefc1ea1e245112627",
+  "body": {
+    "model": "claude-haiku-4-5-20251001",
+    "max_tokens": 70000,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply with OK."
+      }
+    ],
+    "stream": true
+  }
+}

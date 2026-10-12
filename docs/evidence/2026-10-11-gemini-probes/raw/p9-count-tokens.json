@@ -1,0 +1,178 @@
+{
+  "contentsOnly": {
+    "label": "p9-contents#1",
+    "startedAt": "2026-10-11T22:13:59.185Z",
+    "request": {
+      "method": "POST",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:countTokens",
+      "headers": {
+        "Content-Type": "application/json",
+        "x-goog-api-key": "<redacted>"
+      },
+      "body": "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Call read_file on README.md\"}]}]}"
+    },
+    "status": 200,
+    "responseHeaders": {
+      "content-encoding": "gzip",
+      "content-length": "105",
+      "content-type": "application/json; charset=UTF-8",
+      "date": "Sun, 11 Oct 2026 22:13:59 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "server-timing": "gfet4t7; dur=59",
+      "vary": "Origin,X-Origin,Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    },
+    "chunks": [
+      {
+        "ms": 111,
+        "text": "{\n  \"totalTokens\": 9,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 9\n    }\n  ]\n}\n"
+      }
+    ],
+    "body": "{\n  \"totalTokens\": 9,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 9\n    }\n  ]\n}\n",
+    "framing": {
+      "bytes": 115,
+      "crlf": 0,
+      "lf": 9,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 0,
+      "eventLines": 0,
+      "doneMarker": false,
+      "lastBytes": "\"{\\n  \\\"totalTokens\\\": 9,\\n  \\\"promptTokensDetails\\\": [\\n    {\\n      \\\"modality\\\": \\\"TEXT\\\",\\n      \\\"tokenCount\\\": 9\\n    }\\n  ]\\n}\\n\""
+    }
+  },
+  "contentsPlusTools": {
+    "label": "p9-contents-tools#1",
+    "startedAt": "2026-10-11T22:14:02.299Z",
+    "request": {
+      "method": "POST",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:countTokens",
+      "headers": {
+        "Content-Type": "application/json",
+        "x-goog-api-key": "<redacted>"
+      },
+      "body": "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Call read_file on README.md\"}]}],\"tools\":[{\"functionDeclarations\":[{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]}}]}]}"
+    },
+    "status": 400,
+    "responseHeaders": {
+      "content-encoding": "gzip",
+      "content-length": "242",
+      "content-type": "application/json; charset=UTF-8",
+      "date": "Sun, 11 Oct 2026 22:14:02 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "server-timing": "gfet4t7; dur=27",
+      "vary": "Origin,X-Origin,Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    },
+    "chunks": [
+      {
+        "ms": 36,
+        "text": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Invalid JSON payload received. Unknown name \\\"tools\\\": Cannot find field.\",\n    \"status\": \"INVALID_ARGUMENT\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.BadRequest\",\n        \"fieldViolations\": [\n          {\n            \"description\": \"Invalid JSON payload received. Unknown name \\\"tools\\\": Cannot find field.\"\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+      }
+    ],
+    "body": "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Invalid JSON payload received. Unknown name \\\"tools\\\": Cannot find field.\",\n    \"status\": \"INVALID_ARGUMENT\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.BadRequest\",\n        \"fieldViolations\": [\n          {\n            \"description\": \"Invalid JSON payload received. Unknown name \\\"tools\\\": Cannot find field.\"\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+    "framing": {
+      "bytes": 431,
+      "crlf": 0,
+      "lf": 17,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 0,
+      "eventLines": 0,
+      "doneMarker": false,
+      "lastBytes": "\": \\\"Invalid JSON payload received. Unknown name \\\\\\\"tools\\\\\\\": Cannot find field.\\\"\\n          }\\n        ]\\n      }\\n    ]\\n  }\\n}\\n\""
+    }
+  },
+  "generateContentRequestNoTools": {
+    "label": "p9-gcr#1",
+    "startedAt": "2026-10-11T22:14:05.338Z",
+    "request": {
+      "method": "POST",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:countTokens",
+      "headers": {
+        "Content-Type": "application/json",
+        "x-goog-api-key": "<redacted>"
+      },
+      "body": "{\"generateContentRequest\":{\"model\":\"models/gemini-3.5-flash-lite\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Call read_file on README.md\"}]}]}}"
+    },
+    "status": 200,
+    "responseHeaders": {
+      "content-encoding": "gzip",
+      "content-length": "105",
+      "content-type": "application/json; charset=UTF-8",
+      "date": "Sun, 11 Oct 2026 22:14:05 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "server-timing": "gfet4t7; dur=60",
+      "vary": "Origin,X-Origin,Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    },
+    "chunks": [
+      {
+        "ms": 70,
+        "text": "{\n  \"totalTokens\": 9,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 9\n    }\n  ]\n}\n"
+      }
+    ],
+    "body": "{\n  \"totalTokens\": 9,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 9\n    }\n  ]\n}\n",
+    "framing": {
+      "bytes": 115,
+      "crlf": 0,
+      "lf": 9,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 0,
+      "eventLines": 0,
+      "doneMarker": false,
+      "lastBytes": "\"{\\n  \\\"totalTokens\\\": 9,\\n  \\\"promptTokensDetails\\\": [\\n    {\\n      \\\"modality\\\": \\\"TEXT\\\",\\n      \\\"tokenCount\\\": 9\\n    }\\n  ]\\n}\\n\""
+    }
+  },
+  "generateContentRequestWithTools": {
+    "label": "p9-gcr-tools#1",
+    "startedAt": "2026-10-11T22:14:08.411Z",
+    "request": {
+      "method": "POST",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:countTokens",
+      "headers": {
+        "Content-Type": "application/json",
+        "x-goog-api-key": "<redacted>"
+      },
+      "body": "{\"generateContentRequest\":{\"model\":\"models/gemini-3.5-flash-lite\",\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"Call read_file on README.md\"}]}],\"tools\":[{\"functionDeclarations\":[{\"name\":\"read_file\",\"description\":\"Read a UTF-8 text file from the project.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]}}]}]}}"
+    },
+    "status": 200,
+    "responseHeaders": {
+      "content-encoding": "gzip",
+      "content-length": "106",
+      "content-type": "application/json; charset=UTF-8",
+      "date": "Sun, 11 Oct 2026 22:14:08 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "server-timing": "gfet4t7; dur=59",
+      "vary": "Origin,X-Origin,Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    },
+    "chunks": [
+      {
+        "ms": 70,
+        "text": "{\n  \"totalTokens\": 57,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 57\n    }\n  ]\n}\n"
+      }
+    ],
+    "body": "{\n  \"totalTokens\": 57,\n  \"promptTokensDetails\": [\n    {\n      \"modality\": \"TEXT\",\n      \"tokenCount\": 57\n    }\n  ]\n}\n",
+    "framing": {
+      "bytes": 117,
+      "crlf": 0,
+      "lf": 9,
+      "cr": 0,
+      "commentLines": 0,
+      "dataLines": 0,
+      "eventLines": 0,
+      "doneMarker": false,
+      "lastBytes": "\"{\\n  \\\"totalTokens\\\": 57,\\n  \\\"promptTokensDetails\\\": [\\n    {\\n      \\\"modality\\\": \\\"TEXT\\\",\\n      \\\"tokenCount\\\": 57\\n    }\\n  ]\\n}\\n\""
+    }
+  }
+}

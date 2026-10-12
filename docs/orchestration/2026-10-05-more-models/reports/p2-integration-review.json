@@ -1,0 +1,331 @@
+{
+  "summary": "More models Phase 2 integration review on the integrated head: spec, breaker (real Electron), invariants, mutation; all read e2e/",
+  "agentCount": 4,
+  "logs": [],
+  "result": [
+    {
+      "role": "spec",
+      "result": {
+        "findings": [
+          {
+            "id": "P2-SPEC-1",
+            "severity": "S2",
+            "problem": "Two places tell users something the live evidence no longer supports. The hint (src/renderer/App.tsx AnthropicHint) and the README say \"Moonzila's Anthropic connection is built from Anthropic's documentation and is not yet checked against the live API.\" docs/ARCHITECTURE.md repeats it, and tests/workbench.test.tsx pins the phrase. But the 2026-10-12 probes ran the native request shape on four models. tests/anthropic-transport.test.ts asserts that complete() sends the D1 and the D5-think step-1 and step-2 bodies with the sha256 of the bodies the live API accepted. Seven live streams go through readAnthropic/anthropicOutcome byte for byte. The sentence came from spec section 7, written while the probes had not yet run, and no decision revisited it after the probes.",
+            "evidence": "docs/evidence/2026-10-12-anthropic-probes.md: D1/D5 200 on Sonnet, Opus and Fable; D5(a) live caller field replayed verbatim and accepted. tests/anthropic-transport.test.ts:115-153 'the live D1 request: complete() sends the body the API accepted, byte for byte' and 'both bodies are the ones the API accepted (D5)' (expect(bodies.map(sha256)).toEqual(steps.map(step => step.bodySha256))); passing at 2d3fa59 (8 files, 463 tests green). grep of reports/ and DECISIONS-P2 for 'not yet checked against the live API': only the pre-probe design files, nothing after the probes.",
+            "reproduction": "Read README.md line 24 (last sentence) and App.tsx AnthropicHint last <p>, then docs/evidence/2026-10-12-anthropic-probes.md 'D1', 'D5', and tests/anthropic-transport.test.ts:115-153.",
+            "fix": "The lead decides the wording in the spec's 'As built (Phase 2)' section. Suggested: 'Moonzila's requests match ones Anthropic's live API accepted on 2026-10-12, and recorded live answers pass through it; it has not yet been used end to end against the live API.' Change it in the hint, README, ARCHITECTURE and the renderer test's 'order' fragment together. If the sentence is kept as written, the As-built section should say why."
+          },
+          {
+            "id": "P2-SPEC-2",
+            "severity": "S2",
+            "problem": "The D-1 and D-2 docs owed for the PR are missing (REQUIREMENTS-P2 D-1, D-2; spec sections 1, 4 item 6, 8). Exactly what is missing: (a) docs/specification/more-models-phase2.md has no 'As built (Phase 2)' section. It must hold the rule that chat requests for every kind are sent with credentials: 'omit', the D10 verdict ('no as-shipped proxy or 401 path worked at the parent'; cookie dropped and Authorization kept with commit 3), and the known-limit sentence beside it (Windows-integrated sign-in or a client certificate; a proxy authorization Chromium already cached is still sent). (b) Spec section 8's credentials line still reads 'is written into this line ... only if the D10 verdict keeps commit 3'. (c) 'Recorded for later' still lists both alternatives, 'If commit 3 stays' and 'If commit 3 is dropped or not merged'; drop the second. The login-handler item says D10's harness-handler outcomes 'are recorded here' but does not give them: with a handler, a cached Proxy-Authorization was still sent under omit; the credentials-in-URL rule gave ERR_NO_SUPPORTED_PROXIES (RUN.md 2026-10-12 wave-1 entry). (d) AGENTS.md Invariants has no provider-state row. Its Evidence should be: tests/application.test.ts 'a tool step's provider state goes back on the next step ... never reaches disk, events or session.read' (T-6; base64 marker; red without the strip and under a state hidden in the message.created content string); e2e/anthropic.spec.ts userData scan (T-4); F-3 ownership refusals (tests/provider-transport.test.ts 'a %s request carrying any provider state is refused before any fetch', 'checkTranscript keeps a state its kind owns ...'); F-1 contract refines ('provider state rides only on an assistant tool step and a tool-call outcome ...'). (e) AGENTS.md's token row ('Tokens never reach the engine ...') lacks the S-1 evidence: tests/provider-screen.test.ts. (f) docs/development-status.md still says 'Phase 1' (2026-10-11), and HANDOFF.md has no Phase 2 or Anthropic entry. (g) RUN.md still records the last checkpoint as U0 and wave 2 as running. (h) DAY-ONE-P2.md and the spec header (l.15-17) and 'Day one' section still say the Anthropic probes 'have not run'. The As-built section should record their outcomes and the four contradictions in the evidence file: the live tool_use caller field (spec 5.5 'Set aside' says captured start objects hold only documented fields); ping inside the first open block; Sonnet 5.5 display omitted (D13); Haiku '64K' = 64,000, against DAY-ONE's 65,536 cost basis. Also D6's side effect: the model called its earlier answer invented when the history dropped its tool turns.",
+            "evidence": "grep -n 'As built' docs/specification/more-models*.md gives only more-models.md:104 '(Phase 1)' and phase2.md lines 343, 353 and 789, which are forward references. AGENTS.md:76-88 has no 'Provider state' row. grep -i 'phase 2|anthropic' HANDOFF.md gives no hit. docs/development-status.md:1 '# Development status - 2026-10-11 - More models, Phase 1'. RUN.md:7 'Last checkpoint | 2026-10-12 - Phase 2 U0 committed'. more-models-phase2.md:15 'Anthropic's live probes ... have not run'; DAY-ONE-P2.md:3 'have not run'.",
+            "reproduction": "In a checkout of 2d3fa59: grep the files named above.",
+            "fix": "The lead writes items (a) to (h) in one docs commit before the PR, citing the evidence file and reports/p2-wave1-workflow.json for D10."
+          },
+          {
+            "id": "P2-SPEC-3",
+            "severity": "S3",
+            "problem": "The workbench no-cookie assertion has no positive control. The Anthropic journey proves with a /cookie-probe that a non-omit session.fetch carries the planted cookie to its origin. The workbench block only checks that cookies.get returns the cookie. If the local session never sent that cookie to http://127.0.0.1:<port> for an unrelated reason, `cookie: undefined` would pass whatever credentials says. U5's commit report shows the guard red only in a scratch harness, not in the committed spec.",
+            "evidence": "e2e/workbench.spec.ts diff: cookies.set then cookies.get assertion only; e2e/anthropic.spec.ts:50-51 has the probe and expect(fake.probeCookies).toEqual([...]). Commit 2d3fa59 report: 'Expected, not run here: the workbench journey itself'.",
+            "reproduction": "Read e2e/workbench.spec.ts around the new block, then compare with e2e/anthropic.spec.ts:45-51.",
+            "fix": "Add the same positive control to the workbench fake: a GET /cookie-probe through localSession.fetch without omit, asserting the cookie arrives. Or show the guard (credentials removed from post()) red on the first Windows round."
+          },
+          {
+            "id": "P2-SPEC-4",
+            "severity": "S4",
+            "problem": "The code fails closed in several cases the spec does not describe; they should be listed in As built. (1) readAnthropic refuses with PROVIDER_INVALID_RESPONSE: a data payload that is not an object with a string `type`, even under `event: ping`; a content_block_start whose content_block lacks a string type; a delta on a known block whose `type` is missing or not a string; a non-null, non-string stop_reason. Section 5.4 only says unknown types are ignored. (2) A usage count that is not a non-negative safe integer is ignored, and an input sum past the safe integers leaves usage unset (tested, U3-R3/R7; not in spec 5.6). (3) screenCompletion turns a state whose data is not JSON into PROVIDER_PROTOCOL_ERROR (ARCHITECTURE says so; spec section 6 does not). (4) S-5 says 'only the owning adapter parses it'. Main's screen JSON.parses the data of any format to walk its leaves; spec section 6 designs this, so the requirement's wording should name the screen as the one other reader.",
+            "evidence": "src/main/anthropic.ts:158, :208, :231, :256 (reader); :146-152, :279 (usage); src/main/provider-screen.ts:362; REQUIREMENTS-P2 S-5.",
+            "reproduction": "Read the lines cited.",
+            "fix": "Record these in 'As built (Phase 2)'. No code change."
+          },
+          {
+            "id": "P2-SPEC-5",
+            "severity": "S4",
+            "problem": "Small text points. (a) The hint and README say the 5.x models have 'up to 128K output tokens'. D7 found Anthropic's '64K' means 64,000, so 128K is likely 128,000, while the form accepts up to 200,000. A user who enters 131,072 gets a 400 that Test connection reports generically. (b) docs/ARCHITECTURE.md's Phase 2 paragraph keeps superseded interim clauses: 'src/main/anthropic.ts ... a skeleton until unit U3' and '`anthropic` answers NOT_IMPLEMENTED until U4', before later sentences that undo them. (c) README: 'Once a step returns thinking, the task's earlier steps must be sent back unchanged': D5f showed this account accepting a changed system prompt with signed thinking. The rule holds per E-12 for newer accounts and as Anthropic's advice, but 'must' is stronger than the live result. (d) profile.test picks its session from the stored profile.locality without the validateEndpoint comparison infer() makes. A pre-Phase-2 loopback anthropic row labelled local would be tested through the local session (spec section 7 known limit 2 covers only infer()). (e) npm run lint (eslint src tests scripts) does not cover e2e/; U5 ran eslint e2e by hand.",
+            "evidence": "docs/evidence/2026-10-12-anthropic-probes.md D7, D5(f); App.tsx Maximum response max={Math.min(200000, contextTokens)}; src/main/index.ts:276; package.json lint script.",
+            "reproduction": "Read the lines cited.",
+            "fix": "(a) Say '128,000'. (b) Trim the interim clauses. (c) Optionally 'as Anthropic requires for newer accounts and advises for all'. (d) Note it in the known-limit list. (e) Add e2e to the lint script in a later change."
+          }
+        ],
+        "checked": [
+          "Pinned Linux gate at 2d3fa59 (A-1): typecheck exit 0, lint exit 0. Full vitest: 1540 tests in 75 files, 74 failed, all 74 exactly baseline-failing.json, 0 outside it, every file with results. Phase 2 files alone: 8 files, 463 green.",
+          "F-1 (U0): ProviderStateSchema bounds and both refines in one commit (28395c5); provider-transport 'provider state rides only on an assistant tool step ...'.",
+          "F-2, S-2 strip and carry: message() destructures providerState. MessageSchema, EventSchema, ToolCallSchema, errors.ts and migrations unchanged (no src/shared diff). Mutation: strip removed turns the application byte-scan test red (1 failed).",
+          "F-3 ownership in checkTranscript; F-4 order pins (commit 1 0337f69 before the seam c0fe1fb); T-2 snapshots committed before the refactor.",
+          "F-5 credentials: 'omit' in post(), exact init pinned for openai-compatible, ollama and anthropic; README credentials sentence and limit match ARCHITECTURE and the D10 outcome.",
+          "F-6, F-7, F-8 encoder against spec 5.1-5.3: key order, system lift, tools mapping, no thinking/tool_choice/sampling, consecutive users, tool_result grouping, prefill refusal, state checks (counts, ids, names, JSON-text inputs, joined text); refusal-table tests at the encoder and through complete().",
+          "F-9 reader against spec 5.4: message_start rules, event-name match, index/open-block rules, types before accumulation, single signature_delta, ending at message_stop with cancel, text cap across blocks, 128/512/131072 bounds. F-10/F-11 outcome table, state built and checked by the encoder's schema, size cap. F-12 usage.",
+          "F-13 overflow 400 rule (live D2 body as fixture); F-14 retries (429 integer only, 5xx 1 s/2 s, at most two, deadline, Stop, retry:false); F-22 deadline timer armed after pre-checks, 120 s and 600 s pins.",
+          "F-15, F-16, F-17, T-3 engine: reserve at half the budget and 500 messages, freeze, continueContext, frozen CONTEXT_LIMIT text, review runs unchanged. Mutations: freeze disabled turns 8 tests red; frozen text dropped turns 2 red.",
+          "F-18 validateEndpoint labels anthropic external on loopback; S-3 engine pins (session and project switch) and the main source pin.",
+          "F-19 option order, endpoint default, hint order; data-use sentence identical in App.tsx, README and spec section 7 (checked by script). F-20 profile.test line pinned. F-21 no new public code, IPC type, table or migration. F-23 PROVIDER_PROTOCOL_ERROR crosses, with the widened text.",
+          "S-1 screenCompletion: leaves, keys, split text and escapes. Mutation: state rule removed turns 5 tests red. vault.redact matches literal saved secrets only, so a thinking signature does not trip it.",
+          "T-4 e2e read as code against App.tsx and policy: UI strings and labels exist; project sessions default cloud-allowed, so 'Allow for this project' is enough; Ask mode offers list_files; request 2 equals request 1 plus the replay plus tool_result through continueContext; marker scan with positive control; cookie probe; packaged-exe path handled; CI runs every e2e/ spec.",
+          "D-1: every src/ commit in 3735096..2d3fa59 stages docs/ARCHITECTURE.md.",
+          "README against code and live evidence: Bearer only (D1), single workspace, always cloud, 10-minute wait (600 s), Test connection with its own max_tokens and never retried, credentials paragraph (D10).",
+          "Worktree /home/user/task5-handoff/wt/p2-ir-spec was already on disk at 2d3fa59 with the two symlinks when the task started, so the add step failed and I reused it. Mutations were restored with git checkout; nothing tracked was changed. It is now removed with git worktree remove --force; /home/user/moonaliza's own checkout was never touched."
+        ]
+      }
+    },
+    {
+      "role": "breaker",
+      "result": {
+        "findings": [
+          {
+            "id": "P2-BRK-1",
+            "severity": "S3",
+            "problem": "The S-1 state screen matches every stored vault value as a plain substring (vault.redact splits on each value; src/main/vault.ts:183-195), and that includes placeholder keys such as 'ollama', 'EMPTY' or 'lm-studio' that local OpenAI-compatible servers ask for. If any such value appears in an Anthropic tool step's thinking text, its text, or any key or string leaf of the state, the step fails with PROVIDER_PROTOCOL_ERROR. Thinking is free prose, so a run about a project that mentions the placeholder fails on every tool step. The spec's known limit (section 6, (1)) covers a real secret in a step but not this false positive on a short, common stored value. The README does not name it either.",
+            "evidence": "Scratch test tests/brk/cross.test.ts 'secret in thinking text of a tool step' ran the real engine, complete() and screenCompletion. The base was the D5-think-sonnet-step1 live recording with the thinking_delta changed to contain the stored value, and redact did a substring replace. Result: run failed with {\"code\":\"PROVIDER_PROTOCOL_ERROR\",\"message\":\"The provider returned a tool call or step Moonzila could not use safely ...\"}. providerStateLeaves also returns object keys and type values ('type', 'text', 'thinking', 'tool_use', 'caller', 'direct'), so a stored value that is one of those words fails every step.",
+            "reproduction": "Save any profile whose key is a short common word (for example an OpenAI-compatible profile pointed at Ollama /v1 with key 'ollama'). Then run an Anthropic tool step whose thinking or text contains that word: screenCompletion(output, t => t.split('ollama').join('[redacted]')) throws PROVIDER_PROTOCOL_ERROR.",
+            "fix": "Either skip vault values below a minimum length (for example 16 characters) or values made only of [a-z-] in the state and content screen, or add this false positive to the spec's known limit (1) and to the README. Keep the tool-call rule as it is."
+          },
+          {
+            "id": "P2-BRK-2",
+            "severity": "S4",
+            "problem": "The history reserve's extra trimming loop (assembleContext with historyReserve) repeats the quadratic estimate that already existed: each dropped turn re-stringifies the whole request. It runs on every unfrozen step of an Anthropic tool run, synchronously in the engine process. The quadratic cost predates Phase 2; the reserve adds about 2.7x at small message sizes and makes it run in more cases.",
+            "evidence": "Scratch test tests/brk/reserve.test.ts: 500 turns (1000 messages), contextTokens 1,000,000, outputTokens 128,000. Size 2000: reserve off 442 ms, on 1183 ms. Size 20000: off 21353 ms, on 20263 ms. Size 200000: off 264445 ms, on 270576 ms. While this runs, the engine cannot answer main's 30 s control requests.",
+            "reproduction": "Call assembleContext({system, history: 500 turns of N-character user/assistant pairs, current: [user], tools: READ_TOOL_SPECS, contextTokens: 1e6, outputTokens: 128000, historyReserve: true}) and time it.",
+            "fix": "Optional: compute per-message estimates once and subtract when dropping a turn, which makes trimming linear. If not, record it for later; this is not a Phase 2 regression."
+          },
+          {
+            "id": "P2-BRK-3",
+            "severity": "S4",
+            "problem": "When the 600 s anthropic deadline fires in real Electron, the error is an AbortError ('The operation was aborted') if it hits mid-stream, or a TimeoutError if it hits before the headers. Both cross as PROVIDER_ERROR with the generic text 'Check the selected profile and project access'. The same text appears after retries on a 529 are used up, and for an Electron cut (net::ERR_INCOMPLETE_CHUNKED_ENCODING). A user whose step timed out after 10 minutes is told to check the profile. Electron itself imposes no shorter timeout.",
+            "evidence": "Real Electron 44.4.5 under xvfb-run, harness tests/brk/el/main.ts driving an esbuild bundle of src/main/inference.ts with session.fetch on an in-memory partition. A server that idles 330 s mid-stream, and one that idles 330 s before the headers: both completed 'OK tool_calls 2 after 330.04 s'. Idling 620 s: '[600.4s] midstream THROW AbortError The operation was aborted after 600.033 s' and '[600.4s] ttfb THROW TimeoutError The operation was aborted due to timeout after 600.032 s'. A socket destroyed mid-stream: 'THROW Error net::ERR_INCOMPLETE_CHUNKED_ENCODING'; with a Content-Length: 'net::ERR_CONTENT_LENGTH_MISMATCH'.",
+            "reproduction": "Run the harness above with IDLE_S=620: dbus-run-session -- xvfb-run -a electron --no-sandbox --disable-gpu .",
+            "fix": "No code change is required for correctness. Record that the deadline and retry exhaustion show the generic PROVIDER_ERROR text. A dedicated message needs a public mapping (F-21), so keep it with the recorded-for-later items."
+          },
+          {
+            "id": "P2-BRK-4",
+            "severity": "S4",
+            "problem": "A stream that ends cleanly (no transport error) before any text block, for example a cut during the thinking block, is read as outcome 'incomplete' with content ''. The engine stores an empty partial assistant message, and the renderer shows nothing for it (MessageItem returns null). In real Electron an abrupt cut raises a net:: error instead, so no message is stored. Only a server or proxy that closes the chunked body properly without message_stop reaches the empty-row path.",
+            "evidence": "tests/brk/cross.test.ts '529 (retry-after 0) then a stream cut mid-thinking': a 529 with retry-after 0 was retried once, then the step-2 body ended cleanly mid-thinking. The run failed with PROVIDER_ERROR and the stored messages ended with 'assistant(partial):' (empty). A reset mid data line stored no partial. The frozen run's earlier signature was not found in state.sqlite, -wal or -shm (byte scan empty).",
+            "reproduction": "Serve D5-think-sonnet-step2.response.raw truncated before its first content_block_stop, with a clean close, to step 2 of a frozen run.",
+            "fix": "Optional: skip storing an empty incomplete assistant message. This is pre-existing behaviour for every kind."
+          },
+          {
+            "id": "P2-BRK-5",
+            "severity": "S4",
+            "problem": "The SSE line splitter (provider-stream.ts lines(), which predates Phase 2) splits only on \\r?\\n. An Anthropic stream using bare-CR line endings, which the SSE format allows, fails as PROVIDER_INVALID_RESPONSE. None of the live recordings use CR, so this matters only behind a rewriting proxy.",
+            "evidence": "tests/brk/mutate.test.ts on D5-think-sonnet-step1: 'crlf => tool_calls ... state(appendOnly=true, 1389c)' but 'bare CR => THROWS PROVIDER_INVALID_RESPONSE'.",
+            "reproduction": "complete() on the recording with every \\n replaced by \\r.",
+            "fix": "Note only. If wanted, split on /\\r\\n|\\r|\\n/ while keeping \\r\\n split across chunks as one break."
+          },
+          {
+            "id": "P2-BRK-6",
+            "severity": "S4",
+            "problem": "The F-17 estimate counts a whole-replay message as JSON.stringify of a string that already holds JSON. Every quote, backslash and newline inside the state's data is escaped a second time, so thinking text with many quotes or newlines is overestimated. That can end a frozen run with CONTEXT_LIMIT earlier than the request needs. Signatures (base64) and the empty thinking in the live recordings are not affected.",
+            "evidence": "src/engine/context.ts estimated() returns {role, providerState: state.data}, then estimateInput JSON.stringifies it. The state data is the JSON text built by toolCallsOutcome.",
+            "reproduction": "Compare estimateInput on a message whose state thinking text is 100 KB of '\"\\n' with the byte length of the encoder's assistant entry.",
+            "fix": "Count JSON.parse(state.data).content, the value the encoder sends, instead of the data string. Otherwise note that the error is conservative."
+          }
+        ],
+        "checked": [
+          "Worktree /home/user/task5-handoff/wt/p2-ir-breaker at 2d3fa59 was already present and clean when I started. My ln -s commands then created two self-referencing symlinks inside the main checkout's ignored directories (/home/user/moonaliza/.build/.build and node_modules/node_modules). I removed both. git status on /home/user/moonaliza is clean, and the worktree was removed with git worktree remove --force.",
+          "The P2 unit files at head on Linux: tests/anthropic.test.ts, anthropic-transport, application, context, provider-screen, provider-transport and workbench.test.tsx. 7 files, 424 tests passed.",
+          "Hostile and malformed streams through the real complete(), mutating the live D5-think-sonnet-step1 recording (40 cases, tests/brk/mutate.test.ts). Results matched the spec in every case except the bare-CR note: CRLF, no event lines, a leading BOM, ping before message_start, application/json or no content-type all read correctly. Cut at clean EOF gives incomplete with no state; a cut mid data line, a duplicate message_start, an event-name mismatch, a string index, a second signature_delta, a null start signature, an unknown block on a tool_use stop, invalid or array partial JSON, an unoffered tool, duplicate ids, a 40-deep extra field, and a non-string text block all give PROVIDER_INVALID_RESPONSE. An error event gives PROVIDER_STREAM_ERROR without its text. pause_turn gives PROVIDER_FINISH_FAILED; max_tokens incomplete; refusal blocked; a changed stop_reason invalid. A redacted_thinking block gives appendOnly true; a __proto__ field is kept as an own property; lone surrogates survive; a 3.9 MB thinking text gives a 3,901,389-character state; [DONE] mid-stream gives incomplete.",
+          "Cross-unit runs with the real engine (Application and Store on a file database) plus complete() and screenCompletion, built from adapted live recordings (tests/brk/cross.test.ts). Baseline frozen round trip: request 2's messages begin with request 1's, system and tools are byte-equal, and neither signature is on disk in the sqlite, -wal or -shm files. Stop during a 30 s retry-after wait in a frozen run: cancelled in 244 ms, the 529 body cancelled, no further fetch. A 529 followed by a stream cut mid-thinking at a frozen step: one retry, then PROVIDER_ERROR, no signature on disk. A switch to local-only during a hanging stream: run cancelled and the fetch body aborted. The live D2 'prompt is too long' 400 at a frozen step gives CONTEXT_LIMIT with the frozen text. A 3.9 MB thinking step on a 2M-token profile completes with a 3.9 MB body. Nine tool calls give PROVIDER_PROTOCOL_ERROR with no signature on disk.",
+          "The e2e fake (e2e/fixtures/anthropic-fake.ts) driven through the real engine, complete() and Node fetch (tests/brk/fake-journey.test.ts): turns test, step1 and step2 were all accepted with no refusals, the run completed, and SIGNATURE_MARKER was absent from the database files.",
+          "Windows e2e read step by step against src/renderer/App.tsx and src/main: every selector exists and is unique ('Your work starts here', the Provider combobox regex, Endpoint autofill to https://api.anthropic.com/v1, the AnthropicHint aria-label not colliding with getByLabel('API key'), 'Test connection', the notice text, 'Close dialog', 'Trust and open', the heading, the Model profile option label, 'Review cloud access' and 'Allow for this project'). Assistant tool-step content renders as plain text, which STEP1_TEXT's exact match needs. Budget check: the Ask-mode tools plus system fit 16384/3072 (estimate about 4k against a 13,312 budget and 6,656 for the reserve half). The provider and local partitions are in memory, so no cookie or cache reaches userData. My conclusion is that the journey should pass on Windows CI.",
+          "The e2e journey in real Electron 44.4.5 under dbus-run-session and xvfb-run, from a scratch copy that adds --no-sandbox and --disable-gpu and stubs safeStorage, because Linux has no DPAPI. The cookie probe positive control, profile save, and Test connection through the real app all passed the fake's checks (Bearer, anthropic-version, path, max_tokens 3072, no planted cookie). Project open cannot run on Linux because it needs the Windows native helper, so the steps after it were covered by the Node harness above.",
+          "session.fetch in Electron with credentials 'omit' and an explicit Authorization header to a loopback fake, with a cookie planted for that origin: the fake saw Bearer and anthropic-version and no cookie. Electron does not cut a 330 s idle, either mid-stream or before the headers. The 600 s deadline fires at 600.03 s.",
+          "Reviewed and found correct: post() and pause() retry rules (deadline check, body cancelled before the wait, Stop gives RUN_CANCELLED); the frozen base being the request that produced the state; continueContext appending only; message() stripping the state before both the stored message and its event; inference.error passing PROVIDER_PROTOCOL_ERROR end to end; validateEndpoint labelling a loopback anthropic endpoint external, so the stored-locality comparison in main fails closed; verifyOllamaLocality skipping non-ollama kinds; profile.test using retry false and the profile's own outputTokens; the workbench.spec Authorization and no-cookie block."
+        ]
+      }
+    },
+    {
+      "role": "invariants",
+      "result": {
+        "findings": [
+          {
+            "id": "P2-IR-1",
+            "severity": "S3",
+            "problem": "The tool-call secret check that moved unchanged into screenCompletion (src/main/provider-screen.ts:33-36, rule 1) still compares the JSON text of the calls. Suppose a vault secret contains a double quote, a backslash or a control character, and it appears in a tool input from a chat kind (openai-compatible or ollama, which carry no provider state). JSON.stringify escapes those characters, so the secret never matches the text, the screen passes, and the call runs (for example run_command). It is then stored in messages.tool_calls and in the tool.started event, and session.read returns it to the renderer in clear. For the anthropic kind the state's leaf scan does catch it, because every tool_use input is also in the state. The gap was already there before Phase 2 and the spec records it (more-models-phase2.md:1117, 'Pre-existing: the tool-call secret check reads JSON text'). However, AGENTS.md's 'Tokens never reach the engine, DB, events, logs, renderer ... in clear' row is written without that exception, and on HEAD 5e82997 the row now cites provider-screen tests for the 'escaped' case.",
+            "evidence": "Ran a scratch vitest file in the worktree at 2d3fa59: for each secret in ['key\"with-quote-1234', 'key\\\\with-backslash-1234', 'key\\twith-tab-1234'], redact = text => text.split(secret).join('[redacted]'), then await screenCompletion({content:'', outcome:'tool_calls', toolCalls:[{id:'c1', name:'run_command', input:{command:`curl -H \"Authorization: ${secret}\"`}}]}, redact). Output for all three: 'PASSED SCREEN; input still holds secret: true' (1 test passed, no throw).",
+            "reproduction": "In tests/, call screenCompletion with a completion that has no providerState and whose toolCalls[0].input holds a secret containing \" or \\, using a redact that replaces that secret. The call resolves and nothing throws. Run the same shape through Application with a chat-kind profile: the call is stored, and session.read returns the secret's decoded value.",
+            "fix": "In rule 1, screen the leaves of the calls rather than their JSON text, for example `providerStateLeaves(JSON.stringify(output.toolCalls))`; keys are included, and numbers are already covered by the JSON-text check, which can stay too. Add a provider-screen case with a secret containing \" and one containing \\ in a chat-kind tool input, and show it red against the current JSON-text check. Until that lands, qualify the AGENTS.md tokens row with this exception or point it at the recorded item."
+          },
+          {
+            "id": "P2-IR-2",
+            "severity": "S4",
+            "problem": "An anthropic profile saved through IPC before Phase 2 with a loopback endpoint has locality 'local' stored. Phase 2 makes every anthropic endpoint external, but stored rows keep their old label. For such a profile the engine's local-only checks at run.start (application.ts:237) and before each step (assertRunPolicy) read the stored label, so they admit the run in a local-only conversation. The user's prompt is stored and the run starts. Only main's comparison in infer(), `inferred.locality !== context.profile.locality` → INVALID_ENDPOINT (index.ts:94), stops the fetch, and the user then sees the generic PROVIDER_ERROR text. No byte leaves the machine, but two of the three layers named in the invariant do not hold for this row: run.start and before each step. Main's guard is pinned only by a source-line-order test (anthropic-transport.test.ts:308-331), not by behaviour. profile.test for such a row also picks localSession because of the label, and the profile list shows the profile as 'Local'. The spec records this as known limit (2) in section 7.",
+            "evidence": "Read src/engine/application.ts:234-237 (run.start uses publicProfile(...).locality) and :494-496 (assertRunPolicy uses the stored locality). Read src/main/index.ts:91-95: assertConversationPolicy runs with the stored locality, then the label is compared with validateEndpoint. git show 3735096:src/main/inference.ts: validateEndpoint returned 'local' for any loopback kind, and src/shared/params.ts:24 already accepted kind 'anthropic' in profile.save. Spec: docs/specification/more-models-phase2.md, the section 7 'Known limit (2)' line.",
+            "reproduction": "Use Store.putProfile({kind:'anthropic', endpoint:'http://127.0.0.1:9/v1', locality:'local', ...}) in a project whose policy is local-only, then call run.start. It succeeds: the run is admitted and the prompt message is stored. In the real app, main's infer() then refuses with INVALID_ENDPOINT, and the run fails with the generic PROVIDER_ERROR message.",
+            "fix": "Refuse in the engine as well: in run.start and assertRunPolicy, treat kind 'anthropic' as external whatever label is stored. Alternatively, relabel stale rows when the engine starts (a data fix, so no schema change). Add a behavioural test of the stale-label case through Application. Optionally make profile.test pick the session from validateEndpoint rather than from the stored label."
+          },
+          {
+            "id": "P2-IR-3",
+            "severity": "S4",
+            "problem": "At the reviewed head 2d3fa59, AGENTS.md's Invariants table has no row for provider state and no Phase 2 (S-1) update to the tokens row. Both arrive in 8127c98, which is on main-axuse after the review range (HEAD 5e82997). The new invariant is enforced in code and tests at 2d3fa59, but the record that states it is not in the reviewed diff.",
+            "evidence": "`grep -n -i 'provider state\\|S-1' AGENTS.md` in the 2d3fa59 worktree returned nothing. `git -C /home/user/moonaliza log --oneline -- AGENTS.md` lists 8127c98 'docs(more-models): Phase 2 D-2 invariant row and development status', and `git log 2d3fa59..HEAD` shows 5 later commits.",
+            "reproduction": "git show 2d3fa59:AGENTS.md | grep -i 'provider state'  (no output); git show 5e82997:AGENTS.md | grep -i 'provider state'  (the row is there).",
+            "fix": "None needed if the PR is reviewed and merged at 5e82997 or later. Make sure the integration review reads the row as it stands at the PR head, and correct its tokens claim as P2-IR-1 says."
+          },
+          {
+            "id": "P2-IR-4",
+            "severity": "S4",
+            "problem": "The vault grant for inference still lasts 125 s (index.ts:102), sized for the 120 s chat deadline. An anthropic call can last up to 600 s and can retry twice. withSecret checks the grant only on entry, so a retry can send the key after the grant has expired. This stays within withSecret's callback and only in the Authorization header, and a credential replacement or a policy change aborts the call through capability.stop. So the invariant 'keys only in Authorization within withSecret' holds, but the grant's expiry no longer bounds how long the key is in use. REQUIREMENTS-P2 F-22 records this.",
+            "evidence": "src/main/vault.ts:156-161 (authorized() is checked on entry only); src/main/anthropic.ts:382 (timeoutMs 600_000); src/main/inference.ts post() retries inside the same invoke closure; REQUIREMENTS-P2.md F-22 says 'the grant is checked on entry only, so the 125 s grant ... does not bound a call'.",
+            "reproduction": "Reading the code is enough: the first anthropic attempt gets a 503 at t≈124 s; post() waits 1 s and fetches again with the same Authorization header after the grant's expiresAt.",
+            "fix": "No change is required for the invariant. Optionally, size the inference grant from the kind's timeoutMs, or check vault.authorized before each retry, so that expiry again bounds use of the key."
+          }
+        ],
+        "checked": [
+          "Setup: detached worktree at 2d3fa59 with node_modules/.build symlinked, Node 24.21.0; worktree removed at the end (git worktree list shows no p2-ir-invariants); /home/user/moonaliza untouched (status clean).",
+          "Diff scope: git diff --stat 3735096..2d3fa59 -- src touches only application.ts, context.ts, control.ts, anthropic.ts, index.ts, inference.ts, provider-kind.ts, provider-screen.ts and App.tsx. operations.ts, commands, approvals, store.ts and migrations.ts are unchanged, so journal-before-effect and approval binding are unchanged. In execute(), the assistant message is still stored with this.message() before any tool runs.",
+          "message() (application.ts:283-289) destructures providerState out before appendMessage and message.created. MessageSchema is strict, so session.read rejects a stray field. history for later runs excludes messages with toolCalls, so earlier state and tool steps never re-enter.",
+          "Real end-to-end runs through Application with a file database (my scratch tests/zz-audit-invariants.test.ts, 6/6 pass), with the real main path for infer: InferenceMessagesSchema parse (engine→main), complete() on the real anthropic adapter against a local HTTP fake, screenCompletion with a vault-like redact, then ToEngineSchema.parse of inference.result (main→engine). Markers: thinking text, signature, redacted_thinking data and an unknown extra field on a text block. Results: (a) Ask run, two thinking tool steps, then an answer; request 3 carries both content arrays, request 1 none; byte scan of everything under the data dir (state.sqlite, -wal, -shm, workspace) and the project dir, in UTF-8 and UTF-16LE, finds no marker and no key; the positive control (the visible step text) is on disk; session.read, run.events and every published event contain no marker, no 'providerState' and no 'anthropic-messages@1'; FTS searchHistory finds no marker and finds all 3 visible texts; session.branch copies only the context text. (b) A second run in the same session: its first request has no marker. (c) A key only inside a thinking block: PROVIDER_PROTOCOL_ERROR, only the user message stored, no marker or key on disk or in events. (d) Step 2 refused with a 400 whose body holds thinking text: PROVIDER_ERROR via inferenceErrorCode, no body text anywhere. (e) Stop during step 2: run cancelled, no marker on disk. (f) Research review run (beginReview) with a state step: request 2 replays the signature, and nothing reaches the DB, the workspace or events.",
+          "Scan teeth: with the strip in message() mutated to store `...value`, 4 of the 6 scratch tests went red (restored afterwards; git status showed only the scratch file and the symlinks).",
+          "Existing suites at 2d3fa59: application, anthropic, anthropic-transport, provider-screen, provider-transport, context, contracts, workbench, ollama-locality, policy-route: 10 files, 499 tests passed.",
+          "Format ownership: checkTranscript refuses any providerState whose format the target kind's part does not own (chat kinds own []), before any fetch. chatOutcome never produces state. A run's profile revision is fixed, and main checks that profileRevisionId matches.",
+          "Errors crossing the bridge: main→engine inference.error carries only an enum code (CONTEXT_LIMIT, LOCAL_MODEL_UNVERIFIED, PROVIDER_PROTOCOL_ERROR, else PROVIDER_ERROR). The anthropic stream 'error' event becomes PROVIDER_STREAM_ERROR without its text. refusalCode reads at most 64 KiB, only to classify an overflow. bridge safeError maps known codes to fixed public text. Review-run failure texts are fixed strings.",
+          "Logs and diagnostics: engine fork uses stdio 'ignore' (main/engine.ts:41). There is no console, appendFile, crashReporter or netLog in src/main. diagnostics.export is declared in params.ts but has no handler. Purge paths (research.purge) do not touch messages or state. The pre-existing provider_wire_state table and wire_state contract are not written by any Phase 2 path.",
+          "Renderer DTOs: App.tsx changes only the profile form, the Anthropic option and its hint. No Completion or state type reaches the renderer. context.updated and usage.updated payloads are numbers only.",
+          "Vault: anthropicHeaders puts the key only in 'Authorization: Bearer' (no x-api-key, anthropic-beta or workspace header). The key is never in the URL or body. post() sends credentials 'omit' and redirect 'error'. All of this runs inside vault.withSecret's callback, and revokeContext follows in a finally.",
+          "Local-only for the anthropic kind: validateEndpoint labels every anthropic endpoint external, loopback included. run.start refuses with CLOUD_NOT_ALLOWED and infer is never called (application tests). assertRunPolicy runs before each step and after infer. A switch to local-only mid-run cancels the run with no further inference (tests for both session and project scope). Main aborts active runs synchronously before forwarding session.policy.update or project.policy.update (index.ts:205-211, policy-route.ts), so a retry wait in post() ends as RUN_CANCELLED (provider-transport test at l.707), and no retry fetch happens after the policy flips. In main, the policy check and the stored-label check both precede `const invoke` (exception: P2-IR-2's stale row).",
+          "Tokens: screenCompletion screens the calls' JSON text, then the state's leaves (keys included) together with the unredacted content, then redacts the content. The state is never redacted in place. infer() returns only through screenCompletion (source pin). Exception: P2-IR-1.",
+          "e2e read as code (Windows-only). anthropic.spec.ts: one launch, a cookie planted in the moonaliza-providers partition with a positive-control probe, the profile saved through the UI, Test connection, cloud allowed through the UI, an Ask round trip, then after close a userData scan for the signature marker in UTF-8 and UTF-16LE with a positive control. anthropic-fake.ts checks Bearer, version, path, max_tokens and no cookie; that request 2 is request 1 plus the replayed content array plus a user message of tool_result blocks only; and that system, tools, model, max_tokens and stream are canonically equal between steps. Any extra request gets a 400. workbench.spec.ts adds a cookie planted in the local session plus an Authorization assertion. I found no defect in these by reading; their partitions are non-persistent, so no HTTP cache lands in userData."
+        ]
+      }
+    },
+    {
+      "role": "mutation",
+      "result": {
+        "findings": [
+          {
+            "id": "P2-MUT-1",
+            "severity": "S2",
+            "problem": "Nothing tests that complete() hands post() the kind's own deadline. If complete() passes `deadline: started + 120_000` instead of `started + part.timeoutMs`, an Anthropic retry whose retry-after wait ends between 120 s and 600 s is refused at once with PROVIDER_HTTP_503 or PROVIDER_HTTP_429, when it should wait and retry. This breaks F-14 (5xx and 429 waits honour an integer retry-after) together with F-22 (one 600 s deadline for every attempt of an anthropic call). The 600 s timer itself is tested (I11 was killed). The deadline value post() uses to decide whether a wait fits is not.",
+            "evidence": "Mutation I12 in src/main/inference.ts line 289: `deadline: started + part.timeoutMs,` changed to `deadline: started + 120_000,`. The mutant SURVIVED both the scoped files (provider-transport, anthropic-transport, anthropic, ollama-locality, provider-stream) and the full set of 10 named files (FULL=1 rerun: status 0). I wrote a probe test that is not committed: `timed([() => refusedWith(503, {'retry-after':'300'}), okStream])` with fake timers advanced by 400 s. It passes on 2d3fa59 with at=[0,300000] and settledAt=300000. On the mutant it fails: `expected [ +0 ] to deeply equal [ +0, 300000 ]`, meaning one fetch, then PROVIDER_HTTP_503.",
+            "reproduction": "Create a worktree at 2d3fa59. Add the probe above to tests/anthropic-transport.test.ts, inside or beside describe('retries through complete()'), reusing its timed() and refusedWith() helpers. Run `npx vitest run tests/anthropic-transport.test.ts`: it passes. Then apply `sed -i 's/deadline: started + part.timeoutMs,/deadline: started + 120_000,/' src/main/inference.ts` and run again: the probe fails while the 503 tests at 1 s/2 s and the 600 s stall tests still pass.",
+            "fix": "Add the probe as a regression test in tests/anthropic-transport.test.ts: a 503 (or 429) with retry-after 300 makes a second fetch at 300 000 ms and completes. Optionally add a companion: retry-after 700 is refused at once as PROVIDER_HTTP_503, which pins the 600 s bound from the other side. Name the mutation in the guard comment, as the neighbouring tests do."
+          },
+          {
+            "id": "P2-MUT-2",
+            "severity": "S4",
+            "problem": "A surviving mutation that is equivalent in practice: complete() hands post() `stop: options.signal`, and changing it to the joined Stop-plus-deadline signal survives. pause() reads `stop` only to tell a Stop from the deadline when the joined signal aborts during a wait. post() never starts a wait that would end at or after `started + timeoutMs`, so the deadline cannot fire during a wait except through a sub-millisecond gap between arming the timer and reading `started`. Even then, RUN_CANCELLED and a TimeoutError both reach the engine as PROVIDER_ERROR (inferenceErrorCode). So the wiring is unobservable. The post()-level test covers pause()'s distinction directly (I8 and I17 were killed).",
+            "evidence": "Mutation I19 in src/main/inference.ts line 289: `stop: options.signal, deadline:` changed to `stop: AbortSignal.any([options.signal, deadline.signal]), deadline:`. It SURVIVED both the scoped run and the FULL=1 run over the 10 files.",
+            "reproduction": "Apply the edit and run `npx vitest run` on tests/provider-transport.test.ts, tests/anthropic-transport.test.ts and the other 8 named files: all pass.",
+            "fix": "No code change needed. Optionally add a note in the complete() comment that `stop` must be the caller's signal alone, or a source-pin test, if the team wants the wiring guarded against a future refactor that removes the before-deadline check."
+          },
+          {
+            "id": "P2-MUT-3",
+            "severity": "S4",
+            "problem": "Two guards in toolCallsOutcome (src/main/anthropic.ts) duplicate later checks, so removing either is an equivalent mutation. (a) The thinking-signature check at line 301 is repeated by parseAnthropicState(data) at line 322: BLOCK_FIELDS.thinking.signature requires a non-empty string, and both paths end in PROVIDER_INVALID_RESPONSE. The only difference: a state over PROVIDER_STATE_MAX with an unsigned thinking block gives PROVIDER_RESPONSE_TOO_LARGE instead. (b) The 'no tool_use block' check at line 297 is repeated by InferenceToolCallsSchema.min(1) at line 309-310, which gives the same invalid().",
+            "evidence": "N26 (line 301 removed) and N61 (`if (!blocks.some(block => block.fields.type === 'tool_use')) return invalid();` removed) both SURVIVED the scoped run and the FULL=1 run over the 10 files.",
+            "reproduction": "Remove either line and run `npx vitest run tests/anthropic.test.ts tests/anthropic-transport.test.ts`: all pass.",
+            "fix": "No change required: they are defence in depth with an identical outcome. Either keep them with a comment saying they are early exits that parseAnthropicState and InferenceToolCallsSchema also enforce, or drop them to remove code that is never decisive."
+          }
+        ],
+        "checked": [
+          "Setup: detached worktree /home/user/task5-handoff/wt/p2-ir-mutation at 2d3fa59, with node_modules and .build symlinked, Node v24.21.0. Baseline over the 9 named files: 9 files, 503 tests passed. I also used tests/contracts.test.ts, which covers control.ts.",
+          "Harness: 128 small mutations (a unique string replace each), applied one at a time; each file was restored from its in-memory copy after every run. Tests ran with `vitest run --bail=1`, scoped per source file to the relevant named test files; every survivor was re-run against all 10 files (FULL=1). Results: 124 KILLED, 4 SURVIVED (I12, I19, N26, N61). I12 is a real gap (finding P2-MUT-1). I19, N26 and N61 are equivalent or near-equivalent (S4 notes).",
+          "src/engine/control.ts, 7 mutations, all killed: the providerState refine weakened to role only (C1) or removed (C2); the Completion providerState refine removed (C3); data min(2) dropped (C4); max dropped (C7); the format regex dropped (C5); PROVIDER_PROTOCOL_ERROR removed from the inference.error enum (C6).",
+          "src/engine/context.ts, 11 mutations, all killed: reserve token half changed to the full budget (X1); reserve message half changed to 1000 (X2); reserve disabled (X3); WHOLE_REPLAY estimate disabled (X4); continueContext with no cuts (X5), fits always true (X6), dropping previous compacted (X7) or previous omitted (X8) counts, without the message cap (X9), cutting new results to 0 bytes at once (X10), cutting newest-first (X11).",
+          "src/engine/application.ts, 11 mutations, all killed: the strip removed from message() (A1); state not carried on the assistant message (A2); always frozen (A3); never frozen (A4); frozen on any state (A10); reserve without the tools condition (A5) or without the kind condition (A6); frozen CONTEXT_LIMIT text always used (A7) or never used (A11); `through: 0` (A8); slice off by one (A9).",
+          "src/main/inference.ts, 19 mutations, 17 killed: credentials 'include' (I1) or dropped (I2); 3 retries (I3); retry flag ignored (I4); deadline check dropped (I5) or off by one (I16); NaN delay guard dropped (I6); refused-body cancel before the wait dropped (I7); pause rejects RUN_CANCELLED always (I8) or signal.reason always (I17); state ownership check dropped (I9); anthropic loopback labelled local (I10); 120 s timer for every kind (I11); retry forced true (I13); refusalStatuses ignored (I14); PROVIDER_PROTOCOL_ERROR no longer crosses (I15); deadline signal not joined (I18). Survivors: I12 (finding P2-MUT-1) and I19 (S4).",
+          "src/main/anthropic.ts, 63 mutations, 61 killed. Encoder: version header, x-api-key, tool_use count/id/input and text-join replay checks, prefill, a system message after the first, result-run grouping, the lifted system prompt, the system key omitted when empty, input_schema, foreign state format, end of the stream. Reader: event/type mismatch, second message_start, index order, block cap 512, tool_use cap 128, second signature_delta, partial-JSON cap, unknown delta not replayable, stop_reason change, open block at message_stop, stop at message_stop, error event, events before message_start, string-only extend, text cap in delta and in start. Usage: both cache sums, both counts required, negative counts. Outcome: closed check, redacted_thinking appendOnly, unoffered name, reused id, parseAnthropicState, end_turn with tool_use, no message_stop, model_context_window_exceeded, refusal blocked, stop_sequence, empty partialJson handling, fold.started. State schema: deep extra field, single top-level key, empty signature, 0 or 513 blocks, PROVIDER_STATE_MAX. Overflow type, and the retry-after rules (429 without the header, 1 s then 2 s, seconds conversion, 599 bound, header regex anchor). Part: refusalStatuses, timeoutMs, url. Survivors N26 and N61 are equivalent (S4).",
+          "src/main/provider-screen.ts, 8 mutations, all killed: content no longer screened with the leaves (S1); leaves no longer screened (S2); keys dropped from the leaves (S3); tool-call screen removed (S4); unreadable state accepted (S5); content not redacted (S6); leaf order reversed (S7); NUL joiner dropped (S8).",
+          "src/main/index.ts, 3 mutations, all killed, by tests that pin the source text: outputTokens 32 for anthropic (M1), retry:false dropped (M2), screenCompletion bypassed (M3).",
+          "src/renderer/App.tsx, 6 mutations, all killed by workbench.test.tsx: anthropic default endpoint (R1), the hint (R2), the data-use text (R3), the option (R4), the 'several minutes' line (R5), the single-workspace line (R6).",
+          "Read as code: e2e/anthropic.spec.ts and e2e/fixtures/anthropic-fake.ts. The journey plants a cookie with a positive-control probe; runs Test connection and then a two-step thinking replay through a strict fake that records refusals; scans userData for the signature marker with a positive control for STEP1_TEXT. The fake endpoint is http on loopback, which validateEndpoint allows for anthropic and labels external, consistent with the project being made cloud-allowed through the UI. No defect found on reading; not executed, since e2e runs on Windows CI only.",
+          "Cleanup: every mutated file was restored after each run, and the I12 probe file was deleted. `git status --porcelain` showed only the two untracked symlinks (.build, node_modules) before removal. The worktree was removed with `git -C /home/user/moonaliza worktree remove --force` and no longer appears in the worktree list. /home/user/moonaliza's own checkout and node_modules were never modified. No network calls, nothing spent."
+        ]
+      }
+    }
+  ],
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Review"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "review:spec",
+      "phaseIndex": 1,
+      "phaseTitle": "Review",
+      "agentId": "abf027bbfe605d9c6",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791815675953,
+      "queuedAt": 1791815675868,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Moonzila (to be renamed back to MoonAliza), an Electron/TypeScript desktop coding agent. Repository /home/user/moonaliza, branch main-axuse, head 2d3fa59. The change under review is More models Phase 2: git diff 3735096..2d3fa59 (U0 28395c5 contracts; U1 engine append-only runs; U2 transport seam + credentials:'omit'; U3 Anthropic adapter; U4 main wiring, state screen, profile option, README; U5 W…",
+      "promptFramed": true,
+      "lastProgressAt": 1791816865908,
+      "tokens": 301419,
+      "toolCalls": 50,
+      "durationMs": 1189953,
+      "resultPreview": "{\"findings\":[{\"id\":\"P2-SPEC-1\",\"severity\":\"S2\",\"problem\":\"Two places tell users something the live evidence no longer supports. The hint (src/renderer/App.tsx AnthropicHint) and the README say \\\"Moonzila's Anthropic connection is built from Anthropic's documentation and is not yet checked against the live API.\\\" docs/ARCHITECTURE.md repeats it, and tests/workbench.test.tsx pins the phrase. But the…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "review:breaker",
+      "phaseIndex": 1,
+      "phaseTitle": "Review",
+      "agentId": "a4f5f1cd44f682667",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791815675953,
+      "queuedAt": 1791815675868,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Moonzila (to be renamed back to MoonAliza), an Electron/TypeScript desktop coding agent. Repository /home/user/moonaliza, branch main-axuse, head 2d3fa59. The change under review is More models Phase 2: git diff 3735096..2d3fa59 (U0 28395c5 contracts; U1 engine append-only runs; U2 transport seam + credentials:'omit'; U3 Anthropic adapter; U4 main wiring, state screen, profile option, README; U5 W…",
+      "promptFramed": true,
+      "lastProgressAt": 1791817574195,
+      "tokens": 295950,
+      "toolCalls": 83,
+      "durationMs": 1897167,
+      "resultPreview": "{\"findings\":[{\"id\":\"P2-BRK-1\",\"severity\":\"S3\",\"problem\":\"The S-1 state screen matches every stored vault value as a plain substring (vault.redact splits on each value; src/main/vault.ts:183-195), and that includes placeholder keys such as 'ollama', 'EMPTY' or 'lm-studio' that local OpenAI-compatible servers ask for. If any such value appears in an Anthropic tool step's thinking text, its text, or …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "review:invariants",
+      "phaseIndex": 1,
+      "phaseTitle": "Review",
+      "agentId": "a5645bdbbdd33e2c3",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791816868426,
+      "queuedAt": 1791815675869,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Moonzila (to be renamed back to MoonAliza), an Electron/TypeScript desktop coding agent. Repository /home/user/moonaliza, branch main-axuse, head 2d3fa59. The change under review is More models Phase 2: git diff 3735096..2d3fa59 (U0 28395c5 contracts; U1 engine append-only runs; U2 transport seam + credentials:'omit'; U3 Anthropic adapter; U4 main wiring, state screen, profile option, README; U5 W…",
+      "promptFramed": true,
+      "lastProgressAt": 1791817337772,
+      "tokens": 238692,
+      "toolCalls": 64,
+      "durationMs": 469345,
+      "resultPreview": "{\"findings\":[{\"id\":\"P2-IR-1\",\"severity\":\"S3\",\"problem\":\"The tool-call secret check that moved unchanged into screenCompletion (src/main/provider-screen.ts:33-36, rule 1) still compares the JSON text of the calls. Suppose a vault secret contains a double quote, a backslash or a control character, and it appears in a tool input from a chat kind (openai-compatible or ollama, which carry no provider s…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "review:mutation",
+      "phaseIndex": 1,
+      "phaseTitle": "Review",
+      "agentId": "a4eda6186d3078b92",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791817339921,
+      "queuedAt": 1791815675869,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Moonzila (to be renamed back to MoonAliza), an Electron/TypeScript desktop coding agent. Repository /home/user/moonaliza, branch main-axuse, head 2d3fa59. The change under review is More models Phase 2: git diff 3735096..2d3fa59 (U0 28395c5 contracts; U1 engine append-only runs; U2 transport seam + credentials:'omit'; U3 Anthropic adapter; U4 main wiring, state screen, profile option, README; U5 W…",
+      "promptFramed": true,
+      "lastProgressAt": 1791818211062,
+      "tokens": 188843,
+      "toolCalls": 44,
+      "durationMs": 871140,
+      "resultPreview": "{\"findings\":[{\"id\":\"P2-MUT-1\",\"severity\":\"S2\",\"problem\":\"Nothing tests that complete() hands post() the kind's own deadline. If complete() passes `deadline: started + 120_000` instead of `started + part.timeoutMs`, an Anthropic retry whose retry-after wait ends between 120 s and 600 s is refused at once with PROVIDER_HTTP_503 or PROVIDER_HTTP_429, when it should wait and retry. This breaks F-14 (5…"
+    }
+  ],
+  "totalTokens": 1024904,
+  "totalToolCalls": 241
+}

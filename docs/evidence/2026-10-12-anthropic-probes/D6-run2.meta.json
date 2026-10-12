@@ -1,0 +1,168 @@
+{
+  "id": "D6-run2",
+  "model": "claude-sonnet-5-5",
+  "auth": "bearer",
+  "status": 200,
+  "headers": {
+    "anthropic-organization-id": "<redacted-id>",
+    "anthropic-ratelimit-input-tokens-limit": "10000000",
+    "anthropic-ratelimit-input-tokens-remaining": "10000000",
+    "anthropic-ratelimit-input-tokens-reset": "2026-10-12T07:19:19Z",
+    "anthropic-ratelimit-output-tokens-limit": "2000000",
+    "anthropic-ratelimit-output-tokens-remaining": "2000000",
+    "anthropic-ratelimit-output-tokens-reset": "2026-10-12T07:19:19Z",
+    "anthropic-ratelimit-requests-limit": "10000",
+    "anthropic-ratelimit-requests-remaining": "9999",
+    "anthropic-ratelimit-requests-reset": "2026-10-12T07:19:19Z",
+    "anthropic-ratelimit-tokens-limit": "12000000",
+    "anthropic-ratelimit-tokens-remaining": "12000000",
+    "anthropic-ratelimit-tokens-reset": "2026-10-12T07:19:19Z",
+    "anthropic-workspace-id": "<redacted-id>",
+    "cache-control": "no-cache",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a49455ea7fa9bd11-ATL",
+    "content-encoding": "gzip",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "text/event-stream; charset=utf-8",
+    "date": "Mon, 12 Oct 2026 07:19:20 GMT",
+    "request-id": "req_011CfwwHGjs5NxyoMvdjVx5J",
+    "server": "cloudflare",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-29cb90d1c7975d108083408e13865543-f1f543a06d63f353-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-robots-tag": "none"
+  },
+  "latencyMs": {
+    "headers": 807,
+    "total": 4030
+  },
+  "responseBytes": 7179,
+  "isSse": true,
+  "usage": {
+    "input_tokens": 666,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 410
+  },
+  "cost": 0.005432,
+  "costBasis": "usage",
+  "worstCase": 0.04496,
+  "retries": [],
+  "facts": {
+    "crlf": false,
+    "lfOnly": true,
+    "eventOrder": [
+      "message_start",
+      "content_block_start",
+      "ping",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_stop",
+      "content_block_start",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_stop",
+      "content_block_start",
+      "content_block_delta",
+      "content_block_stop",
+      "message_delta",
+      "message_stop"
+    ],
+    "pings": [
+      2
+    ],
+    "eventsWithoutName": 0,
+    "nameMismatch": 0,
+    "unknownEventTypes": [],
+    "deltaTypes": {
+      "thinking_delta": 1,
+      "signature_delta": 1,
+      "text_delta": 23,
+      "input_json_delta": 1
+    },
+    "blockTypes": [
+      "thinking",
+      "text",
+      "tool_use"
+    ],
+    "signatureDeltasPerBlock": {
+      "0": 1
+    },
+    "bytesAfterMessageStop": 0,
+    "fallbackBlock": false,
+    "stopReason": "tool_use",
+    "stopDetails": null,
+    "usageEvents": [
+      {
+        "event": "message_start",
+        "usage": {
+          "input_tokens": 666,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 5,
+          "service_tier": "standard",
+          "inference_geo": "global"
+        }
+      },
+      {
+        "event": "message_delta",
+        "usage": {
+          "input_tokens": 666,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 410,
+          "output_tokens_details": {
+            "thinking_tokens": 267
+          }
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQSvwsKEAgSGAI4AUIIdGhpbmtpbmcSDNSXzTLLvCP0Ac6DaRoMP1NtHxdTbnjq2ab+IjCGiS1SOSSTQXJf3hVtq8EZYm+Hu5tfFvti8KyB5Ue0QidOEXiR9i16LBUWmJpUqgIq3AqWmJzIMhkcFHp0pfh2gkbu6Se7rhtWj3haAXgA9WWXKhoVqe/dKAyUfzFs00VFe/1L0Wdojb4hNvcaCZADIgcSe1z4q6fLmJFECwxbG3aU/JtfS6gcZFFFcerBTUMu2gyY3m/1wUqviqP7S9eCHUuJE4wD2vVsCzSvSevVoTvKZldR+lP/5G+Bdw9N0bo6KBWr4yaqzFqIticSoTU4WEY9XESzrE/0XPl58pedHpdSPn3PplpzcjjkWq5BD7/cvDHTa7DN3QpSH8Xhta+oqzSJRQ3BFqMUMlOpD0p6w7InpsgcohTNKrNmI52OZbRgnvXjl1V+e/jCweeomtaeOAh2dMxwScJsLD8NrXa793mMYxNcOOEQwBV0UMoTAvdEZEOXoyOODyFp4a36W6i/zSXu9zTUUnwIjtgYtvpyknL7bI5Upwd4oERXqlGn+hv6Fn0+1fEBFzXnwzDVpSPl99leaoY7xzZZNVIzFuhUECFczSqTDl4Tf7K9nbS1vnCjJphTU9ZNj3BpV5Pay9LPMV6C5WIcyXvjbW+N07ws1iLsHaNX90Bl7g49Kj7QkbvvOI/2uTP0BeSPF32RmV2Empn7AUV3Q2xGrsksKjtFWfmLqBvN+Nrd/WVQpVOY4D3pQPaJEEGht4SICbD1Ok4FFWoYxXzM0a/155l44u0l+SE0F1z7ADsrjLhF1icMfHB84h3DD7xbg2z04+u9Mc3CfNUND6VdwvJN2Il+ioQ3hd0nf8R2dywUSdmam6FHeY/RDGIlk9NtLnZrmtUMfLGnJhLn8DOEzxZ8FiIBrUiKj70pNOPKfuD0kg4d1uv+KNiw+OjdVuRw8lp2p1ZEJY8EZA3OjuxvOE7972a63dWFABODuCijPlWF/qYGkq4/X3iUq2XG/lGXWoL/rA79ErT8Tn/3pa5B5HPs4pBPkQ7dbUhfz/DeF0FoMbc+8ApntpPY8C+DIKmG8QRN/FegiJbVSdK5JKZ3Ep3vz7mu4wsIhKHuqo0Flzq4c5V1/2vBW3iW6ZCwJGAb++KkWYP+USJLGK9TZWu/sUgDJmXYIBoSC3+qHPqHW0ZBGnpnlrFFvSYwOK5n23QTBnWS8D3VAZFjyu8ynnOtR2DqWQFrTp1awd8NoFRNPUefs7ltQpIN2JLkjc4NimM8EAOY/56ZYilaFgh6NpF3j5L0fpuVxR047RHOsJsi6DccMRNqf0AfrO3UJZy3inJ+khEk8jac4NYZSOnLXBDsOgT2XS6UWxterhQnyGnWW/jPFrzogKm4kk3XUXNmKCN85xafVaX8l/hPI8Kc8MgTkkQKJtW07Z7EW++jKrLt9M5ZzOiuLHIfrtPUhiROv85mlodQumbdpctn/MkN5wZVgbGv9sDe1czfWdEihZo1ha93qkHl9oPv9IRrMK9KilAiFeILaS7LPaBbzHCLjnLxrzb4jsiTeocGOoCTzgiU3jvjeel0gVei1U+Gd0eQvOxkWpZEDQ6PoPRK808hWMK52Px/PGKjz0JbPpFaJH5Hwg1cZkjKwUOjotF4RHYHFcRhdYDARPrvbprapuY55kdaeh3pofmkGrnikE521f1nBVHb3zrtTbKvaIgaZb3Jx2eD4+0DCG139XOEPydjxOtKQfyR1sJgUNrIek8F6ZxvIakVfpkj0jfa0OGbWMLYhGLTKT86NViEDKko9mEeJ+D3Pa/J9kCHoHOkVrVBiqpwsnc/XW+/+aORIURLK8mnLUhDareYk2UBS0A5Qmjzb75XKxiMkl4wLLuShldaHkgTll2pPL/78+ER83U2gZ44pbtKhur/Mos0byM4yJaWgdkrnL2C4Yr2msCAGAE="
+      },
+      {
+        "type": "text",
+        "text": "Before I get the time, I need to correct my last message. I never called any weather tool. The \"Paris, 18 °C, cloudy\" result was made up, so ignore it and the umbrella advice. The math is right: 391 = 17 × 23, so it isn't prime, and the weather check should have been for Rome. I haven't run it yet.\n\nI'll get the time now."
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_015svDNT6TpTtyD6v7QTMANj",
+        "name": "get_time",
+        "input": {},
+        "caller": {
+          "type": "direct"
+        },
+        "_rawPartialJson": ""
+      }
+    ]
+  }
+}

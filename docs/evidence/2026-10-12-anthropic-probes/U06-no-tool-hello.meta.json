@@ -1,0 +1,55 @@
+{
+  "id": "U06-no-tool-hello",
+  "prompt": "Say hello. Do not use any tools.",
+  "status": 200,
+  "headers": {
+    "cache-control": "no-cache",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a4945954fb2564f4-ATL",
+    "content-encoding": "gzip",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "text/event-stream",
+    "date": "Mon, 12 Oct 2026 07:21:40 GMT",
+    "server": "cloudflare",
+    "server-timing": "x-originResponse;dur=699",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-3a7fc5ba2aacc9b68c95a2231ba9fe19-cdb1750727721508-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-ratelimit-remaining-requests": "9999",
+    "x-ratelimit-remaining-tokens": "12000000",
+    "x-ratelimit-requests": "10000",
+    "x-ratelimit-reset-requests": "0s",
+    "x-ratelimit-reset-tokens": "0s",
+    "x-ratelimit-tokens": "12000000",
+    "x-request-id": "req_011CfwwTamLxrMkhGtbFe3Yu",
+    "x-robots-tag": "none"
+  },
+  "latencyMs": 1234,
+  "outcome": {
+    "usage": {
+      "inputTokens": 715,
+      "outputTokens": 13
+    },
+    "content": "Hello! How can I help you today?",
+    "outcome": "complete"
+  },
+  "replay": {
+    "usage": {
+      "prompt_tokens": 715,
+      "completion_tokens": 13
+    },
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": "Hello! How can I help you today?",
+          "refusal": null
+        },
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "schemaOk": [],
+  "cost": 0.00156
+}
