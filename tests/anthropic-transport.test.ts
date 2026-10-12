@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { inspect } from 'node:util';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { complete, type Completion, type Fetcher, type InferenceMessage, type InferenceProfile } from '../src/main/inference';
+import { assertConversationPolicy } from '../src/engine/policy';
+import { complete, validateEndpoint, type Completion, type Fetcher, type InferenceMessage, type InferenceProfile } from '../src/main/inference';
 import type { ToolSpec } from '../src/shared';
 import { REFUSAL_TOOL, STATE_REFUSALS, VALID_STATE_DATA, builtStream, refusalTranscript, type BuiltBlock } from './fixtures/anthropic-state-refusals';
 
@@ -302,4 +303,26 @@ test('profile.test sends the profile\'s own outputTokens for anthropic and 32 fo
   ]);
   expect(lines).toContain('const timeout = setTimeout(() => controller.abort(), 25_000);');
   expect(lines).toContain("if (output.outcome !== 'complete') throw new Error('PROVIDER_ERROR');");
+});
+
+test('S-3 in main: an anthropic profile under a local-only policy is refused before complete() is reached', () => {
+  // A regression pin of the main side of S-3, now that the kind reaches a fetch. infer() checks the policy with the
+  // profile's stored locality and refuses a stored label that is not what validateEndpoint gives today, both before
+  // `const invoke =`; validateEndpoint labels every anthropic endpoint external (U2, F-18), so local-only refuses it
+  // with CLOUD_NOT_ALLOWED. Mutations: label a loopback anthropic endpoint local in validateEndpoint; move the policy
+  // check or the locality comparison after `const invoke =` in infer().
+  for (const endpoint of ['https://api.anthropic.com/v1', 'http://127.0.0.1:11434/v1', 'http://localhost:8123/v1']) {
+    const { locality } = validateEndpoint('anthropic', endpoint);
+    expect(locality, endpoint).toBe('external');
+    expect(() => assertConversationPolicy({ id: 's', projectId: null, policy: { revision: 1, inference: 'local-only' } }, null, locality), endpoint).toThrow('CLOUD_NOT_ALLOWED');
+  }
+  const source = readFileSync(new URL('../src/main/index.ts', import.meta.url), 'utf8');
+  const start = source.indexOf('async function infer(');
+  const lines = source.slice(start, source.indexOf('async function readGitHub(', start)).split('\n').map(line => line.trim());
+  const invoke = lines.findIndex(line => line.startsWith('const invoke = '));
+  const policy = lines.indexOf('assertConversationPolicy(context.session, context.project, context.profile.locality, capability.stop.signal, context.run);');
+  const label = lines.indexOf("if (inferred.locality !== context.profile.locality) throw new Error('INVALID_ENDPOINT');");
+  expect(policy, 'the policy check, whole').toBeGreaterThan(-1);
+  expect(label, 'the stored-label check, whole').toBeGreaterThan(-1);
+  expect(Math.max(policy, label)).toBeLessThan(invoke);
 });
