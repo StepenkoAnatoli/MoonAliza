@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { inspect } from 'node:util';
 import { describe, expect, test } from 'vitest';
@@ -167,6 +168,51 @@ data: {"type": "message_stop"}`;
 const E10_ERROR = String.raw`event: error
 data: {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}}`;
 
+// Live files, not Research-Kit captures: each file under tests/fixtures/anthropic-live/ is a byte-for-byte copy of the
+// file of the same name in docs/evidence/2026-10-12-anthropic-probes/ (live probe 2026-10-12, against the native
+// Messages API; report docs/evidence/2026-10-12-anthropic-probes.md, D3, D4, D5, D13, D14), checked by the sha256
+// below, which is the evidence file's own (`sha256sum`, 2026-10-12):
+// - D1-bearer.response.raw: docs/evidence/2026-10-12-anthropic-probes/D1-bearer.response.raw, live probe D1 (Sonnet 5.5,
+//   "Reply with OK."), the streamed answer D4 compares with the non-streamed one.
+// - D5-think-sonnet-step1.response.raw: docs/evidence/2026-10-12-anthropic-probes/D5-think-sonnet-step1.response.raw,
+//   live probe D5-think-sonnet step 1 (Sonnet 5.5): thinking, text and two tool_use, the second argument-free.
+// - D5-think-sonnet-step2.request.json: docs/evidence/2026-10-12-anthropic-probes/D5-think-sonnet-step2.request.json,
+//   the step-2 request that replayed step 1's content, accepted (200); headers redacted; `bodySha256` hashes the bytes sent.
+// - D5-think-sonnet-step2.response.raw: docs/evidence/2026-10-12-anthropic-probes/D5-think-sonnet-step2.response.raw,
+//   live probe D5-think-sonnet step 2: the final answer (thinking, text).
+// - D11-haiku-step1.response.raw: docs/evidence/2026-10-12-anthropic-probes/D11-haiku-step1.response.raw, live probe D11
+//   step 1 (Haiku 4.5, thinking omitted): two tool_use, the second argument-free.
+// - D11-haiku-step2.request.json: docs/evidence/2026-10-12-anthropic-probes/D11-haiku-step2.request.json, its step-2
+//   request, accepted (200).
+// - D12-opus-32000.response.raw: docs/evidence/2026-10-12-anthropic-probes/D12-opus-32000.response.raw, live probe D12
+//   (Opus 5.5, max_tokens 32,000): a thinking-heavy tool step.
+const LIVE_SHA256 = {
+  'D1-bearer.response.raw': '66cf0064b6c8114d177d7dc258b5097d345aed56f230d9cbbfabcfe95b2c7f6d',
+  'D5-think-sonnet-step1.response.raw': '41d24e1bb0266ec346b686ba23c17d6eeec7a5d183a402d41202f0041d390f83',
+  'D5-think-sonnet-step2.request.json': '413d5f9d5c20ab180c1ac9708aaa67fab4e18601ed52786b92c033b08487bd8c',
+  'D5-think-sonnet-step2.response.raw': '1bacd81c88a687b351612e9c9af78c47ea9daf7edd40a90dda24cfa59bdc1b2c',
+  'D11-haiku-step1.response.raw': 'c269ccb1925798437677c1b22afbfd69e26d5cbcbaa63e854f2bf187088bf1f9',
+  'D11-haiku-step2.request.json': '893e24a82d1d3aab649119febf821aa2ee1b949494203f410e245b463237cea3',
+  'D12-opus-32000.response.raw': '472666b6925deb7a50c2b0b5c1e1869a757d56b08510ab17276a973dab7a4039',
+} as const;
+type LiveFile = keyof typeof LIVE_SHA256;
+const LIVE_STREAMS = ['D1-bearer.response.raw', 'D5-think-sonnet-step1.response.raw', 'D5-think-sonnet-step2.response.raw', 'D11-haiku-step1.response.raw', 'D12-opus-32000.response.raw'] as const;
+/** A live file's text. The probes recorded LF line ends only (D3), so a checkout that wrote CRLF is undone here. */
+const live = (name: LiveFile) => readFileSync(new URL(`./fixtures/anthropic-live/${name}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const sha256 = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
+interface RecordedRequest { readonly bodyUtf8Bytes: number; readonly bodySha256: string; readonly body: { readonly messages: ReadonlyArray<{ readonly role: string; readonly content: unknown }> } }
+const recorded = (name: LiveFile) => JSON.parse(live(name)) as RecordedRequest;
+// The probes' system prompt, tools and prompts (docs/evidence/2026-10-12-anthropic-probes/run.mjs; the recorded requests).
+const LIVE_SYSTEM = 'You are a test assistant. Use the tools when the user asks for them.';
+const LIVE_TOOLS: ToolSpec[] = [
+  { name: 'get_weather', description: 'Get the current weather for a city.', parameters: { type: 'object', properties: { city: { type: 'string', description: 'City name' } }, required: ['city'] } },
+  { name: 'get_time', description: 'Get the current UTC time. Takes no arguments.', parameters: { type: 'object', properties: {} } },
+];
+const THINK_PROMPT = 'Think step by step before using any tool: which is larger, 17 x 23 or 19 x 21? If the first is larger, call get_weather for Paris, otherwise for Rome. Also call get_time. Then answer in one sentence.';
+const PLAIN_PROMPT = 'Call get_weather for Paris and call get_time, then tell me both results in one sentence.';
+const RAINY_PROMPT = 'Think carefully before acting. A city is chosen as follows: list the ten largest European capitals by population, reason step by step about which of them has the most rainy days per year, double-check your reasoning, and then call get_weather exactly once for the city you chose. Do not answer before calling the tool.';
+const LIVE_RESULTS = ['Paris: 18 C, cloudy.', '14:05 UTC'];
+
 const profile: InferenceProfile = { kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', model: 'claude-opus-5-5', outputTokens: 4096 };
 const tool = (name: string, description = `${name} tool`): ToolSpec => ({ name, description, parameters: { type: 'object', properties: {} } });
 const check = (tools: readonly ToolSpec[] = [REFUSAL_TOOL], usedIds: Iterable<string> = []) => ({ tools, usedIds: new Set(usedIds) });
@@ -304,6 +350,178 @@ describe('captured and built streams, folded and mapped', () => {
     // Guard: an empty join takes the start's input (mutation: parse the empty join, which fails).
     const completion = await map(builtStream([{ start: { type: 'tool_use', id: 'toolu_01', name: 'list_files', input: {} } }]));
     expect(completion.toolCalls).toEqual([{ id: 'toolu_01', name: 'list_files', input: {} }]);
+  });
+});
+
+describe('live streams (the Anthropic probes of 2026-10-12), folded and mapped', () => {
+  type LiveEvent = { readonly name: string; readonly data: Record<string, unknown> };
+  /** A live stream's events, parsed apart from the adapter: every event is one `event:` line and one `data:` line. */
+  const eventsOf = (name: LiveFile): LiveEvent[] => live(name).split('\n\n').filter(Boolean).map(block => {
+    const lines = block.split('\n');
+    expect(lines).toHaveLength(2);
+    return { name: lines[0]!.replace(/^event: /, ''), data: JSON.parse(lines[1]!.replace(/^data: /, '')) as Record<string, unknown> };
+  });
+  /** A block's start object and its deltas, from the parsed events. */
+  const blockOf = (events: readonly LiveEvent[], index: number) => ({
+    start: events.find(item => item.name === 'content_block_start' && item.data.index === index)!.data.content_block,
+    deltas: events.filter(item => item.name === 'content_block_delta' && item.data.index === index).map(item => item.data.delta),
+  });
+  /** The stream's one signature_delta value, read from the text with a pattern, not by the adapter. */
+  const signatureOf = (name: LiveFile) => {
+    const found = [...live(name).matchAll(/"type":"signature_delta","signature":"([^"]*)"/g)].map(match => match[1]!);
+    expect(found).toHaveLength(1);
+    return found[0]!;
+  };
+  // Served as the live answers were labelled (D3), in 7-byte pieces, so a two-byte "×" or "°" is split across reads.
+  const readLive = (name: LiveFile) => readAnthropic(respond(live(name), { contentType: 'text/event-stream; charset=utf-8' }));
+  const mapLive = async (name: LiveFile, usedIds: Iterable<string> = []) => anthropicOutcome(await readLive(name), check(LIVE_TOOLS, usedIds));
+  /** Step 2 as the engine sends it: the system prompt, the prompt, step 1's completion as the assistant step, a result per call. */
+  const stepTwo = (model: string, outputTokens: number, prompt: string, step: Completion, results: readonly string[]) => encodeAnthropic(
+    { kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', model, outputTokens },
+    checked([
+      { role: 'system', content: LIVE_SYSTEM }, { role: 'user', content: prompt },
+      { role: 'assistant', content: step.content, toolCalls: step.toolCalls, providerState: step.providerState },
+      ...step.toolCalls!.map((call, index) => result(call, results[index])),
+    ]),
+    LIVE_TOOLS,
+  );
+  /** The state's content array exactly as its bytes stand in `data`. */
+  const contentBytes = (completion: Completion) => completion.providerState!.data.slice('{"content":'.length, -1);
+
+  test('the live fixtures are the recorded files, byte for byte, and each recorded request body is the one sent', () => {
+    // Guard: a fixture that drifts from its evidence file (mutation: remove one space of padding from a line of
+    // D1-bearer.response.raw).
+    for (const [name, hash] of Object.entries(LIVE_SHA256)) expect(sha256(live(name as LiveFile)), name).toBe(hash);
+    // Each record's `body` is the body sent: its JSON text has the recorded length and sha256.
+    for (const name of ['D5-think-sonnet-step2.request.json', 'D11-haiku-step2.request.json'] as const) {
+      const request = recorded(name); const sent = JSON.stringify(request.body);
+      expect(Buffer.byteLength(sent), name).toBe(request.bodyUtf8Bytes);
+      expect(sha256(sent), name).toBe(request.bodySha256);
+    }
+  });
+
+  test('the live streams hold the recorded facts the tests below rely on (D3, D4, D5, D13, D14)', () => {
+    // Read apart from the adapter, so each fact the next tests depend on is shown to be in the fixture they read.
+    let toolUses = 0;
+    for (const name of LIVE_STREAMS) {
+      const events = eventsOf(name);
+      for (const item of events) expect(item.data.type, name).toBe(item.name);
+      // (a) D3: exactly one ping, the third event, right after the first content_block_start, so inside an open block.
+      expect(events.filter(item => item.name === 'ping'), name).toHaveLength(1);
+      expect(events.slice(0, 3).map(item => item.name), name).toEqual(['message_start', 'content_block_start', 'ping']);
+      // (c) D3's padding: a run of spaces inside the JSON, before its last brace, on most data lines; no line ends in one.
+      const data = live(name).split('\n').filter(line => line.startsWith('data: '));
+      expect(data.filter(line => / +\}$/.test(line)).length, name).toBeGreaterThan(data.length / 2);
+      expect(data.filter(line => /\s$/.test(line)), name).toEqual([]);
+      // (d) D3: fields no E-10 capture shows, on message_start's message and usage and on message_delta.
+      expect(events[0]!.data, name).toMatchObject({ message: { container: null, stop_details: null, diagnostics: null, usage: { cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 0 }, service_tier: 'standard', inference_geo: expect.any(String) } } });
+      expect(events.find(item => item.name === 'message_delta')!.data, name).toMatchObject({ delta: { stop_details: null, container: null } });
+      // (e) D5 (a): every tool_use start carries "caller":{"type":"direct"}.
+      for (const item of events.filter(event => event.name === 'content_block_start' && (event.data.content_block as { type: string }).type === 'tool_use')) {
+        expect(item.data.content_block, name).toMatchObject({ input: {}, caller: { type: 'direct' } });
+        toolUses++;
+      }
+    }
+    expect(toolUses).toBe(5);
+    // (g) D4: output_tokens 3 at message_start, then 5 at message_delta, which also carries output_tokens_details.
+    const d1 = eventsOf('D1-bearer.response.raw');
+    expect(d1[0]!.data).toMatchObject({ message: { usage: { input_tokens: 15, output_tokens: 3 } } });
+    expect(d1.find(item => item.name === 'message_delta')!.data.usage).toEqual({ input_tokens: 15, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, output_tokens: 5, output_tokens_details: { thinking_tokens: 0 } });
+    // (b) D5 (c), D13: a thinking block starts with an empty-string signature, then one empty thinking_delta and one
+    // signature_delta.
+    for (const name of ['D5-think-sonnet-step1.response.raw', 'D5-think-sonnet-step2.response.raw', 'D12-opus-32000.response.raw'] as const) {
+      expect(blockOf(eventsOf(name), 0), name).toEqual({ start: { type: 'thinking', thinking: '', signature: '' }, deltas: [{ type: 'thinking_delta', thinking: '' }, { type: 'signature_delta', signature: signatureOf(name) }] });
+    }
+    // (f) D14: the argument-free get_time streams one input_json_delta whose partial_json is "".
+    for (const [name, index] of [['D5-think-sonnet-step1.response.raw', 3], ['D11-haiku-step1.response.raw', 1]] as const) {
+      expect(blockOf(eventsOf(name), index).deltas, name).toEqual([{ type: 'input_json_delta', partial_json: '' }]);
+    }
+  });
+
+  // Guards shared by every test below, each a mutation that turns all five red: a ping inside an open block is ignored
+  // (mutation: refuse a ping while a block is open); the padding is read (mutation, in provider-stream.ts: refuse a
+  // data payload with white space before its last brace); fields no capture shows are passed over (mutations: refuse a
+  // usage object holding a value that is not a number, such as `cache_creation` or `service_tier`; refuse a
+  // message_delta whose delta holds a key besides stop_reason and stop_sequence); each count takes its latest value
+  // (mutations: add the counts across events; keep the first count).
+  test('D1-bearer: the exact fold, and complete "OK." with usage 15 in, 5 out', async () => {
+    const fold = await readLive('D1-bearer.response.raw');
+    expect(fold).toEqual({ started: true, stopped: true, stopReason: 'end_turn', usage: { input_tokens: 15, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 5 }, blocks: [{ fields: { type: 'text', text: 'OK.' }, partialJson: '', replayable: true, closed: true }] });
+    expect(anthropicOutcome(fold, check(LIVE_TOOLS))).toEqual({ content: 'OK.', outcome: 'complete', usage: { inputTokens: 15, outputTokens: 5 } });
+  });
+
+  test('D5-think-sonnet step 1: two calls, the exact state, and step 2 encodes the request the API accepted, byte for byte', async () => {
+    // Guards: the empty start signature is replaced by the delta's (mutation: keep a start signature that is a string;
+    // the outcome then refuses the empty signature); extra fields are kept (mutation: rebuild each tool_use block from
+    // type, id, name and input, which drops `caller`); an empty join takes the start's input (mutation: parse every
+    // join); appendOnly follows the thinking block (mutation: appendOnly false); the encoder sends the state's blocks
+    // unchanged (mutation: rebuild each replayed tool_use block from its documented fields).
+    const weather = { id: 'toolu_01YXMxbAF33AFs67CC9oMczx', name: 'get_weather', input: { city: 'Rome' } };
+    const time = { id: 'toolu_01AzrUvtgma5L6ypA3e7w3Gq', name: 'get_time', input: {} };
+    const accepted = recorded('D5-think-sonnet-step2.request.json');
+    const completion = await mapLive('D5-think-sonnet-step1.response.raw');
+    expect(completion).toEqual({
+      content: "Step by step:\n- 17 × 23 = 391\n- 19 × 21 = 399\n\n19 × 21 is larger, so I'll check the weather for Rome. I'll also get the time.",
+      outcome: 'tool_calls', toolCalls: [weather, time], usage: { inputTokens: 528, outputTokens: 183 },
+      // The state is the content the probe replayed at step 2 and the API accepted.
+      providerState: { format: 'anthropic-messages@1', appendOnly: true, data: JSON.stringify({ content: accepted.body.messages[1]!.content }) },
+    });
+    // Block by block: index order, the empty thinking kept with the delta's signature (928 characters, D16), the
+    // re-serialized inputs (the stream sent `{"city": "Rome"}`, D5 (e)), and `caller` kept after `input`.
+    expect(signatureOf('D5-think-sonnet-step1.response.raw')).toHaveLength(928);
+    expect(completion.providerState!.data).toBe(JSON.stringify({ content: [
+      { type: 'thinking', thinking: '', signature: signatureOf('D5-think-sonnet-step1.response.raw') },
+      { type: 'text', text: completion.content },
+      { type: 'tool_use', ...weather, caller: { type: 'direct' } },
+      { type: 'tool_use', ...time, caller: { type: 'direct' } },
+    ] }));
+    // Step 2 from that state: the content array byte-identical to the one sent live, and the whole body too.
+    const body = stepTwo('claude-sonnet-5-5', 4096, THINK_PROMPT, completion, LIVE_RESULTS);
+    expect(body).toContain(`{"role":"assistant","content":${JSON.stringify(accepted.body.messages[1]!.content)}}`);
+    expect(body).toBe(JSON.stringify(accepted.body));
+    expect(sha256(body)).toBe(accepted.bodySha256);
+  });
+
+  test('D5-think-sonnet step 2: the final answer is its text, with no state', async () => {
+    // Guards: the shared ones; a signature_delta onto a start's "" is accepted (mutation: refuse a signature_delta when
+    // the start carries a `signature` field).
+    expect(await mapLive('D5-think-sonnet-step2.response.raw', ['toolu_01YXMxbAF33AFs67CC9oMczx', 'toolu_01AzrUvtgma5L6ypA3e7w3Gq'])).toEqual({
+      content: "19 × 21 (399) is larger than 17 × 23 (391), so I requested Rome's weather, but the tool returned data labeled Paris (18 °C, cloudy), so I can't confirm Rome's conditions, and the current time is 14:05 UTC.",
+      outcome: 'complete', usage: { inputTokens: 789, outputTokens: 130 },
+    });
+  });
+
+  test('D11-haiku step 1 (no thinking): two calls, the argument-free one with `{}`, appendOnly false, and the accepted step 2, byte for byte', async () => {
+    // Guards: an empty join takes the start's input (mutation: parse every join); extra fields are kept (mutation: drop
+    // `caller`); appendOnly follows the blocks (mutation: appendOnly true); the encoder sends the state unchanged.
+    const weather = { id: 'toolu_014WQE8mTrRHdU7FrKAbKeiK', name: 'get_weather', input: { city: 'Paris' } };
+    const time = { id: 'toolu_01F8CKhMUBvKKrZ3xjCJw9JE', name: 'get_time', input: {} };
+    const accepted = recorded('D11-haiku-step2.request.json');
+    const completion = await mapLive('D11-haiku-step1.response.raw');
+    expect(completion).toEqual({
+      content: '', outcome: 'tool_calls', toolCalls: [weather, time], usage: { inputTokens: 646, outputTokens: 73 },
+      providerState: { format: 'anthropic-messages@1', appendOnly: false, data: JSON.stringify({ content: [{ type: 'tool_use', ...weather, caller: { type: 'direct' } }, { type: 'tool_use', ...time, caller: { type: 'direct' } }] }) },
+    });
+    expect(completion.providerState!.data).toBe(JSON.stringify({ content: accepted.body.messages[1]!.content }));
+    const body = stepTwo('claude-haiku-4-5-20251001', 4096, PLAIN_PROMPT, completion, LIVE_RESULTS);
+    expect(body).toContain(`{"role":"assistant","content":${JSON.stringify(accepted.body.messages[1]!.content)}}`);
+    expect(body).toBe(JSON.stringify(accepted.body));
+    expect(sha256(body)).toBe(accepted.bodySha256);
+  });
+
+  test('D12-opus-32000: a thinking-heavy tool step gives one call and the exact state, and step 2 sends that state unchanged', async () => {
+    // No live step 2 was sent for D12, so step 2 is checked against the state's own bytes, and its tool result is built.
+    // Guards: as D5-think-sonnet step 1 (the signature replaced, `caller` kept, appendOnly true, the state sent unchanged).
+    const weather = { id: 'toolu_01DcpP1k9MrVkwHkLP8KAbTi', name: 'get_weather', input: { city: 'Minsk' } };
+    const signature = signatureOf('D12-opus-32000.response.raw');
+    expect(signature).toHaveLength(2216);
+    const completion = await mapLive('D12-opus-32000.response.raw');
+    expect(completion).toEqual({
+      content: '', outcome: 'tool_calls', toolCalls: [weather], usage: { inputTokens: 544, outputTokens: 588 },
+      providerState: { format: 'anthropic-messages@1', appendOnly: true, data: JSON.stringify({ content: [{ type: 'thinking', thinking: '', signature }, { type: 'tool_use', ...weather, caller: { type: 'direct' } }] }) },
+    });
+    const body = stepTwo('claude-opus-5-5', 32_000, RAINY_PROMPT, completion, ['Minsk: 4 C, rain.']);
+    expect(body).toContain(`{"role":"assistant","content":${contentBytes(completion)}}`);
   });
 });
 
