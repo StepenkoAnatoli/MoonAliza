@@ -1196,7 +1196,5 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   the full set (20 or more per model, Opus and Fable too) is Phase 4 input. Replaying re-serialized tool
   input was accepted with string arguments only; integer-like key order and number normalisation are
   not exercised.
-- U5's e2e fakes: give the remaining checks (per-request `model` and `stream: true`; request 1's Ask-mode
-  system prompt, `list_files` present, `write_file` absent) the one-line guard name every other check
-  carries (U5-R2), and, if the workbench fake gains a 204 branch, replace the local-session positive
-  control (`cookies.get`) with a probe sent without `omit` (U5-R3).
+- U5's workbench fake: if it gains a 204 branch, replace the local-session positive control
+  (`cookies.get`) with a probe sent without `omit` (U5-R3).

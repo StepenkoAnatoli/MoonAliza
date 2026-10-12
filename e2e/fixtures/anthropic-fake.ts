@@ -139,9 +139,11 @@ function check(turn: Turn, method: string, path: string, headers: IncomingHttpHe
   // from post() (src/main/inference.ts), where the session's cookie rides along (D10, case 1).
   need(headers.cookie === undefined, 'a cookie header was sent');
   if (!body) return [...failed, 'the body is not a JSON object'];
+  // Red when the body's model is not the profile's (`model` in the Messages request, src/main/anthropic.ts).
   need(body.model === expected.model, `model is ${canonical(body.model)}`);
   // The profile's own maximum response on every request; red when profile.test sends 32 for anthropic (F-20).
   need(body.max_tokens === expected.maxTokens, `max_tokens is ${canonical(body.max_tokens)}`);
+  // Red with `stream: true` removed from the Messages request (src/main/anthropic.ts); the reader needs SSE.
   need(body.stream === true, 'stream is not true');
   const messages = Array.isArray(body.messages) ? body.messages as unknown[] : undefined;
   if (turn === 'test') {
@@ -151,7 +153,8 @@ function check(turn: Turn, method: string, path: string, headers: IncomingHttpHe
   }
   if (turn === 'step1') {
     need(canonical(messages) === canonical([{ role: 'user', content: expected.prompt }]), 'request 1 is not exactly the prompt as one user message');
-    // Ask mode, as the run's system message names it, offering list_files and no write tool.
+    // Ask mode, as the run's system message names it, offering list_files and no write tool: red when the journey
+    // starts the run in plan or build mode, or the engine offers Ask mode a write tool.
     need(typeof body.system === 'string' && body.system.startsWith('You are Moonzila, a coding assistant in ask mode.'), 'the system prompt is not the Ask-mode prompt');
     need(toolNames(body).includes('list_files') && !toolNames(body).includes('write_file'), `the tools are not Ask mode's: ${canonical(toolNames(body))}`);
     return failed;
