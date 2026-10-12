@@ -795,6 +795,23 @@ describe('isAnthropicOverflow', () => {
   // E-12 l.66-74's error shape; the overflow words are E-13 l.150's. Bodies marked "captured" quote E-12's message text
   // inside that shape; the spend-limit message is built (no capture states its text).
   const body = (type: string, message: string) => JSON.stringify({ type: 'error', error: { type, message }, request_id: 'req_built' });
+  const ERRORS = '2026-10-05-claude-api-errors-claude-platform-docs-claude-854b88aa.md';
+  const errorLines = (first: number, last: number) => readFileSync(new URL(WIRE + ERRORS, import.meta.url), 'utf8').split('\n').slice(first - 1, last).join('\n');
+  // E-12, capture lines 152-158: the prefill error body, verbatim.
+  const E12_PREFILL = '{\n  "type": "error",\n  "error": {\n    "type": "invalid_request_error",\n    "message": "This model does not support assistant message prefill. The conversation must end with a user message."\n  }\n}';
+  // E-12, capture lines 170, 182, 262, 286 and 296: one message text each, verbatim.
+  const E12_MODIFIED_THINKING = '`thinking` or `redacted_thinking` blocks in the latest assistant message cannot be modified. These blocks must remain as they were in the original response.';
+  const E12_THINKING_TYPE = '"thinking.type.enabled" is not supported for this model. Use "thinking.type.adaptive" and "output_config.effort" to control thinking behavior.';
+  const E12_FORCED_TOOL = 'tool_choice: type "tool" and "any" are not supported for this model.';
+  const E12_PREFIX_MISMATCH = 'messages.{i}.content.{j}: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".';
+  const E12_BLOCK_BINDING = 'block_binding: Extra inputs are not permitted';
+
+  test('the fixtures marked "captured" are the cited E-12 lines, copied verbatim', () => {
+    // Guard: a fixture that drifts from its capture or its cited lines (mutation: change one character of any of them).
+    for (const [fixture, first, last] of [[E12_PREFILL, 152, 158], [E12_MODIFIED_THINKING, 170, 170], [E12_THINKING_TYPE, 182, 182], [E12_FORCED_TOOL, 262, 262], [E12_PREFIX_MISMATCH, 286, 286], [E12_BLOCK_BINDING, 296, 296]] as const) {
+      expect(errorLines(first, last)).toBe(fixture);
+    }
+  });
 
   test('is true only for invalid_request_error with "prompt is too long"', () => {
     // Guard: the error type is checked (mutation: match the message alone).
@@ -805,12 +822,12 @@ describe('isAnthropicOverflow', () => {
 
   test.each([
     ['a spend limit (built)', body('invalid_request_error', 'You have reached your specified workspace API usage limits.')],
-    ['prefill (captured, E-12 l.152-158)', '{\n  "type": "error",\n  "error": {\n    "type": "invalid_request_error",\n    "message": "This model does not support assistant message prefill. The conversation must end with a user message."\n  }\n}'],
-    ['modified thinking (captured, E-12 l.170)', body('invalid_request_error', '`thinking` or `redacted_thinking` blocks in the latest assistant message cannot be modified. These blocks must remain as they were in the original response.')],
-    ['a thinking type (captured, E-12 l.182)', body('invalid_request_error', '"thinking.type.enabled" is not supported for this model. Use "thinking.type.adaptive" and "output_config.effort" to control thinking behavior.')],
-    ['forced tool use (captured, E-12 l.262)', body('invalid_request_error', 'tool_choice: type "tool" and "any" are not supported for this model.')],
-    ['a prefix mismatch (captured, E-12 l.286)', body('invalid_request_error', 'messages.{i}.content.{j}: Invalid `signature` in `thinking` block. The block is bound to a different conversation. Remove the block, or set `thinking.block_binding.prefix_mismatch_behavior` to "drop_block".')],
-    ['block_binding (captured, E-12 l.296)', body('invalid_request_error', 'block_binding: Extra inputs are not permitted')],
+    ['prefill (captured, E-12 l.152-158)', E12_PREFILL],
+    ['modified thinking (captured, E-12 l.170)', body('invalid_request_error', E12_MODIFIED_THINKING)],
+    ['a thinking type (captured, E-12 l.182)', body('invalid_request_error', E12_THINKING_TYPE)],
+    ['forced tool use (captured, E-12 l.262)', body('invalid_request_error', E12_FORCED_TOOL)],
+    ['a prefix mismatch (captured, E-12 l.286)', body('invalid_request_error', E12_PREFIX_MISMATCH)],
+    ['block_binding (captured, E-12 l.296)', body('invalid_request_error', E12_BLOCK_BINDING)],
     ['plain text that is not JSON', 'prompt is too long'],
     ['an `error` that is not an object', JSON.stringify({ type: 'error', error: 'prompt is too long' })],
   ])('is false for %s', (_name, text) => {
