@@ -242,6 +242,25 @@ describe('captured and built streams, folded and mapped', () => {
     expect(completion.providerState).toEqual({ format: 'anthropic-messages@1', appendOnly: true, data: `{"content":[{"type":"thinking","thinking":"","signature":"${REFUSAL_SIGNATURE}"},{"type":"text","text":"Listing."},{"type":"tool_use","id":"toolu_01","name":"list_files","input":{"path":"."}}]}` });
   });
 
+  test('a thinking start with no `signature` field takes its `signature_delta`, in a tool turn and in a final answer (F-9)', async () => {
+    // Built from E-10 shapes, not a capture: E-10 l.392 and every live start carry `"signature":""`; this start leaves the
+    // field out, which F-9 and spec 5.4 allow ("the start's `signature` to be absent or a string"). The delta sets the
+    // field, which then follows `thinking` in the state, and step 2 encodes that state.
+    // Guards: an absent start signature is accepted (mutation: require the start's `signature` to be a string before its
+    // signature_delta; both turns then fail in the reader with PROVIDER_INVALID_RESPONSE); the delta replaces the start's
+    // value (mutation: append the delta to it, which every start that is "" hides and which gives "undefined" + the
+    // signature here).
+    const unsigned: BuiltBlock = { start: { type: 'thinking', thinking: '' }, deltas: [{ type: 'thinking_delta', thinking: 'Hm.' }, { type: 'signature_delta', signature: REFUSAL_SIGNATURE }] };
+    const completion = await map(builtStream([unsigned, toolUseBlock()]));
+    expect(completion).toEqual({
+      content: '', outcome: 'tool_calls', toolCalls: [LIST_FILES_CALL], usage: { inputTokens: 10, outputTokens: 5 },
+      providerState: { format: 'anthropic-messages@1', appendOnly: true, data: `{"content":[{"type":"thinking","thinking":"Hm.","signature":"${REFUSAL_SIGNATURE}"},{"type":"tool_use","id":"toolu_01","name":"list_files","input":{"path":"."}}]}` },
+    });
+    const step: InferenceMessage = { role: 'assistant', content: completion.content, toolCalls: completion.toolCalls, providerState: completion.providerState };
+    expect(JSON.parse(encode([{ role: 'user', content: 'Go' }, step, result(LIST_FILES_CALL)], [REFUSAL_TOOL])).messages[1]).toEqual({ role: 'assistant', content: JSON.parse(completion.providerState!.data).content });
+    expect(await map(builtStream([unsigned, textOf('Done.')], 'end_turn'))).toEqual({ content: 'Done.', outcome: 'complete', usage: { inputTokens: 10, outputTokens: 5 } });
+  });
+
   test('a built interleaved turn with two calls (thinking, text, tool_use, text, tool_use): both calls, the exact state, and step 2 encodes it', async () => {
     // Built from E-10 shapes, not a capture: each call's partial JSON is different and split differently across deltas.
     // Guards: every tool_use block is a call (mutation: keep only the first call, `.slice(0, 1)`; step 2's encoder would
