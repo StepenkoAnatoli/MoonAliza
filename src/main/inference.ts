@@ -90,10 +90,13 @@ function hasCalls(raw: unknown): boolean { return raw !== undefined && (!Array.i
  * The code an inference failure crosses into the engine with. Only an overflow is told apart:
  * the engine already explains CONTEXT_LIMIT to the user. Everything else stays PROVIDER_ERROR,
  * as it always crossed - RUN_CANCELLED included, whose passage would change how a run that lost
- * its trust or policy mid-flight is reported, a separate decision.
+ * its trust or policy mid-flight is reported, a separate decision. LOCAL_MODEL_UNVERIFIED (a local
+ * Ollama that may send prompts to its cloud, refused under a local-only policy before any prompt
+ * byte; docs/specification/more-models.md) crosses too, so the user is told how to fix it.
  */
-export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'PROVIDER_ERROR' {
-  return error instanceof Error && error.message === 'CONTEXT_LIMIT' ? 'CONTEXT_LIMIT' : 'PROVIDER_ERROR';
+export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'LOCAL_MODEL_UNVERIFIED' | 'PROVIDER_ERROR' {
+  const reason = error instanceof Error ? error.message : '';
+  return reason === 'CONTEXT_LIMIT' || reason === 'LOCAL_MODEL_UNVERIFIED' ? reason : 'PROVIDER_ERROR';
 }
 
 // Providers do not share one overflow code. Accept known structured codes and the
@@ -124,10 +127,16 @@ async function refusalCode(response: Response): Promise<string> {
 /**
  * Folds a streamed answer back into the one-body shape validated below. Ollama's NDJSON reads a
  * non-streamed body as its single line; an OpenAI-compatible server that ignores `stream` answers
- * with plain JSON rather than `text/event-stream`, and is read as before.
+ * with plain JSON rather than `text/event-stream`, and is read as before - except that a top-level
+ * `error` that is not null fails it as PROVIDER_STREAM_ERROR, the rule the stream accumulator applies
+ * to each chunk (OpenRouter, wire E-25), so the same object is never an answer in one form only.
  */
 async function readStreamed(response: Response, local: boolean): Promise<unknown> {
-  if (!local && !/^text\/event-stream\b/i.test(response.headers.get('content-type') ?? '')) return readBoundedJson(response);
+  if (!local && !/^text\/event-stream\b/i.test(response.headers.get('content-type') ?? '')) {
+    const body = await readBoundedJson(response);
+    if (typeof body === 'object' && body !== null && (body as { error?: unknown }).error != null) throw new Error('PROVIDER_STREAM_ERROR');
+    return body;
+  }
   const accumulator = local ? new OllamaAccumulator() : new OpenAIAccumulator();
   for await (const chunk of local ? readNdjson(response) : readSse(response)) accumulator.push(chunk);
   return accumulator.result();
@@ -175,8 +184,18 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   const parsed = ChatSchema.safeParse(data);
   if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
   const choice = parsed.data.choices[0]!;
+  // finish_reason, streamed or not (docs/specification/more-models.md, Phase 1 design 1): `stop` is
+  // complete when it carries no call; `tool_calls`; `length` and Mistral's `model_length` (wire E-22)
+  // are incomplete; `content_filter` or a refusal is blocked; no reason at all (a stream cut short) stays
+  // incomplete. An empty reason is no reason: the stream accumulator has always skipped it, so a plain JSON
+  // answer reads it the same way. Every other value fails the call, before a refusal can make it look
+  // blocked: the failures vendors document - `error` (OpenRouter E-25, Mistral E-22),
+  // `insufficient_system_resource` and `aborted` (DeepSeek E-20) - and any value not listed here, so a new
+  // failure signal is never saved as a partial answer.
+  const reason = choice.finish_reason || null;
+  if (reason !== null && !['stop', 'tool_calls', 'length', 'model_length', 'content_filter'].includes(reason)) throw new Error('PROVIDER_FINISH_FAILED');
   const content = choice.message.content ?? choice.message.refusal ?? '';
-  if (choice.message.refusal || choice.finish_reason === 'content_filter') return { ...usage, content, outcome: 'blocked' };
-  if (choice.finish_reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
-  return { ...usage, content, outcome: choice.finish_reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
+  if (choice.message.refusal || reason === 'content_filter') return { ...usage, content, outcome: 'blocked' };
+  if (reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
+  return { ...usage, content, outcome: reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
 }

@@ -1,4 +1,8 @@
-# Development status - 2026-10-03 - product renamed to Moonzila; Operate mode specified
+# Development status - 2026-10-11 - More models, Phase 1: stream robustness and Ollama locality
+
+## More models, Phase 1 (2026-10-11)
+
+OpenAI-shaped streams now end in failure, not a saved partial answer, on a vendor's error chunk, an error `finish_reason` or one Moonzila does not know; comment lines and named events are read ([spec](specification/more-models.md), Phase 1). **Behaviour change:** in a local-only conversation or project (the default), a user-run Ollama profile is used only after its `/api/status` reports cloud features off. A stock Ollama has them on, so it is refused with a message naming the fix (`OLLAMA_NO_CLOUD=1` or `"disable_ollama_cloud": true` in server.json, then restart Ollama). Cloud-allowed chats, OpenAI-compatible profiles and the managed runtime are unchanged; a loopback OpenAI-compatible endpoint is still not checked.
 
 ## Product name and Operate mode
 

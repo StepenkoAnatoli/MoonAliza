@@ -1,5 +1,6 @@
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 import { createServer } from 'node:http';
+import { answerOllamaStatus } from './fixtures/ollama-status';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -14,6 +15,7 @@ test('Recovery survives restart, preserves conflicts and never replays an uncert
   await writeFile(join(project, 'interrupt.cjs'), 'require("fs").appendFileSync("executions.txt","once\\n");console.log("effect recorded");setTimeout(()=>process.kill(process.ppid),100);setInterval(()=>{},1000);');
   let requests = 0;
   const server = createServer((request, response) => {
+    if (answerOllamaStatus(request, response)) return;
     request.resume(); request.on('end', () => {
       requests++;
       const message = requests === 1 ? { content: '', tool_calls: [{ id: 'interrupt', function: { name: 'run_command', arguments: { program: 'node', args: ['interrupt.cjs'], timeoutSeconds: 20 } } }] } : { content: 'Ready after recovery review.' };

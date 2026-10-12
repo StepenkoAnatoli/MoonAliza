@@ -1,0 +1,417 @@
+[
+ {
+  "unit": "fix1",
+  "builds": [
+   {
+    "commit": "a2f316d70b801b0c582d0180faf232d2021e168e",
+    "report": "The commit is a2f316d on branch build/mm-p1-fix1, on top of f1c4867. It is not pushed, and the commit gate allowed it.\n\nFiles changed:\n- src/main/inference.ts: only readStreamed and its doc comment. On the OpenAI-shaped plain-JSON path, after readBoundedJson, a top-level `error` that is not null now throws PROVIDER_STREAM_ERROR before ChatSchema. A body with `\"error\": null` is still accepted.\n- tests/provider-stream.test.ts: 10 new tests, appended.\n- docs/ARCHITECTURE.md: one sentence at the end of the paragraph that begins \"The September 30 reconciliation\".\n\nWhat happened to each finding:\n- BRK-3 / MM-P1-SPEC-9: fixed. Two tests use E-25's error object from capture line 445. One checks that a non-null error fails the call; the other checks that `\"error\": null` still completes. A grep confirmed no existing test sends a 200 plain-JSON body with a non-null error. Only the 400/413/422 refusal bodies carry one, and those never reach readStreamed.\n- MUT-2 + MUT-9: closed. One test runs E-20's stream without [DONE], so it ends on the stop+usage chunk with no blank line, and expects complete with usage. A second test reads E10_BASIC as captured, unterminated, and expects the last event to keep the name message_stop.\n- MUT-6: closed. E-20 with every `data: ` written `data:`, including `data:[DONE]`, still completes.\n- MUT-8: closed. E-20, then [DONE], then a `data: not json` line, sent on a stream that is never closed. The call completes and the stream is cancelled.\n- MUT-12: closed. Every E-20 chunk (capture lines 1143-1165) carries `\"error\": null` and the call still completes.\n- MUT-13: closed.\n  - An empty `event:` line gives event undefined.\n  - A colon-less `data` line counts as an empty data value. One such line yields no event. Two such lines make the data \"\\n\", which fails with PROVIDER_INVALID_RESPONSE. That is what the current code gives, and it matches the WHATWG HTML grammar, which is not in the corpus.\n- MUT-14: closed. readSse with maxBytes equal to the body's size reads all 11 events. One byte less throws PROVIDER_RESPONSE_TOO_LARGE.\n\nGuard proofs: I applied each mutation, ran both stream test files, then restored the file. Every mutation turned exactly its named test red; S14 also turned the event-name test red, as expected. Before the fix, only the plain-JSON error test was red. The other nine passed as pure pins.\n\nChecks after the change, all verified: typecheck exit 0, lint exit 0, and the four test files passed 138/138. I did not run the full Linux suite; I expect it to match the baseline.\n\nDeviations:\n- All tests went into tests/provider-stream.test.ts, where the E-20, E-10 and E-25 fixtures and their check against the captures already live. tests/provider-transport.test.ts is unchanged.\n- The error check is inline in readStreamed rather than a helper shared with the accumulator, so that the import line of inference.ts is not touched.\n\nRisks:\n- The `!= null` rule is now in two places, provider-stream.ts and readStreamed, and can drift apart.\n- A plain-JSON failure is reported as PROVIDER_STREAM_ERROR, a name that says \"stream\". This is as the brief asked.\n- Mutation S03 (any truthy `error` counting as an error) is still not pinned. It was not in this brief.",
+    "findings_closed": [
+     {
+      "id": "BRK-3",
+      "action": "fixed: readStreamed fails a non-null top-level error on a plain-JSON body with PROVIDER_STREAM_ERROR; tests: error fails, error:null completes (E-25 capture line 445)"
+     },
+     {
+      "id": "MM-P1-SPEC-9",
+      "action": "fixed with BRK-3 (same change and tests)"
+     },
+     {
+      "id": "MUT-2",
+      "action": "test: E-20 stream ending on its stop+usage chunk with no blank line or [DONE] completes with usage (kills S14)"
+     },
+     {
+      "id": "MUT-9",
+      "action": "test: E10_BASIC as captured, unterminated, keeps event name message_stop (kills S13)"
+     },
+     {
+      "id": "MUT-6",
+      "action": "test: E-20 with data: written data: (incl. data:[DONE]) completes (kills S09)"
+     },
+     {
+      "id": "MUT-8",
+      "action": "test: garbage line after [DONE] on an open stream; call completes and stream is cancelled (kills S16)"
+     },
+     {
+      "id": "MUT-12",
+      "action": "test: every E-20 chunk with \"error\": null completes (kills S02)"
+     },
+     {
+      "id": "MUT-13",
+      "action": "tests: empty event: gives undefined (kills S07); colon-less data line is an empty data value, two of them fail as PROVIDER_INVALID_RESPONSE, per the grammar (kills S11)"
+     },
+     {
+      "id": "MUT-14",
+      "action": "test: readSse with maxBytes equal to the body size reads it, one byte less throws PROVIDER_RESPONSE_TOO_LARGE (kills S18)"
+     }
+    ],
+    "guard_proofs": [
+     {
+      "test": "E-20: a stream that ends on its terminal chunk, with no blank line and no [DONE], completes with its usage",
+      "mutation": "S14: delete the trailing-event yield in readSseEvents",
+      "observed_red": "1 of 2 failed under S14: expected { \u2026(2) } to deeply equal { \u2026(3) } (usage lost, incomplete)"
+     },
+     {
+      "test": "E-10: a last event the stream ends without its blank line keeps its event name",
+      "mutation": "S13: trailing yield with event: undefined (also red under S14)",
+      "observed_red": "expected { event: undefined, \u2026 } to deeply equal { event: 'message_stop', \u2026 }"
+     },
+     {
+      "test": "data lines with no space after the colon are read the same, [DONE] included",
+      "mutation": "S09: value always starts at colon + 2",
+      "observed_red": "Error: PROVIDER_INVALID_RESPONSE"
+     },
+     {
+      "test": "[DONE] ends the stream: what follows it is never read, and an open connection is closed",
+      "mutation": "S16: [DONE] return -> continue",
+      "observed_red": "Error: PROVIDER_INVALID_RESPONSE"
+     },
+     {
+      "test": "E-20: a normal chunk carrying \"error\": null is not an error chunk",
+      "mutation": "S02: accumulator error != null -> !== undefined",
+      "observed_red": "Error: PROVIDER_STREAM_ERROR"
+     },
+     {
+      "test": "an empty `event:` line names nothing: its event has no name",
+      "mutation": "S07: event = value || undefined -> event = value",
+      "observed_red": "expected [ { event: '', \u2026 } ] to deeply equal [ { event: undefined, \u2026 } ]"
+     },
+     {
+      "test": "a colon-less `data` line is a data field with an empty value, as the grammar reads it",
+      "mutation": "S11: colon-less line read as field ''",
+      "observed_red": "Error: expected the call to fail (data\\ndata skipped instead of failing)"
+     },
+     {
+      "test": "readSse applies the byte bound it is given",
+      "mutation": "S18: readSse calls readSseEvents(response) without maxBytes",
+      "observed_red": "promise resolved \"[ { \u2026(6) }, \u2026(10) ]\" instead of rejecting"
+     },
+     {
+      "test": "E-25: a plain JSON answer carrying a top-level error fails the call, as the stream chunk does",
+      "mutation": "remove the new error check line in readStreamed (also red on unchanged f1c4867, test-first)",
+      "observed_red": "Error: expected the call to fail (call completed with 'partial text')"
+     },
+     {
+      "test": "E-25: a plain JSON answer carrying \"error\": null is an answer",
+      "mutation": "readStreamed check error != null -> !== undefined",
+      "observed_red": "Error: PROVIDER_STREAM_ERROR"
+     }
+    ],
+    "checks": [
+     {
+      "command": "git log -1 (start)",
+      "result": "f1c4867cfab52acca4a1a0b935eacb1748eeaaf1"
+     },
+     {
+      "command": "npx vitest run tests/provider-stream.test.ts (new tests, before fix)",
+      "result": "1 failed (plain JSON error test: 'expected the call to fail'), 39 passed"
+     },
+     {
+      "command": "node scratchpad/fix1/guards.mjs (10 mutations, each run on provider-stream + provider-transport, restored)",
+      "result": "each mutation red on its named test; git status afterwards shows only the intended changes"
+     },
+     {
+      "command": "npm run typecheck",
+      "result": "exit 0"
+     },
+     {
+      "command": "npm run lint",
+      "result": "exit 0"
+     },
+     {
+      "command": "npx vitest run tests/provider-stream.test.ts tests/provider-transport.test.ts tests/ollama-locality.test.ts tests/application.test.ts",
+      "result": "4 files passed, 138 tests passed"
+     },
+     {
+      "command": "grep tests for OpenAI bodies with error",
+      "result": "only 400/413/422 refusal bodies carry error; none are 200 plain-JSON bodies"
+     },
+     {
+      "command": "git commit (commit gate)",
+      "result": "research gate: allow; a2f316d created"
+     }
+    ],
+    "got_wrong": "mistake: I sent the first Edit to inference.ts before reading the file through Read. where: readStreamed. impact: none; the tool refused the edit, and the test run alongside it still showed 1 failure because the fix was not yet applied. cause: I edited from the cat output instead of a Read. fix: I read the file, then edited it. verified: the four files re-ran 138/138 passing."
+   }
+  ],
+  "reviews": [
+   {
+    "verdict": "PASS",
+    "findings": [
+     {
+      "id": "REV1-OPS-1",
+      "severity": "S4",
+      "problem": "This is a problem I caused during the review, not one in a2f316d. A stray `git -C /home/user/moonaliza checkout f1c4867 --` moved the main checkout from branch main-axuse to a detached HEAD at f1c4867. main-axuse also points to f1c4867, so no file content changed and the 6 uncommitted files are untouched. My attempt to switch back was denied by the permission classifier.",
+      "evidence": "git reflog: 'f1c4867 HEAD@{2026-10-11 23:27:25}: checkout: moving from main-axuse to f1c4867'. git rev-parse main-axuse HEAD returns f1c4867 for both. git status --short lists 6 entries, as before.",
+      "fix": "The lead should run: git -C /home/user/moonaliza checkout main-axuse (same commit, so the switch is safe)."
+     },
+     {
+      "id": "REV1-1",
+      "severity": "S4",
+      "problem": "The comment on the MUT-12 test overstates the corpus: it says 'No capture shows \"error\": null', but a capture does. The OpenAI Responses capture shows \"error\": null on a completed response object (a different API from chat completions, so the test itself is still valid).",
+      "evidence": "docs/research/2026-10-05-provider-wire-formats/research/raw/2026-10-05-create-a-model-response-openai-api-refer-openai-a1273404.md line 32054 (11 occurrences), in a response with object: response and status: completed. Test comment: tests/provider-stream.test.ts, the 'E-20: a normal chunk carrying \"error\": null' test.",
+      "fix": "Narrow the wording to 'no chat-completions chunk capture shows \"error\": null', and optionally cite the Responses capture as a real success body that carries it."
+     },
+     {
+      "id": "REV1-2",
+      "severity": "S4",
+      "problem": "No test pins whether the check uses `!= null` or a plain truthiness test. S03 (stream: `.error != null` changed to `.error`) and its counterpart B3 on the new plain-JSON check both survive. Today `\"error\": false`, `\"\"` and `0` all fail the call in both forms, consistently. The brief asked only for S02, and the review listed S03 as optional.",
+      "evidence": "Mutation run on a2f316d: S03, 138/138 pass; B3 (inference.ts `(body as {error?:unknown}).error != null)` changed to `.error)`), 138/138 pass. Probe: a plain JSON body with error:false or error:\"\" gives THROW PROVIDER_STREAM_ERROR.",
+      "fix": "Optional: add one test with `\"error\": false` if the rule that any non-null value fails the call is intended. Otherwise leave it as a note."
+     }
+    ],
+    "checked": [
+     "git worktree add --detach .../mm-p1-fix1-rev1 a2f316d (plus the two symlinks): HEAD is a2f316d, parent f1c4867",
+     "git diff --numstat f1c4867 a2f316d: ARCHITECTURE 1/1, inference.ts 8/2, provider-stream.test.ts 107/0. Only owned files changed; the tests are additions only (nothing loosened or skipped)",
+     "ARCHITECTURE line 33: the old paragraph is an exact prefix of the new one, so only one sentence was appended to 'The September 30 reconciliation' paragraph. The sentence is true: the check runs on the OpenAI-shaped path only (local = kind==='ollama'), before ChatSchema, and error:null is accepted",
+     "npm run typecheck: exit 0; npm run lint: exit 0",
+     "npx vitest run with provider-stream, provider-transport, ollama-locality and application, 3 times: 138/138 passed each time (no flakes)",
+     "npx vitest run tests/research-review-e2e.test.ts tests/research-review-engine.test.ts (the other importers of inference): 107/107 passed",
+     "Mutation runner (scratchpad/rev1/run.mjs; each mutation applied, the 4 files run, the file restored): S14 fails 2 (E-20 terminal-chunk, E-10 event-name); S13, S09, S16, S02, S07, S11 and S18 each fail exactly their named test; B1 (new check removed) fails the E-25 error test; B2 (!= null changed to !== undefined) fails the E-25 error:null test; S03 and B3 (truthy) survive (REV1-2)",
+     "Removing reader.cancel in lines(): the [DONE] test and the existing abandonment test both fail, so the claim that an open connection is closed holds",
+     "src/main/inference.ts reverted to f1c4867 with the new tests kept: 1 failed (E-25 plain JSON error), 39 passed. This confirms test-first and that the other nine are pure pins",
+     "Review repros on a2f316d: the BRK-3 body and the MM-P1-SPEC-9 body both give THROW PROVIDER_STREAM_ERROR, which inferenceErrorCode maps to PROVIDER_ERROR (before the fix they completed)",
+     "Citations: E-25 raw line 445 is the error chunk; E-20 raw lines 1143 and 1165 are the first chunk and data: [DONE]; EVIDENCE E-20 quotes 'terminated by a data: [DONE] message'. Grammar claims for an empty event: field and a colon-less data line match WHATWG (data\\ndata gives \"\\n\", which is not JSON, so PROVIDER_INVALID_RESPONSE)",
+     "Commit a2f316d: author and committer are StepenkoAnatoli <318295322+StepenkoAnatoli@users.noreply.github.com>. All five parts are present, the got-wrong section has all six fields, and the Co-Authored-By and Claude-Session trailers are there",
+     "Process incident: a stray checkout detached /home/user/moonaliza from main-axuse (same commit f1c4867). Restoring it was denied by the permission classifier; see REV1-OPS-1",
+     "Worktree removed (force removal was denied; I unlinked my own symlinks, then ran git worktree remove without --force): worktree list shows no rev1, the directory is gone, and /home/user/moonaliza/node_modules and .build are intact"
+    ]
+   }
+  ]
+ },
+ {
+  "unit": "fix2",
+  "builds": [
+   {
+    "commit": "11695fd1980482f903b8a976b5dfd6f29b827989",
+    "report": "Commit 11695fd on build/mm-p1-fix2, parent f1c4867. Not pushed. Commit gate result: \"research gate: allow\".\n\nFiles changed (4 files, +65/-12):\n- src/main/ollama-locality.ts: readStatus now sends `cache: 'no-store'`. It also runs `if (signal.aborted) { cancel(); return false; }` right after the abort listener is registered. The redirect comment and the defence-in-depth comment are reworded.\n- tests/ollama-locality.test.ts: 5 new tests. The constants are pinned inside the timing test, and that test's comment is reworded. The wire test is renamed so it claims only what Node's fetch can show.\n- tests/application.test.ts: the LOCAL_MODEL_UNVERIFIED test now checks the whole message against the spec text.\n- docs/ARCHITECTURE.md: one sentence added to the privacy paragraph.\n\nElectron check for BRK-1 (Electron 44.4.5 under xvfb, cache.cjs in scratchpad/el-fix2, bundle built from this worktree):\n- Before (f1c4867 bundle): the max-age=600, Expires and Last-Modified-only cases all passed step 2 (\"ok\") with only 1 status request reaching the fake Ollama.\n- After: all 5 header cases refuse step 2 with LOCAL_MODEL_UNVERIFIED, and the fake Ollama sees 2 requests in each.\n- Output is saved in before.txt and after.txt in that folder.\n\nDeviations:\n- In the BRK-2 test, the server holds back its headers until the check has already refused. The breaker used a fixed 5.5 s timer instead. Holding them makes the order certain, so the test is not timing-sensitive on a slow runner.\n- I also pinned STATUS_MAX_BYTES and proved it red with a mutation (G5b).\n- I renamed the existing wire test, which the review listed as optional.\n\nRisks:\n- The late-headers test adds about 6 s to the suite.\n- The late-headers fix was checked only with Node's fetch, not in Electron.\n- The exact-init test will fail on any future option added to the request init. That is deliberate.",
+    "findings_closed": [
+     {
+      "id": "BRK-1",
+      "action": "Added cache: 'no-store' to the readStatus request init. Pinned by the exact-init test (G3). In Electron, before: 3 cache cases passed step 2 with 1 request. After: all refuse with 2 requests."
+     },
+     {
+      "id": "MM-P1-SPEC-2",
+      "action": "Recording-fetcher test checks the exact init: {method GET, redirect error, credentials omit, cache no-store} plus an AbortSignal, with nothing else. Red under G1, G2 and G3."
+     },
+     {
+      "id": "INV-1",
+      "action": "Same exact-init test. Removing credentials 'omit' turns it red (G1)."
+     },
+     {
+      "id": "MUT-1",
+      "action": "Same exact-init test kills L14 and L15 (credentials changed or removed): toStrictEqual fails (G1)."
+     },
+     {
+      "id": "MUT-11",
+      "action": "Same exact-init test kills L12 (redirect changed to 'manual') (G2)."
+     },
+     {
+      "id": "MUT-3",
+      "action": "New test: a stub fetcher returns new Response(null, {status: 200}) and the check refuses. Kills L28 (G4)."
+     },
+     {
+      "id": "MUT-4",
+      "action": "expect(STATUS_TIMEOUT_MS).toBe(5_000) and expect(STATUS_MAX_BYTES).toBe(64*1024) added to the timing test. Its comment now says the upper bound catches only 9.5 s or more. Kills L09 (G5)."
+     },
+     {
+      "id": "MM-P1-SPEC-4",
+      "action": "Same constant pins and reworded comment as MUT-4 (G5, G5b)."
+     },
+     {
+      "id": "MUT-5",
+      "action": "test.each case: an oversized 200 body that never ends, through the unsignalled fetcher, is refused in under 2 s and its connection closes. Kills L20 (G6)."
+     },
+     {
+      "id": "MUT-10",
+      "action": "test.each case: a 500 whose body never ends, through the unsignalled fetcher, is refused and its connection closes. Kills L31 (G7)."
+     },
+     {
+      "id": "BRK-2",
+      "action": "Added `if (signal.aborted) { cancel(); return false; }` after the listener is registered. New late-headers test reuses the closedBy and unsignalled helpers. Red on f1c4867 and under G8."
+     },
+     {
+      "id": "INV-4",
+      "action": "Same code line and test as BRK-2."
+     },
+     {
+      "id": "INV-3",
+      "action": "Comment now names redirect: 'error' as the real guard, which Electron enforces. response.redirected only catches fetchers that report it."
+     },
+     {
+      "id": "MUT-15",
+      "action": "Post-read abort check kept, with a comment saying it is defence in depth because untilAborted already rejects on the same signal."
+     },
+     {
+      "id": "MUT-7",
+      "action": "application test compares the whole message (typographic apostrophe normalised) with the spec text. A script confirmed the literal matches the spec paragraph. Kills A03 and A02."
+     }
+    ],
+    "guard_proofs": [
+     {
+      "test": "main hands the fetcher exactly a bare GET: no credential, no redirect, never from the cache, no headers, no body",
+      "mutation": "unchanged f1c4867 source (test-first)",
+      "observed_red": "expected { method: 'GET', \u2026(2) } to strictly equal { method: 'GET', \u2026(3) }"
+     },
+     {
+      "test": "main hands the fetcher exactly a bare GET ...",
+      "mutation": "G1 remove credentials: 'omit'",
+      "observed_red": "exit 1; to strictly equal ... (2) vs (3)"
+     },
+     {
+      "test": "main hands the fetcher exactly a bare GET ...",
+      "mutation": "G2 redirect 'error' -> 'manual' (L12)",
+      "observed_red": "exit 1; to strictly equal ... (3) vs (3)"
+     },
+     {
+      "test": "main hands the fetcher exactly a bare GET ...",
+      "mutation": "G3 remove cache: 'no-store'",
+      "observed_red": "exit 1; to strictly equal ... (2) vs (3)"
+     },
+     {
+      "test": "a 200 with no body at all refuses with LOCAL_MODEL_UNVERIFIED",
+      "mutation": "G4 L28: if (!reader) return true",
+      "observed_red": "promise resolved \"undefined\" instead of rejecting"
+     },
+     {
+      "test": "every way of not answering ends as LOCAL_MODEL_UNVERIFIED at the 5 s bound ...",
+      "mutation": "G5 L09: STATUS_TIMEOUT_MS = 9_000",
+      "observed_red": "expected 9000 to be 5000"
+     },
+     {
+      "test": "every way of not answering ...",
+      "mutation": "G5b STATUS_MAX_BYTES = 65 * 1024",
+      "observed_red": "expected 66560 to be 65536"
+     },
+     {
+      "test": "an oversized 200 body that never ends is refused before the bound and its connection closes ...",
+      "mutation": "G6 L20: drop cancel() from finally",
+      "observed_red": "the refused body is cancelled: expected false to be true"
+     },
+     {
+      "test": "a 500 whose body never ends is refused before the bound and its connection closes ...",
+      "mutation": "G7 L31: non-200 branch becomes { return false; }",
+      "observed_red": "the refused body is cancelled: expected false to be true"
+     },
+     {
+      "test": "headers that arrive after the 5 s bound ... close their connection at once",
+      "mutation": "unchanged f1c4867 source, and G8 removing the new if (signal.aborted) line",
+      "observed_red": "the reader is cancelled when the late headers arrive: expected false to be true (both)"
+     },
+     {
+      "test": "a local Ollama that can reach cloud models fails the run with an actionable message, never retried",
+      "mutation": "A03 drop ', restart Ollama' in src/engine/application.ts",
+      "observed_red": "expected 'Moonzila could not confirm\u2026' to be 'Moonzila could not confirm\u2026'"
+     },
+     {
+      "test": "a local Ollama that can reach cloud models ...",
+      "mutation": "A02 drop the server.json remedy",
+      "observed_red": "expected 'Moonzila could not confirm\u2026' to be 'Moonzila could not confirm\u2026'"
+     }
+    ],
+    "checks": [
+     {
+      "command": "git log -1 (start)",
+      "result": "f1c4867cfab52acca4a1a0b935eacb1748eeaaf1"
+     },
+     {
+      "command": "npx vitest run tests/ollama-locality.test.ts tests/application.test.ts (new tests, src unchanged)",
+      "result": "2 failed (init pin, late headers), 56 passed: expected red"
+     },
+     {
+      "command": "same, after the src change",
+      "result": "58 passed"
+     },
+     {
+      "command": "python3 scratchpad/fix2-proofs/run.py (11 mutations, each run as npx vitest run <file> -t <name>, then restored)",
+      "result": "all 11 exit 1 (red); afterwards git diff showed only the intended changes and cmp confirmed the source was identical to the fixed copy"
+     },
+     {
+      "command": "xvfb-run electron ./cache.cjs with the f1c4867 bundle",
+      "result": "max-age, Expires, Last-Modified: step 2 ok with 1 request (bug reproduced)"
+     },
+     {
+      "command": "xvfb-run electron ./cache.cjs with the fixed bundle",
+      "result": "all 5 header cases: step 2 LOCAL_MODEL_UNVERIFIED with 2 requests"
+     },
+     {
+      "command": "npm run typecheck",
+      "result": "exit 0"
+     },
+     {
+      "command": "npm run lint",
+      "result": "exit 0"
+     },
+     {
+      "command": "npx vitest run tests/provider-stream.test.ts tests/provider-transport.test.ts tests/ollama-locality.test.ts tests/application.test.ts",
+      "result": "4 files, 133 passed"
+     },
+     {
+      "command": "git commit (StepenkoAnatoli identity, no --no-verify)",
+      "result": "research gate: allow; 11695fd"
+     }
+    ],
+    "got_wrong": "Nothing to report."
+   }
+  ],
+  "reviews": [
+   {
+    "verdict": "PASS",
+    "findings": [
+     {
+      "id": "R-1",
+      "severity": "S4",
+      "problem": "Two new never-ending body fixtures, '{\"error\":' (500) and 65 KiB of whitespace (200), have no E-row cited beside them.",
+      "evidence": "tests/ollama-locality.test.ts:242-243. The error-body shape matches E-31 (routes.go capture: gin.H{\"error\": ...} appears 146 times), but no comment cites it. The existing '{\"cloud\":' stall fixture has no inline citation either.",
+      "fix": "Optional: add '// shape: wire E-31 gin.H{\"error\"}' beside the 500 case. The body content does not affect what the tests assert."
+     },
+     {
+      "id": "R-2",
+      "severity": "S4",
+      "problem": "MUT-15/L21 is still an equivalent mutation: removing the post-read abort check leaves every test green. This is intended, and the code now carries a comment saying so.",
+      "evidence": "Mutation 'drop if (signal.aborted) return false; after the read loop': tests/ollama-locality.test.ts gave 39 passed, exit 0.",
+      "fix": "None. This is recorded as defence in depth."
+     },
+     {
+      "id": "R-3",
+      "severity": "S4",
+      "problem": "The BRK-2 late-headers fix was verified only through Node's fetch, not in Electron. The builder declares this as untested.",
+      "evidence": "The commit report lists it under 'untested'. Electron's session.fetch honours the signal (review BRK-2/INV-4), so the gap is defensive only.",
+      "fix": "None required."
+     }
+    ],
+    "checked": [
+     "git worktree add --detach mm-p1-fix2-rev1 at 11695fd and symlinks: ok. HEAD 11695fd, parent f1c4867",
+     "git diff --name-only f1c4867 HEAD: 4 files (docs/ARCHITECTURE.md, src/main/ollama-locality.ts, tests/application.test.ts, tests/ollama-locality.test.ts), all owned",
+     "python ARCHITECTURE check: only the privacy paragraph changed, only the one sentence was inserted, all other lines identical",
+     "npm run typecheck: exit 0",
+     "npm run lint: exit 0",
+     "npx vitest run provider-stream, provider-transport, ollama-locality, application: 133 passed, run 4 times (1 plus 3 for flakiness), all green",
+     "4 concurrent runs of npx vitest run tests/ollama-locality.test.ts on 4 cores: 39/39 passed in each",
+     "Test-first check (f1c4867 ollama-locality.ts with the new tests): 2 failed (exact-init, late-headers), 37 passed",
+     "Mutation L15/G1 (drop credentials 'omit'): red, exact-init test",
+     "Mutation L14 (credentials 'include'): red, exact-init",
+     "Mutation L12/G2 (redirect 'manual'): red, exact-init",
+     "Mutation L13 (redirect 'follow'): red, 3 tests",
+     "Mutation G3 (drop cache 'no-store'): red, exact-init",
+     "Mutation cache 'no-cache': red, exact-init",
+     "Mutation adding headers {} or keepalive to the init: red, exact-init",
+     "Mutation L28/G4 (no reader returns true): red, bodiless-200 test",
+     "Mutation L09/G5 (STATUS_TIMEOUT_MS 9_000): red, timing test constant pin",
+     "Mutation G5b (STATUS_MAX_BYTES 65 KiB): red, 3 tests",
+     "Mutation L20/G6 (finally without cancel): red, oversized never-ending 200 case",
+     "Mutation L31/G7 (non-200 without body cancel): red, never-ending 500 case",
+     "Mutation G8 (drop the new late-abort line): red, late-headers test",
+     "Mutation G8b (late-abort line without cancel()): red, late-headers test",
+     "Mutation L21 (drop the post-read check): green. Equivalent mutation, as expected (MUT-15)",
+     "Mutation A03 (drop ', restart Ollama' in application.ts): red, application test",
+     "Mutation A02 (drop the server.json remedy): red, application test",
+     "git status after each mutation run: only the .build and node_modules symlinks untracked, so the source was restored",
+     "python spec-text check: the test literal equals the spec 'The engine shows:' text, and application.ts (apostrophe normalised) equals the spec",
+     "Electron 44.4.5 under xvfb, cache.cjs, plain rows (no harness injection). f1c4867 bundle: max-age, Expires and Last-Modified pass step 2 with 1 request. 11695fd bundle: all 5 cases refuse step 2 with LOCAL_MODEL_UNVERIFIED and 2 requests; step 1 ok in every case",
+     "grep of the test diff: no .only, .skip or .todo, no loosened bound. The removed toContain assertions are replaced by an exact toBe",
+     "git log -1: author and committer StepenkoAnatoli <318295322+StepenkoAnatoli@users.noreply.github.com>. Five-part report present, got-wrong line 'Nothing to report.', Co-Authored-By and Claude-Session trailers present",
+     "Cleanup: removed scratch rev1 and rev1-el, ran git worktree remove --force on mm-p1-fix2-rev1, directory gone"
+    ]
+   }
+  ]
+ }
+]

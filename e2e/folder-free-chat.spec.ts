@@ -1,5 +1,6 @@
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 import { createServer } from 'node:http';
+import { answerOllamaStatus } from './fixtures/ollama-status';
 import { mkdtemp, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,6 +11,7 @@ test('chat without a folder survives restart, creates a workspace and applies on
   const workspace = join(root, 'Idea workspace');
   const requests: Array<{ messages: Array<{ role: string; content: string }>; tools?: unknown[] }> = [];
   const server = createServer((request, response) => {
+    if (answerOllamaStatus(request, response)) return;
     let bytes = ''; request.on('data', chunk => { bytes += String(chunk); });
     request.on('end', () => {
       const body = JSON.parse(bytes); requests.push(body);

@@ -43,20 +43,39 @@ export async function* readNdjson(response: Response, maxBytes = 4 * 1024 * 1024
   for await (const line of lines(response, maxBytes)) if (line.trim()) yield json(line);
 }
 
-/** Server-sent events: each event's `data:` lines joined; `[DONE]` ends the stream. */
-export async function* readSse(response: Response, maxBytes = 4 * 1024 * 1024): AsyncGenerator<unknown> {
-  let data: string[] = [];
+/** One server-sent event: its `event:` name (undefined when it has none) and its parsed `data:`. */
+export interface SseEvent { event: string | undefined; data: unknown }
+
+/**
+ * Server-sent events: each event's `data:` lines joined and parsed, with the event's `event:` name,
+ * which Anthropic and the Responses API send (wire E-10, E-33). Only the `data` and `event` fields are
+ * kept. A comment line (`:` first, such as OpenRouter's `: OPENROUTER PROCESSING`, E-25) has an empty
+ * field name, so it is skipped with `id:`, `retry:` and any other field, even inside a multi-line
+ * event. `[DONE]` ends the stream; an event with no data is not yielded; a last event the stream ends
+ * without its blank line is still read, as before.
+ */
+export async function* readSseEvents(response: Response, maxBytes = 4 * 1024 * 1024): AsyncGenerator<SseEvent> {
+  let data: string[] = []; let event: string | undefined;
   for await (const line of lines(response, maxBytes)) {
     if (line === '') {
-      const payload = data.join('\n'); data = [];
+      const payload = data.join('\n'); const name = event; data = []; event = undefined;
       if (payload === '[DONE]') return;
-      if (payload) yield json(payload);
+      if (payload) yield { event: name, data: json(payload) };
       continue;
     }
-    if (line.startsWith('data:')) data.push(line.slice(line.startsWith('data: ') ? 6 : 5));
+    const colon = line.indexOf(':');
+    const field = colon === -1 ? line : line.slice(0, colon);
+    const value = colon === -1 ? '' : line.slice(line.startsWith(' ', colon + 1) ? colon + 2 : colon + 1);
+    if (field === 'event') event = value || undefined;
+    else if (field === 'data') data.push(value);
   }
   const payload = data.join('\n');
-  if (payload && payload !== '[DONE]') yield json(payload);
+  if (payload && payload !== '[DONE]') yield { event, data: json(payload) };
+}
+
+/** The parsed `data:` of each server-sent event, for callers that do not use event names. */
+export async function* readSse(response: Response, maxBytes = 4 * 1024 * 1024): AsyncGenerator<unknown> {
+  for await (const item of readSseEvents(response, maxBytes)) yield item.data;
 }
 
 const OllamaChunkSchema = z.object({
@@ -134,6 +153,9 @@ export class OpenAIAccumulator {
   private usage: TokenUsage | undefined;
 
   push(raw: unknown): void {
+    // OpenRouter (wire E-25): an error after the 200 is committed arrives as a chunk with a top-level
+    // `error` object. It fails the call, whatever the chunk's choice says; its text is never kept.
+    if (typeof raw === 'object' && raw !== null && (raw as { error?: unknown }).error != null) throw new Error('PROVIDER_STREAM_ERROR');
     const parsed = OpenAIChunkSchema.safeParse(raw);
     if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
     const { choices, usage } = parsed.data;
@@ -163,7 +185,12 @@ export class OpenAIAccumulator {
       call.arguments += fragment.function?.arguments ?? '';
       if (call.arguments.length > MAX_ARGUMENTS) throw new Error('PROVIDER_INVALID_RESPONSE');
     }
-    if (choice.finish_reason) this.finishReason = choice.finish_reason;
+    if (choice.finish_reason) {
+      // OpenRouter repeats the terminal reason on its usage chunk (wire E-25): the same reason again is
+      // an accounting frame. A different one contradicts the first, so neither is trusted.
+      if (this.finishReason !== null && choice.finish_reason !== this.finishReason) throw new Error('PROVIDER_INVALID_RESPONSE');
+      this.finishReason = choice.finish_reason;
+    }
   }
 
   /** The shape of a non-streamed completion; calls in index order, then arrival, arguments still unparsed. */

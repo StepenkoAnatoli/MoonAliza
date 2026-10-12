@@ -1,5 +1,6 @@
 import { _electron as electron, expect, test } from '@playwright/test';
 import { createServer } from 'node:http';
+import { answerOllamaStatus } from './fixtures/ollama-status';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -15,6 +16,7 @@ test('Build reviews real command execution, receives failure evidence, and stops
   await writeFile(join(project, 'tree.mjs'), await readFile(resolve('tests/fixtures/processes/tree.mjs')));
   const evidence: Array<{ status: string; code: number | null; output: string }> = [];
   const server = createServer((request, response) => {
+    if (answerOllamaStatus(request, response)) return;
     let bytes = ''; request.on('data', chunk => { bytes += String(chunk); });
     request.on('end', () => {
       const body = JSON.parse(bytes) as { messages: Array<{ role: string; content: string; tool_name?: string }> };

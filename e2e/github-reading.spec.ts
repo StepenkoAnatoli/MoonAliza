@@ -1,5 +1,6 @@
 import { _electron as electron, expect, test } from '@playwright/test';
 import { createServer } from 'node:http';
+import { answerOllamaStatus } from './fixtures/ollama-status';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -9,6 +10,7 @@ test('General chat reads a supplied GitHub URL through main and saves cited resu
   const root = await mkdtemp(join(tmpdir(), 'moon-github-e2e-'));
   const sha = 'a'.repeat(40); let modelCalls = 0; let observedSource = '';
   const server = createServer((request, response) => {
+    if (answerOllamaStatus(request, response)) return;
     let body = ''; request.on('data', chunk => { body += String(chunk); }); request.on('end', () => {
       const input = JSON.parse(body); modelCalls++;
       const last = input.messages.at(-1);

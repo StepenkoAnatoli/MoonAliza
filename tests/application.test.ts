@@ -56,6 +56,23 @@ test('an oversized prompt fails before inference and persists an actionable cont
   expect(result.context.estimatedInputTokens).toBeGreaterThan(result.context.inputBudgetTokens);
 });
 
+test('an unverified local Ollama fails the run with an actionable message, never retried', async () => {
+  // Guard: the engine maps LOCAL_MODEL_UNVERIFIED to its own message, the whole of it (mutations: drop the failures
+  // entry, drop a remedy step such as the server.json setting or restarting Ollama).
+  const { store } = fixture(); let calls = 0;
+  const app = new Application(store, { publish() {}, async infer() { calls++; throw new Error('LOCAL_MODEL_UNVERIFIED'); } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'hello' }, 'start'));
+  await app.whenIdle();
+  expect(calls).toBe(1);
+  const result = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { failure: { code: string; message: string; retry: string } };
+  expect(result.failure).toMatchObject({ code: 'LOCAL_MODEL_UNVERIFIED', retry: 'never' });
+  // The message is the spec's, word for word (docs/specification/more-models.md, Phase 1 design 2, "The engine shows:"):
+  // every refusal reads true - cloud on, an Ollama without /api/status, or one not running (review U2-R4) - and it names
+  // every remedy step. The engine writes the apostrophe typographically, as its other messages do.
+  expect(result.failure.message.replace(/\u2019/g, "'")).toBe('Moonzila could not confirm that this Ollama keeps prompts on this computer, and this conversation is local only. Ollama can send prompts to ollama.com cloud models unless its cloud features are off. Check that Ollama is running and up to date, turn off its cloud features (set OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama\'s server.json), restart Ollama, then try again.');
+});
+
 test('result retrieval cannot cross conversation boundaries or rerun an operation', async () => {
   const { store } = fixture(); let steps = 0;
   const at = new Date().toISOString();
