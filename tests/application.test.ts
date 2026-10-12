@@ -299,3 +299,52 @@ test('a protocol refusal from main, and the engine\'s own unoffered-call check, 
   }
 });
 
+
+// More models Phase 2, U1: local-only policy for an `anthropic` profile (docs/specification/more-models-phase2.md
+// section 8; REQUIREMENTS-P2 S-3). Regression pins of today's behaviour: an `anthropic` revision is always `external`
+// (spec section 7), and the existing admission, abort and revision checks keep it from sending a byte under local-only.
+function cloud(store: Store, kind: 'anthropic' | 'openai-compatible', budget: { contextTokens: number; outputTokens: number } = { contextTokens: 8192, outputTokens: 512 }) {
+  const project = store.getProject('p1')!; const saved = store.getProfile('profile1')!;
+  store.putProject({ ...project, policy: { revision: 1, inference: 'cloud-allowed', research: 'off' } });
+  store.putProfile({ ...saved, kind, endpoint: kind === 'anthropic' ? 'https://api.anthropic.com/v1' : 'https://provider.example/v1', locality: 'external', ...budget, revisionId: `${kind}-revision`, revision: 2 });
+}
+
+test.each([
+  ['a local-only session', null],
+  ['a session in a local-only project', 'p1'],
+] as const)('an external anthropic revision is refused at run.start in %s, before any inference', async (_name, projectId) => {
+  // S-3 (a). Guard (mutation): run.start skips assertConversationPolicy (application.ts, `run.start`); the run is then
+  // admitted, so run.start no longer rejects (execute's own check fails it later, still without calling infer).
+  const { store } = fixture(); const saved = store.getProfile('profile1')!;
+  store.putProfile({ ...saved, kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', locality: 'external', revisionId: 'anthropic-revision', revision: 2 });
+  let calls = 0; const app = new Application(store, { publish() {}, async infer() { calls++; return { content: 'bad', outcome: 'complete' }; } });
+  const { session } = await app.handle(request('session.create', { projectId }, 'create')) as { session: { id: string; policy: { inference: string } } };
+  if (projectId === null) expect(session.policy.inference).toBe('local-only');
+  await expect(app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'private' }, 'start'))).rejects.toThrow('CLOUD_NOT_ALLOWED');
+  await app.whenIdle();
+  expect(calls).toBe(0); expect(store.listRuns(session.id)).toHaveLength(0); expect(store.listMessages(session.id)).toHaveLength(0);
+});
+
+test.each(['session', 'project'] as const)('a switch to local-only by %s.policy.update during an anthropic run cancels it with no further inference', async scope => {
+  // S-3 (b). Two protections each cancel the run alone: the update's abort (session.policy.update) or cancelProject
+  // (project.policy.update), and the revision comparison in assertConversationPolicy (policy.ts), reached when infer
+  // returns. Guard (mutation): remove both; the run then fails with CLOUD_NOT_ALLOWED, reported as PROVIDER_ERROR.
+  const { store } = fixture(); cloud(store, 'anthropic'); let calls = 0; const published: Array<{ type: string }> = [];
+  let sessionId = '';
+  const app: Application = new Application(store, { publish(event) { published.push(event); }, async infer() {
+    calls++;
+    if (scope === 'session') await app.handle(request('session.policy.update', { sessionId, expectedRevision: 0, inference: 'local-only' }, 'switch'));
+    else await app.handle(request('project.policy.update', { projectId: 'p1', expectedRevision: 1, policy: { inference: 'local-only', research: 'off' } }, 'switch'));
+    return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'after-switch', name: 'list_files', input: { path: '.' } }] };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  sessionId = session.id;
+  const { run } = await app.handle(request('run.start', { sessionId, profileId: 'profile1', mode: 'ask', prompt: 'List the files.' }, 'start')) as { run: { id: string } };
+  await app.whenIdle();
+  expect(calls).toBe(1);
+  expect(store.getRun(run.id)?.status).toBe('cancelled');
+  const types = store.events(run.id, 0, 1000).events.map(event => event.type);
+  expect(types).toContain('run.cancelled'); expect(types).not.toContain('run.failed'); expect(types).not.toContain('tool.started');
+  expect(published.some(event => event.type === 'tool.started')).toBe(false);
+  expect(store.listMessages(session.id).filter(message => message.role === 'tool')).toHaveLength(0);
+});
