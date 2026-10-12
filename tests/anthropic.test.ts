@@ -866,7 +866,9 @@ describe('route, headers and the kind part', () => {
 
 describe('isAnthropicOverflow', () => {
   // E-12 l.66-74's error shape; the overflow words are E-13 l.150's. Bodies marked "captured" quote E-12's message text
-  // inside that shape; the spend-limit message is built (no capture states its text).
+  // inside that shape. Built, since no capture states them: the spend-limit message, and the overflow messages' text
+  // beyond E-13's words. E-13 l.150 gives "prompt is too long" alone, so the suffix ": 1000500 tokens > 1000000 maximum"
+  // and the capitalised "Prompt Is Too Long" are built.
   const body = (type: string, message: string) => JSON.stringify({ type: 'error', error: { type, message }, request_id: 'req_built' });
   const ERRORS = '2026-10-05-claude-api-errors-claude-platform-docs-claude-854b88aa.md';
   const errorLines = (first: number, last: number) => readFileSync(new URL(WIRE + ERRORS, import.meta.url), 'utf8').split('\n').slice(first - 1, last).join('\n');
