@@ -1,0 +1,832 @@
+---
+url: https://pypi.org/search/?q=selenic
+retrieved: 2026-10-12
+command: firecrawl scrape https://pypi.org/search/?q=selenic --only-main-content --max-age 0 --format markdown,rawHtml --json
+statusCode: 200
+transport: firecrawl-cli
+completeness: full
+title: Search results · PyPI
+---
+[Skip to main content](https://pypi.org/search/?q=selenic#content) Switch to mobile version
+
+Search PyPISearch
+
+## Filter by [classifier](https://pypi.org/classifiers/)
+
+Framework
+
+- [ ] AWS CDK  - [ ] 1
+  - [ ] 2
+- [ ] AiiDA
+- [ ] Ansible
+- [ ] AnyIO
+- [ ] Apache Airflow  - [ ] Provider
+- [ ] AsyncIO
+- [ ] BEAT
+- [ ] BFG
+- [ ] Bob
+- [ ] Bottle
+- [ ] Buildout  - [ ] Extension
+  - [ ] Recipe
+- [ ] CastleCMS  - [ ] Theme
+- [ ] Celery
+- [ ] Chandler
+- [ ] CherryPy
+- [ ] CubicWeb
+- [ ] Dash
+- [ ] Datasette
+- [ ] Django  - [ ] 1
+  - [ ] 1.4
+  - [ ] 1.5
+  - [ ] 1.6
+  - [ ] 1.7
+  - [ ] 1.8
+  - [ ] 1.9
+  - [ ] 1.10
+  - [ ] 1.11
+  - [ ] 2
+  - [ ] 2.0
+  - [ ] 2.1
+  - [ ] 2.2
+  - [ ] 3
+  - [ ] 3.0
+  - [ ] 3.1
+  - [ ] 3.2
+  - [ ] 4
+  - [ ] 4.0
+  - [ ] 4.1
+  - [ ] 4.2
+  - [ ] 5
+  - [ ] 5.0
+  - [ ] 5.1
+  - [ ] 5.2
+  - [ ] 6
+  - [ ] 6.0
+  - [ ] 6.1
+- [ ] Django CMS  - [ ] 3.4
+  - [ ] 3.5
+  - [ ] 3.6
+  - [ ] 3.7
+  - [ ] 3.8
+  - [ ] 3.9
+  - [ ] 3.10
+  - [ ] 3.11
+  - [ ] 4.0
+  - [ ] 4.1
+  - [ ] 5.0
+  - [ ] 5.1
+- [ ] FastAPI
+- [ ] Flake8
+- [ ] Flask
+- [ ] Hatch
+- [ ] Hypothesis
+- [ ] IDLE
+- [ ] IPython
+- [ ] InvenTree
+- [ ] Jupyter  - [ ] JupyterLab    - [ ] 1
+    - [ ] 2
+    - [ ] 3
+    - [ ] 4
+    - [ ] Extensions      - [ ] Mime Renderers
+      - [ ] Prebuilt
+      - [ ] Themes
+- [ ] Kedro
+- [ ] Lektor
+- [ ] Litestar  - [ ] 2
+- [ ] Masonite
+- [ ] Matplotlib
+- [ ] MkDocs
+- [ ] Nengo
+- [ ] Odoo  - [ ] 8.0
+  - [ ] 9.0
+  - [ ] 10.0
+  - [ ] 11.0
+  - [ ] 12.0
+  - [ ] 13.0
+  - [ ] 14.0
+  - [ ] 15.0
+  - [ ] 16.0
+  - [ ] 17.0
+  - [ ] 18.0
+  - [ ] 19.0
+  - [ ] 20.0
+- [ ] OpenTelemetry  - [ ] Distros
+  - [ ] Exporters
+  - [ ] Instrumentations
+- [ ] Opps
+- [ ] Paste
+- [ ] Pelican  - [ ] Plugins
+  - [ ] Themes
+- [ ] Plone  - [ ] 3.2
+  - [ ] 3.3
+  - [ ] 4.0
+  - [ ] 4.1
+  - [ ] 4.2
+  - [ ] 4.3
+  - [ ] 5.0
+  - [ ] 5.1
+  - [ ] 5.2
+  - [ ] 5.3
+  - [ ] 6.0
+  - [ ] 6.1
+  - [ ] 6.2
+  - [ ] 6.3
+  - [ ] Addon
+  - [ ] Core
+  - [ ] Distribution
+  - [ ] Theme
+- [ ] PySimpleGUI  - [ ] 4
+  - [ ] 5
+- [ ] Pycsou
+- [ ] Pydantic  - [ ] 1
+  - [ ] 2
+- [ ] Pylons
+- [ ] Pyodide
+- [ ] Pyramid
+- [ ] Pytest
+- [ ] Review Board
+- [ ] Robot Framework  - [ ] Library
+  - [ ] Tool
+- [ ] Scrapy
+- [ ] Setuptools Plugin
+- [ ] Sphinx  - [ ] Domain
+  - [ ] Extension
+  - [ ] Theme
+- [ ] Trac
+- [ ] Trio
+- [ ] Tryton
+- [ ] TurboGears  - [ ] Applications
+  - [ ] Widgets
+- [ ] Twisted
+- [ ] Wagtail  - [ ] 1
+  - [ ] 2
+  - [ ] 3
+  - [ ] 4
+  - [ ] 5
+  - [ ] 6
+  - [ ] 7
+  - [ ] 8
+- [ ] ZODB
+- [ ] Zope  - [ ] 2
+  - [ ] 3
+  - [ ] 4
+  - [ ] 5
+  - [ ] 6
+- [ ] Zope2
+- [ ] Zope3
+- [ ] aiohttp
+- [ ] cocotb
+- [ ] napari
+- [ ] tox
+
+Topic
+
+- [ ] Adaptive Technologies
+- [ ] Artistic Software
+- [ ] Communications  - [ ] BBS
+  - [ ] Chat    - [ ] ICQ
+    - [ ] Internet Relay Chat
+    - [ ] Unix Talk
+  - [ ] Conferencing
+  - [ ] Email    - [ ] Address Book
+    - [ ] Email Clients (MUA)
+    - [ ] Filters
+    - [ ] Mail Transport Agents
+    - [ ] Mailing List Servers
+    - [ ] Post-Office      - [ ] IMAP
+      - [ ] POP3
+  - [ ] FIDO
+  - [ ] Fax
+  - [ ] File Sharing    - [ ] Gnutella
+  - [ ] Ham Radio
+  - [ ] Internet Phone
+  - [ ] Telephony
+  - [ ] Usenet News
+- [ ] Database  - [ ] Database Engines/Servers
+  - [ ] Front-Ends
+- [ ] Desktop Environment  - [ ] File Managers
+  - [ ] GNUstep
+  - [ ] Gnome
+  - [ ] K Desktop Environment (KDE)    - [ ] Themes
+  - [ ] Screen Savers
+  - [ ] Window Managers    - [ ] Applets
+    - [ ] FVWM
+    - [ ] Fluxbox
+    - [ ] XFCE
+- [ ] Documentation  - [ ] Sphinx
+- [ ] Education  - [ ] Computer Aided Instruction (CAI)
+  - [ ] Testing
+- [ ] File Formats  - [ ] JSON    - [ ] JSON Schema
+- [ ] Games/Entertainment  - [ ] Arcade
+  - [ ] Board Games
+  - [ ] First Person Shooters
+  - [ ] Fortune Cookies
+  - [ ] Multi-User Dungeons (MUD)
+  - [ ] Puzzle Games
+  - [ ] Real Time Strategy
+  - [ ] Role-Playing
+  - [ ] Side-Scrolling/Arcade Games
+  - [ ] Simulation
+  - [ ] Turn Based Strategy
+- [ ] Home Automation
+- [ ] Internet  - [ ] File Transfer Protocol (FTP)
+  - [ ] Finger
+  - [ ] Log Analysis
+  - [ ] Name Service (DNS)
+  - [ ] Proxy Servers
+  - [ ] WAP
+  - [ ] WWW/HTTP    - [ ] Browsers
+    - [ ] Dynamic Content      - [ ] CGI Tools/Libraries
+      - [ ] Content Management System
+      - [ ] Message Boards
+      - [ ] News/Diary
+      - [ ] Page Counters
+      - [ ] Wiki
+    - [ ] HTTP Servers
+    - [ ] Indexing/Search
+    - [ ] Session
+    - [ ] Site Management      - [ ] Link Checking
+    - [ ] WSGI      - [ ] Application
+      - [ ] Middleware
+      - [ ] Server
+  - [ ] XMPP
+  - [ ] Z39.50
+- [ ] Multimedia  - [ ] Graphics    - [ ] 3D Modeling
+    - [ ] 3D Rendering
+    - [ ] Capture      - [ ] Digital Camera
+      - [ ] Scanners
+      - [ ] Screen Capture
+    - [ ] Editors      - [ ] Raster-Based
+      - [ ] Vector-Based
+    - [ ] Graphics Conversion
+    - [ ] Presentation
+    - [ ] Viewers
+  - [ ] Sound/Audio    - [ ] Analysis
+    - [ ] CD Audio      - [ ] CD Playing
+      - [ ] CD Ripping
+      - [ ] CD Writing
+    - [ ] Capture/Recording
+    - [ ] Conversion
+    - [ ] Editors
+    - [ ] MIDI
+    - [ ] Mixers
+    - [ ] Players      - [ ] MP3
+    - [ ] Sound Synthesis
+    - [ ] Speech
+  - [ ] Video    - [ ] Capture
+    - [ ] Conversion
+    - [ ] Display
+    - [ ] Non-Linear Editor
+- [ ] Office/Business  - [ ] Financial    - [ ] Accounting
+    - [ ] Investment
+    - [ ] Point-Of-Sale
+    - [ ] Spreadsheet
+  - [ ] Groupware
+  - [ ] News/Diary
+  - [ ] Office Suites
+  - [ ] Scheduling
+- [ ] Other/Nonlisted Topic
+- [ ] Printing
+- [ ] Religion
+- [ ] Scientific/Engineering  - [ ] Artificial Intelligence
+  - [ ] Artificial Life
+  - [ ] Astronomy
+  - [ ] Atmospheric Science
+  - [ ] Bio-Informatics
+  - [ ] Chemistry
+  - [ ] Electronic Design Automation (EDA)
+  - [ ] GIS
+  - [ ] Human Machine Interfaces
+  - [ ] Hydrology
+  - [ ] Image Processing
+  - [ ] Image Recognition
+  - [ ] Information Analysis
+  - [ ] Instrument Drivers
+  - [ ] Interface Engine/Protocol Translator
+  - [ ] Mathematics
+  - [ ] Medical Science Apps.
+  - [ ] Oceanography
+  - [ ] Physics
+  - [ ] Quantum Computing
+  - [ ] Visualization
+- [ ] Security  - [ ] Cryptography
+- [ ] Sociology  - [ ] Genealogy
+  - [ ] History
+- [ ] Software Development  - [ ] Assemblers
+  - [ ] Bug Tracking
+  - [ ] Build Tools
+  - [ ] Code Generators
+  - [ ] Compilers
+  - [ ] Debuggers
+  - [ ] Disassemblers
+  - [ ] Documentation
+  - [ ] Embedded Systems    - [ ] Controller Area Network (CAN)      - [ ] J1939
+  - [ ] Internationalization
+  - [ ] Interpreters
+  - [ ] Libraries    - [ ] Application Frameworks
+    - [ ] Java Libraries
+    - [ ] PHP Classes
+    - [ ] Perl Modules
+    - [ ] Pike Modules
+    - [ ] Python Modules
+    - [ ] Ruby Modules
+    - [ ] Tcl Extensions
+    - [ ] pygame
+  - [ ] Localization
+  - [ ] Object Brokering    - [ ] CORBA
+  - [ ] Pre-processors
+  - [ ] Quality Assurance
+  - [ ] Testing    - [ ] Acceptance
+    - [ ] BDD
+    - [ ] Mocking
+    - [ ] Traffic Generation
+    - [ ] Unit
+  - [ ] User Interfaces
+  - [ ] Version Control    - [ ] Bazaar
+    - [ ] CVS
+    - [ ] Git
+    - [ ] Mercurial
+    - [ ] RCS
+    - [ ] SCCS
+  - [ ] Widget Sets
+- [ ] System  - [ ] Archiving    - [ ] Backup
+    - [ ] Compression
+    - [ ] Mirroring
+    - [ ] Packaging
+  - [ ] Benchmark
+  - [ ] Boot    - [ ] Init
+  - [ ] Clustering
+  - [ ] Console Fonts
+  - [ ] Distributed Computing
+  - [ ] Emulators
+  - [ ] Filesystems
+  - [ ] Hardware    - [ ] Hardware Drivers
+    - [ ] Mainframes
+    - [ ] Symmetric Multi-processing
+    - [ ] Universal Serial Bus (USB)      - [ ] Audio
+      - [ ] Communications Device Class (CDC)
+      - [ ] Human Interface Device (HID)
+      - [ ] Mass Storage
+      - [ ] Miscellaneous
+      - [ ] Printer
+      - [ ] Smart Card
+      - [ ] Vendor
+      - [ ] Video (UVC)
+      - [ ] Wireless Controller
+  - [ ] Installation/Setup
+  - [ ] Logging
+  - [ ] Monitoring
+  - [ ] Networking    - [ ] Firewalls
+    - [ ] Monitoring      - [ ] Hardware Watchdog
+    - [ ] Time Synchronization
+  - [ ] Operating System
+  - [ ] Operating System Kernels    - [ ] BSD
+    - [ ] GNU Hurd
+    - [ ] Linux
+  - [ ] Power (UPS)
+  - [ ] Recovery Tools
+  - [ ] Shells
+  - [ ] Software Distribution
+  - [ ] System Shells
+  - [ ] Systems Administration    - [ ] Authentication/Directory      - [ ] LDAP
+      - [ ] NIS
+- [ ] Terminals  - [ ] Serial
+  - [ ] Telnet
+  - [ ] Terminal Emulators/X Terminals
+- [ ] Text Editors  - [ ] Documentation
+  - [ ] Emacs
+  - [ ] Integrated Development Environments (IDE)
+  - [ ] Text Processing
+  - [ ] Word Processors
+- [ ] Text Processing  - [ ] Filters
+  - [ ] Fonts
+  - [ ] General
+  - [ ] Indexing
+  - [ ] Linguistic
+  - [ ] Markup    - [ ] HTML
+    - [ ] LaTeX
+    - [ ] Markdown
+    - [ ] SGML
+    - [ ] VRML
+    - [ ] XML
+    - [ ] reStructuredText
+- [ ] Utilities
+
+Development Status
+
+- [ ] 1 - Planning
+- [ ] 2 - Pre-Alpha
+- [ ] 3 - Alpha
+- [ ] 4 - Beta
+- [ ] 5 - Production/Stable
+- [ ] 6 - Mature
+- [ ] 7 - Inactive
+
+License
+
+- [ ] Aladdin Free Public License (AFPL)
+- [ ] CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+- [ ] CeCILL-B Free Software License Agreement (CECILL-B)
+- [ ] CeCILL-C Free Software License Agreement (CECILL-C)
+- [ ] DFSG approved
+- [ ] Eiffel Forum License (EFL)
+- [ ] Free For Educational Use
+- [ ] Free For Home Use
+- [ ] Free To Use But Restricted
+- [ ] Free for non-commercial use
+- [ ] Freely Distributable
+- [ ] Freeware
+- [ ] Nokia Open Source License (NOKOS)
+- [ ] OSI Approved  - [ ] Academic Free License (AFL)
+  - [ ] Apache Software License
+  - [ ] Apple Public Source License
+  - [ ] Artistic License
+  - [ ] Attribution Assurance License
+  - [ ] BSD License
+  - [ ] Blue Oak Model License (BlueOak-1.0.0)
+  - [ ] Boost Software License 1.0 (BSL-1.0)
+  - [ ] CEA CNRS Inria Logiciel Libre License, version 2.1 (CeCILL-2.1)
+  - [ ] CMU License (MIT-CMU)
+  - [ ] Common Development and Distribution License 1.0 (CDDL-1.0)
+  - [ ] Common Public License
+  - [ ] Eclipse Public License 1.0 (EPL-1.0)
+  - [ ] Eclipse Public License 2.0 (EPL-2.0)
+  - [ ] Eiffel Forum License
+  - [ ] European Union Public Licence 1.0 (EUPL 1.0)
+  - [ ] European Union Public Licence 1.1 (EUPL 1.1)
+  - [ ] European Union Public Licence 1.2 (EUPL 1.2)
+  - [ ] GNU Affero General Public License v3
+  - [ ] GNU Affero General Public License v3 or later (AGPLv3+)
+  - [ ] GNU Free Documentation License (FDL)
+  - [ ] GNU General Public License (GPL)
+  - [ ] GNU General Public License v2 (GPLv2)
+  - [ ] GNU General Public License v2 or later (GPLv2+)
+  - [ ] GNU General Public License v3 (GPLv3)
+  - [ ] GNU General Public License v3 or later (GPLv3+)
+  - [ ] GNU Lesser General Public License v2 (LGPLv2)
+  - [ ] GNU Lesser General Public License v2 or later (LGPLv2+)
+  - [ ] GNU Lesser General Public License v3 (LGPLv3)
+  - [ ] GNU Lesser General Public License v3 or later (LGPLv3+)
+  - [ ] GNU Library or Lesser General Public License (LGPL)
+  - [ ] Historical Permission Notice and Disclaimer (HPND)
+  - [ ] IBM Public License
+  - [ ] ISC License (ISCL)
+  - [ ] MIT License
+  - [ ] MIT No Attribution License (MIT-0)
+  - [ ] MirOS License (MirOS)
+  - [ ] Mozilla Public License 1.0 (MPL)
+  - [ ] Mozilla Public License 1.1 (MPL 1.1)
+  - [ ] Mozilla Public License 2.0 (MPL 2.0)
+  - [ ] Mulan Permissive Software License v2 (MulanPSL-2.0)
+  - [ ] NASA Open Source Agreement v1.3 (NASA-1.3)
+  - [ ] Nethack General Public License
+  - [ ] Nokia Open Source License
+  - [ ] Open Group Test Suite License
+  - [ ] Open Software License 3.0 (OSL-3.0)
+  - [ ] PostgreSQL License
+  - [ ] Python License (CNRI Python License)
+  - [ ] Python Software Foundation License
+  - [ ] SIL Open Font License 1.1 (OFL-1.1)
+  - [ ] Sleepycat License
+  - [ ] Sun Public License
+  - [ ] The Unlicense (Unlicense)
+  - [ ] Universal Permissive License (UPL)
+  - [ ] University of Illinois/NCSA Open Source License
+  - [ ] W3C License
+  - [ ] Zero-Clause BSD (0BSD)
+  - [ ] Zope Public License
+  - [ ] zlib/libpng License
+- [ ] Other/Proprietary License
+- [ ] Public Domain
+- [ ] Repoze Public License
+
+Programming Language
+
+- [ ] APL
+- [ ] ASP
+- [ ] Ada
+- [ ] Assembly
+- [ ] Awk
+- [ ] Basic
+- [ ] C
+- [ ] C#
+- [ ] C++
+- [ ] Cython
+- [ ] D
+- [ ] Delphi/Kylix
+- [ ] Emacs-Lisp
+- [ ] Erlang
+- [ ] Euler
+- [ ] F#
+- [ ] Forth
+- [ ] Fortran
+- [ ] Go
+- [ ] Haskell
+- [ ] Hy
+- [ ] Java
+- [ ] JavaScript
+- [ ] Kotlin
+- [ ] Lisp
+- [ ] Logo
+- [ ] Lua
+- [ ] ML
+- [ ] OCaml
+- [ ] Object Pascal
+- [ ] Objective C
+- [ ] Other
+- [ ] Other Scripting Engines
+- [ ] PHP
+- [ ] PL/SQL
+- [ ] Pascal
+- [ ] Perl
+- [ ] Pike
+- [ ] Prolog
+- [ ] Python  - [ ] 2    - [ ] Only
+  - [ ] 2.3
+  - [ ] 2.4
+  - [ ] 2.5
+  - [ ] 2.6
+  - [ ] 2.7
+  - [ ] 3    - [ ] Only
+  - [ ] 3.0
+  - [ ] 3.1
+  - [ ] 3.2
+  - [ ] 3.3
+  - [ ] 3.4
+  - [ ] 3.5
+  - [ ] 3.6
+  - [ ] 3.7
+  - [ ] 3.8
+  - [ ] 3.9
+  - [ ] 3.10
+  - [ ] 3.11
+  - [ ] 3.12
+  - [ ] 3.13
+  - [ ] 3.14
+  - [ ] 3.15
+  - [ ] 3.16
+  - [ ] Free Threading    - [ ] 1 - Unstable
+    - [ ] 2 - Beta
+    - [ ] 3 - Stable
+    - [ ] 4 - Resilient
+  - [ ] Implementation    - [ ] CPython
+    - [ ] GraalPy
+    - [ ] IronPython
+    - [ ] Jython
+    - [ ] MicroPython
+    - [ ] PyPy
+    - [ ] Stackless
+- [ ] R
+- [ ] REBOL
+- [ ] Rexx
+- [ ] Ruby
+- [ ] Rust
+- [ ] SQL
+- [ ] Scheme
+- [ ] Tcl
+- [ ] Unix Shell
+- [ ] Visual Basic
+- [ ] YACC
+- [ ] Zig
+- [ ] Zope
+
+Operating System
+
+- [ ] Android
+- [ ] BeOS
+- [ ] MacOS  - [ ] MacOS 9
+  - [ ] MacOS X
+- [ ] Microsoft  - [ ] MS-DOS
+  - [ ] Windows    - [ ] Windows 3.1 or Earlier
+    - [ ] Windows 7
+    - [ ] Windows 8
+    - [ ] Windows 8.1
+    - [ ] Windows 10
+    - [ ] Windows 11
+    - [ ] Windows 95/98/2000
+    - [ ] Windows CE
+    - [ ] Windows NT/2000
+    - [ ] Windows Server 2003
+    - [ ] Windows Server 2008
+    - [ ] Windows Vista
+    - [ ] Windows XP
+- [ ] OS Independent
+- [ ] OS/2
+- [ ] Other OS
+- [ ] PDA Systems
+- [ ] POSIX  - [ ] AIX
+  - [ ] BSD    - [ ] BSD/OS
+    - [ ] FreeBSD
+    - [ ] NetBSD
+    - [ ] OpenBSD
+  - [ ] GNU Hurd
+  - [ ] HP-UX
+  - [ ] IRIX
+  - [ ] Linux
+  - [ ] Other
+  - [ ] SCO
+  - [ ] SunOS/Solaris
+- [ ] PalmOS
+- [ ] RISC OS
+- [ ] Unix
+- [ ] iOS
+
+Environment
+
+- [ ] Console  - [ ] Curses
+  - [ ] Framebuffer
+  - [ ] Newt
+  - [ ] svgalib
+- [ ] Cygwin (MS Windows)
+- [ ] GPU  - [ ] NVIDIA CUDA    - [ ] 1.0
+    - [ ] 1.1
+    - [ ] 5.0
+    - [ ] 7.0
+    - [ ] 9.0
+    - [ ] 9.2
+    - [ ] 10.0
+    - [ ] 10.1
+    - [ ] 10.2
+    - [ ] 11
+    - [ ] 11.0
+    - [ ] 11.1
+    - [ ] 11.2
+    - [ ] 11.3
+    - [ ] 11.4
+    - [ ] 11.5
+    - [ ] 11.6
+    - [ ] 11.7
+    - [ ] 11.8
+    - [ ] 12      - [ ] 12.0
+      - [ ] 12.1
+      - [ ] 12.2
+      - [ ] 12.3
+      - [ ] 12.4
+      - [ ] 12.5
+      - [ ] 12.6
+    - [ ] 13
+- [ ] Handhelds/PDA's
+- [ ] MacOS X  - [ ] Aqua
+  - [ ] Carbon
+  - [ ] Cocoa
+- [ ] No Input/Output (Daemon)
+- [ ] OpenStack
+- [ ] Other Environment
+- [ ] Plugins
+- [ ] Web Environment  - [ ] Buffet
+  - [ ] Mozilla
+  - [ ] ToscaWidgets
+- [ ] WebAssembly  - [ ] Emscripten
+  - [ ] WASI
+- [ ] Win32 (MS Windows)
+- [ ] X11 Applications  - [ ] GTK
+  - [ ] Gnome
+  - [ ] KDE
+  - [ ] Qt
+
+Intended Audience
+
+- [ ] Customer Service
+- [ ] Developers
+- [ ] Education
+- [ ] End Users/Desktop
+- [ ] Financial and Insurance Industry
+- [ ] Healthcare Industry
+- [ ] Information Technology
+- [ ] Legal Industry
+- [ ] Manufacturing
+- [ ] Other Audience
+- [ ] Religion
+- [ ] Science/Research
+- [ ] System Administrators
+- [ ] Telecommunications Industry
+
+Natural Language
+
+- [ ] Afrikaans
+- [ ] Arabic
+- [ ] Armenian
+- [ ] Basque
+- [ ] Bengali
+- [ ] Bosnian
+- [ ] Bulgarian
+- [ ] Cantonese
+- [ ] Catalan
+- [ ] Catalan (Valencian)
+- [ ] Chinese (Simplified)
+- [ ] Chinese (Traditional)
+- [ ] Croatian
+- [ ] Czech
+- [ ] Danish
+- [ ] Dutch
+- [ ] English
+- [ ] Esperanto
+- [ ] Estonian
+- [ ] Finnish
+- [ ] French
+- [ ] Galician
+- [ ] Georgian
+- [ ] German
+- [ ] Greek
+- [ ] Hebrew
+- [ ] Hindi
+- [ ] Hungarian
+- [ ] Icelandic
+- [ ] Indonesian
+- [ ] Irish
+- [ ] Italian
+- [ ] Japanese
+- [ ] Javanese
+- [ ] Korean
+- [ ] Latin
+- [ ] Latvian
+- [ ] Lithuanian
+- [ ] Macedonian
+- [ ] Malay
+- [ ] Marathi
+- [ ] Nepali
+- [ ] Norwegian
+- [ ] Panjabi
+- [ ] Persian
+- [ ] Polish
+- [ ] Portuguese
+- [ ] Portuguese (Brazilian)
+- [ ] Romanian
+- [ ] Russian
+- [ ] Serbian
+- [ ] Slovak
+- [ ] Slovenian
+- [ ] Spanish
+- [ ] Swedish
+- [ ] Tamil
+- [ ] Telugu
+- [ ] Thai
+- [ ] Tibetan
+- [ ] Turkish
+- [ ] Ukrainian
+- [ ] Urdu
+- [ ] Vietnamese
+- [ ] Yiddish
+
+Typing
+
+- [ ] Stubs Only
+- [ ] Typed
+
+## Search results
+
+**46** projects for "selenic"
+
+Order by  RelevanceDate last updated
+
+Add filter
+
+- [**selenicAug 6, 2019** \\
+Some selenium infrastructure for testing.](https://pypi.org/project/selenic/)
+- [**selene-sdkDec 16, 2024** \\
+framework for developing sequence-level deep learning networks](https://pypi.org/project/selene-sdk/)
+- [**selene-coreSep 9, 2026** \\
+The core interop library for Selene python interfaces](https://pypi.org/project/selene-core/)
+- [**selene-fmtMar 9, 2026** \\
+Selene Data Format v1.0 — parser, validator, and converter](https://pypi.org/project/selene-fmt/)
+- [**selenibleDec 19, 2019** \\
+selenium like ansible](https://pypi.org/project/selenible/)
+- [**selenateJan 28, 2015** \\
+Web Automation made easy](https://pypi.org/project/selenate/)
+- [**selene\_with\_new\_wdmSep 26, 2024** \\
+Selene 2.0.0rc4 + webdriver-manager-4.0.2](https://pypi.org/project/selene-with-new-wdm/)
+- [**selene\_wdm\_4.0.1Sep 26, 2023** \\
+User-oriented browser tests in Python (Selenide port)](https://pypi.org/project/selene-wdm-4-0-1/)
+- [**selene-simOct 2, 2026** \\
+Quantinuum's open source emulator for quantum computation](https://pypi.org/project/selene-sim/)
+- [**selen-kaaJul 9, 2022** \\
+A lightweight wrapper around Selenium python repo.](https://pypi.org/project/selen-kaa/)
+- [**koverjApr 23, 2020** \\
+Test coverage for selenium based tests](https://pypi.org/project/koverj/)
+- [**cltl.triple-extractionOct 3, 2023** \\
+The Leolani Language module for knowledge extraction](https://pypi.org/project/cltl-triple-extraction/)
+- [**mkdocs-zettelkastenFeb 24, 2026** \\
+Add Zettelkasten features to MkDocs](https://pypi.org/project/mkdocs-zettelkasten/)
+- [**compas-mobile-robot-relocAug 26, 2021** \\
+Robot localization using external measuring device (total station).](https://pypi.org/project/compas-mobile-robot-reloc/)
+- [**lina-assistantApr 24, 2026** \\
+Voice-controlled multi-agent coding assistant with plugin architecture](https://pypi.org/project/lina-assistant/)
+- [**get-locatorMar 1, 2025** \\
+Pytest plugin. Run command, e.g.: run-inspector --url "https://demoqa.com/automation-practice-form"](https://pypi.org/project/get-locator/)
+- [**moonriseNov 4, 2024** \\
+Test suite creation toolset with additional quality of life upgrades for using the selenium test framework.](https://pypi.org/project/moonrise/)
+- [**selen-enchantedOct 27, 2025** \\
+A selenium wrapper that makes it easier to use](https://pypi.org/project/selen-enchanted/)
+- [**cltl-backendJul 24, 2026** \\
+Backend for Leolani](https://pypi.org/project/cltl-backend/)
+- [**cltl.entity-linkingOct 2, 2023** \\
+The Leolani Language module for identifying instances](https://pypi.org/project/cltl-entity-linking/)
+
+Previous1 [2](https://pypi.org/search/?q=selenic&page=2) [3](https://pypi.org/search/?q=selenic&page=3) [Next](https://pypi.org/search/?q=selenic&page=2)
+
+[![](https://pypi-camo.freetls.fastly.net/0e16ff2846ab7bc04f1e52d760b072c987232f52/68747470733a2f2f73332e6475616c737461636b2e75732d656173742d322e616d617a6f6e6177732e636f6d2f707974686f6e646f746f72672d6173736574732f6d656469612f73706f6e736f725f7765625f6c6f676f732f416e7468726f7069635f6c6f676f5f2d5f536c6174652e706e67)Anthropic, PBCVisionary sponsor](https://www.anthropic.com/) [![](https://pypi-camo.freetls.fastly.net/2056e7cc45e271b6b509980e9ff24b8b6346f2f4/68747470733a2f2f73332e6475616c737461636b2e75732d656173742d322e616d617a6f6e6177732e636f6d2f707974686f6e646f746f72672d6173736574732f6d656469612f73706f6e736f725f7765625f6c6f676f732f626c6f6f6d626572672e706e67)BloombergVisionary sponsor](https://www.techatbloomberg.com/) [![](https://pypi-camo.freetls.fastly.net/7e24ecafc35532bbd56c7c91521ea6701110c742/68747470733a2f2f73332e6475616c737461636b2e75732d656173742d322e616d617a6f6e6177732e636f6d2f707974686f6e646f746f72672d6173736574732f6d656469612f73706f6e736f725f7765625f6c6f676f732f6872742e706e67)Hudson River TradingVisionary sponsor](https://www.hudsonrivertrading.com/careers/) [![](https://pypi-camo.freetls.fastly.net/6f7cbf25b7d9ee146661528e012e8fa51d6f3337/68747470733a2f2f73332e6475616c737461636b2e75732d656173742d322e616d617a6f6e6177732e636f6d2f707974686f6e646f746f72672d6173736574732f6d656469612f73706f6e736f725f7765625f6c6f676f732f4d6574615f6c6f636b75705f706f7369746976655f7072696d6172795f5247425f636f70795f68546b493532472e706e67)MetaVisionary sponsor](https://about.facebook.com/meta/) [![](https://pypi-camo.freetls.fastly.net/22baa32a7b36b109ce052634015d878f5d029280/68747470733a2f2f73332e6475616c737461636b2e75732d656173742d322e616d617a6f6e6177732e636f6d2f707974686f6e646f746f72672d6173736574732f6d656469612f73706f6e736f725f7765625f6c6f676f732f6e76696469612e706e67)NVIDIAVisionary sponsor](https://developer.nvidia.com/) [![](https://pypi-camo.freetls.fastly.net/34ebcaca9a4316e862f2f7641b12534f0cb81bf1/68747470733a2f2f73332e6475616c737461636b2e75732d656173742d322e616d617a6f6e6177732e636f6d2f707974686f6e646f746f72672d6173736574732f6d656469612f73706f6e736f725f7765625f6c6f676f732f6d6963726f736f66742e706e67)MicrosoftSustainability sponsor](https://aka.ms/python) [![](https://pypi-camo.freetls.fastly.net/237c8773674b9f8beff9f894a07424e3b579cd6a/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f6465706f742d636f6c6f722d6c6f676f2d35567a75416e7a6b2e706e67)DepotContinuous Integration](https://depot.dev/) [![](https://pypi-camo.freetls.fastly.net/f0e9bd2edb2aa1c533d61b0d4fda0ee761bef88a/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f6177732d636f6c6f722d6c6f676f2d416c6f43525230612e706e67)AWSCloud computing and Security Sponsor](https://aws.amazon.com/) [![](https://pypi-camo.freetls.fastly.net/530379bec76c3440bd94a24092f49e27323ad0d7/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f64617461646f672d636f6c6f722d6c6f676f2d71616563774a67722e706e67)DatadogMonitoring](https://www.datadoghq.com/) [![](https://pypi-camo.freetls.fastly.net/9706778018adad6f5bf682f55d7bbc226abe551c/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f666173746c792d636f6c6f722d6c6f676f2d766c6d424c33654c2e706e67)FastlyCDN](https://www.fastly.com/) [![](https://pypi-camo.freetls.fastly.net/522342e78db3080c18697369dde99a0ed7925e86/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f676f6f676c652d636f6c6f722d6c6f676f2d32755437496c54702e706e67)GoogleDownload Analytics](https://careers.google.com/) [![](https://pypi-camo.freetls.fastly.net/f2a422796f8e4d51d60d7030b7973aa1651bd096/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f73656e7472792d636f6c6f722d6c6f676f2d346e306a654878502e706e67)SentryError logging](https://sentry.io/for/python/?utm_source=pypi&utm_medium=paid-community&utm_campaign=python-na-evergreen&utm_content=static-ad-pypi-sponsor-learnmore) [![](https://pypi-camo.freetls.fastly.net/b0ba0741ac65afcb01ebb4bbf0634c54b8a15827/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f737461747573706167652d636f6c6f722d6c6f676f2d423232436b746e6b2e706e67)StatusPageStatus page](https://statuspage.io/)
+
+- "PyPI", "Python Package Index", and the blocks logos are registered [trademarks](https://pypi.org/trademarks/) of the [Python Software Foundation](https://www.python.org/psf-landing).
+- © 2026 [Python Software Foundation](https://www.python.org/psf-landing/ "External link")
+- [Site map](https://pypi.org/sitemap/)
+- Deployed from [`f43a0f7`](https://github.com/pypi/warehouse/commit/f43a0f79dbaf40e4888110ad5b1d5e0ad87121b6 "External link")

@@ -1,0 +1,23 @@
+{
+  "topic": "Is Selenic free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila): software products and companies named Selenic; Selenic open-source projects and package names and web domains; Selenic registered trademarks in software and developer tools",
+  "notes": "Run 4 (2 pages, about 2 credits; the project stands at 25 of 30 credits before it). U-03 (EUIPO and WIPO marks) is reached for before it is declared unreachable: TMview (EUIPO's search across the EU office, national offices and WIPO designations) and the WIPO Global Brand Database are JavaScript applications whose searches run in the browser from the URL's fragment or query, so a capture may hold only the application shell. The WIPO URL's query shape is from memory of the site, not from a capture, and may not run the search. If neither capture shows result rows, U-03 stays KNOWN-UNKNOWN with the manual search named in research/DISCOVERY.md.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 2,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://www.tmdn.org/tmview/#/tmview/results?page=1&pageSize=30&criteria=C&basicSearch=selenic",
+      "type": "P",
+      "why": "U-03: TMview (EUIPO's search across the EU office, national offices and WIPO designations) for SELENIC"
+    },
+    {
+      "url": "https://branddb.wipo.int/en/quicksearch/results?sort=score%20desc&strategy=concept&rows=30&asStructure=%7B%22boolean%22:%22AND%22,%22bricks%22:%5B%7B%22key%22:%22brandName%22,%22value%22:%22selenic%22,%22strategy%22:%22Simple%22%7D%5D%7D",
+      "type": "P",
+      "why": "U-03: the WIPO Global Brand Database (international registrations and national collections) for the brand name SELENIC"
+    }
+  ]
+}

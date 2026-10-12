@@ -1,0 +1,28 @@
+{
+  "topic": "Is Selenic free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila): software products and companies named Selenic; Selenic open-source projects and package names and web domains; Selenic registered trademarks in software and developer tools",
+  "notes": "Run 2 (follow-up, 3 pages, about 3 credits; the project stands at 22 of 30 credits before it). Run 1 left U-04 and U-07 without a decisive capture: Mercurial's hgweb refused every Firecrawl engine for the 2005 PKG-INFO, the wiki URL found by the planning search (with a trailing slash) answered 404, and the Microsoft Store search page rendered no results (a partial capture). The replacements were status-checked with a planning curl on 2026-10-12 (HTTP status and, for hg.py, a count of the word selenic), which is not evidence: the wiki page without the trailing slash answers 200; the Store's own JSON search endpoint behind apps.microsoft.com answers 200; hg.py is Mercurial's source in a GitHub mirror whose description (run 1, the GitHub repository search) says it mirrors selenic.com/repo/hg. The EUIPO and WIPO registers take POST searches from JavaScript applications and are not attempted; U-03 is KNOWN-UNKNOWN with the manual search.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 3,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://www.mercurial-scm.org/wiki/mpm",
+      "type": "P",
+      "why": "U-04: the Mercurial project's own page for its primary author (mpm) - the Selenic tie and whether the author is still with the project"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/Distrotech/mercurial/master/mercurial/hg.py",
+      "type": "S",
+      "why": "U-04: a Mercurial source file from a GitHub mirror of selenic.com/repo/hg - the copyright header naming the author and the selenic.com address (secondary: a third party's mirror)"
+    },
+    {
+      "url": "https://apps.microsoft.com/api/products/search?gl=US&hl=en-us&query=selenic&mediaType=all&age=all&price=all&category=all&subscription=all",
+      "type": "P",
+      "why": "U-07: the Microsoft Store's own search endpoint (the JSON behind apps.microsoft.com/search) - whether a Windows app named Selenic is listed"
+    }
+  ]
+}

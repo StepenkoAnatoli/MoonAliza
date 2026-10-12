@@ -1,0 +1,18 @@
+{
+  "topic": "Is Selenic free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila): software products and companies named Selenic; Selenic open-source projects and package names and web domains; Selenic registered trademarks in software and developer tools",
+  "notes": "Run 3 (1 page, about 1 credit; the project stands at 24 of 30 credits before it). Run 2 skipped https://www.mercurial-scm.org/wiki/mpm as gone: the kit keys it to the same page as the trailing-slash URL that answered 404 in run 1. A planning curl on 2026-10-12 (status and redirect only, not evidence) shows www.mercurial-scm.org/wiki/mpm answers 302 to https://wiki.mercurial-scm.org/mpm, which answers 200, and the trailing-slash form redirects to wiki.mercurial-scm.org/mpm/, the 404. This run fetches the canonical page the redirect names; --force is not used.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 1,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://wiki.mercurial-scm.org/mpm",
+      "type": "P",
+      "why": "U-04: the Mercurial project's own wiki page for its primary author (mpm) - the Selenic tie and whether the author is still with the project"
+    }
+  ]
+}

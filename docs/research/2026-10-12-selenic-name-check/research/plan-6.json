@@ -1,0 +1,18 @@
+{
+  "topic": "Is Selenic free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila): software products and companies named Selenic; Selenic open-source projects and package names and web domains; Selenic registered trademarks in software and developer tools",
+  "notes": "Run 6 (1 page, about 1 credit; the project stands at 29 of 30 credits before it - doctor balance 359, from 388 at the start; this is the last credit). U-12 (a primary USPTO search for SELENIC and its variants) is reached for before it is declared unreachable. The USPTO trademark search at tmsearch.uspto.gov is a JavaScript application: a planning curl on 2026-10-12 (not evidence) returned a 125 KB page titled Trademark search with a noscript block, so a capture may hold only the application shell. The query URL's shape is from memory of the site, not from a capture, and may not run the search. If the capture shows no result rows, U-12 stays KNOWN-UNKNOWN with the manual search named in research/DISCOVERY.md.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 1,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://tmsearch.uspto.gov/search/search-results?query=selenic&section=default",
+      "type": "P",
+      "why": "U-12: the USPTO's own trademark search for SELENIC (all filings, live and dead)"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "topic": "Is Selenic free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila): software products and companies named Selenic; Selenic open-source projects and package names and web domains; Selenic registered trademarks in software and developer tools",
+  "notes": "Run 5 (3 pages, about 3 credits; the project stands at 26 of 30 credits before it - doctor balance 362, from 388 at the start). Answers the adversarial review of 2026-10-12. Material: the businesses behind selenic.ai and selenic.io were never captured, although the GitHub user search (E-11) listed selenic-ai and selenic-io; a reviewer's curl and a planning curl on 2026-10-12 (status only, not evidence) show https://selenic.ai/ and https://www.selenic.io/ answering 200 (selenic.io redirects 301 to www.selenic.io). Minor: E-12 saw only 30 of 55 repositories, sorted by best match; the stars-sorted query with per_page=100 returns all of them in one page. Not attempted: selenic.dev, which a planning DNS lookup (dns.google, not evidence) shows has no A record for the apex or www, so there is no site to capture; and the GitHub organisation pages, kept back to leave a credit of margin.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 3,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://selenic.ai/",
+      "type": "P",
+      "why": "U-01, U-06: who trades at selenic.ai (registered 2026-03-15, E-08) and what the business does"
+    },
+    {
+      "url": "https://www.selenic.io/",
+      "type": "P",
+      "why": "U-01: who trades at selenic.io and what the business does"
+    },
+    {
+      "url": "https://api.github.com/search/repositories?q=selenic&sort=stars&order=desc&per_page=100",
+      "type": "P",
+      "why": "U-01, U-05: every GitHub repository matching selenic, most-starred first, so the claim about widely used projects covers all of them rather than the 30 best matches of E-12"
+    }
+  ]
+}

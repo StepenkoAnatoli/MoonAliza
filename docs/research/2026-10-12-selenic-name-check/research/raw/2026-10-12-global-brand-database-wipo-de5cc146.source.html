@@ -1,0 +1,296 @@
+<!DOCTYPE html><html lang="en" data-beasties-container="" style="--wipo-font: &quot;Noto Sans Display&quot;,&quot;IBM Plex Sans Arabic&quot;,&quot;Noto Sans SC&quot;,&quot;Noto Sans JP&quot;,&quot;Noto Sans KR&quot;,sans-serif;"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+html, body, app-root { display: block; min-height: -webkit-fill-available; height: calc(var(--vh, 1vh) * 100); }
+
+body { overflow: hidden auto; font-size: 1rem; margin: 0px; padding: 0px; transition: opacity 0.7s linear; }
+
+:root, ::after, ::before { --w-color-blue-1: hsl(213, 100%, 11%); --w-color-blue-2: hsl(213, 100%, 19%); --w-color-blue-3: hsl(213, 100%, 29%); --w-color-blue-4: hsl(213, 100%, 39%); --w-color-blue-5: hsl(213, 100%, 49%); --w-color-blue-6: hsl(213, 100%, 59%); --w-color-blue-7: hsl(213, 100%, 69%); --w-color-blue-8: hsl(213, 100%, 79%); --w-color-blue-9: hsl(213, 100%, 89%); --w-color-blue-10: hsl(213, 100%, 95%); --w-color-blue-11: hsl(213, 100%, 98%); --w-color-aqua-4: hsl(190, 72%, 39%); --w-color-aqua-5: hsl(190, 72%, 49%); --w-color-aqua-8: hsl(190, 72%, 79%); --w-color-aqua-9: hsl(190, 72%, 89%); --w-color-aqua-10: hsl(190, 72%, 95%); --w-color-aqua-11: hsl(190, 72%, 98%); --w-color-green-4: hsl(88, 63%, 39%); --w-color-green-5: hsl(88, 63%, 49%); --w-color-green-8: hsl(88, 63%, 79%); --w-color-green-9: hsl(88, 63%, 89%); --w-color-green-10: hsl(88, 63%, 95%); --w-color-green-11: hsl(88, 63%, 98%); --w-color-orange-4: hsl(24, 92%, 39%); --w-color-orange-5: hsl(24, 92%, 49%); --w-color-orange-8: hsl(24, 92%, 79%); --w-color-orange-9: hsl(24, 92%, 89%); --w-color-orange-10: hsl(24, 92%, 95%); --w-color-orange-11: hsl(24, 92%, 98%); --w-color-red-4: hsl(1, 65%, 39%); --w-color-red-5: hsl(1, 65%, 49%); --w-color-red-8: hsl(1, 65%, 79%); --w-color-red-9: hsl(1, 65%, 89%); --w-color-red-10: hsl(1, 65%, 95%); --w-color-red-11: hsl(1, 65%, 98%); --w-color-lime-4: hsl(64, 79%, 39%); --w-color-lime-5: hsl(64, 79%, 49%); --w-color-lime-8: hsl(64, 79%, 79%); --w-color-lime-9: hsl(64, 79%, 89%); --w-color-lime-10: hsl(64, 79%, 95%); --w-color-lime-11: hsl(64, 79%, 98%); --w-color-highlight-4: var(--w-color-lime-4); --w-color-highlight-5: var(--w-color-lime-5); --w-color-highlight-8: var(--w-color-lime-8); --w-color-highlight-9: var(--w-color-lime-9); --w-color-highlight-10: var(--w-color-lime-10); --w-color-highlight-11: var(--w-color-lime-11); --w-color-magenta-4: hsl(318, 53%, 39%); --w-color-magenta-5: hsl(318, 53%, 49%); --w-color-magenta-8: hsl(318, 53%, 79%); --w-color-magenta-9: hsl(318, 53%, 89%); --w-color-magenta-10: hsl(318, 53%, 95%); --w-color-magenta-11: hsl(318, 53%, 98%); --w-color-cherry-4: hsl(333, 53%, 39%); --w-color-cherry-5: hsl(333, 53%, 49%); --w-color-cherry-8: hsl(333, 53%, 79%); --w-color-cherry-9: hsl(333, 53%, 89%); --w-color-cherry-10: hsl(333, 53%, 95%); --w-color-cherry-11: hsl(333, 53%, 98%); --w-color-gray-1: hsl(0, 0%, 11%); --w-color-gray-2: hsl(0, 0%, 19%); --w-color-gray-3: hsl(0, 0%, 29%); --w-color-gray-4: hsl(0, 0%, 39%); --w-color-gray-5: hsl(0, 0%, 45%); --w-color-gray-6: hsl(0, 0%, 59%); --w-color-gray-7: hsl(0, 0%, 69%); --w-color-gray-8: hsl(0, 0%, 79%); --w-color-gray-9: hsl(0, 0%, 89%); --w-color-gray-10: hsl(0, 0%, 94%); --w-color-gray-11: hsl(0, 0%, 99%); --w-color-black: #000; --w-color-white: #fff; --w-color-grey-warm: #FAF8F8; --w-color-info: var(--w-color-aqua-5); --w-color-info-light: var(--w-color-aqua-9); --w-color-success: var(--w-color-green-5); --w-color-success-light: var(--w-color-green-9); --w-color-warning: var(--w-color-orange-5); --w-color-warning-light: var(--w-color-orange-9); --w-color-danger: var(--w-color-red-5); --w-color-danger-light: var(--w-color-red-9); --w-color-highlight: var(--w-color-lime-5); --w-color-highlight-light: var(--w-color-lime-9); --w-color-gray: var(--w-color-gray-4); --w-color-blue: var(--w-color-blue-4); --w-color-magenta: var(--w-color-magenta-4); --w-icon-color: var(--w-color-blue); --w-ulf-background-color: var(--w-color-grey-warm); }
+
+html { background-color: var(--w-ulf-background-color); }
+
+:root { --w-box-shadow: 0px 4px 15px rgba(0, 0, 0, .18); --w-box-radius: 8px; --w-modal-radius: 4px; }
+
+html { scrollbar-gutter: stable; }
+
+html { font-family: sans-serif; text-size-adjust: 100%; }
+
+body { margin: 0px; }
+
+html { box-sizing: border-box; }
+
+* { box-sizing: inherit; }
+
+html { min-width: 1080px; background-color: rgb(247, 247, 247); color: rgb(26, 26, 26); font-family: var(--wipo-font, simplon, arial, meiryo, sans-serif); font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body { width: 100%; font-size: 16px; line-height: 1.5; }
+
+@font-face { font-family: simplon; font-weight: 400; src: url("SimplonNorm-Regular-WebXL.543b50fbb4be0998.woff2") format("woff2"), url("SimplonNorm-Regular-WebXL.8ed6527aabe7c33a.woff") format("woff"), url("SimplonNorm-Regular-WebXL.f390de7c78048bfb.ttf") format("truetype"); }
+
+@font-face { font-family: simplon; font-weight: 500; src: url("SimplonNorm-Medium-WebXL.a3036645aa91d4b3.woff2") format("woff2"), url("SimplonNorm-Medium-WebXL.fa0955579f21fc2d.woff") format("woff"), url("SimplonNorm-Medium-WebXL.74c0e7640635015e.ttf") format("truetype"); }
+
+@font-face { font-family: simplon; font-weight: 700; src: url("SimplonNorm-Bold-WebXL.b39c2c96f38f0ea5.woff2") format("woff2"), url("SimplonNorm-Bold-WebXL.b4981ba3ede3b9c9.woff") format("woff"), url("SimplonNorm-Bold-WebXL.cd762d5f55f3f569.ttf") format("truetype"); }
+
+@media screen and (min-width: 1280px) {
+  html { min-width: 85vw; }
+}
+
+@media screen and (max-width: 1049px) {
+  html { min-width: 85vw; }
+}
+
+:root { --w-style-ulf: "1"; }
+
+html { background-color: var(--w-ulf-background-color); color: var(--w-color-gray-2); }
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+@layer primeng {
+}
+
+:root { --wipo-font: "Noto Sans Display", "IBM Plex Sans Arabic", "Noto Sans SC", "Noto Sans JP", "Noto Sans KR", sans-serif; }
+
+:root, ::after, ::before { --w-icon-size: 26px; --wipo-icon-font: "Icons ULF", "Material Symbols Outlined"; }</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.heightWithoutHeader { height: calc(-48px + 100vh); }
+
+.gbd_info { padding: 5px; background-color: rgb(76, 194, 230); }
+
+.mainGrid { display: flex; flex-direction: column; width: 100vw; height: 100vh; background: rgb(248, 248, 246); scroll-behavior: smooth; padding: 10px; }
+
+.mainGrid wipo-navbar .placeholder { background: rgb(255, 255, 255); height: 80px; }
+
+.mainGrid .flex.center-h { display: flex; justify-content: center; }
+
+.mainGrid .flex.center-h altcha-widget { width: 200px; margin-top: 100px; }
+
+.mainGrid .app-gbd { width: 100vw; position: relative; display: flex; flex-direction: column; flex-grow: 1; }
+
+.mainGrid .app-gbd.lang-ar { direction: rtl; }
+
+.mainGrid .app-gbd.lang-ar .b-navigation__in-page-nav { margin-left: 0px; margin-right: 40px; }
+
+.mainGrid .app-gbd.lang-ar .b-navigation__list { letter-spacing: 0px; }
+
+.mainGrid .app-gbd.lang-ar .b-navigation-floater .b-navigation__in-page-nav .b-navigation__shortcut-list { float: right; }
+
+.mainGrid .app-gbd > .langs { position: absolute; right: 5ch; top: 3ch; z-index: 1; }
+
+.mainGrid .app-gbd > router-outlet { flex-shrink: 1; grid-column-start: content; grid-row-start: router-outlet; }
+
+.mainGrid .noMobileVersion { font-size: large; padding: 2ch; }
+
+small.logs { display: flex; align-items: flex-end; position: absolute; color: rgb(255, 255, 255); line-height: 0.9rem; transition: 0.2s linear; inset: auto 0px 0px auto; pointer-events: none; z-index: 9999; }
+
+small.logs.minimized { transform: translate(-100%) translateY(100%); right: auto !important; left: 18px !important; bottom: 18px !important; }
+
+small.logs.align-left { flex-direction: row-reverse; right: auto; left: 0px; }
+
+small.logs > * { background: rgb(0, 0, 0); border: 1px solid rgb(255, 255, 255); pointer-events: auto; }
+
+small.logs pre { margin: 0px; padding: 0px 1ch; font-size: smaller; max-height: 100vh; max-width: 60ch; }
+
+small.logs label { padding: 3px; cursor: pointer; }
+
+small.logs .buttons { display: flex; flex-direction: column; }
+
+small.logs .buttons > div { display: flex; justify-content: space-between; align-items: center; }
+
+small.logs .buttons button { color: rgb(0, 0, 0); }
+
+small.logs button.restore { position: absolute; top: 0px; right: 0px; }
+
+@keyframes bounce { 
+  0% { bottom: 5px; }
+  25%, 75% { bottom: 15px; }
+  50% { bottom: 20px; }
+  100% { bottom: 0px; }
+}
+
+@keyframes heightAnim { 
+  0%, 100% { height: 52px; }
+  50% { height: 120px; }
+}</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.heightWithoutHeader { height: calc(-48px + 100vh); }
+
+@media (max-width: 800px) {
+  .main0 w-page-header { margin-left: 0px; }
+  .main0 w-page-header h1.b-page-header__title span { font-size: 1.5rem; }
+}
+
+.main0 .fullWidth w-page-header { margin-left: 0px; margin-top: 2em; }
+
+.main0 .fullWidth w-sticky-bar { z-index: 1003 !important; padding-left: 3em; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports .b-navigation-floater--is-sticky .clf-sticky-bg { border-bottom: 0px; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports w-sticky-bar-link#nav-reports { position: relative; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports w-sticky-bar-link#nav-reports::after { position: absolute; left: 0px; transform: translateY(calc(100% + 10px)); white-space: nowrap; text-transform: none; padding: 1ch 2ch; background: rgb(144, 238, 144); color: green; animation: 1s ease 0s infinite normal none running bounce; z-index: 100; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports.langen w-sticky-bar-link#nav-reports::after { content: "▲ Added to your reports!"; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports.langfr w-sticky-bar-link#nav-reports::after { content: "▲ Ajouté à vos rapports!"; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports.langes w-sticky-bar-link#nav-reports::after { content: "▲ Agregado a sus informes!"; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports.langru w-sticky-bar-link#nav-reports::after { content: "▲ Добавлено в ваши отчеты!"; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports.langzh w-sticky-bar-link#nav-reports::after { content: "▲ 添加到您的报告中!"; }
+
+.main0 .fullWidth w-sticky-bar.showTooltipAddedToReports.showTooltipAddedToReports.langar w-sticky-bar-link#nav-reports::after { content: "!تمت إضافته إلى تقاريرك ▲"; transform: translateY(calc(100% + 10px)) translate(-110%); }
+
+.main0 .fullWidth w-table-commands { flex-grow: 1; }
+
+.main0 .left { flex-shrink: 1; }
+
+.main0 .left w-page-header { margin-left: 0px; margin-top: 2em; }
+
+.main0 .left w-sticky-bar { padding-left: 3em; }
+
+.main0 .left w-table-commands { flex-grow: 1; }
+
+@media (max-width: 800px) {
+  .main0 .left nav ul { display: flex; overflow-x: auto; }
+  .main0 .left nav ul w-sticky-bar-link a { white-space: nowrap; }
+}
+
+.main0 .left .host { position: absolute; color: green; transform: rotate(-90deg) translateZ(0px); font-family: impact; font-size: 25px; text-align: center; top: 35px; left: -3px; line-height: 20px; }
+
+.main0 .left w-validation-panel.error { margin-bottom: 20px; margin-left: 20px; }
+
+.main0 .right { flex-shrink: 0; max-width: 260px; text-align: center; margin: 1ch; }
+
+.main0 .right span { display: flex; width: 250px; }
+
+.main0 .right .officeLogo { cursor: pointer; margin: 0px auto; align-self: flex-start; max-height: 128px; max-width: 250px; }
+
+.main0 .appVersion { flex-shrink: 0; margin-top: 1em; font-size: small; margin-right: 10px; }
+
+.flex.row.center-v.space-between { margin-right: 20px; }</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.b-navigation__in-page-nav-list.b-navigation__list > li[facet-right-side], .b-navigation__in-page-nav-list.b-navigation__list > f-facet[name="right-side"] { padding: 1em; font-weight: 500; display: inline-block; }
+
+.b-navigation__in-page-nav-list.b-navigation__list > li[facet-right-side]:not([clf-uppercase]), .b-navigation__in-page-nav-list.b-navigation__list > f-facet[name="right-side"]:not([clf-uppercase]) { text-transform: none; letter-spacing: normal; }</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.heightWithoutHeader { height: calc(-48px + 100vh); }
+
+.page-results { height: 100%; padding: 0px 20px; }
+
+.page-results w-validation-panel { position: relative; }
+
+.page-results .b-sidebar__content { padding-right: 0px; }
+
+.page-results.explore .b-sidebar-wrapper { display: none; }
+
+.page-results.explore .b-sidebar__content { padding-left: 0px; margin-left: 0px; }
+
+.page-results .p-paginator-last { display: none; pointer-events: none; }
+
+.page-results w-action-bar { display: block; transform: translate(-1px); width: calc(100% + 1px); }
+
+.page-results w-action-bar button { margin-bottom: 0px; }
+
+.page-results w-input-checkbox-one { margin-left: 0px !important; margin-bottom: -2px; }
+
+.page-results w-slot.visibilityDiv { display: contents; min-height: 130px; border: 2px dashed rgb(0, 128, 0) !important; }
+
+iframe#resultsExport { position: absolute; top: 100vh; width: 1200px; height: 1000px; visibility: hidden; }</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.heightWithoutHeader { height: calc(-48px + 100vh); }
+
+.queryParamsHuman { background: rgb(255, 255, 255); border-width: 1px 1px medium; border-style: solid solid none; border-color: rgb(203, 203, 203) rgb(203, 203, 203) currentcolor; border-image: none; padding: 2ch; min-height: 80px; }
+
+.queryParamsHuman > button { align-self: flex-start; }
+
+.textBlock { margin-bottom: 0px !important; }
+
+.textBlock .mockNotice { margin-right: 2ch; color: orange !important; }
+
+.textBlock .mockNotice * { color: orange !important; }
+
+.summary { padding-left: 7px; }
+
+.display_save { display: none; position: relative; padding: 0.8572em 1.2143em; border-top: 1px solid rgb(204, 204, 204); background-color: rgb(240, 240, 240); font-size: 0.875em; line-height: 1.7143; width: 100%; }
+
+.display_save button.save_input { margin: 0px 1ch; padding: 1.2ch 2ch; transition: background-color 0.16s ease-in; z-index: 1; }
+
+.display_save::after, .display_save::before { position: absolute; bottom: 100%; right: 240px; width: 0px; height: 0px; border: solid transparent; content: " "; pointer-events: none; }
+
+.display_save::after { border-width: 9px; border-bottom-color: rgb(240, 240, 240); margin-right: 0px; margin-left: 1px; }
+
+.display_save::before { border-width: 10px; border-bottom-color: rgb(204, 204, 204); }
+
+[dir="rtl"] .display_save::after { margin-right: 1px; margin-left: 0px; }
+
+.textBlock.flex w-table-commands { margin: 0px; padding-right: 11px; }
+
+.textBlock.flex w-table-commands f-facet li { padding: 0px 0px 0px 10px; }
+
+.textBlock.flex w-table-commands f-facet li .bigger { font-size: 20px; color: rgb(77, 192, 229); }</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.heightWithoutHeader[_ngcontent-ng-c546154941] { height: calc(-48px + 100vh); }
+
+.pre[_ngcontent-ng-c546154941] { font-weight: 700; color: gray; }
+
+.pre-filters[_ngcontent-ng-c546154941] { font-weight: 500; color: gray; font-size: 0.875em; text-transform: uppercase; }
+
+.thumbnail[_ngcontent-ng-c546154941] { height: 4vh; width: 6vw; background-position: center center; background-size: contain; background-repeat: no-repeat; }
+
+.facets[_ngcontent-ng-c546154941] ul.flex[_ngcontent-ng-c546154941] { display: flex; flex-flow: wrap; }
+
+.facets[_ngcontent-ng-c546154941] ul.flex.readonly[_ngcontent-ng-c546154941] li[_ngcontent-ng-c546154941] { margin-right: 0.3ch; }
+
+ul.boolean[_ngcontent-ng-c546154941] li[_ngcontent-ng-c546154941] h6.separationBoolean[_ngcontent-ng-c546154941] { font-size: 10px; }
+
+ul.boolean[_ngcontent-ng-c546154941] li[_ngcontent-ng-c546154941]:last-child > .separationBoolean[_ngcontent-ng-c546154941] { display: none; }
+
+ul.boolean[_ngcontent-ng-c546154941] li[_ngcontent-ng-c546154941] ul.boolean[_ngcontent-ng-c546154941] { margin-left: 3ch; }</style><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+.b-input__label--not-floating[_ngcontent-ng-c2000568063] { padding-bottom: 0px; }</style><title>Global Brand Database</title><base href="https://branddb.wipo.int/"><meta name="compileDateTime" content="2026-09-04T13:37:00.156Z"><meta name="commit" hash="d8c8fbcf988f0290d38216c47648b978d4989569" datetime="2026-09-04T15:32:21.315+02:00"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="pragma" content="no-cache"><meta http-equiv="expires" content="-1"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/x-icon" href="https://branddb.wipo.int/favicon.ico"><script>const showBody = () => {
+	document.getElementsByTagName("body")[0].style.opacity = 1
+}
+
+window.onload = showBody;
+
+// failsafe just in case something goes funky and the window.onload event never gets triggered, or triggered after 2 years
+setTimeout(showBody, 4000)
+
+
+//- https://css-tricks.com/the-trick-to-viewport-units-on-mobile/
+const redefineVH = () => {
+	const vh = window.innerHeight * 0.01;
+	document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+let timeoutDebounce = null
+window.addEventListener('resize', () =>{
+	clearTimeout(timeoutDebounce)
+	timeoutDebounce = setTimeout(redefineVH, 200)
+});
+
+</script><link rel="stylesheet" href="https://branddb.wipo.int/styles.4a9aa3907606a444.css" media="all"><noscript><link rel="stylesheet" href="styles.4a9aa3907606a444.css"></noscript><script src="https://webcomponents.wipo.int/polyfills/webcomponents-loader.js" async=""></script><script src="https://webcomponents.wipo.int/wipo-init/wipo-init.js" async=""></script><script src="https://webcomponents.wipo.int/wipo-navbar/wipo-navbar.js" async=""></script><link href="https://webcomponents.wipo.int/wipo-navbar/ulf-fonts.css" rel="stylesheet"><script src="https://webcomponents.wipo.int/wipo-navbar/wipo-navbar-v4.4dcff73e.js" type="module"></script><script type="text/javascript" async="" defer="" src="https://wipoanalytics.wipo.int/matomo/js/container_jdTOcj6j.js"></script><script type="text/javascript" async="" defer="" src="https://webcomponents.wipo.int/wipo-init/wipo-init-cookie.js"></script><script type="text/javascript" async="" defer="" src="https://webcomponents.wipo.int/wipo-init/wipo-load-compatibility-css.js"></script><link href="https://webcomponents.wipo.int/fonts/noto-sans-sc-400.css" rel="stylesheet"><link href="https://webcomponents.wipo.int/fonts/noto-sans-kr-400.css" rel="stylesheet"><link href="https://webcomponents.wipo.int/fonts/noto-sans-jp-400.css" rel="stylesheet"><link href="https://webcomponents.wipo.int/fonts/noto-sans-sc-weights.css" rel="stylesheet"><link href="https://webcomponents.wipo.int/fonts/noto-sans-kr-weights.css" rel="stylesheet"><link href="https://webcomponents.wipo.int/fonts/noto-sans-jp-weights.css" rel="stylesheet"></head><body style="opacity: 1; --wipo-navbar-height: 80px;"><app-root ng-version="19.2.25"><!----><div class="mainGrid noflex column"><wipo-navbar applicationname="Global Brand Database" applicationcategory="marks" login="EVENT" logout="EVENT" appid="app-0018" hide-breadcrumbs="true" hide-top-notch="true" collapse-navigation="true" hide-search="true" pagekey="similarname" style="--wipo-navbar-height: 80px; --wipo-notification-height: 0px; --bar-offset: 16px; --scrollbarWidth: 0px; --menu-area-padding: 0px; --menu-header-padding: 0px; opacity: 1;"><!----><div id="bar-root" class=" application desktop "><!--?lit$124350894$--><!--?lit$124350894$--><!--?--> <!--?lit$124350894$--><div class="wu-bar-menus"><!--?lit$124350894$--><div id="main-menu-icon" class="wu-main-menu-icon"><!--?lit$124350894$--><svg class="rtl-mirror" width="27" height="22" viewBox="0 0 27 22" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_4612_809)"><path fill-rule="evenodd" clip-rule="evenodd" d="M28 2.64H0V0H28V2.64Z" fill="#303030"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M28 12.3201H0V9.68005H28V12.3201Z" fill="#303030"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M28 22H0V19.36H28V22Z" fill="#303030"></path></g><defs><clipPath id="clip0_4612_809"><rect width="27" height="22" fill="white"></rect></clipPath></defs></svg></div><div class="wu-wipo-logo"><a href="https://www.wipo.int/portal/en/" title="WIPO"><!--?lit$124350894$--><svg viewBox="0 0 121 24"><path d="M0.113281 0.634895H6.48687L11.0216 17.1903H11.089L15.8846 0.634895H22.261L27.0559 17.1903H27.1205L31.6546 0.634895H38.028L30.6049 23.3651H24.0346L19.1048 7.18971H19.0402L14.1104 23.3651H7.53703L0.113281 0.634895Z"></path><path d="M44.4075 0.634895H50.7834V23.3651H44.4075V0.634895Z"></path><path d="M66.5548 11.1043H73.3888C75.3626 11.1043 77.659 11.0384 77.659 7.98747C77.659 5.02531 75.789 4.77491 73.9808 4.77491H66.5548V11.1043ZM60.1781 0.634895H75.9518C82.6202 0.634895 84.2318 4.48359 84.2318 7.54131C84.2318 12.3766 81.6034 15.2445 76.4464 15.2445H66.5548V23.3651H60.1781V0.634895Z"></path><path d="M105.526 19.6643C111.309 19.6643 113.344 15.53 113.344 11.9965C113.344 8.46431 111.309 4.32315 105.526 4.32315C99.7444 4.32315 97.706 8.46431 97.706 11.9965C97.706 15.53 99.7444 19.6643 105.526 19.6643ZM105.526 0C118.143 0 120.113 7.25581 120.113 11.9965C120.113 16.7431 118.143 24 105.526 24C92.9076 24 90.9366 16.7431 90.9366 11.9965C90.9366 7.25581 92.9076 0 105.526 0Z"></path></svg></a></div><div class="wu-tag"><!--?lit$124350894$--></div><!--?lit$124350894$--><div class="wu-flex-grow"></div><!--?lit$124350894$--><!----><div class="wu-dropdown-menu-container" id="help-457300"><!--?lit$124350894$--><!----><div class="wu-menu-dropdown   "><!--?lit$124350894$--><!--?lit$124350894$-->Help <!--?lit$124350894$--><svg class="collapsable" viewBox="6 0 13 18"><path d="M16.59 8.59003L12 13.17L7.41 8.59003L6 10L12 16L18 10L16.59 8.59003Z"></path></svg></div><!----><!----><!--?--><!----></div><!----><!----><div class="wu-dropdown-menu-container" id="languageDropdown-229977"><!--?lit$124350894$--><!----><div class="wu-menu-dropdown   "><!--?lit$124350894$--><!--?lit$124350894$-->English <!--?lit$124350894$--><svg class="collapsable" viewBox="6 0 13 18"><path d="M16.59 8.59003L12 13.17L7.41 8.59003L6 10L12 16L18 10L16.59 8.59003Z"></path></svg></div><!----><!----><!--?--><!----></div><!----><!----><div class="wu-dropdown-menu-container" id="login-732954"><!--?lit$124350894$--><div tabindex="0" class="wu-text-button   "><!--?lit$124350894$-->IP Portal login</div> <!--?lit$124350894$--><!--?--></div><!----></div><!--?lit$124350894$--><div class="wu-main-menu-container   " id="main-menu-778451" style="z-index:0"><!--?lit$124350894$--><!----><!----><!----><!----><div class="wu-flex-grow"></div></div> <!--?lit$124350894$--><!--?--></div><!--?lit$124350894$--><!--?lit$124350894$--><div class="wu-bar-toggle" dir="ltr" style="z-index:3006"><span aria-label="Collapse navigation"><span class="wu-toggle-content"><!--?lit$124350894$-->Collapse navigation</span> <span><!--?lit$124350894$--><svg width="24" height="24" viewBox="0 0 24 24" fill="#0059c6" xmlns="http://www.w3.org/2000/svg"><path d="M12 18.2821L17.1749 13.1072L12.7853 8.72552V18.2821H11.2147V8.72552L6.82512 13.1072L5.7179 12L12 5.7179L18.2821 12L12 18.2821Z"></path></svg></span></span></div><!--?--><!--?--><div class="placeholder"></div></wipo-navbar><!----><!----><div class="app-gbd lang-en"><router-outlet></router-outlet><page-results><nav-bar><div class="main0 flex column"><!----><div class="fullWidth flex center-v space-between nav"><div class="left"><w-sticky-bar class="b-navigation--has-close langen" style="height: 24px;"><div class="b-navigation-floater landing-background-container"><div class="landing-background"></div><!----><nav class="b-navigation__in-page-nav" style="width: 1905px;"><div hide-empty="" class="b-navigation__shortcut-list b-navigation__list w-navigation-header" style="display: none;"></div><ul class="b-navigation__shortcut-list b-navigation__list"><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-similarname" class="b-navigation__shortcut-item active"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/similarname" class="b-navigation__shortcut-item--is-selected">BRAND NAME</a><!----><!----><!----><!----></w-sticky-bar-link><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-similarlogo" class="b-navigation__shortcut-item"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/similarlogo">BRAND LOGO</a><!----><!----><!----><!----></w-sticky-bar-link><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-advancedsearch" class="b-navigation__shortcut-item"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/advancedsearch">ADVANCED SEARCH</a><!----><!----><!----><!----></w-sticky-bar-link><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-explore" class="b-navigation__shortcut-item"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/explore/visu">Explore</a><!----><!----><!----><!----></w-sticky-bar-link><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-vienna" class="b-navigation__shortcut-item"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/vienna">↗Vienna assistant</a><!----><!----><!----><!----></w-sticky-bar-link><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-gs" class="b-navigation__shortcut-item"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/gs">↗G&amp;S Explorer</a><!----><!----><!----><!----></w-sticky-bar-link><w-sticky-bar-link routerlinkactive="active" tabindex="0" id="nav-reports" class="b-navigation__shortcut-item"><!----><a routerlinkactive="b-navigation__shortcut-item--is-selected" href="https://branddb.wipo.int/en/reports">Reports</a><!----><!----><!----><!----></w-sticky-bar-link><!----></ul><ul class="b-navigation__in-page-nav-list b-navigation__list"></ul><w-button-group hide-empty="" class="b-navigation__button-group b-navigation__button-group--is-visible" style="display: none;"><div class="b-button-group"></div></w-button-group></nav></div></w-sticky-bar></div><div class="right"><span><!----></span><!----></div><!----></div><div class="fullWidth"><!----></div></div></nav-bar><hoc-search page="results"></hoc-search><results-holder><div class="page-results flex column similarname"><results-info><div class="queryParamsHuman flex space-between center-v"><queryparams2human _nghost-ng-c546154941=""><span _ngcontent-ng-c546154941=""><span _ngcontent-ng-c546154941="">Searching Trademark applications, appellations of origin, emblems and international non-proprietary names. Covering 76,989,584 records from 89 data sources.&nbsp;</span><!----><a _ngcontent-ng-c546154941="" href="https://branddb.wipo.int/en/coverage">Check our data coverage</a></span><!----><!----><!----><ul _ngcontent-ng-c546154941="" class="boolean"><!----></ul><!----><!----><!----><!----><!----></queryparams2human><f-facet class="flex nobreak"><button w-button="" size="small" data-test-id="editSearch" type="button" class="b-button b-button--small b-button-small b-button--is-type_secondary"><!----><!----><!----><!----><span>Edit your search</span><!----><!----><!----><!----><!----><!----><!----><!----><!----></button><!----><!----><button w-button="" size="small" type="button" class="b-button b-button--small b-button-small b-button--is-type_secondary"><!----><!----><!----><!----><span>TMview</span><!----><!----><!----><!----><!----><!----><!----><!----><!----></button><!----></f-facet></div><div class="display_save" style="display: none;"><w-input-text class="b-input b-input--has-floatlabel b-input-text b-input--is-empty ng-untouched ng-valid ng-dirty" _nghost-ng-c2000568063="" required="false"><div _ngcontent-ng-c2000568063="" class="b-input__table"><div _ngcontent-ng-c2000568063="" class="clf-flex-column"><div _ngcontent-ng-c2000568063="" class="clf-flex-row"><label _ngcontent-ng-c2000568063="" class="b-input__label">Search name</label><!----><div _ngcontent-ng-c2000568063="" hide-empty="" class="b-input__input b-input--has-label" style="display: none;"></div><input _ngcontent-ng-c2000568063="" class="b-input__input b-input__text-input ng-untouched ng-pristine ng-valid" type="text" placeholder="" maxlength="" minlength="" pattern=""><!----><!----></div><div _ngcontent-ng-c2000568063="" hide-empty="" style="display: none;"></div></div><div _ngcontent-ng-c2000568063="" hide-empty="" class="b-input__button-wrapper"><f-facet name="buttons"><button w-button="" class="save_input b-button b-button--is-type_primary" type="button"><!----><!----><!----><!----><span>Save</span><!----><!----><!----><!----><!----><!----><!----><!----><!----></button></f-facet></div></div><f-facet-info _ngcontent-ng-c2000568063="" class="b-input__info b-input__info--dropdown" style="display: none;"><div class="b-input__info-text"></div></f-facet-info><f-facet-info _ngcontent-ng-c2000568063="" class="b-input__info b-input__info--dropdown clf-notice" style="display: none;"><div class="b-input__info-text"></div></f-facet-info><f-facet-info _ngcontent-ng-c2000568063="" class="b-input__info b-input__info--is-error" style="display: none;"><div class="b-input__info-text"> </div></f-facet-info><!----><f-facet-info _ngcontent-ng-c2000568063="" class="b-input__info" style="display: none;"><div class="b-input__info-text"> </div></f-facet-info></w-input-text></div><div class="textBlock flex"><div data-test-id="resultsCount" class="summary grow">Loading...</div><!----><w-table-commands class="b-workbench-commands"><ul><f-facet name="links"><li facet-links="" class="b-navigation__shortcut-item"><span class="tooltipTrigger m_active">Results view</span></li><!----><li facet-links="" class="b-navigation__shortcut-item"><span class="tooltipTrigger">Statistics view</span></li><li facet-links="" class="b-navigation__shortcut-item"><!----><span class="tooltipTrigger"><i class="bi bi-menu-button-wide"></i></span><!----></li></f-facet><li class="clf-flex-grow"></li></ul></w-table-commands><!----></div></results-info><!----><!----><!----></div></results-holder><!----></page-results><!----></div><!----><!----></div><!----><!----><w-block-ui title="Processing" text="" style="position: fixed; z-index: 3000; height: 100vh; top: 0px; left: 0px;"><div class="b-infobox-background"></div><!----><div class="b-infobox b-infobox--has-spinner"><div class="b-infobox__title">Processing</div><div class="b-infobox__text"><p></p></div></div><!----></w-block-ui></app-root><script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha512-E8QSvWZ0eCLGk4km3hxSsNmGWbLtSCSUcewDQPQWZF6pEU8GlT8a5fF32wOl1i8ftdMhssTrF/OhyGWwonTcXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><script src="https://branddb.wipo.int/runtime.19448c589f54574b.js" type="module"></script><script src="https://branddb.wipo.int/polyfills.8614da28a4887857.js" type="module"></script><script src="https://branddb.wipo.int/main.f94740e84a281496.js" type="module"></script></body></html>
