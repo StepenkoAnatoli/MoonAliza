@@ -1,0 +1,85 @@
+{
+  "cap": 3,
+  "rows": [
+    {
+      "id": "D2-over-window",
+      "model": "claude-haiku-4-5-20251001",
+      "status": 400,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cost": 0,
+      "costBasis": "refused, no usage reported",
+      "worstCase": 0.40032
+    },
+    {
+      "id": "D7-over-max-haiku",
+      "model": "claude-haiku-4-5-20251001",
+      "status": 400,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cost": 0,
+      "costBasis": "refused, no usage reported",
+      "worstCase": 0.32968
+    },
+    {
+      "id": "D11-haiku-step1",
+      "model": "claude-haiku-4-5-20251001",
+      "status": 200,
+      "inputTokens": 646,
+      "outputTokens": 73,
+      "cost": 0.001011,
+      "costBasis": "usage",
+      "worstCase": 0.02248
+    },
+    {
+      "id": "D11-haiku-step2",
+      "model": "claude-haiku-4-5-20251001",
+      "status": 200,
+      "inputTokens": 796,
+      "outputTokens": 28,
+      "cost": 0.000936,
+      "costBasis": "usage",
+      "worstCase": 0.03048
+    },
+    {
+      "id": "D2-reservation",
+      "model": "claude-haiku-4-5-20251001",
+      "status": null,
+      "inputTokens": 340027,
+      "outputTokens": 0,
+      "cost": 0.340027,
+      "costBasis": "conservative reservation: the refusal reports no usage and whether a refused request is billed is not stated; booked at the counted 340,027 input tokens",
+      "worstCase": 0.340027
+    },
+    {
+      "id": "D7-over-max-reservation",
+      "model": "claude-haiku-4-5-20251001",
+      "status": null,
+      "inputTokens": 2000,
+      "outputTokens": 0,
+      "cost": 0.002,
+      "costBasis": "conservative reservation for a refused request (input bound 2,000)",
+      "worstCase": 0.002
+    },
+    {
+      "id": "D1-bearer",
+      "model": "claude-sonnet-5-5",
+      "status": 200,
+      "inputTokens": 15,
+      "outputTokens": 5,
+      "cost": 0.00008,
+      "costBasis": "usage",
+      "worstCase": 0.00464
+    },
+    {
+      "id": "D4-non-streamed",
+      "model": "claude-sonnet-5-5",
+      "status": 200,
+      "inputTokens": 15,
+      "outputTokens": 5,
+      "cost": 0.00008,
+      "costBasis": "usage",
+      "worstCase": 0.00464
+    }
+  ]
+}
