@@ -312,6 +312,9 @@ function toolCallsOutcome(fold: AnthropicFold, check: { tools: readonly ToolSpec
   if (calls.data.some(call => check.usedIds.has(call.id))) return invalid();
   // What Anthropic's own loop sends back: the accumulated content array, every block in index order (E-10 l.59;
   // E-11 l.611-613). An extra field nested too deep for JSON.stringify's recursion is refused, not a stack overflow.
+  // "Kept as received" means as JSON values, not bytes: the state is written again from the parsed events, so a number
+  // past double precision is rounded, 1e400 becomes null, integer-like keys move first and an escape is written plain.
+  // Every string keeps its value, signatures included. This is inherent to reading JSON here; D5 shows any live effect.
   let data: string;
   try { data = JSON.stringify({ content }); } catch { return invalid(); }
   if (data.length > PROVIDER_STATE_MAX) fail('PROVIDER_RESPONSE_TOO_LARGE');
