@@ -13,10 +13,11 @@ test('trusted project, encrypted profile, real IPC inference and durable history
   const data = join(directory, 'app-data'); await mkdir(data);
   // One status request per model step, before the chat request (the locality check runs in the real app).
   let statusRequests = 0; let chatRequests = 0;
+  const chatHeaders: Array<{ authorization?: string; cookie?: string }> = [];
   const server = createServer((request, response) => {
     if (answerOllamaStatus(request, response)) { statusRequests++; return; }
     if (request.url !== '/api/chat') { response.writeHead(404).end(); return; }
-    chatRequests++;
+    chatRequests++; chatHeaders.push({ authorization: request.headers.authorization });
     let content = '';
     request.on('data', chunk => { content += String(chunk); });
     request.on('end', () => {
@@ -60,6 +61,9 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     await expect(page.getByText('Fixture model response', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
     expect([statusRequests, chatRequests]).toEqual([1, 1]);
+    // The chat request carries the profile's key (more-models-phase2.md, Windows e2e). Red with the Authorization
+    // entry removed from the chat kinds' headers (src/main/inference.ts).
+    expect(chatHeaders).toStrictEqual([{ authorization: 'Bearer test-only-credential-marker' }]);
     await page.screenshot({ path: 'test-results/moonzila-workbench.png' });
     const invalid = await page.evaluate(async () => {
       try { await window.moonaliza.invoke('project.pick', { path: 'C:\\private' }); return false; } catch { return true; }
