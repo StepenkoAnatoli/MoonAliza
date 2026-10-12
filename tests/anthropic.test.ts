@@ -615,6 +615,15 @@ describe('usage', () => {
     expect((await map(text)).usage).toEqual({ inputTokens: 123, outputTokens: 7 });
   });
 
+  test('an input sum past the safe integers is never taken, and never fails an otherwise valid answer', async () => {
+    // Built from E-10 shapes, not a capture. Each count is a valid safe integer; only their sum is not. Guard: the sum is
+    // checked (mutation: take the sum unconditionally; CompletionSchema then refuses the answer as PROVIDER_INVALID_RESPONSE).
+    // The control, a sum of exactly Number.MAX_SAFE_INTEGER, is taken.
+    const answer = (usage: Record<string, number>) => sseText([messageStart(usage), ...blockEvents([textOf('Hi')]), ...messageEnd('end_turn', { output_tokens: 1 })]);
+    expect(await map(answer({ input_tokens: Number.MAX_SAFE_INTEGER, cache_read_input_tokens: 1, output_tokens: 1 }))).toEqual({ content: 'Hi', outcome: 'complete' });
+    expect((await map(answer({ input_tokens: Number.MAX_SAFE_INTEGER - 1, cache_read_input_tokens: 1, output_tokens: 1 }))).usage).toEqual({ inputTokens: Number.MAX_SAFE_INTEGER, outputTokens: 1 });
+  });
+
   test('each field takes its latest value (E-10 l.457 and l.531), never a sum across events', async () => {
     // The two usage objects are read from the capture itself. Guard: the latest value wins (mutation: the first one wins).
     const first = (JSON.parse(captureLines(457, 457).slice('data: '.length)) as { message: { usage: Record<string, number> } }).message.usage;
