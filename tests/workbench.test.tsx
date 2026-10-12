@@ -206,3 +206,55 @@ test('research opens per project from the details pane and is not requested befo
   expect(await within(dialog).findByText('Set up the collector below before starting research.')).toBeTruthy();
   expect(calls).toContain('research.list');
 });
+
+// The Anthropic profile option (docs/specification/more-models-phase2.md section 7; F-19). The data-use sentence is pinned
+// whole, as one string, so a dropped or reworded clause is red (sources: SL-E11 l.12, l.26; SL-E17 l.16, l.45, l.140,
+// l.241). The hint never says "not retained" and never names Haiku 4.5, which may retire before this merges (SL-E01 l.27).
+const ANTHROPIC_DATA_USE = "Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs; Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page refers to its commercial data retention policy, which Moonzila has not reviewed.";
+
+test('the profile form offers Anthropic API after the existing options, with its endpoint and hint', async () => {
+  // Guards: the option (mutation: remove it; the option list then lacks it); the endpoint default (mutation: anthropic
+  // falls back to the OpenAI endpoint); the hint (mutations, one each: drop a clause of the data-use sentence; drop the
+  // hint's "several minutes"; name Haiku 4.5 beside the 5.x models; say "is not retained by default").
+  render(<App api={api([project])} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Model profiles' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Model profiles' });
+  expect(dialog.textContent).toContain('the Anthropic API');
+  const provider = screen.getByLabelText('Provider') as HTMLSelectElement;
+  const endpoint = () => (screen.getByLabelText('Endpoint') as HTMLInputElement).value;
+  // Existing values and order are kept (the e2e journeys select by value); the new option comes last.
+  expect([...provider.options].map(option => [option.value, option.textContent])).toEqual([['ollama', 'Ollama (local)'], ['openai-compatible', 'OpenAI-compatible API'], ['anthropic', 'Anthropic API']]);
+  expect(screen.queryByRole('note', { name: 'Anthropic API notes' })).toBeNull();
+  fireEvent.change(provider, { target: { value: 'anthropic' } });
+  expect(endpoint()).toBe('https://api.anthropic.com/v1');
+  const hint = screen.getByRole('note', { name: 'Anthropic API notes' }).textContent ?? '';
+  // In the spec's order: workspace key, thinking and the model figures, duration, data use, not checked live.
+  const order = ['created for a single workspace', 'Thinking counts toward the maximum response', 'Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens', 'several minutes', ANTHROPIC_DATA_USE, 'not yet checked against the live API'];
+  const positions = order.map(fragment => hint.indexOf(fragment));
+  expect(positions.every(position => position >= 0), `missing: ${order.filter((_fragment, index) => positions[index]! < 0).join(' | ')}`).toBe(true);
+  expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  expect(hint).not.toContain('Haiku');
+  expect(hint).not.toContain('not retained');
+  fireEvent.change(provider, { target: { value: 'ollama' } });
+  expect(endpoint()).toBe('http://127.0.0.1:11434');
+  expect(screen.queryByRole('note', { name: 'Anthropic API notes' })).toBeNull();
+  fireEvent.change(provider, { target: { value: 'openai-compatible' } });
+  expect(endpoint()).toBe('https://api.openai.com/v1');
+});
+
+test('an Anthropic profile is saved with its kind and endpoint, and editing one shows its hint', async () => {
+  const bridge = api([project]); let submitted: Record<string, unknown> | undefined;
+  const saved = { ...cloudProfile, id: 'claude', name: 'Claude', kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', model: 'claude-sonnet-5-5' };
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    if (method === 'profile.list') return { profiles: [saved] };
+    if (method === 'profile.save') { submitted = params; return { profile: saved }; }
+    return bridge.invoke(method, params);
+  } }} />);
+  await screen.findByRole('heading', { name: project.name });
+  fireEvent.click(screen.getByRole('button', { name: 'Model profiles' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit Claude' }));
+  expect((screen.getByLabelText('Provider') as HTMLSelectElement).value).toBe('anthropic');
+  expect(screen.getByRole('note', { name: 'Anthropic API notes' }).textContent).toContain(ANTHROPIC_DATA_USE);
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(submitted).toMatchObject({ id: 'claude', kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', model: 'claude-sonnet-5-5' }));
+});
