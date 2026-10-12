@@ -160,7 +160,7 @@ function install(childProcess, input, scope = globalThis) {
 if (process.env[ENV] !== undefined) {
   const network = JSON.parse(process.env[ENV]);
   delete process.env[ENV];
-  globalThis.__moonzilaE2eCollectorNetwork = install(require('node:child_process'), network);
+  globalThis.__moonalizaE2eCollectorNetwork = install(require('node:child_process'), network);
 }
 
 module.exports = { ENV, install };

@@ -21,7 +21,7 @@ const runner: OwnedRunner = async (request, signal, options = {}) => {
 };
 const make = (name: string) => new ResearchKit({ kitRoot: resolve('.build/research-kit-external/research-kit'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, name), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner);
 
-beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-review-kit-')); nodeSha256 = digest(await readFile(process.execPath)); });
+beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-review-kit-')); nodeSha256 = digest(await readFile(process.execPath)); });
 afterAll(async () => { if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
 
 test('create gets one --name=value element per value; the Q8 values only in a plain shape; an identity the binding refuses throws', () => {

@@ -14,7 +14,7 @@ import type { Run } from '../src/shared';
 const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(store => store.close()); roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })); });
 function fixture() {
-  const root = mkdtempSync(join(tmpdir(), 'moonzila-app-')); roots.push(root);
+  const root = mkdtempSync(join(tmpdir(), 'moonaliza-app-')); roots.push(root);
   const store = new Store(join(root, 'state.sqlite')); stores.push(store);
   const at = new Date().toISOString();
   store.putProject({ id: 'p1', rootPath: root, pathLabel: root, name: 'Example', trusted: true, trustRevision: 1, policy: { revision: 1, inference: 'local-only', research: 'off' }, missing: false, createdAt: at });
@@ -591,7 +591,7 @@ test.each([
 
 test('a frozen review run that overflows keeps REVIEW_CONTEXT_LIMIT and the review message', async () => {
   // F-16. Guard (mutation): apply the frozen text to review runs too.
-  const root = mkdtempSync(join(tmpdir(), 'moonzila-app-review-')); roots.push(root);
+  const root = mkdtempSync(join(tmpdir(), 'moonaliza-app-review-')); roots.push(root);
   const data = join(root, 'data'); const project = join(root, 'project'); mkdirSync(data); mkdirSync(project);
   const store = new Store(join(data, 'state.sqlite')); stores.push(store);
   const at = new Date().toISOString();

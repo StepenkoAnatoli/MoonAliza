@@ -70,7 +70,7 @@ test('each fake GitHub has its own CA file while open, and close removes it', as
 });
 
 test('a fake whose start fails after generation leaves no temporary folder behind', async () => {
-  const folders = async () => (await readdir(tmpdir())).filter(name => name.startsWith('moonzila-github-tls-')).sort();
+  const folders = async () => (await readdir(tmpdir())).filter(name => name.startsWith('moonaliza-github-tls-')).sort();
   const before = await folders();
   vi.spyOn(https, 'createServer').mockImplementationOnce(() => { throw new Error('SERVER_REFUSED'); });
   await expect(startFakeGitHub('t')).rejects.toThrow('SERVER_REFUSED');

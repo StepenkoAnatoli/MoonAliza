@@ -44,7 +44,7 @@ test('Build reads, reviews an edit, applies, undoes and stops before an unapprov
     await expect(page.getByRole('button', { name: 'Approve edit' })).toBeVisible();
     expect(await readFile(join(project, 'hello.txt'), 'utf8')).toBe('before\r\n');
     await expect(page.getByLabel('Proposed content')).toContainText('after');
-    await page.screenshot({ path: 'test-results/moonzila-edit-review.png' });
+    await page.screenshot({ path: 'test-results/moonaliza-edit-review.png' });
     await page.getByRole('button', { name: 'Approve edit' }).click();
     await expect(page.getByText('Applied the approved edit.', { exact: true })).toBeVisible();
     expect(await readFile(join(project, 'hello.txt'), 'utf8')).toBe('after\r\n');

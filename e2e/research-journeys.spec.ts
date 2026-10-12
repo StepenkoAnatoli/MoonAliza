@@ -41,7 +41,7 @@ async function files(directory: string): Promise<string[]> {
  * into the harness route that answers the verified import's run read from the fake; without it that read is refused.
  */
 async function journey(name: string, { routeRunRead = false }: { routeRunRead?: boolean } = {}) {
-  const root = await mkdtemp(join(tmpdir(), `moonzila-${name}-`));
+  const root = await mkdtemp(join(tmpdir(), `moonaliza-${name}-`));
   const data = join(root, 'data'); const project = join(root, 'Research project');
   await mkdir(join(data, 'research-kit'), { recursive: true }); await mkdir(project);
   const nodeSha256 = createHash('sha256').update(await readFile(process.execPath)).digest('hex');
@@ -83,7 +83,7 @@ const read = async (page: Page, id: string) => (await invoke<{ research: Job }>(
 const count = (fake: FakeGitHub, method: string, path: string) => fake.seen.filter(request => request.method === method && request.path === path).length;
 type Outcome = { code: number | null; status: string | null; clientRef: string | null; state: string | null };
 type Harness = { collectors: number; rewritten: number; outcomes: Outcome[]; refusedFetches: string[] };
-const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonzilaE2eCollectorNetwork?: Harness }).__moonzilaE2eCollectorNetwork ?? null);
+const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonalizaE2eCollectorNetwork?: Harness }).__moonalizaE2eCollectorNetwork ?? null);
 
 test('The harness is loaded into main before the app, and the product never sees its variable', async () => {
   const { root, fake, launch } = await journey('journey-harness');

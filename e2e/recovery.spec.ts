@@ -9,7 +9,7 @@ import { FileJournal } from '../src/tools/files';
 
 test('Recovery survives restart, preserves conflicts and never replays an uncertain command', async () => {
   test.setTimeout(120000);
-  const root = await mkdtemp(join(tmpdir(), 'moonzila-recovery-e2e-'));
+  const root = await mkdtemp(join(tmpdir(), 'moonaliza-recovery-e2e-'));
   const project = join(root, 'Recovery project'); const data = join(root, 'data');
   await mkdir(project); await mkdir(data);
   await writeFile(join(project, 'interrupt.cjs'), 'require("fs").appendFileSync("executions.txt","once\\n");console.log("effect recorded");setTimeout(()=>process.kill(process.ppid),100);setInterval(()=>{},1000);');
@@ -72,7 +72,7 @@ test('Recovery survives restart, preserves conflicts and never replays an uncert
     await command.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Dismiss error' }).click();
     await page.getByText('Recovery · 1 needs review', { exact: true }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: 'test-results/moonzila-recovery.png' });
+    await page.screenshot({ path: 'test-results/moonaliza-recovery.png' });
     await command.getByRole('button', { name: 'Acknowledge outcome' }).click();
     await expect(page.getByText('Recovery · reviewed operations', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Send message' }).click();

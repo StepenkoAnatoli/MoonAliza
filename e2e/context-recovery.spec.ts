@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 
 test('privacy choices, durable result retrieval, usage and context recovery in the desktop', async () => {
   test.setTimeout(120_000);
-  const root = await mkdtemp(join(tmpdir(), 'moonzila-context-'));
+  const root = await mkdtemp(join(tmpdir(), 'moonaliza-context-'));
   const project = join(root, 'Context project'); await mkdir(project);
   await writeFile(join(project, 'large.txt'), 'A'.repeat(25000) + 'TAIL_EVIDENCE');
   const data = join(root, 'app-data'); await mkdir(data);

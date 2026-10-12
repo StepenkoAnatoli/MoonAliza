@@ -21,7 +21,7 @@ const helperPath = resolve('.build/native/MoonAlizaHost.exe');
 const collectedFixture = resolve('tests/fixtures/research-kit/collected.zip');
 const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 let root: string;
-beforeAll(async () => { if (windows) root = await mkdtemp(join(tmpdir(), 'moonzila-review-native-')); });
+beforeAll(async () => { if (windows) root = await mkdtemp(join(tmpdir(), 'moonaliza-review-native-')); });
 afterAll(async () => {
   if (!root) return;
   const child = relative(resolve(tmpdir()), root); if (!child || child.startsWith('..') || isAbsolute(child)) throw new Error('UNSAFE_TEST_CLEANUP');

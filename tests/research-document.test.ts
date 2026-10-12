@@ -131,7 +131,7 @@ const workspaceFile = (w: World, name = 'BRIEF.md') => join(w.project, 'research
 let collectedBrief: string; let collectedEvidence: string; let approvedBrief: string;
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), 'moonzila-document-'));
+  root = await mkdtemp(join(tmpdir(), 'moonaliza-document-'));
   nodeSha256 = digest(await readFile(process.execPath));
   collectedBytes = await readFile(collectedFixture); approvedBytes = await readFile(approvedFixture);
   // The fixtures' documents, through the workspace's own materialisation (hash-checked against each manifest).

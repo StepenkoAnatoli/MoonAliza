@@ -35,7 +35,7 @@ test('chat without a folder survives restart, creates a workspace and applies on
     await page.getByLabel('Message MoonAliza').fill('Explore a garden idea'); await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByText('Let us explore your idea before choosing a folder.', { exact: true })).toBeVisible();
     expect(requests[0]?.tools ?? []).toHaveLength(0);
-    await page.screenshot({ path: 'test-results/moonzila-general-chat.png' });
+    await page.screenshot({ path: 'test-results/moonaliza-general-chat.png' });
     await app.close(); app = await launch(); page = await app.firstWindow();
     await page.getByRole('button', { name: 'Explore a garden idea', exact: true }).click();
     await expect(page.getByText('Let us explore your idea before choosing a folder.', { exact: true })).toBeVisible();

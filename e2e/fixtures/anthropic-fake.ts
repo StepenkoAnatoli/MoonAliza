@@ -30,8 +30,8 @@ const ANTHROPIC_VERSION = '2023-06-01';
  * nesting; long enough not to occur by chance. It reaches MoonAliza only inside the provider state, so after the app
  * closes it must be found nowhere under userData (the spec's byte scan).
  */
-export const SIGNATURE_MARKER = 'MoonzilaE2eSignatureMarkerQ7x9Zr4Lw2Vb8Nc5Kt3Hp6';
-export const TOOL_ID = 'toolu_01MoonzilaE2eListFiles';
+export const SIGNATURE_MARKER = 'MoonAlizaE2eSignatureMarkerQ7x9Zr4Lw2Vb8Nc5Kt3Hp6';
+export const TOOL_ID = 'toolu_01MoonAlizaE2eListFiles';
 export const STEP1_TEXT = 'I will list the project folder first.';
 export const STEP2_TEXT = 'The project folder was listed through the Anthropic fixture.';
 
@@ -68,7 +68,7 @@ function stream(model: string, id: string, blocks: BuiltBlock[], stopReason: 'en
 }
 
 /** The Test connection's answer: one text block, `end_turn`. */
-const testAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eTestConnection', [
+const testAnswer = (model: string) => stream(model, 'msg_01MoonAlizaE2eTestConnection', [
   { start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text: 'OK.' }] },
 ], 'end_turn', 4);
 
@@ -77,7 +77,7 @@ const testAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eTestConnec
  * `{"path": "."}`, stopping with `tool_use`. `list_files` is offered in Ask mode (src/tools/reads.ts:23); E-10's
  * `get_weather` is not a MoonAliza tool and would fail the step as PROVIDER_INVALID_RESPONSE.
  */
-const stepOneAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eStepOne', [
+const stepOneAnswer = (model: string) => stream(model, 'msg_01MoonAlizaE2eStepOne', [
   { start: { type: 'thinking', thinking: '', signature: '' }, deltas: [{ type: 'thinking_delta', thinking: '' }, { type: 'signature_delta', signature: SIGNATURE_MARKER }] },
   { start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text: 'I will list' }, { type: 'text_delta', text: ' the project folder first.' }] },
   // The first partial_json is empty, as in E-10 l.324 and the live recordings.
@@ -85,7 +85,7 @@ const stepOneAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eStepOne
 ], 'tool_use', 96);
 
 /** Step 2: the final answer, one text block, `end_turn`. */
-const stepTwoAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eStepTwo', [
+const stepTwoAnswer = (model: string) => stream(model, 'msg_01MoonAlizaE2eStepTwo', [
   { start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text: 'The project folder was listed' }, { type: 'text_delta', text: ' through the Anthropic fixture.' }] },
 ], 'end_turn', 14);
 

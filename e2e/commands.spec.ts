@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 
 test('Build reviews real command execution, receives failure evidence, and stops an owned process tree', async () => {
   test.setTimeout(120000);
-  const root = await mkdtemp(join(tmpdir(), 'moonzila-commands-e2e-'));
+  const root = await mkdtemp(join(tmpdir(), 'moonaliza-commands-e2e-'));
   const project = join(root, 'Code project'); const data = join(root, 'data');
   await mkdir(project); await mkdir(data);
   execFileSync('git', ['init'], { cwd: project, windowsHide: true, stdio: 'pipe' });
@@ -46,7 +46,7 @@ test('Build reviews real command execution, receives failure evidence, and stops
     await expect(page.getByRole('button', { name: 'Approve command' })).toBeVisible({ timeout: 30000 });
     await expect(readFile(join(project, 'check-ran.txt'))).rejects.toThrow();
     await expect(page.getByLabel('Command arguments')).toContainText('check.cjs');
-    await page.screenshot({ path: 'test-results/moonzila-command-review.png' });
+    await page.screenshot({ path: 'test-results/moonaliza-command-review.png' });
     await page.getByRole('button', { name: 'Approve command' }).click();
     await expect(page.getByText('The project check failed with exit code 7.', { exact: true })).toBeVisible({ timeout: 30000 });
     await expect(page.getByText('Command · Exit code 7', { exact: true })).toBeVisible();

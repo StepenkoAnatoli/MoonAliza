@@ -14,7 +14,7 @@ const at = '2026-10-04T00:00:00.000Z';
 const request = (method: string, params: unknown, id: string) => ({ protocolVersion: 1, clientRequestId: id, method, params });
 
 function fixture(mode: Run['mode'], status: Run['status'] = 'running') {
-  const root = mkdtempSync(join(tmpdir(), 'moonzila-policy-')); roots.push(root);
+  const root = mkdtempSync(join(tmpdir(), 'moonaliza-policy-')); roots.push(root);
   const store = new Store(join(root, 'state.sqlite')); stores.push(store);
   store.putProject({ id: 'p1', rootPath: root, pathLabel: root, name: 'Example', trusted: true, trustRevision: 1, policy: { revision: 1, inference: 'cloud-allowed', research: 'off' }, missing: false, createdAt: at });
   store.putProfile({ id: 'profile1', name: 'Local', kind: 'ollama', endpoint: 'http://127.0.0.1:11434', model: 'test', contextTokens: 8192, outputTokens: 512, locality: 'local', revision: 1, revisionId: 'v1', createdAt: at, updatedAt: at });
