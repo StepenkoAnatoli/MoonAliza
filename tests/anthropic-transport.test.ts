@@ -222,6 +222,21 @@ describe('retries through complete() (F-14, spec 5.8)', () => {
     expect(twice.state).toMatchObject({ settledAt: 3_000, result: { outcome: 'complete' } });
   });
 
+  test('the wait fits the kind\'s own 600 s deadline: a retry-after of 300 s waits and retries, one of 700 s is refused at once', async () => {
+    // Guard: complete() hands post() `started + part.timeoutMs` (mutation: `started + 120_000`; the 300 s wait no longer
+    // fits, so one fetch and PROVIDER_HTTP_503 at 0 ms). The 700 s case pins the bound from the other side (integration
+    // review P2-MUT-1).
+    vi.useFakeTimers();
+    const fits = timed([() => refusedWith(503, { 'retry-after': '300' }), okStream]);
+    const over = timed([() => refusedWith(503, { 'retry-after': '700' }), okStream]);
+    await vi.advanceTimersByTimeAsync(400_000);
+    expect(fits.at).toEqual([0, 300_000]);
+    expect(fits.state).toMatchObject({ settledAt: 300_000, result: { outcome: 'complete' } });
+    expect(over.at).toEqual([0]);
+    expect(over.state.error?.message).toBe('PROVIDER_HTTP_503');
+    expect(over.state.settledAt).toBe(0);
+  });
+
   test('with retry: false the same 503 makes one fetch and throws PROVIDER_HTTP_503 at once, with no timer left', async () => {
     // profile.test passes it (F-20). Guard: complete() hands the option to post() (mutation: pass `retry: true`
     // whatever the option; the call then waits 1 s and retries).
