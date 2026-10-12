@@ -409,9 +409,14 @@ describe('the reader refuses', () => {
 describe('refused only in a tool turn', () => {
   const unknownBlock: BuiltBlock = { start: { type: 'fallback' } };
   const unknownDelta: BuiltBlock = { start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text: 'Listing' }, { type: 'citations_delta', citation: {} }, { type: 'text_delta', text: '.' }] };
+  // E-10 l.478-499's server_tool_use shape: a block of an unknown type that receives known deltas (built, not a capture).
+  const unknownBlockWithDeltas: BuiltBlock = { start: { type: 'server_tool_use', id: 'srvtoolu_01', name: 'web_search', input: {} }, deltas: [{ type: 'input_json_delta', partial_json: '' }, { type: 'input_json_delta', partial_json: '{"query":"weather"}' }] };
   test.each([
     // Guard: a tool turn holds only replayable blocks (mutation, with the state schema check skipped too, since it also refuses the type).
     ['an unknown block', [unknownBlock, textOf('Listing.'), toolUseBlock()], [REFUSAL_TOOL], []],
+    // Guards: as the row above for the tool_use stop; and any delta on an unknown block is ignored (mutation: apply deltas
+    // to unknown blocks; the max_tokens turn then fails in the reader instead of being incomplete).
+    ['an unknown block that receives a known delta', [unknownBlockWithDeltas, textOf('Listing.'), toolUseBlock()], [REFUSAL_TOOL], []],
     // Guard: a block an unknown delta touched is not replayable (mutation: an unknown delta leaves the block replayable).
     ['an unknown delta', [unknownDelta, toolUseBlock()], [REFUSAL_TOOL], []],
     // Guard: the input must parse (mutation: an unparseable join falls back to the start's input).
@@ -493,6 +498,22 @@ describe('tolerated in a final answer', () => {
     // Guard: a text block marked not replayable stays in the content (mutation: leave such blocks out of the content).
     const block: BuiltBlock = { start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text: 'Hello' }, { type: 'citations_delta', citation: { type: 'char_location' } }, { type: 'text_delta', text: ' again.' }] };
     expect((await map(builtStream([block], 'end_turn'))).content).toBe('Hello again.');
+  });
+
+  test('the captured `server_tool_use` block and its `input_json_delta` events (E-10 l.456-502) are dropped', async () => {
+    // A known delta on a block of an unknown type, as the wire shows it. E-10 l.456-502 are read from the capture itself,
+    // so they cannot drift; the text block and the stop after them are built from E-10 shapes, not a capture.
+    // Guard: any delta on an unknown block is ignored (mutation: apply deltas to unknown blocks; input_json_delta on a
+    // block that is not tool_use is then PROVIDER_INVALID_RESPONSE).
+    const text = `${captureLines(456, 502)}\n\n${sseText([...blockEvents([textOf(' Done.')], 2), ...messageEnd('end_turn')])}`;
+    expect(await map(text, [])).toEqual({ content: "I'll check the current weather in New York City for you. Done.", outcome: 'complete', usage: { inputTokens: 2679, outputTokens: 5 } });
+  });
+
+  test('a block of an unknown type that receives a `text_delta` is dropped, that text with it', async () => {
+    // Built from E-10 shapes, not a capture. Guard: as the previous test (mutation: apply deltas to unknown blocks; a
+    // text_delta on a block that is not text is then PROVIDER_INVALID_RESPONSE).
+    const unknown: BuiltBlock = { start: { type: 'fallback' }, deltas: [{ type: 'text_delta', text: ' dropped' }] };
+    expect(await map(builtStream([textOf('Hello'), unknown, textOf(' again.')], 'end_turn'))).toEqual({ content: 'Hello again.', outcome: 'complete', usage: { inputTokens: 10, outputTokens: 5 } });
   });
 
   test('a `max_tokens` stop with a half `tool_use` is incomplete', async () => {
