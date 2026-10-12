@@ -483,15 +483,22 @@ describe('reading', () => {
   });
 });
 
-describe('types before accumulation: a malformed start followed by its delta fails in the reader, in any turn', () => {
+describe('types before accumulation: a delta onto a start field that is not a string, or carrying one, fails in the reader, in any turn', () => {
   test.each([
     ['a `text` start with `text: null`, then a text_delta "Hi"', { start: { type: 'text', text: null }, deltas: [{ type: 'text_delta', text: 'Hi' }] }],
     ['a `thinking` start with a numeric `thinking`, then a thinking_delta', { start: { type: 'thinking', thinking: 0, signature: '' }, deltas: [{ type: 'thinking_delta', thinking: 'Hm.' }, { type: 'signature_delta', signature: REFUSAL_SIGNATURE }] }],
     ['a `thinking` start with `signature: 0`, then a signature_delta', { start: { type: 'thinking', thinking: '', signature: 0 }, deltas: [{ type: 'signature_delta', signature: REFUSAL_SIGNATURE }] }],
     ['a text_delta whose own `text` is not a string', { start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text: 5 }] }],
+    // Guard: a signature_delta's own `signature` is a string (mutation: drop that check; the final answer then completes
+    // and the signature 0 reaches the fold).
+    ['a signature_delta whose own `signature` is not a string', { start: { type: 'thinking', thinking: '', signature: '' }, deltas: [{ type: 'signature_delta', signature: 0 }] }],
+    // Guard: an input_json_delta's own `partial_json` is a string (mutation: drop that check; the pieces then join to
+    // '{"path":5}', an input the provider never sent as text, and a tool turn returns that call).
+    ['an input_json_delta whose own `partial_json` is not a string', { start: { type: 'tool_use', id: 'toolu_02', name: 'list_files', input: {} }, deltas: [{ type: 'input_json_delta', partial_json: '{"path":' }, { type: 'input_json_delta', partial_json: 5 }, { type: 'input_json_delta', partial_json: '}' }] }],
   ] as const)('%s', async (_name, block) => {
-    // Guard: a delta applies only when its field and the start field it extends are strings (mutation: append without
-    // the type checks; the tool turn then returns calls with a coerced state, the final answer a coerced content).
+    // Guard for the first four: a delta applies only when its field and the start field it extends are strings (mutation:
+    // append without the type checks; the tool turn then returns calls with a coerced state, the final answer a coerced
+    // content). Each row runs on a tool_use stop and on an end_turn stop: the reader cannot know the stop yet.
     expect(await message(read(builtStream([block as BuiltBlock, toolUseBlock()], 'tool_use')))).toBe('PROVIDER_INVALID_RESPONSE');
     expect(await message(read(builtStream([block as BuiltBlock, textOf('Done.')], 'end_turn')))).toBe('PROVIDER_INVALID_RESPONSE');
   });
