@@ -68,7 +68,7 @@ test('provider requests bind the destination and refuse automatic redirect follo
   const output = await complete(profile, [{ role: 'user', content: 'hello' }], { fetcher, secret: 'private-token', signal: new AbortController().signal });
   expect(requestUrl).toBe('https://model.example/v1/chat/completions');
   expect(requestInit?.redirect).toBe('error');
-  // The exact init (More models Phase 2, U2 commit 3; F-5): no session cookie or saved sign-in rides on a chat request.
+  // The exact init (More models Phase 2, U2 commit 3; F-5): no session cookie rides on a chat request.
   // Guard: credentials: 'omit' in post() (mutation: drop it; the init then lacks the field).
   expect(requestInit).toEqual({ method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer private-token' }, body: requestInit?.body, signal: expect.any(AbortSignal), redirect: 'error', credentials: 'omit' });
   expect(JSON.parse(String(requestInit?.body)).messages).toEqual([{ role: 'user', content: 'hello' }]);

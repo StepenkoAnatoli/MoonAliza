@@ -168,9 +168,10 @@ function pause(ms: number, signal: AbortSignal, stop: AbortSignal): Promise<void
  */
 export async function post(fetcher: Fetcher, url: string, request: { headers: Record<string, string>; body: string; signal: AbortSignal; stop: AbortSignal; deadline: number; retry: boolean }, part: Pick<KindPart<unknown>, 'refusalStatuses' | 'isOverflow' | 'retryDelayMs'>): Promise<Response> {
   for (let retries = 0; ; retries += 1) {
-    // credentials: 'omit' (INV-5): the session's cookies and saved HTTP sign-ins never ride on a chat request; the key
-    // travels only in the explicit Authorization header. It also withholds Windows-integrated sign-in and client
-    // certificates (more-models-phase2.md section 4, known limit); D10 checked it in Electron.
+    // credentials: 'omit' (INV-5): no session cookie rides on a chat request, and the key travels only in the explicit
+    // Authorization header. By the Fetch standard it also withholds server HTTP authentication and TLS client
+    // certificates (untested here). It does not withhold proxy credentials: in the D10 Electron check (44.4.5,
+    // 2026-10-12) a chat request still sent the session's cached Proxy-Authorization.
     const response = await fetcher(url, { method: 'POST', headers: request.headers, body: request.body, signal: request.signal, redirect: 'error', credentials: 'omit' });
     if (response.ok) return response;
     const delay = request.retry && retries < 2 ? part.retryDelayMs?.(response, retries) : undefined;
