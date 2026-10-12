@@ -17,7 +17,7 @@ test('trusted project, encrypted profile, real IPC inference and durable history
   const server = createServer((request, response) => {
     if (answerOllamaStatus(request, response)) { statusRequests++; return; }
     if (request.url !== '/api/chat') { response.writeHead(404).end(); return; }
-    chatRequests++; chatHeaders.push({ authorization: request.headers.authorization });
+    chatRequests++; chatHeaders.push({ authorization: request.headers.authorization, cookie: request.headers.cookie });
     let content = '';
     request.on('data', chunk => { content += String(chunk); });
     request.on('end', () => {
@@ -57,13 +57,19 @@ test('trusted project, encrypted profile, real IPC inference and durable history
       await page.getByRole('button', { name: 'Send message' }).click({ trial: true, timeout: 5000 });
       await page.getByRole('button', { name: 'Project details', exact: true }).click();
     }
+    // A cookie for the fake's origin in the local session (src/main/index.ts, partition `moonaliza-local`, held in
+    // memory, so it is planted in this launch): chat requests are sent with `credentials: 'omit'` (INV-5), so the chat
+    // request must not carry it. Red with that field deleted from post() (src/main/inference.ts).
+    const origin = `http://127.0.0.1:${port}`;
+    await app.evaluate(async ({ session }, url) => { await session.fromPartition('moonaliza-local').cookies.set({ url, name: 'moonzila_e2e', value: 'local-session-cookie' }); }, origin);
+    expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-local').cookies.get({ url })).map(cookie => cookie.name), origin)).toEqual(['moonzila_e2e']);
     await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByText('Fixture model response', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
     expect([statusRequests, chatRequests]).toEqual([1, 1]);
-    // The chat request carries the profile's key (more-models-phase2.md, Windows e2e). Red with the Authorization
-    // entry removed from the chat kinds' headers (src/main/inference.ts).
-    expect(chatHeaders).toStrictEqual([{ authorization: 'Bearer test-only-credential-marker' }]);
+    // The chat request carries the profile's key (more-models-phase2.md, Windows e2e), and not the planted cookie. Red
+    // with the Authorization entry removed from the chat kinds' headers (src/main/inference.ts).
+    expect(chatHeaders).toStrictEqual([{ authorization: 'Bearer test-only-credential-marker', cookie: undefined }]);
     await page.screenshot({ path: 'test-results/moonzila-workbench.png' });
     const invalid = await page.evaluate(async () => {
       try { await window.moonaliza.invoke('project.pick', { path: 'C:\\private' }); return false; } catch { return true; }

@@ -16,6 +16,7 @@ const MODEL = 'claude-e2e-fixture';
 const MAX_TOKENS = 3072;
 const PROMPT = 'List the project folder.';
 const PROJECT_FILE = 'notes.txt';
+const COOKIE = { name: 'moonzila_e2e', value: 'provider-session-cookie' };
 
 async function files(directory: string): Promise<string[]> {
   const found: string[] = [];
@@ -40,6 +41,14 @@ test('an Anthropic profile passes Test connection and replays a thinking step un
   try {
     app = await launch(); const page = await app.firstWindow();
     await expect(page.getByText('Your work starts here')).toBeVisible();
+
+    // A cookie for the fake's origin in the provider session (src/main/index.ts, partition `moonaliza-providers`, held
+    // in memory, so it is planted in this launch). Chat requests are sent with `credentials: 'omit'` (INV-5), so the
+    // fake refuses any request carrying it. The probe is the positive control: a plain fetch from the same session,
+    // without `omit`, does carry it to this origin, so the refusal checks a cookie that would otherwise be sent.
+    await app.evaluate(async ({ session }, cookie) => { await session.fromPartition('moonaliza-providers').cookies.set(cookie); }, { url: fake.origin, ...COOKIE });
+    expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-providers').fetch(url)).status, `${fake.origin}/cookie-probe`)).toBe(204);
+    expect(fake.probeCookies).toEqual([`${COOKIE.name}=${COOKIE.value}`]);
 
     // Save the profile: the Anthropic API option fills its own endpoint, which the test points at the fake.
     await page.getByRole('button', { name: 'Model profiles', exact: true }).click();
@@ -77,7 +86,7 @@ test('an Anthropic profile passes Test connection and replays a thinking step un
     await expect(page.getByText(STEP1_TEXT, { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
 
-    // Every request passed the fake's checks (Bearer, version, path, max_tokens; request 2 = request 1's
+    // Every request passed the fake's checks (Bearer, version, path, max_tokens, no cookie; request 2 = request 1's
     // messages + step 1's content array + one tool_result-only user message; system, tools, model, max_tokens and
     // stream byte-equal between requests 1 and 2), and there were exactly three, so the fake was reached for each:
     // the provider session's proxy did not intercept loopback.

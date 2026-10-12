@@ -105,14 +105,16 @@ export type Turn = 'test' | 'step1' | 'step2';
 export interface RecordedRequest { turn: Turn | 'unexpected'; method: string; path: string; headers: IncomingHttpHeaders; body: Json | undefined }
 
 export interface AnthropicFake {
-  /** `http://127.0.0.1:<port>`. */
+  /** `http://127.0.0.1:<port>`, the origin a cookie is planted for. */
   origin: string;
   /** The profile endpoint, `<origin>/v1`: Moonzila posts to `<endpoint>/messages`. */
   endpoint: string;
-  /** Every request, in arrival order, refused or not. */
+  /** Every request but the cookie probe, in arrival order, refused or not. */
   requests: RecordedRequest[];
   /** One entry per refused request: its turn and every check it failed. */
   refusals: string[];
+  /** The `cookie` header of each `GET /cookie-probe` (undefined when none was sent). */
+  probeCookies: Array<string | undefined>;
   close(): Promise<void>;
 }
 
@@ -133,6 +135,9 @@ function check(turn: Turn, method: string, path: string, headers: IncomingHttpHe
   need(headers.authorization === `Bearer ${expected.key}`, 'authorization is not "Bearer <the profile key>"');
   // Red with the version header removed from anthropicHeaders.
   need(headers['anthropic-version'] === ANTHROPIC_VERSION, `anthropic-version is ${String(headers['anthropic-version'])}`);
+  // A cookie for this origin is planted in the provider session (the spec): red with `credentials: 'omit'` deleted
+  // from post() (src/main/inference.ts), where the session's cookie rides along (D10, case 1).
+  need(headers.cookie === undefined, 'a cookie header was sent');
   if (!body) return [...failed, 'the body is not a JSON object'];
   need(body.model === expected.model, `model is ${canonical(body.model)}`);
   // The profile's own maximum response on every request; red when profile.test sends 32 for anthropic (F-20).
@@ -175,7 +180,7 @@ function check(turn: Turn, method: string, path: string, headers: IncomingHttpHe
 
 /** Starts the fake on a loopback port chosen by the system (port 0), as the other e2e fakes do. */
 export async function startAnthropicFake(expected: AnthropicFakeExpectations): Promise<AnthropicFake> {
-  const requests: RecordedRequest[] = []; const refusals: string[] = [];
+  const requests: RecordedRequest[] = []; const refusals: string[] = []; const probeCookies: Array<string | undefined> = [];
   const turns: Turn[] = ['test', 'step1', 'step2'];
   const answers: Record<Turn, (model: string) => string> = { test: testAnswer, step1: stepOneAnswer, step2: stepTwoAnswer };
   const server = createServer((request, response) => {
@@ -183,6 +188,8 @@ export async function startAnthropicFake(expected: AnthropicFakeExpectations): P
     request.on('data', (chunk: Buffer) => { chunks.push(chunk); });
     request.on('end', () => {
       const method = request.method ?? ''; const path = request.url ?? '';
+      // The spec's positive control: what the provider session sends this origin without `credentials: 'omit'`.
+      if (method === 'GET' && path === '/cookie-probe') { probeCookies.push(request.headers.cookie); response.writeHead(204).end(); return; }
       let body: Json | undefined;
       try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); body = isRecord(parsed) ? parsed : undefined; } catch { body = undefined; }
       const turn = turns[requests.length];
@@ -200,7 +207,7 @@ export async function startAnthropicFake(expected: AnthropicFakeExpectations): P
   await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
   const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
   return {
-    origin, endpoint: `${origin}/v1`, requests, refusals,
+    origin, endpoint: `${origin}/v1`, requests, refusals, probeCookies,
     close: () => new Promise<void>(done => { server.closeAllConnections(); server.close(() => done()); }),
   };
 }
