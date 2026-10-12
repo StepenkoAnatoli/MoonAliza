@@ -1,0 +1,89 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 1106,
+  "bodySha256": "2698ccfd900b71f049ebea83bd93acae19c30f1d77e26df51435d8df0dea0a70",
+  "body": {
+    "model": "claude-fable-5-1",
+    "max_tokens": 4096,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Call get_weather for Paris and call get_time, then tell me both results in one sentence."
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01MNSCgJeokZHDjsyQ7gC9Qc",
+            "name": "get_weather",
+            "input": {
+              "city": "Paris"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01Pr94wM9g18oBGVdi3kCqmG",
+            "name": "get_time",
+            "input": {},
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01MNSCgJeokZHDjsyQ7gC9Qc",
+            "content": "Paris: 18 C, cloudy."
+          },
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01Pr94wM9g18oBGVdi3kCqmG",
+            "content": "14:05 UTC"
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

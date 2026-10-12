@@ -1,0 +1,123 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-sonnet-5-5","id":"msg_011CfwwH4SSGRfJ1BK1wCwuP","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":631,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":5,"service_tier":"standard","inference_geo":"global"},"diagnostics":null}           }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}   }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":""}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"CAQSyAcKEAgSGAI4AUIIdGhpbmtpbmcSDFRC2Akjb7EM0gCz0BoMaIYbFz81mXNBkisLIjAaEMUg2MEmittd9uru1BDL9UlMs9PDCZnYJ5O7jWmZ70C646rOeWg9BHJuzC7bMNoq5QZJNaMv+3BsIkfYwMTO0gvjIzkY9QmLRR0EwbuKaWbH0pcg+1hOz0N31aDnDZklF5ZFG0tzbW2tk+J5v1kTY04s4z/9cxiLmfM8Ljpg0cwu63heESAP1fMe19C+PdM6/ziFmTnTruXcRh+ofwl1Kn4USOEOzhEJO37tEj27Wf0fJAt1Iqz6f8y62WItu1u+44lc/vbhY/jIDiG6i5PADK66N7gtq4igd9weJrFLyp1xXboAqlwzFcqAdigeWs18v00heq6h4hegEPKAkY73TSR6bNWASi5kiXdWbrSZoOzMF/GN9OwFpoSemZ5GLCE8NjR1rzJ4LGpSOLCt0BgJgOAF4E+I7buq6+xT/y5XaStyo4Oqs4iRMCWjOsLUk+RxDtJTfny1SJoGvPGuPgr7fohadQnqOWYmOW8yorwrnnWGLWWu7e441cdPdHbfVfcL9VzOxpYD0MXSh6UgEaFtJTYbCgIhhMNXaAXqF+oDoJiO5EJeK6d51OUVibVq1is5sI7hukCkgMq3nl5mnhffWHvVchGZWp0YLfzxplngNcllm18F6LM0Yl51HODx93ytyXS+clBhj4ZtHFbLmwMJk1Tg3MXQUb9UF7DBj0geZGQs60xxRrjq4I7d5USfsBAwgTFNBmQuXo4kRfJX1pTq3ivlcI8cmXjtvdZ/t6G/6I3RE4+WCzi0Rn5oRQq2mmZ31BPVNeh/LB1x1yee/tiTrUFl1xVie/A6EJ8lVaEn4yBWmr2+/UEmhnrdrbLZV4JN5xWdV+bf6T/wenLUPek8+WIcR6sRd+PnKy1vMUSdXEo+KdcXUPafoqPlSaYM45cZEtpUE2bGDPr+hYHo6jK2aQAFElRwOiKk/Vx7KHkLJtAnsSbeqj1VBFnC/HV6K6JKDL3uuPZ3GAEp2SK5MW0DDXG1RmCzCRvgPxUsReFfzmfOtNHKPlA7EJCLfkb/Us/Zn4BMDvCUvaXGsI60nWxlty7Stj3WYPcc8fVTbC88ps4R+TFOeLtI/al/0Vi08KzlB+8ZxsVA4VT3E6y06yh3jdNMYLR9AXZOW6ZpLrB0lokRJ0VdgW5mKfw/2a5aFD3f1gC29U9kvb/d5KyfFNR2pA4hHGOqAv/uUFYxQsj3FN/gk2PVlwaupF8h7WaRb9SXKQlJqVufzBgB"}        }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0              }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"391"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" ="}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" 17 × 23, so"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" it isn't prime,"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" and I checked Rome."}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" The"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" we"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ather tool returned data"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" for Paris ("}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"18 °"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"C, cloudy), not"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Rome, so I don"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"'t have Rome's act"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ual conditions. Going"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" by that"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Paris result"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", which"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" may"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" not apply,"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" it"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"'s"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" cloudy with"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" no rain re"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ported, so you"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" probably don't need an umb"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"rella. I can ret"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ry the"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Rome lookup if you want"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" to"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" be"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" sure."}              }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1     }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":631,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":258,"output_tokens_details":{"thinking_tokens":127}}               }
+
+event: message_stop
+data: {"type":"message_stop"         }
+

@@ -1,0 +1,75 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-sonnet-5-5","id":"msg_011CfwwFSRDZwvDS9YyagEea","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":789,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":8,"service_tier":"standard","inference_geo":"global"},"diagnostics":null}      }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}   }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":""}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"CAQS8AUKEAgSGAI4AUIIdGhpbmtpbmcSDHeGf8n/oAB1xTftoxoMoGBQxENWKoWskuNeIjAFloInXuHEX2uR2q0jjP4bwJ7pVNFIbF342jrFAQroX7vN6I0Az+c2k0vcEeCumDIqjQUT57gG4I9kO+6oIvoYbanG2aj6hl6s5AHIGOJ6ov5niclpYsZOd/mHmyMN9voVgGrRZaAmCFZsmWrQeZoWT5dJ6EjZoFb4zPifctGdjzrlSsCjFukPfV/5Q3FiYclp2herQxfblTjSnOsbNQSbyPH3paO4L2/wWZLTMdeT7GWhv6hVAG1sMdiCIKifOWsGj/hvYoq3yZGGW6D1Ho157axIT6W3tdMLOTdVYsoaLGNxYLq9gN/tPmL70l3w9l/fbEGisYPRUU6TkkYvN4XVLJYAQlzlSbKJph64O/gvJURJWoazoMJJSiU7sOtV3hNnc3/HfVUtDr3y6H85mlURqOJK/8+G/Mtdohi1/CKVJ+qKMQLO673AIMg15bA2aFGdvJipI4LQFCUR+iRfMnLmpu9v0DJ8YaHBd2dThcAmYnfTmvnDJ9zLFTCIpudLVEu95YVuT4OJum1ldf3vm67oJq/O6pvR6OzGBoqMJcbZCK7Ecz+jn8Y7MNF0a4jpAluKoPDldfN4q4cVnCnQZiHjRqPs7wBH0EC6KIRMfZfBYx4ARkKHQU7ISWrtMhgpsj3YiewGWSQnnglZhFbgq0e/or/l0Fwd9ZVm4VdIykG7fqvopPu+S05TY8q7if3/poevJBka7QVhyUhB3Mi7pTW3IdicHyYzf/1BxSqpR8jVGN3cGbhKmLm+AagO5FBW525Hipd0jxr42JkSOYLcOnxCygVHe3T9PdmpbzWE1xZl3VzqEpCJAJk/oz5wXOun74fhqLHT0E9KkosLineBPRyOhJuM1FU7blm3mwUUW0TQ0cMO3nNWdtXwpLirjMa2Sah4KaPyiYzuCuGbyBjrwTLzXWNZrEL7ypnZJXvDX1vIGRgB"}     }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0     }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"19 ×"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" 21 (399"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":") is larger than 17 "} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"× 23 (391), so"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" I asked for Rome's"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" weather. The tool returned"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" data"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" lab"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"eled Paris (18 "}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"°C, cloudy),"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" so I don"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"'t have a"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" reliable Rome reading"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", and the current UTC time"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" is 14:05."}  }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1      }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":789,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":117,"output_tokens_details":{"thinking_tokens":29}}        }
+
+event: message_stop
+data: {"type":"message_stop"  }
+
