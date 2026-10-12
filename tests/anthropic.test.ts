@@ -606,6 +606,15 @@ describe('the outcome table (E-11 l.20-28)', () => {
     // InferenceToolCallsSchema, also refuses an empty list, so the proof drops both).
     expect(await message(map(answer('tool_use')))).toBe('PROVIDER_INVALID_RESPONSE');
   });
+
+  test('a directly built fold whose joined text is over 2,000,000 characters is PROVIDER_RESPONSE_TOO_LARGE (2,000,000 complete)', () => {
+    // The reader bounds streamed text; the outcome is pure and keeps the same bound and code for a fold built directly.
+    // Guard: completion() checks the content length (mutation: delete that line; CompletionSchema then refuses the answer
+    // as PROVIDER_INVALID_RESPONSE instead).
+    const text = (length: number) => folded({ type: 'text', text: 'a'.repeat(length) });
+    expect(anthropicOutcome(foldOf([text(1_000_000), text(1_000_000)], 'end_turn'), check()).content).toHaveLength(2_000_000);
+    expect(() => anthropicOutcome(foldOf([text(1_000_000), text(1_000_001)], 'end_turn'), check())).toThrow('PROVIDER_RESPONSE_TOO_LARGE');
+  });
 });
 
 describe('usage', () => {
