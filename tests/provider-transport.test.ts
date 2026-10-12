@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { validateEndpoint, readBoundedJson, complete, inferenceErrorCode, type InferenceMessage } from '../src/main/inference';
-import { CompletionSchema, FromEngineSchema, ToEngineSchema } from '../src/engine/control';
+import { CompletionSchema, FromEngineSchema, PROVIDER_STATE_MAX, ProviderStateSchema, ToEngineSchema } from '../src/engine/control';
 import { PublicErrorSchema, type ToolSpec } from '../src/shared';
 import { safeError } from '../src/main/bridge';
 
@@ -217,6 +217,42 @@ test('control messages admit bounded canonical tool data and reject wire fields'
   for (const result of [{ content: '', outcome: 'tool_calls' }, { content: '', outcome: 'tool_calls', toolCalls: [] }, { content: '', outcome: 'incomplete', toolCalls: [call] }, { content: '', outcome: 'tool_calls', toolCalls: [call, call] }, { content: 'x'.repeat(2_000_001), outcome: 'complete' }]) {
     expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.result', result }).success).toBe(false);
   }
+});
+
+test('provider state rides only on an assistant tool step and a tool-call outcome, bounded and strict (More models Phase 2, U0)', () => {
+  // docs/specification/more-models-phase2.md section 1. Guards: each refine and each field bound (mutations: drop the
+  // message refine, drop the completion refine, loosen the format pattern, drop the data bounds, drop .strict()).
+  const state = { format: 'anthropic-messages@1', appendOnly: true, data: '{"content":[]}' };
+  const tool = { role: 'tool', content: 'text', toolCallId: call.id, toolName: call.name };
+  const event = { epoch: 'e1', id: 'q1', type: 'inference', runId: 'r1', messages: [{ role: 'assistant', content: '', toolCalls: [call], providerState: state }, tool], tools };
+  expect(FromEngineSchema.safeParse(event).success).toBe(true);
+  const refused: unknown[] = [
+    [{ role: 'user', content: 'x', providerState: state }],
+    [{ role: 'system', content: 'x', providerState: state }],
+    [{ role: 'assistant', content: 'answer', providerState: state }],
+    [{ role: 'assistant', content: '', toolCalls: [call] }, { ...tool, providerState: state }],
+    ...[{ ...state, data: '' }, { ...state, data: 'x' }, { ...state, data: 'x'.repeat(PROVIDER_STATE_MAX + 1) },
+      { ...state, format: 'Anthropic-messages@1' }, { ...state, format: 'anthropic-messages' }, { ...state, format: 'anthropic-messages@0' },
+      { ...state, format: 'anthropic-messages@1000' }, { ...state, format: `a${'b'.repeat(48)}@1` },
+      { format: state.format, data: state.data }, { ...state, appendOnly: 'yes' }, { ...state, extra: 1 }]
+      .map(bad => [{ role: 'assistant', content: '', toolCalls: [call], providerState: bad }, tool]),
+  ];
+  for (const messages of refused) expect(FromEngineSchema.safeParse({ ...event, messages }).success).toBe(false);
+  expect(FromEngineSchema.safeParse({ ...event, messages: [{ role: 'assistant', content: '', toolCalls: [call], providerState: { ...state, data: 'x'.repeat(PROVIDER_STATE_MAX) } }, tool] }).success).toBe(true);
+  expect(ProviderStateSchema.safeParse({ ...state, format: `a${'b'.repeat(47)}@999` }).success).toBe(true);
+  const result = { content: '', outcome: 'tool_calls', toolCalls: [call], providerState: state };
+  expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.result', result }).success).toBe(true);
+  for (const outcome of ['complete', 'incomplete', 'blocked']) {
+    expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.result', result: { content: 'x', outcome, providerState: state } }).success).toBe(false);
+  }
+});
+
+test('a protocol refusal in main crosses into the engine as PROVIDER_PROTOCOL_ERROR (More models Phase 2, U0)', () => {
+  // A secret in a tool call (src/main/index.ts) or, from Phase 2, in a tool step's provider state fails the step in main;
+  // the engine shows that code's own message. Guards: the enum value; inferenceErrorCode's pass-through.
+  expect(ToEngineSchema.safeParse({ epoch: 'e1', id: 'q1', type: 'inference.error', code: 'PROVIDER_PROTOCOL_ERROR' }).success).toBe(true);
+  expect(inferenceErrorCode(new Error('PROVIDER_PROTOCOL_ERROR'))).toBe('PROVIDER_PROTOCOL_ERROR');
+  expect(inferenceErrorCode(new Error('PROVIDER_INVALID_RESPONSE'))).toBe('PROVIDER_ERROR');
 });
 
 // docs/research/2026-09-29-context-overflow: Ollama truncates silently when `truncate` and

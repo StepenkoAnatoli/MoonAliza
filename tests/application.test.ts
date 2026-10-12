@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
+import { EventSchema } from '../src/shared/events';
 import { Store } from '../src/engine/store';
 import { Application } from '../src/engine/application';
 
@@ -238,3 +239,63 @@ test.each([
   expect(store.latestRunEvent(session.id, 'tool.failed')).toMatchObject({ error: { code: expectedCode, message: result.message } });
   expect(result.message).not.toContain(store.getProject('p1')!.rootPath);
 });
+
+// More models Phase 2, U0 (docs/specification/more-models-phase2.md sections 1, 2 and 8; REQUIREMENTS-P2 F-1, F-2, S-2, T-6).
+// The markers are base64-alphabet only, so JSON never escapes them at any depth, and they sit only in the state's thinking
+// text and signature: its text and tool_use input become the stored content and calls by design. The state is under 1 KiB,
+// so a row holding it fits on one page and a scan cannot miss a marker split across overflow pages.
+const THINKING_MARKER = 'VGhpbmtpbmdNYXJrZXJQaGFzZTJVMA';
+const SIGNATURE_MARKER = 'U2lnbmF0dXJlTWFya2VyUGhhc2UyVTA';
+const markedState = {
+  format: 'anthropic-messages@1', appendOnly: true,
+  data: JSON.stringify({ content: [{ type: 'thinking', thinking: THINKING_MARKER, signature: SIGNATURE_MARKER }, { type: 'tool_use', id: 'state-list', name: 'list_files', input: { path: '.' } }] }),
+};
+
+test('a tool step\'s provider state goes back on the next step of its run and never reaches disk, events or session.read', async () => {
+  // Guards: the strip in message() (mutation: store the value as given); the carry at the tool step (mutation: build the
+  // assistant message without providerState); the scan itself (mutation: copy the state into the message.created
+  // payload's content string, which EventSchema still accepts - the scan must go red).
+  const { store, root } = fixture(); const published: unknown[] = []; let steps = 0;
+  const app = new Application(store, { publish(event) { published.push(event); }, async infer(_run, messages) {
+    steps++;
+    if (steps === 1) return { content: '', outcome: 'tool_calls', toolCalls: [{ id: 'state-list', name: 'list_files', input: { path: '.' } }], providerState: markedState };
+    const assistant = messages.find(message => message.role === 'assistant' && message.toolCalls?.length);
+    expect(assistant?.providerState).toEqual(markedState);
+    return { content: 'Listed.', outcome: 'complete' };
+  } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const { run } = await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'List the files.' }, 'start')) as { run: { id: string } };
+  await app.whenIdle();
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(steps).toBe(2);
+  for (const name of ['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm']) {
+    const file = join(root, name); if (!existsSync(file)) continue;
+    const bytes = readFileSync(file);
+    expect(bytes.includes(Buffer.from(THINKING_MARKER)), name).toBe(false);
+    expect(bytes.includes(Buffer.from(SIGNATURE_MARKER)), name).toBe(false);
+  }
+  const read = JSON.stringify(await app.handle(request('session.read', { sessionId: session.id }, 'read')));
+  for (const text of [read, JSON.stringify(published)]) {
+    expect(text).not.toContain(THINKING_MARKER); expect(text).not.toContain(SIGNATURE_MARKER); expect(text).not.toContain('providerState');
+  }
+  const created = published.filter(event => (event as { type?: string }).type === 'message.created');
+  expect(created.length).toBeGreaterThan(0);
+  for (const event of created) expect(EventSchema.safeParse(event).success).toBe(true);
+});
+
+test('a protocol refusal from main, and the engine\'s own unoffered-call check, end the run with the widened message', async () => {
+  // Spec section 6 and REQUIREMENTS-P2 F-23: one shared text for every cause of PROVIDER_PROTOCOL_ERROR, never retried.
+  const widened = 'The provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.';
+  for (const infer of [
+    async () => { throw new Error('PROVIDER_PROTOCOL_ERROR'); },
+    async () => ({ content: '', outcome: 'tool_calls' as const, toolCalls: [{ id: 'unoffered', name: 'not_a_tool', input: {} }] }),
+  ]) {
+    const { store } = fixture();
+    const app = new Application(store, { publish() {}, infer });
+    const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+    await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'hello' }, 'start'));
+    await app.whenIdle();
+    const result = await app.handle(request('session.read', { sessionId: session.id }, 'read')) as { failure: { code: string; message: string; retry: string } };
+    expect(result.failure).toEqual({ code: 'PROVIDER_PROTOCOL_ERROR', message: widened, retry: 'never' });
+  }
+});
+

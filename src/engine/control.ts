@@ -75,17 +75,33 @@ export const BoundedJsonObjectSchema = z.custom<JsonObject>((value: unknown): va
 export const InferenceToolCallSchema = ToolCallSchema.extend({ input: BoundedJsonObjectSchema }).refine(call => call.inputError === undefined, 'Invalid arguments cannot be submitted for execution');
 export const InferenceToolCallsSchema = z.array(InferenceToolCallSchema).min(1).max(128).refine(calls => new Set(calls.map(call => call.id)).size === calls.length, 'Duplicate tool call identity');
 export const InferenceToolsSchema = z.array(ToolSpecSchema.extend({ name: z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/), parameters: BoundedJsonObjectSchema })).max(128).refine(tools => new Set(tools.map(tool => tool.name)).size === tools.length, 'Duplicate tool declaration');
+/**
+ * Adapter-owned continuation state (docs/specification/more-models-phase2.md section 1): one per assistant tool step,
+ * held in the run's memory only, never stored, published or shown. Only the adapter whose kind owns `format` parses
+ * `data`; `appendOnly` marks state the vendor binds to an unchanged request prefix (wire E-12).
+ */
+export const PROVIDER_STATE_MAX = 4 * 1024 * 1024; // characters: the stream cap (src/main/provider-stream.ts)
+export const PROVIDER_STATE_FORMATS = { anthropic: 'anthropic-messages@1' } as const;
+export const ProviderStateSchema = z.object({
+  format: z.string().regex(/^[a-z][a-z0-9-]{0,47}@[1-9][0-9]{0,2}$/),
+  appendOnly: z.boolean(),
+  data: z.string().min(2).max(PROVIDER_STATE_MAX),
+}).strict();
+export type ProviderState = z.infer<typeof ProviderStateSchema>;
 export const InferenceMessageSchema = z.object({
   role: z.enum(['system', 'user', 'assistant', 'tool']), content: z.string().max(2_000_000),
   toolCalls: InferenceToolCallsSchema.optional(), toolCallId: IdSchema.optional(), toolName: z.string().min(1).max(128).optional(),
+  providerState: ProviderStateSchema.optional(),
 }).strict().refine(message => {
   if (message.role === 'tool') return message.toolCallId !== undefined && message.toolCalls === undefined;
   if (message.toolCallId !== undefined || message.toolName !== undefined) return false;
   return message.role === 'assistant' || message.toolCalls === undefined;
-}, 'Tool data does not match the message role');
+}, 'Tool data does not match the message role')
+  .refine(message => message.providerState === undefined || (message.role === 'assistant' && message.toolCalls !== undefined), 'Provider state belongs to an assistant tool step');
 export const InferenceMessagesSchema = z.array(InferenceMessageSchema).max(1000);
-export const CompletionSchema = z.object({ content: z.string().max(2_000_000), outcome: z.enum(['complete', 'incomplete', 'blocked', 'tool_calls']), toolCalls: InferenceToolCallsSchema.optional(), usage: TokenUsageSchema.optional() }).strict()
-  .refine(result => result.outcome === 'tool_calls' ? result.toolCalls !== undefined : result.toolCalls === undefined, 'Only complete tool-call outcomes may contain executable calls');
+export const CompletionSchema = z.object({ content: z.string().max(2_000_000), outcome: z.enum(['complete', 'incomplete', 'blocked', 'tool_calls']), toolCalls: InferenceToolCallsSchema.optional(), usage: TokenUsageSchema.optional(), providerState: ProviderStateSchema.optional() }).strict()
+  .refine(result => result.outcome === 'tool_calls' ? result.toolCalls !== undefined : result.toolCalls === undefined, 'Only complete tool-call outcomes may contain executable calls')
+  .refine(result => result.providerState === undefined || result.outcome === 'tool_calls', 'Provider state belongs to a tool-call outcome');
 const identity = { epoch: id, id };
 export const ToEngineSchema = z.discriminatedUnion('type', [
   z.object({ ...identity, type: z.literal('github.result'), result: z.string().max(262144) }).strict(),
@@ -93,7 +109,7 @@ export const ToEngineSchema = z.discriminatedUnion('type', [
   z.object({ ...identity, type: z.literal('request'), request: RequestSchema }).strict(),
   z.object({ ...identity, type: z.literal('control'), control: ControlSchema }).strict(),
   z.object({ ...identity, type: z.literal('inference.result'), result: CompletionSchema }).strict(),
-  z.object({ ...identity, type: z.literal('inference.error'), code: z.enum(['RUN_CANCELLED', 'PROVIDER_ERROR', 'CONTEXT_LIMIT', 'LOCAL_MODEL_UNVERIFIED']) }).strict(),
+  z.object({ ...identity, type: z.literal('inference.error'), code: z.enum(['RUN_CANCELLED', 'PROVIDER_ERROR', 'CONTEXT_LIMIT', 'LOCAL_MODEL_UNVERIFIED', 'PROVIDER_PROTOCOL_ERROR']) }).strict(),
   z.object({ ...identity, type: z.literal('command.prepared'), result: CommandPlanSchema }).strict(),
   z.object({ ...identity, type: z.literal('command.result'), result: CommandResultSchema }).strict(),
   z.object({ ...identity, type: z.literal('research.tool.result'), result: ReviewToolResultSchema }).strict(),

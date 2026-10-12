@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
-import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, InferenceToolsSchema, InferenceToolCallsSchema } from '../engine/control';
+import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, InferenceToolsSchema, InferenceToolCallsSchema, type ProviderState } from '../engine/control';
 import { IdSchema, type ToolCall, type ToolSpec } from '../shared';
 import { TokenUsageSchema, type TokenUsage } from '../shared/context';
 import { OllamaAccumulator, OpenAIAccumulator, readNdjson, readSse } from './provider-stream';
 
 export type ProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama';
 export interface InferenceProfile { kind: ProviderKind; endpoint: string; model: string; outputTokens: number; contextTokens?: number }
-export interface InferenceMessage { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; toolCalls?: ToolCall[]; toolCallId?: string; toolName?: string }
-export interface Completion { content: string; outcome: 'complete' | 'incomplete' | 'blocked' | 'tool_calls'; toolCalls?: ToolCall[]; usage?: TokenUsage }
+export interface InferenceMessage { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; toolCalls?: ToolCall[]; toolCallId?: string; toolName?: string; providerState?: ProviderState }
+export interface Completion { content: string; outcome: 'complete' | 'incomplete' | 'blocked' | 'tool_calls'; toolCalls?: ToolCall[]; usage?: TokenUsage; providerState?: ProviderState }
 export type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 
 export function validateEndpoint(kind: ProviderKind, value: string): { endpoint: string; locality: 'local' | 'external' } {
@@ -87,16 +87,17 @@ function parseCalls(raw: unknown, local: boolean, tools: ToolSpec[], usedIds: Se
 function hasCalls(raw: unknown): boolean { return raw !== undefined && (!Array.isArray(raw) || raw.length > 0); }
 
 /**
- * The code an inference failure crosses into the engine with. Only an overflow is told apart:
- * the engine already explains CONTEXT_LIMIT to the user. Everything else stays PROVIDER_ERROR,
- * as it always crossed - RUN_CANCELLED included, whose passage would change how a run that lost
- * its trust or policy mid-flight is reported, a separate decision. LOCAL_MODEL_UNVERIFIED (a local
- * Ollama that may send prompts to its cloud, refused under a local-only policy before any prompt
- * byte; docs/specification/more-models.md) crosses too, so the user is told how to fix it.
+ * The code an inference failure crosses into the engine with. Three are told apart, each because the engine has its
+ * own message for it: CONTEXT_LIMIT (an overflow); LOCAL_MODEL_UNVERIFIED (a local Ollama that may send prompts to its
+ * cloud, refused under a local-only policy before any prompt byte; docs/specification/more-models.md); and
+ * PROVIDER_PROTOCOL_ERROR (a step main refuses to hand over - a secret in a tool call or in a tool step's provider
+ * state; docs/specification/more-models-phase2.md section 6). Everything else stays PROVIDER_ERROR, as it always
+ * crossed - RUN_CANCELLED included, whose passage would change how a run that lost its trust or policy mid-flight is
+ * reported, a separate decision.
  */
-export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'LOCAL_MODEL_UNVERIFIED' | 'PROVIDER_ERROR' {
+export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'LOCAL_MODEL_UNVERIFIED' | 'PROVIDER_PROTOCOL_ERROR' | 'PROVIDER_ERROR' {
   const reason = error instanceof Error ? error.message : '';
-  return reason === 'CONTEXT_LIMIT' || reason === 'LOCAL_MODEL_UNVERIFIED' ? reason : 'PROVIDER_ERROR';
+  return reason === 'CONTEXT_LIMIT' || reason === 'LOCAL_MODEL_UNVERIFIED' || reason === 'PROVIDER_PROTOCOL_ERROR' ? reason : 'PROVIDER_ERROR';
 }
 
 // Providers do not share one overflow code. Accept known structured codes and the
@@ -143,7 +144,7 @@ async function readStreamed(response: Response, local: boolean): Promise<unknown
 }
 
 /** The caller supplies the correct main-owned network session and obtains credentials from the vault. */
-export async function complete(profile: InferenceProfile, messages: InferenceMessage[], options: { fetcher: Fetcher; secret?: string; signal: AbortSignal; tools?: ToolSpec[]; managedOllama?: { numGpu: 0; keepAlive: -1 } }): Promise<Completion> {
+export async function complete(profile: InferenceProfile, messages: InferenceMessage[], options: { fetcher: Fetcher; secret?: string; signal: AbortSignal; tools?: ToolSpec[]; managedOllama?: { numGpu: 0; keepAlive: -1 }; /** Default true: the kind's retry rule applies. false: never retry; the first refusal surfaces (more-models-phase2.md section 4). */ retry?: boolean }): Promise<Completion> {
   if (options.signal.aborted) throw new Error('RUN_CANCELLED');
   const { endpoint } = validateEndpoint(profile.kind, profile.endpoint);
   if (!profile.model || !Number.isInteger(profile.outputTokens) || profile.outputTokens < 1) throw new Error('INVALID_PROFILE');
