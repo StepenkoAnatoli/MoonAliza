@@ -1,0 +1,18 @@
+{
+  "topic": "OrchestratorInc agent-orchestrator: architecture, licence",
+  "notes": "Run 1 of 2, a probe of one page: the repository's own landing page, which shows whether the repository exists and is public, and its About text, licence label, language mix, release count and file list. Run 2 (research/plan-2.json) names the README, LICENSE, releases and docs URLs only after this page shows they exist, so no credit is spent on a guessed path. Budget: at most 15 credits for the project; decompose spent 4 (2 searches; neither found this repository). A 404 here is the finding (U-01) and stops the project.",
+  "depth": "probe",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 1,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://github.com/OrchestratorInc/agent-orchestrator",
+      "type": "P",
+      "why": "U-01, U-03, U-05, U-06: whether the repository exists and is public, its About line, licence label, language mix, releases and file list"
+    }
+  ]
+}

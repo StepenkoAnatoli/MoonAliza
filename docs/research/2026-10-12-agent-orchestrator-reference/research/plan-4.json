@@ -1,0 +1,18 @@
+{
+  "topic": "OrchestratorInc agent-orchestrator: architecture, licence",
+  "notes": "Run 4, one page, after review: the project configuration page, linked from the run-2 capture of the agent adapters page (research/raw/2026-10-12-agent-adapters-agent-orchestrator-docs-orchestrator-47b53714.md, line 119, 'full-config warning' -> configuration/projects/#update-from-the-cli). It owns the project-level fields (default worker agent, model, effort), which decides U-04: whether AO keeps a project default model beside the per-session picker, and whether the orchestrator agent picks models for the workers it spawns. Spent before this run: 12 credits; this run 1, leaving 2 under the 15-credit cap.",
+  "depth": "probe",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 1,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.orchestrator.inc/configuration/projects/",
+      "type": "P",
+      "why": "U-04: project-level model and effort defaults, and how the orchestrator and worker agents are configured"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "topic": "OrchestratorInc agent-orchestrator: architecture, licence",
+  "notes": "Run 2 of 2: six owner pages, every URL copied from the run-1 capture of the repository page (research/raw/2026-10-12-github-orchestratorinc-agent-orchestrato-github-03a93e25.md), so none is a guessed path. The README is not re-fetched: the repository page renders it in full. Spent before this run: 5 credits (decompose 4, run 1 1); this run at most 6, leaving 4 under the 15-credit cap for one follow-up page if a capture names a decisive one.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 6,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://raw.githubusercontent.com/OrchestratorInc/agent-orchestrator/main/LICENSE",
+      "type": "P",
+      "why": "U-06: the licence text and its conditions"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OrchestratorInc/agent-orchestrator/main/docs/architecture.md",
+      "type": "P",
+      "why": "U-02, U-03: backend model, lifecycle, persistence, status derivation and daemon boundaries"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/OrchestratorInc/agent-orchestrator/main/docs/STATUS.md",
+      "type": "P",
+      "why": "U-05, U-02: what ships on main and what is in flight"
+    },
+    {
+      "url": "https://github.com/OrchestratorInc/agent-orchestrator/releases",
+      "type": "P",
+      "why": "U-05: current release, dates and cadence"
+    },
+    {
+      "url": "https://docs.orchestrator.inc/plugins/agents",
+      "type": "P",
+      "why": "U-04: how coding agents are plugged in and set up, and the capability matrix"
+    },
+    {
+      "url": "https://docs.orchestrator.inc/installation",
+      "type": "P",
+      "why": "U-03: platform requirements, Windows install and agent CLI setup"
+    }
+  ]
+}

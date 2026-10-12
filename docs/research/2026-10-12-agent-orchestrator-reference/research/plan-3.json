@@ -1,0 +1,18 @@
+{
+  "topic": "OrchestratorInc agent-orchestrator: architecture, licence",
+  "notes": "Run 3, one page: the product's Platforms page, linked from the run-2 capture of the installation guide (research/raw/2026-10-12-installation-agent-orchestrator-docs-orchestrator-0599b058.md, 'Review platform downloads and terminal behavior'). It decides U-03 for Windows, which Moonzila's acceptance platform is; the README and installation guide only show that a Windows installer exists. Spent before this run: 11 credits; this run 1, leaving 3 under the 15-credit cap unspent.",
+  "depth": "probe",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 1,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.orchestrator.inc/platforms/",
+      "type": "P",
+      "why": "U-03: which platforms are supported and how Windows terminal sessions and agents behave"
+    }
+  ]
+}
