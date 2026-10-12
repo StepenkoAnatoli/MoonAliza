@@ -466,15 +466,25 @@ test('openai-responses has no adapter: NOT_IMPLEMENTED with no fetch (F-4)', asy
 test.each(['openai-compatible', 'ollama'] as const)('a Stop that lands while a %s answer is read wins over an answer the outcome refuses', async kind => {
   // The cancellation re-check sits after the read and before the outcome (more-models-phase2.md section 4: `part.read`,
   // the re-check, `part.outcome`). The answer reads cleanly and only its outcome refuses it (a call to a tool that was not
-  // offered). Mutation: move the re-check after the outcome; the call then fails as PROVIDER_INVALID_RESPONSE.
+  // offered). The Stop lands inside the read: the body is pull-based with highWaterMark 0, so it is pulled only when the
+  // part reads it, and the pull presses Stop before it hands the answer over. Mutations: move the re-check after the
+  // outcome, or before the read (between post() and part.read); either way the call fails as PROVIDER_INVALID_RESPONSE.
   const controller = new AbortController();
   const target = kind === 'ollama' ? ollamaProfile : chatProfile;
   const unoffered = kind === 'ollama'
     ? { message: { content: '', tool_calls: [{ function: { name: call.name, arguments: call.input } }] }, done: true, done_reason: 'stop' }
     : { choices: [{ message: { content: null, tool_calls: [openaiCall] }, finish_reason: 'tool_calls' }] };
-  const fetcher = async () => { controller.abort(); return Response.json(unoffered); };
+  let stoppedBeforeRead: boolean | undefined;
+  const fetcher = async () => new Response(new ReadableStream<Uint8Array>({
+    pull(stream) {
+      stoppedBeforeRead ??= controller.signal.aborted;
+      controller.abort();
+      stream.enqueue(new TextEncoder().encode(JSON.stringify(unoffered))); stream.close();
+    },
+  }, { highWaterMark: 0 }));
   await expect(complete(target, [{ role: 'user', content: 'hello' }], { fetcher: async () => Response.json(unoffered), signal: signal() })).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
   await expect(complete(target, [{ role: 'user', content: 'hello' }], { fetcher, signal: controller.signal })).rejects.toThrow('RUN_CANCELLED');
+  expect(stoppedBeforeRead, 'Stop was not pressed before the read began').toBe(false);
 });
 
 test.each(['openai-compatible', 'ollama'] as const)('a %s request still aborts at 120 s and not before (F-22 pin)', async kind => {
@@ -566,6 +576,37 @@ test('complete() arms one deadline timer once every pre-check has passed, and cl
     expect(vi.getTimerCount(), 'cleared once the call completes').toBe(0);
     await expect(complete(chatProfile, [{ role: 'user', content: 'hello' }], { signal: signal(), fetcher: async () => new Response('busy', { status: 503 }) })).rejects.toThrow('PROVIDER_HTTP_503');
     expect(vi.getTimerCount(), 'cleared once the call fails').toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test.each(['openai-compatible', 'ollama'] as const)('the deadline also bounds the read: a %s body that stalls after its headers ends at 120 s (F-22)', async kind => {
+  // The deadline timer is cleared in a finally around post(), part.read and part.outcome (more-models-phase2.md
+  // section 4). The fake answers 200 with its headers at once and then sends nothing; like a fetch body, it errors with
+  // the request signal's reason when that signal aborts. Mutation: clear the timer as soon as post() returns; the read
+  // then waits past 120 s.
+  vi.useFakeTimers();
+  try {
+    let fetched = 0;
+    const fetcher = async (_url: string, init: RequestInit) => {
+      fetched += 1;
+      const request = init.signal!;
+      return new Response(new ReadableStream<Uint8Array>({
+        start(stream) { request.addEventListener('abort', () => stream.error(request.reason), { once: true }); },
+      }), { headers: { 'Content-Type': kind === 'ollama' ? 'application/x-ndjson' : 'text/event-stream' } });
+    };
+    const target = kind === 'ollama' ? ollamaProfile : chatProfile;
+    let settled = false;
+    const outcome = complete(target, [{ role: 'user', content: 'hello' }], { fetcher, signal: signal() })
+      .then(() => 'resolved', (error: unknown) => error).finally(() => { settled = true; });
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(fetched, 'the headers came back').toBe(1);
+    expect(settled, 'still reading before 120 s').toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled, 'ended at 120 s').toBe(true);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(DOMException);
+    expect((error as DOMException).name).toBe('TimeoutError');
+    expect(vi.getTimerCount()).toBe(0);
   } finally { vi.useRealTimers(); }
 });
 
