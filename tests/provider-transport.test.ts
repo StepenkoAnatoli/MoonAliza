@@ -597,7 +597,7 @@ const answerWith = (status: number, log: string[], label: string, text = `body $
   start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); },
   cancel() { log.push(`cancelled ${label}`); },
 }), { status });
-function posting(part: PostPart, statuses: number[], options: { retry?: boolean; timeoutMs?: number; stop?: AbortController; texts?: string[] } = {}) {
+function posting(part: PostPart, statuses: number[], options: { retry?: boolean; timeoutMs?: number; stop?: AbortController; deadline?: AbortController; texts?: string[] } = {}) {
   const log: string[] = []; let fetches = 0;
   const stop = options.stop ?? new AbortController();
   const fetcher = async () => {
@@ -606,8 +606,10 @@ function posting(part: PostPart, statuses: number[], options: { retry?: boolean;
     return answerWith(status, log, String(fetches), text);
   };
   let settled = false;
-  const outcome = post(fetcher, 'https://model.example/v1/x', { headers: { 'Content-Type': 'application/json' }, body: '{}', signal: stop.signal, stop: stop.signal, deadline: Date.now() + (options.timeoutMs ?? 600_000), retry: options.retry ?? true }, part)
-    .then(response => ({ status: response.status }), (error: unknown) => ({ error: (error as Error).message }))
+  // With a deadline controller, `signal` is Stop joined with it and `stop` is Stop alone, as complete() passes them.
+  const joined = options.deadline ? AbortSignal.any([stop.signal, options.deadline.signal]) : stop.signal;
+  const outcome = post(fetcher, 'https://model.example/v1/x', { headers: { 'Content-Type': 'application/json' }, body: '{}', signal: joined, stop: stop.signal, deadline: Date.now() + (options.timeoutMs ?? 600_000), retry: options.retry ?? true }, part)
+    .then(response => ({ status: response.status }), (error: unknown) => ({ error: (error as Error).message, ...(error instanceof DOMException ? { name: error.name } : {}) }))
     .finally(() => { settled = true; });
   return { log, outcome, stop, fetched: () => fetches, settled: () => settled };
 }
@@ -661,11 +663,15 @@ test('post() takes a wait only if it ends before the call\'s deadline (F-14, F-2
   } finally { vi.useRealTimers(); }
 });
 
-test('Stop during a retry wait ends the call as RUN_CANCELLED with no further fetch (F-14)', async () => {
-  // Guard: the wait listens for the abort (mutation: a plain setTimeout wait; the call then fetches again after Stop).
+test('Stop during a retry wait ends the call as RUN_CANCELLED with no further fetch; the deadline there ends it as itself (F-14)', async () => {
+  // Each run gets its own deadline controller, so `signal` (Stop joined with the deadline) and `stop` differ, as in
+  // complete(). Guards: the wait listens for the abort (mutation: a plain setTimeout wait; the call then fetches again
+  // after Stop); the wait tells Stop from the deadline by the caller's own signal (mutation: pass `request.signal` to
+  // pause() as its stop signal; the deadline then reads as RUN_CANCELLED). The deadline comparison keeps a wait from
+  // reaching the deadline, so the second run aborts the deadline controller by hand during the wait.
   vi.useFakeTimers();
   try {
-    const run = posting(retrying([1000]), [503, 200]);
+    const run = posting(retrying([1000]), [503, 200], { deadline: new AbortController() });
     await vi.advanceTimersByTimeAsync(500);
     run.stop.abort();
     await vi.advanceTimersByTimeAsync(0);
@@ -674,6 +680,34 @@ test('Stop during a retry wait ends the call as RUN_CANCELLED with no further fe
     await vi.advanceTimersByTimeAsync(5000);
     expect(run.fetched()).toBe(1);
     expect(vi.getTimerCount()).toBe(0);
+
+    const deadline = new AbortController();
+    const late = posting(retrying([1000]), [503, 200], { deadline });
+    await vi.advanceTimersByTimeAsync(500);
+    deadline.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late.settled(), 'the deadline ends the wait').toBe(true);
+    expect(await late.outcome).toMatchObject({ name: 'TimeoutError' });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(late.fetched()).toBe(1);
+    expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test.each([Number.NaN, -1])('post() treats a retry delay of %s as no delay: the refusal surfaces at once, with no retry (F-14)', async delay => {
+  // A delay that is not a non-negative number is no delay. Guard: `!(delay >= 0)` in post() (mutation: drop it; a NaN or
+  // negative wait fires at once, so the refused request is sent again).
+  vi.useFakeTimers();
+  try {
+    const part = retrying([delay, delay]);
+    const run = posting(part, [503, 200]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run.settled(), 'settled at once').toBe(true);
+    expect(await run.outcome).toEqual({ error: 'PROVIDER_HTTP_503' });
+    expect(run.fetched()).toBe(1);
+    expect(run.log).toEqual(['fetch 1 503', 'cancelled 1']);
+    expect(part.retryDelayMs).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount(), 'no wait pending').toBe(0);
   } finally { vi.useRealTimers(); }
 });
 
