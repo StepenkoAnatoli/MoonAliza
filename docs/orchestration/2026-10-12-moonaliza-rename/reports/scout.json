@@ -1,0 +1,2277 @@
+{
+  "summary": "Classify every Moonzila occurrence in the MoonAliza repo before the display-name rename (read-only)",
+  "agentCount": 6,
+  "logs": [
+    "5/5 sweeps returned, 205 entries"
+  ],
+  "result": {
+    "sweeps": [
+      {
+        "area": "main-engine",
+        "filesCovered": [
+          "/home/user/moonaliza/src/engine/application.ts",
+          "/home/user/moonaliza/src/engine/research-review.ts",
+          "/home/user/moonaliza/src/main/bridge.ts",
+          "/home/user/moonaliza/src/main/index.ts",
+          "/home/user/moonaliza/src/main/engine.ts",
+          "/home/user/moonaliza/src/main/github.ts",
+          "/home/user/moonaliza/src/main/research-import.ts",
+          "/home/user/moonaliza/src/main/anthropic.ts",
+          "/home/user/moonaliza/src/main/inference.ts",
+          "/home/user/moonaliza/src/adapters/research-kit/collector.ts",
+          "/home/user/moonaliza/src/adapters/research-kit/contracts.ts",
+          "/home/user/moonaliza/src/shared (grepped: 0 hits)",
+          "/home/user/moonaliza/src/models (grepped: 0 hits)"
+        ],
+        "occurrences": [
+          {
+            "file": "src/engine/application.ts",
+            "lines": "355",
+            "text": "You are Moonzila, a coding assistant in ${run.mode} mode. Use the offered tools to inspect the attached local project folder. File search and Git inspection oper",
+            "category": "MODEL_FACING",
+            "proposed": "You are MoonAliza, a coding assistant in ${run.mode} mode. ... (lead decides)",
+            "reason": "System prompt for every Ask/Build run. Pinned by e2e/fixtures/anthropic-fake.ts:158, which must change too. No unit test and no sha256-pinned recording contains it."
+          },
+          {
+            "file": "src/engine/application.ts",
+            "lines": "356",
+            "text": "You are Moonzila, a helpful conversational assistant. Discuss any topic and help develop ideas. No workspace is attached: you have no local file or command tools",
+            "category": "MODEL_FACING",
+            "proposed": "You are MoonAliza, a helpful conversational assistant. ... (lead decides)",
+            "reason": "System prompt for folder-free chat. No test, e2e fake or recording pins it (grep for 'helpful conversational assistant' in tests/ and e2e/ finds nothing)."
+          },
+          {
+            "file": "src/engine/research-review.ts",
+            "lines": "83",
+            "text": "export const REVIEW_SYSTEM_PROMPT = 'You are Moonzila, reviewing a collected Research Kit corpus in a private research workspace. Use the offered tools only.",
+            "category": "MODEL_FACING",
+            "proposed": "You are MoonAliza, reviewing a collected Research Kit corpus ... (lead decides)",
+            "reason": "System prompt for review runs. tests/research-review-engine.test.ts:135 imports the constant, so it follows automatically. No literal pin, no e2e fake check, no hash."
+          },
+          {
+            "file": "src/engine/application.ts",
+            "lines": "45",
+            "text": "...sent back unchanged, so Moonzila could not shorten them while the task ran. Saved messages and any applied changes remain available; commands are not retried.",
+            "category": "DISPLAY",
+            "proposed": "...so MoonAliza could not shorten them...",
+            "reason": "FROZEN_CONTEXT_LIMIT: the user sees this run-failure text; it is never sent to a model. Pinned exactly by tests/application.test.ts:360 FROZEN_TEXT (used at :466 and :574), which must change too."
+          },
+          {
+            "file": "src/engine/application.ts",
+            "lines": "414",
+            "text": "PROVIDER_PROTOCOL_ERROR: 'The provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or not offered, or output that",
+            "category": "DISPLAY",
+            "proposed": "...step MoonAliza could not use safely...",
+            "reason": "Run-failure text shown to the user (run.failed event or review end). Pinned exactly by tests/application.test.ts:292 'widened' (toEqual at :303), which must change too."
+          },
+          {
+            "file": "src/engine/application.ts",
+            "lines": "414",
+            "text": "LOCAL_MODEL_UNVERIFIED: 'Moonzila could not confirm that this Ollama keeps prompts on this computer, and this conversation is local only. Ollama can send",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza could not confirm that this Ollama keeps prompts on this computer...",
+            "reason": "Run-failure text shown to the user. Pinned exactly by tests/application.test.ts:79 (toBe), which must change too."
+          },
+          {
+            "file": "src/main/bridge.ts",
+            "lines": "24",
+            "text": "DOCUMENT_UNSAFE: 'The review workspace changed in a way Moonzila will not read through. Start the review again.',",
+            "category": "DISPLAY",
+            "proposed": "...in a way MoonAliza will not read through...",
+            "reason": "publicMessages text that crosses IPC and is shown in the research panel. tests/research-panel.test.tsx:349 and :553 copy it into a mocked rejection: update them for fidelity. Their asserts (/will not read through/) pass either way; not hash-pinned."
+          },
+          {
+            "file": "src/main/bridge.ts",
+            "lines": "25",
+            "text": "DOCUMENT_REDACTION_UNAVAILABLE: 'Moonzila cannot check this document for saved keys right now, so it is not shown. Try again after restarting Moonzila.',",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza cannot check this document ... after restarting MoonAliza. (two mentions)",
+            "reason": "publicMessages text shown to the user. tests/research-panel.test.tsx:286 copies it into a mock: update it for fidelity. The assert at :289 (/cannot check this document for saved keys/) passes either way."
+          },
+          {
+            "file": "src/main/bridge.ts",
+            "lines": "31",
+            "text": "RESEARCH_KIT_UNAVAILABLE: 'The Research Kit is not installed or failed its integrity check. Install or repair it, then restart Moonzila.',",
+            "category": "DISPLAY",
+            "proposed": "...then restart MoonAliza.",
+            "reason": "publicMessages text shown to the user. No test pins this text; tests/research-document.test.ts pins only the code RESEARCH_KIT_UNAVAILABLE."
+          },
+          {
+            "file": "src/main/index.ts",
+            "lines": "305",
+            "text": "window = new BrowserWindow({ width: 1440, height: 960, minWidth: 960, minHeight: 640, title: 'Moonzila', backgroundColor: '#101821', show: false,",
+            "category": "DISPLAY",
+            "proposed": "title: 'MoonAliza'",
+            "reason": "Window title. No test reads it (no getTitle or toHaveTitle). After load, src/renderer/index.html's <title>Moonzila</title> (outside this area) overrides it, so both must change."
+          },
+          {
+            "file": "src/main/index.ts",
+            "lines": "320",
+            "text": "}).catch(() => { dialog.showErrorBox('Moonzila could not start', 'The application engine could not be initialized. Your saved project data has been retained.');",
+            "category": "DISPLAY",
+            "proposed": "dialog.showErrorBox('MoonAliza could not start', ...)",
+            "reason": "Startup error dialog title the user sees. No test pins it."
+          },
+          {
+            "file": "src/main/github.ts",
+            "lines": "16",
+            "text": "headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Moonzila-public-repository-reader' } });",
+            "category": "MODEL_FACING",
+            "proposed": "'User-Agent': 'MoonAliza-public-repository-reader' (lead decides)",
+            "reason": "User-Agent header sent to the GitHub API by read_github. GitHub requires a UA but reads no value from it. No test, fake (tests/fixtures/fake-github.ts, github-tls) or recording checks it: grep -i user-agent over tests/ and e2e/ finds nothing."
+          },
+          {
+            "file": "src/main/research-import.ts",
+            "lines": "43",
+            "text": "headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Moonzila-research-import' },",
+            "category": "MODEL_FACING",
+            "proposed": "'User-Agent': 'MoonAliza-research-import' (lead decides)",
+            "reason": "User-Agent on the authenticated GitHub Actions run read. No contract: the collector repo and the kit do not read it, and no test, fake or recording pins it."
+          },
+          {
+            "file": "src/main/engine.ts",
+            "lines": "41",
+            "text": "const child = this.fork(this.entry, [this.database, epoch], { env, stdio: 'ignore', serviceName: 'Moonzila engine' });",
+            "category": "UNSURE",
+            "proposed": "serviceName: 'MoonAliza engine' (recommended; safe)",
+            "reason": "Electron utilityProcess label, seen only in diagnostics (app.getAppMetrics, child-process-gone), not in the app UI. Nothing in src reads it, no test asserts it, and it is not persisted, so renaming is safe."
+          },
+          {
+            "file": "src/engine/research-review.ts",
+            "lines": "85",
+            "text": "/** Moonzila's fixed review instruction (spec \"Instruction\"). The topic is shown as data. */",
+            "category": "UNSURE",
+            "proposed": "MoonAliza's fixed review instruction (if comments are in scope)",
+            "reason": "Code comment: not seen by users, not sent to a model, not an identifier, not historical. Renaming has no runtime or test effect. Scope is the lead's call."
+          },
+          {
+            "file": "src/main/anthropic.ts",
+            "lines": "350",
+            "text": "// pause_turn belongs to server tools, which Moonzila never sends (E-11 l.26, l.347); any other value is a failure.",
+            "category": "UNSURE",
+            "proposed": "...which MoonAliza never sends... (if comments are in scope)",
+            "reason": "Code comment only. No runtime or test effect."
+          },
+          {
+            "file": "src/main/inference.ts",
+            "lines": "23",
+            "text": "// (Ollama serves /v1/messages and proxies cloud models), which Moonzila cannot verify (more-models-phase2.md section 7).",
+            "category": "UNSURE",
+            "proposed": "...which MoonAliza cannot verify... (if comments are in scope)",
+            "reason": "Code comment only. No runtime or test effect."
+          },
+          {
+            "file": "src/adapters/research-kit/collector.ts",
+            "lines": "7",
+            "text": " * The pinned Research Kit collector (bin/collect-remote.mjs) as Moonzila drives it: argv, environment and the",
+            "category": "UNSURE",
+            "proposed": "...as MoonAliza drives it... (if comments are in scope)",
+            "reason": "Code comment only. The collector's argv, env, artifact name (research-kit-corpus-v1-<clientRef>.zip) and clientRef format carry no product name, so no collector convention is involved."
+          },
+          {
+            "file": "src/adapters/research-kit/contracts.ts",
+            "lines": "3",
+            "text": "// Moonzila-owned boundary types. The pinned external validator owns the full wire schema.",
+            "category": "UNSURE",
+            "proposed": "// MoonAliza-owned boundary types... (if comments are in scope)",
+            "reason": "Code comment only. No schema field, regex or wire string contains the name."
+          }
+        ],
+        "risks": [
+          "The grep found 18 lines in this area: src/engine 5, src/main 11, src/adapters 2, src/shared 0, src/models 0. No variant spelling ('moon zila', 'moon-zila' and similar) appears.",
+          "Install and data identity is untouched by this area's renames. The persisted and exchanged identifiers here already say MoonAliza and must stay: app.setName('MoonAliza') at src/main/index.ts:34 (the %APPDATA% userData folder); partitions moonaliza-local, -providers and -renderer (index.ts:64, :66, :306, and e2e/workbench.spec.ts:65-66 uses moonaliza-local); IPC channels moonaliza:invoke, :event and :research; MoonAlizaHost.exe; the journal temp prefix .moonaliza- (review-workspace.ts:25); the model-store namespace moonaliza/<digest> (model-store.ts:16, :56); the suite id moonaliza-coding-v1 (runtime.ts:43, select.ts:30); and the signature domain 'MoonAliza activation set v1\\0' (catalogue.ts:31). Changing the last one breaks every signed activation set.",
+          "Window title: index.ts:305 alone will not change what users see. Electron replaces the window title with the page's <title>, and src/renderer/index.html still says <title>Moonzila</title> (renderer area). Both must change in the same commit.",
+          "Installer and exe name (outside this area): package.json productName 'Moonzila' and electron-builder.yml productName 'Moonzila' (appId com.moonaliza.desktop) set the exe name, the shortcuts and the uninstall display name. Renaming them changes Moonzila.exe and the desktop and Start-menu shortcut targets. tests/check-fuses.test.ts:174 and :238-245 pin 'Moonzila' and release/win-unpacked/Moonzila.exe. Whether an in-place NSIS upgrade keeps the old install folder and replaces the old shortcuts is expected but not verified here.",
+          "e2e red: if the Ask/Build system prompt (application.ts:355) changes and e2e/fixtures/anthropic-fake.ts:158 does not, the Anthropic journey (e2e/anthropic.spec.ts) fails with 'the system prompt is not the Ask-mode prompt'. Change both together.",
+          "Hash pins: none cover this area's strings. tests/fixtures/anthropic-live/*.request.json and docs/evidence/2026-10-12-anthropic-probes/*.request.json use the probe prompt 'You are a test assistant. Use the tools when the user asks for them.' (LIVE_SYSTEM in tests/anthropic.test.ts:208 and tests/anthropic-transport.test.ts:46), and grep finds no name in tests/fixtures/anthropic-live. The sha256 checks in those two tests are therefore unaffected.",
+          "A blanket find-and-replace would rewrite things that must not change: docs/orchestration/2026-10-05-more-models/reports/p2-wave2-workflow.json ('You are Moonzila', a dated run report) and docs/evidence/2026-10-12-anthropic-probes/{compat.ts, probe-lib.mjs, scan.mjs} (the MOONZILA_ANTHROPIC_API_KEY env var in a dated evidence corpus) are historical. tests/provider-transport.test.ts:365 puts '# Moonzila' inside the byte-exact expected bodies at :372-373. That is test-owned data that follows no source string: change all three lines together or leave them.",
+          "Exact-text unit tests must change with the source, or the suite goes red: tests/application.test.ts:79 (LOCAL_MODEL_UNVERIFIED), :292 (PROVIDER_PROTOCOL_ERROR) and :360 (FROZEN_CONTEXT_LIMIT).",
+          "Stored user data: failure texts already written into run.failed events in users' state.sqlite will keep saying Moonzila, and saved assistant messages that say 'Moonzila' are replayed to the model as history. This is harmless mixed naming. Do not migrate it; it is user history.",
+          "The provider requests (index.ts:98, :276) go through Electron session.fetch with Electron's default User-Agent, which is expected to come from the app name (MoonAliza, unchanged). That is expected, not verified, and no Moonzila string is involved. Only the two explicit GitHub User-Agents name Moonzila.",
+          "e2e and unit selectors 'Message Moonzila' (renderer aria label, outside this area) appear throughout e2e/*.spec.ts and tests/workbench.test.tsx. The renderer rename must update them in the same commit, or every e2e journey breaks."
+        ],
+        "questions": [
+          "The user's request was 'Merge #40?'. Local history already shows PR #40 merged into main-axuse: 2fb13ac 'Merge pull request #40: More models, Phase 2', and HEAD 6ed7e22 'RUN.md - Phase 2 merged (PR #40, 2fb13ac)'. This read-only run did not query GitHub and did not merge anything. Confirm on GitHub whether #40 is still open before taking any merge action. The plan says the rename is its own PR after Phase 2 merges, which appears to have happened.",
+          "Should the three system prompts (application.ts:355, :356, research-review.ts:83) say 'You are MoonAliza'? Recommendation: yes, because otherwise the model introduces itself by the old name in a visible chat. Downstream cost: update e2e/fixtures/anthropic-fake.ts:158. research-review-engine.test.ts follows the constant automatically. No hash-pinned recording is affected.",
+          "Should the GitHub User-Agent strings (github.ts:16, research-import.ts:43) be renamed? Nothing pins or consumes them, so either way is safe. Renaming keeps the name consistent; keeping them avoids touching network code in a display-only PR.",
+          "Are code comments in scope (research-review.ts:85, anthropic.ts:350, inference.ts:23, collector.ts:7, contracts.ts:3)? They have zero runtime or test effect.",
+          "Should the utility-process label serviceName 'Moonzila engine' (engine.ts:41) be renamed? It appears only in diagnostics, and nothing reads or pins it."
+        ],
+        "commandsRun": [
+          "git -C /home/user/moonaliza rev-parse --abbrev-ref HEAD; git rev-parse --short HEAD (main-axuse, 6ed7e22)",
+          "git -C /home/user/moonaliza grep -n -I -i moonzila -- src/main src/engine src/adapters src/shared src/models (18 lines)",
+          "git grep -n -I -i -E 'moon[ _.-]?zila' over the same paths (variants: 18 lines, the same set)",
+          "git grep -n -I -i -E 'moonaliza|moon aliza' over the same paths (existing identifiers)",
+          "git log --oneline -5; git status --short",
+          "grep and sed of docs/superpowers/plans/2026-10-02-research-jobs.md lines 418-420 and 518-531 (rename rule)",
+          "sed -n on src/engine/application.ts, src/engine/research-review.ts, src/main/{bridge,engine,github,research-import,index,inference,anthropic}.ts, src/adapters/research-kit/{collector,contracts}.ts",
+          "git grep -n -I -i moonzila -- tests e2e",
+          "git grep -F for each failure-text fragment, 'Moonzila engine', 'serviceName', 'public-repository-reader' and 'research-import' over tests, e2e, scripts and src/renderer",
+          "git grep -i user-agent, getTitle and toHaveTitle over tests and e2e (no hits)",
+          "grep -c -i moonzila tests/fixtures/anthropic-live/* (all 0); grep of the system field in the *.request.json fixtures",
+          "sed -n 1,90p tests/anthropic-transport.test.ts; grep of LIVE_SYSTEM and sha256 in tests/anthropic.test.ts and tests/anthropic-transport.test.ts",
+          "grep -l -i moonzila docs/evidence/2026-10-12-anthropic-probes/*",
+          "git grep -F 'You are Moonzila' outside src",
+          "grep of productName and appId in package.json and electron-builder.yml; grep of <title> in src/renderer/index.html",
+          "git grep of safeError, publicMessages and the bridge error codes in tests and e2e; grep of the widened and FROZEN_TEXT usages in tests/application.test.ts",
+          "sed -n 372,373p tests/provider-transport.test.ts (byte-exact bodies containing '# Moonzila')"
+        ]
+      },
+      {
+        "area": "renderer",
+        "filesCovered": [
+          "/home/user/moonaliza/src/renderer/App.tsx",
+          "/home/user/moonaliza/src/renderer/LocalModelPanel.tsx",
+          "/home/user/moonaliza/src/renderer/RecoveryPanel.tsx",
+          "/home/user/moonaliza/src/renderer/ResearchPanel.tsx",
+          "/home/user/moonaliza/src/renderer/index.html",
+          "/home/user/moonaliza/src/renderer/research-text.ts"
+        ],
+        "occurrences": [
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "158",
+            "text": "const discussion = !project ? messages.filter(...).map(m => `${m.role === 'user' ? 'You' : 'Moonzila'}: ${m.content}`).join('\\n\\n') : '';",
+            "category": "MODEL_FACING",
+            "proposed": "Lead decides. Change 'Moonzila' to 'MoonAliza', but only in the same change as the engine system prompt ('You are Moonzila, a coding assistant...', outside this area), so both say the same name.",
+            "reason": "This speaker label goes into the editable 'Discussion to carry over' handoff text. session.branch (src/engine/application.ts:199-209) stores that text as the first user message of the new conversation, so a model receives it on the next turn. No test, recording or hash pins it: e2e/folder-free-chat.spec.ts:43 matches only /garden idea/. Existing branched conversations keep 'Moonzila:' in saved user data, and that data must not be rewritten."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "213",
+            "text": "<div className=\"brand\"><svg ... aria-hidden=\"true\">...</svg><strong>Moonzila</strong></div>",
+            "category": "DISPLAY",
+            "proposed": "<strong>MoonAliza</strong>",
+            "reason": "This is the product name in the sidebar header. No test in tests/ or e2e/ selects it."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "228",
+            "text": "<p>{project ? 'Ask a question or describe a change. Moonzila keeps the conversation with your project.' : 'Ask anything, explore an idea, ...'}</p>",
+            "category": "DISPLAY",
+            "proposed": "'... MoonAliza keeps the conversation with your project.'",
+            "reason": "This is the empty-state copy. No test asserts the sentence that contains the name."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "235",
+            "text": "<label className=\"sr-only\" htmlFor=\"prompt\">Message Moonzila</label><textarea id=\"prompt\" ...",
+            "category": "DISPLAY",
+            "proposed": "'Message MoonAliza'. Update every selector listed in the reason in the same commit, or first move the selectors to a name-free hook such as #prompt.",
+            "reason": "This is the composer's accessible name, read by screen readers. It is the most-used test selector: getByLabel('Message Moonzila') in e2e/anthropic.spec.ts:78, build.spec.ts:42,55, commands.spec.ts:45,56,64, context-recovery.spec.ts:44,46,64,72,76, folder-free-chat.spec.ts:35,56, github-reading.spec.ts:51, recovery.spec.ts:37,61, workbench.spec.ts:51, and getByLabelText in tests/workbench.test.tsx:65,66,68,78,109,110,115,123,124,127,137,139,140,142,143,145,159,160,163,164,190."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "241",
+            "text": "<Modal title=\"Trust this project?\" ...><p>Moonzila will be able to read this folder when you start a task. File changes and commands require approval.</p>",
+            "category": "DISPLAY",
+            "proposed": "'MoonAliza will be able to read this folder when you start a task. ...'",
+            "reason": "This is the trust dialog copy. No test asserts the sentence that contains the name."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "259",
+            "text": "const ANTHROPIC_DATA_USE = \"Data use: Anthropic's commercial terms say ... refers to its commercial data retention policy, which Moonzila has not reviewed.\";",
+            "category": "DISPLAY",
+            "proposed": "'... which MoonAliza has not reviewed.' Change the copy in tests/workbench.test.tsx:213 and README.md:24 in the same commit. Then either update docs/specification/more-models-phase2.md:714-719, or reword the code comment at App.tsx:255-256 that says the text is copied word for word from the spec.",
+            "reason": "Users see this in the Anthropic profile notes. The comment says the sentence is 'word for word as more-models-phase2.md section 7 gives it'. tests/workbench.test.tsx:213 keeps its own literal copy (not an import) and checks it at :234 (order) and :260 (toContain). The dated records docs/orchestration/2026-10-05-more-models/REQUIREMENTS-P2.md and USER-DECISIONS-P2.md also carry it and must stay as they are."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "267",
+            "text": "<p>Moonzila's Anthropic connection is tested against requests and responses recorded from the live API; the app itself has not yet been run against it.</p>",
+            "category": "DISPLAY",
+            "proposed": "\"MoonAliza's Anthropic connection is tested against ...\"",
+            "reason": "This is the Anthropic profile notes copy. tests/workbench.test.tsx:234 matches only the substring 'tested against requests and ...' without the name, so it is unaffected. The same sentence appears in README.md and docs/ARCHITECTURE.md:35, which belong to the docs area."
+          },
+          {
+            "file": "src/renderer/App.tsx",
+            "lines": "302",
+            "text": "<div className=\"message-author\">{message.role === 'user' ? 'You' : 'Moonzila'}</div>",
+            "category": "DISPLAY",
+            "proposed": "'MoonAliza'",
+            "reason": "This is the author label on every assistant message. It is rendered only and never sent to a model, because messages go to the model from the store, not from the DOM. No test selects it."
+          },
+          {
+            "file": "src/renderer/LocalModelPanel.tsx",
+            "lines": "43",
+            "text": "<p>Checks 127.0.0.1:11434 for an existing runtime and installed models. Moonzila does not start, stop or change that runtime during this check.</p>",
+            "category": "DISPLAY",
+            "proposed": "'MoonAliza does not start, stop or change ...'",
+            "reason": "This is the local-model panel copy. tests/local-model-panel.test.tsx and e2e/local-models.spec.ts do not assert the name."
+          },
+          {
+            "file": "src/renderer/RecoveryPanel.tsx",
+            "lines": "39",
+            "text": "item.operation.kind === 'write' ? observations[item.observation] : 'Moonzila could not confirm how this command ended. Check its effects in your project.'",
+            "category": "DISPLAY",
+            "proposed": "'MoonAliza could not confirm how this command ended. ...'",
+            "reason": "This is the recovery panel copy. e2e/recovery.spec.ts uses only the composer label. No test asserts this sentence."
+          },
+          {
+            "file": "src/renderer/ResearchPanel.tsx",
+            "lines": "260",
+            "text": "Moonzila follows the run on GitHub and downloads its corpus when it finishes. ... until you save collector settings or restart Moonzila. ... waits until Moonzila restarts.",
+            "category": "DISPLAY",
+            "proposed": "Replace all 3 names on the line with MoonAliza. Update the regex in tests/research-panel.test.tsx:119 (/... waits until Moonzila restarts/) in the same commit.",
+            "reason": "This is the status text shown while a collection runs. A renderer test pins the last clause with a regex, so it would fail if only the source changed."
+          },
+          {
+            "file": "src/renderer/ResearchPanel.tsx",
+            "lines": "262",
+            "text": "current.reviewRunId ? REVIEW_CANCEL_STATUS.cancelled : 'Moonzila stopped following this collection. A run already started on GitHub was not cancelled there.'",
+            "category": "DISPLAY",
+            "proposed": "'MoonAliza stopped following this collection. ...'. Update the COLLECTION_CANCELLED literal in tests/research-panel-cancel-review.test.tsx:33 in the same commit.",
+            "reason": "This is the cancelled-collection status. The test keeps its own literal copy (not an import), so it would fail if only the source changed."
+          },
+          {
+            "file": "src/renderer/index.html",
+            "lines": "2",
+            "text": "<title>Moonzila</title>",
+            "category": "DISPLAY",
+            "proposed": "<title>MoonAliza</title>. Change it in the same commit as src/main/index.ts:305 (BrowserWindow title: 'Moonzila') and :320 (error box), which are outside this area.",
+            "reason": "This is the window and taskbar title. No 'page-title-updated' handler exists, so after load this page title replaces the BrowserWindow title. Changing only one of the two makes the title switch from one name to the other at startup. scripts/build.mjs:17 copies the file unchanged. No test pins the title, and the CSP in the same line is not affected."
+          },
+          {
+            "file": "src/renderer/research-text.ts",
+            "lines": "11,12,15,18,24,31,33,35,40,44",
+            "text": "RESEARCH_FAILURES action texts, e.g. POLICY_CHANGED '... so Moonzila stopped it.'; RESEARCH_KIT_UNAVAILABLE '... restart Moonzila, then start again.'; REMOTE_STATE_UNKNOWN 'Moonzila could not confirm ...'",
+            "category": "DISPLAY",
+            "proposed": "Replace Moonzila with MoonAliza in each action string. The keys (the failure codes) stay as they are.",
+            "reason": "These are collection and review failure messages shown in the research panel. Only ResearchPanel.tsx imports them. tests/research-panel.test.tsx imports RESEARCH_FAILURES and failureText, so it follows the change on its own. No test or e2e spec has a literal copy."
+          },
+          {
+            "file": "src/renderer/research-text.ts",
+            "lines": "57,58,59",
+            "text": "REVIEW_PHASE_FAILURES: POLICY_CHANGED '... so Moonzila stopped it.'; TRUST_CHANGED '... so Moonzila stopped it.'; RESEARCH_KIT_UNAVAILABLE '... restart Moonzila, then start the review again.'",
+            "category": "DISPLAY",
+            "proposed": "Replace Moonzila with MoonAliza in each action string.",
+            "reason": "These are the review-phase failure messages. They are used only by the renderer, and no test has a literal copy."
+          },
+          {
+            "file": "src/renderer/research-text.ts",
+            "lines": "107",
+            "text": "unexpected: 'Moonzila could not tell what was deleted. Check the research status before trying again.',",
+            "category": "DISPLAY",
+            "proposed": "'MoonAliza could not tell what was deleted. ...'",
+            "reason": "This is PURGE_TEXT.unexpected. tests/research-panel-purge.test.tsx imports PURGE_TEXT, so it follows the change on its own."
+          },
+          {
+            "file": "src/renderer/research-text.ts",
+            "lines": "143",
+            "text": "const GITHUB_KEEPS_RUNNING = 'A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result.';",
+            "category": "DISPLAY",
+            "proposed": "'... MoonAliza stops following it ...'. Update tests/research-panel.test.tsx:429,456 (regex) and e2e/research-journeys.spec.ts:213 (exact getByText) in the same commit.",
+            "reason": "This line is shown in the research switch confirmations (SWITCH_TEXT). The constant is not exported, and the tests keep literal copies, so they would fail if only the source changed."
+          }
+        ],
+        "risks": [
+          "Window title: src/renderer/index.html:2 <title> replaces BrowserWindow title 'Moonzila' (src/main/index.ts:305) once the page loads, because no page-title-updated handler exists. Rename both together, or the window and taskbar title switches from one name to the other during startup.",
+          "Composer selector: renaming the sr-only label 'Message Moonzila' (App.tsx:235) breaks 19 getByLabel calls across 8 e2e specs (anthropic, build, commands, context-recovery, folder-free-chat, github-reading, recovery, workbench) and 21 lines in tests/workbench.test.tsx, unless they are updated in the same commit.",
+          "Literal test copies, not imports, fail if only the source changes: tests/workbench.test.tsx:213 (ANTHROPIC_DATA_USE), tests/research-panel-cancel-review.test.tsx:33 (ResearchPanel.tsx:262), tests/research-panel.test.tsx:119 (ResearchPanel.tsx:260), tests/research-panel.test.tsx:429,456 and e2e/research-journeys.spec.ts:213 (research-text.ts:143 GITHUB_KEEPS_RUNNING).",
+          "ANTHROPIC_DATA_USE is documented as matching docs/specification/more-models-phase2.md section 7 (lines 714-719) word for word, and README.md:24 repeats it. The dated records docs/orchestration/2026-10-05-more-models/REQUIREMENTS-P2.md and USER-DECISIONS-P2.md also carry it and must not be rewritten. Renaming the app string makes the 'word for word' comment at App.tsx:255-256 false unless the spec is updated or the comment is reworded.",
+          "Handoff label (App.tsx:158) is text a model reads. If it is renamed but the engine system prompt still says 'You are Moonzila', or the reverse, the model sees two names for itself. Existing saved branched conversations keep 'Moonzila:' in stored user messages. That is user data and must not be rewritten.",
+          "Drift without breakage: the mocked bridge errors in tests/research-panel.test.tsx:286,349,553 copy src/main/bridge.ts:24-25 ('Moonzila cannot check this document...', '...a way Moonzila will not read through'). Their assertions match only name-free substrings, so tests still pass if bridge.ts is renamed and the mocks are not. They should still be renamed with bridge.ts so the mocks match the real messages.",
+          "No renderer occurrence is an identifier. The renderer's real identifiers already say MoonAliza (window.moonaliza in App.tsx:13,32), so this area has no risk to installs, the user data folder, the update feed, signatures or pinned hashes. Renaming these strings changes no persisted, exchanged or hash-pinned value."
+        ],
+        "questions": [
+          "App.tsx:158 handoff speaker label 'Moonzila:' is read by a model. Rename it to 'MoonAliza:' in the same commit as the engine system prompt ('You are Moonzila, a coding assistant...'), or keep both as they are for now?",
+          "ANTHROPIC_DATA_USE (App.tsx:259): is docs/specification/more-models-phase2.md current documentation to update with the app string and README.md:24, or a historical record to keep? If it is kept, the App.tsx:255-256 comment claiming a word-for-word match must be reworded.",
+          "Composer label 'Message Moonzila' -> 'Message MoonAliza': update the 40 selectors in place, or first switch the e2e and renderer tests to a name-free selector (for example #prompt or a test id) so a future rename does not touch them? The second is a test-shape change and would be a separate commit.",
+          "Spelling check: the rule says 'MoonAliza' (capital A, as in app.setName('MoonAliza')). Confirm this exact casing for every user-facing string, including the possessive \"MoonAliza's\" at App.tsx:267."
+        ],
+        "commandsRun": [
+          "git -C /home/user/moonaliza rev-parse --abbrev-ref HEAD; git -C /home/user/moonaliza rev-parse --short HEAD",
+          "git -C /home/user/moonaliza grep -n -I -i moonzila -- src/renderer",
+          "git grep -n -I -i -E 'moon[ _.-]*zila' -- src/renderer | wc -l (28 lines, same as the plain grep: no other spellings)",
+          "git grep -n -I -i 'moonaliza\\|moon aliza' -- src/renderer",
+          "sed/grep reads of src/renderer/App.tsx (handoff, branch modal, AnthropicHint), src/renderer/research-text.ts, src/engine/application.ts session.branch",
+          "git grep -n -I 'session.branch' -- src",
+          "git grep -n -I -i moonzila -- tests e2e (and per-file counts)",
+          "git grep -n -I 'research-text' -- src tests e2e",
+          "git grep for the bridge error strings in src (src/main/bridge.ts:24-25)",
+          "git grep for 'Discussion to carry over', 'message-author', 'toHaveTitle', 'You: ' in tests and e2e",
+          "git grep -l for the data-use sentence and the 'tested against requests' sentence across the repository",
+          "git grep for page-title-updated, setTitle and title: in src/main, and for index.html in scripts, tests and e2e",
+          "grep of docs/superpowers/plans/2026-10-02-research-jobs.md for the rename rule (lines 418-420, 518)"
+        ]
+      },
+      {
+        "area": "packaging",
+        "filesCovered": [
+          "/home/user/moonaliza/package.json",
+          "/home/user/moonaliza/electron-builder.yml",
+          "/home/user/moonaliza/.github/workflows/windows.yml",
+          "/home/user/moonaliza/scripts/build-native.mjs",
+          "/home/user/moonaliza/scripts/build.mjs",
+          "/home/user/moonaliza/scripts/capture-collector-golden.ts",
+          "/home/user/moonaliza/scripts/check-fuses.mjs",
+          "/home/user/moonaliza/scripts/check-handoff.mjs",
+          "/home/user/moonaliza/scripts/check-installed.mjs",
+          "/home/user/moonaliza/scripts/check-live-provider.mjs",
+          "/home/user/moonaliza/scripts/check-model-store.ts",
+          "/home/user/moonaliza/scripts/check-runtime-artifacts.ts",
+          "/home/user/moonaliza/scripts/check-runtime.cjs",
+          "/home/user/moonaliza/scripts/generate-research-fixtures.mjs",
+          "/home/user/moonaliza/scripts/prepare-research-kit.mjs",
+          "/home/user/moonaliza/scripts/research-kit-source.mjs",
+          "/home/user/moonaliza/scripts/verify-research-kit.ts",
+          "/home/user/moonaliza/native/connection.cpp",
+          "/home/user/moonaliza/native/connection.hpp",
+          "/home/user/moonaliza/native/hardware.cpp",
+          "/home/user/moonaliza/native/hardware.hpp",
+          "/home/user/moonaliza/native/host.cpp",
+          "(build/ and resources/ do not exist in the checkout; skipped)"
+        ],
+        "occurrences": [
+          {
+            "file": "package.json",
+            "lines": "3",
+            "text": "\"productName\": \"Moonzila\",",
+            "category": "DISPLAY",
+            "proposed": "\"productName\": \"MoonAliza\"",
+            "reason": "For packaging, electron-builder.yml productName overrides it (appInfo.js: config.productName || metadata.productName || name). At runtime it only sets Electron's first app name, which app.setName('MoonAliza') at src/main/index.ts:34 replaces. Nothing in src reads productName or app.getName."
+          },
+          {
+            "file": "package.json",
+            "lines": "9",
+            "text": "\"author\": \"Moonzila\",",
+            "category": "DISPLAY",
+            "proposed": "\"author\": \"MoonAliza\"",
+            "reason": "electron-builder uses author as companyName. It becomes the exe's CompanyName and LegalCopyright ('Copyright (c) <year> Moonzila') and NSIS COMPANY_NAME, which is the uninstall entry's 'Publisher' in Apps & features. No path or registry key uses it."
+          },
+          {
+            "file": "package.json",
+            "lines": "2",
+            "text": "\"name\": \"moonzila\",",
+            "category": "UNSURE",
+            "proposed": "\"moonaliza\" (put back the released value); package-lock.json lines 2 and 8 must follow. The lead decides.",
+            "reason": "Users never see it, but it is persisted: it sets electron-builder's updaterCacheDirName. Every NSIS install copies itself to %LOCALAPPDATA%\\<name>-updater\\installer.exe (installer.nsh:93), and app-update.yml records the same name. NSIS APP_PACKAGE_NAME uses it only for delete-on-uninstall, which is off here. All four release tags (v0.6.0-dev.1 to v0.8.1-dev.1) shipped 'moonaliza'. Putting it back matches released installs and breaks nothing; electron-updater is not wired in src. The rule names neither 'change' nor 'keep' for this field. Decision 12 put 'the package name' inside the earlier rename."
+          },
+          {
+            "file": "electron-builder.yml",
+            "lines": "2",
+            "text": "productName: Moonzila",
+            "category": "DISPLAY",
+            "proposed": "productName: MoonAliza",
+            "reason": "Sets the exe name (Moonzila.exe becomes MoonAliza.exe) and the installer file name ('${productName} Setup ${version}.exe'; no artifactName is set). Also sets the new per-user install folder (%LOCALAPPDATA%\\Programs\\<productName>), the shortcut names, the uninstall DisplayName ('<productName> <version>'), the exe FileDescription and ProductName, and the NSIS caption. It does not change appId, the APP_GUID registry keys, userData or the update feed."
+          },
+          {
+            "file": ".github/workflows/windows.yml",
+            "lines": "38, 48, 53",
+            "text": "run: node scripts/check-fuses.mjs release/win-unpacked/Moonzila.exe | ...--test-package release-e2e/win-unpacked/Moonzila.exe | MOONALIZA_TEST_EXECUTABLE: '${{ github.workspace }}/release-e2e/win-unpacked/Moonzila.exe'",
+            "category": "TEST_FOLLOWS",
+            "proposed": "Replace Moonzila.exe with MoonAliza.exe on all three lines. Keep the env var name MOONALIZA_TEST_EXECUTABLE.",
+            "reason": "These paths follow electron-builder.yml productName, because the exe name comes from productFilename. They are not byte-pinned. tests/check-fuses.test.ts:174-180 and 222-230 read productName from electron-builder.yml and require these lines to equal '.../win-unpacked/${productName}.exe'. If they are left stale, the workflow_dispatch fuse check fails with FUSES_UNREADABLE and the packaged e2e cannot launch."
+          },
+          {
+            "file": "scripts/check-fuses.mjs",
+            "lines": "3",
+            "text": "// Reads the fuse wire of a packaged Moonzila executable and exits 1 unless the five",
+            "category": "DISPLAY",
+            "proposed": "// Reads the fuse wire of a packaged MoonAliza executable ...",
+            "reason": "A current code comment that names the product. Nothing pins it."
+          },
+          {
+            "file": "scripts/check-fuses.mjs",
+            "lines": "5, 31",
+            "text": "// Usage: ... (default release/win-unpacked/Moonzila.exe) | const path = args[0] ?? 'release/win-unpacked/Moonzila.exe';",
+            "category": "TEST_FOLLOWS",
+            "proposed": "Use 'release/win-unpacked/MoonAliza.exe' in both the usage comment and the default.",
+            "reason": "The default exe path follows productName. It is pinned by tests/check-fuses.test.ts:236-243, which copies a stand-in to release/win-unpacked/Moonzila.exe and expects that path string in stdout and stderr. The script and the test must change in the same commit."
+          },
+          {
+            "file": "scripts/check-live-provider.mjs",
+            "lines": "59",
+            "text": "await page.getByLabel('Message Moonzila').fill('Read hello.txt with read_file, then use edit_file to replace the word before with after. ...');",
+            "category": "TEST_FOLLOWS",
+            "proposed": "getByLabel('Message MoonAliza')",
+            "reason": "This Playwright selector follows the screen-reader label at src/renderer/App.tsx:235 ('Message Moonzila'), which 17 e2e lines and tests/workbench.test.tsx also select. It is not a recording. If App.tsx changes alone, this manual and billable live check fails at the 'run-and-review' step. The prompt text is sent to the model but does not contain the name."
+          },
+          {
+            "file": "scripts/research-kit-source.mjs",
+            "lines": "10",
+            "text": "// --git-dir, not -C: if the pin clone is broken, git must fail rather than walk up into Moonzila.",
+            "category": "DISPLAY",
+            "proposed": "...walk up into MoonAliza.",
+            "reason": "A current comment that names this repository. It is not hash-pinned: inventory() hashes only the exported kit's bin/lib/schemas, and check-handoff hashes only docs/handoff."
+          },
+          {
+            "file": "scripts/verify-research-kit.ts",
+            "lines": "22",
+            "text": "console.log(`${result.status}; researchReady=${result.researchReady}; Moonzila tool permission is separate.`);",
+            "category": "DISPLAY",
+            "proposed": "...; MoonAliza tool permission is separate.",
+            "reason": "Console output an operator reads. git grep finds no test, doc or fixture that pins the string."
+          }
+        ],
+        "risks": [
+          "Lockstep test break (outside this area): tests/check-fuses.test.ts:174 pins the literal 'Moonzila' (expect([productName, output]).toEqual(['Moonzila','release'])). Lines 236-243 pin 'release/win-unpacked/Moonzila.exe'. Changing productName or the check-fuses default without these turns vitest red. package-lock.json name (lines 2 and 8) should follow package.json name, as both earlier renames did.",
+          "The selector 'Message Moonzila' is shared by src/renderer/App.tsx:235, e2e/*.spec.ts (17 lines), tests/workbench.test.tsx and scripts/check-live-provider.mjs:59. All must move together, or the e2e and live checks cannot find the composer.",
+          "Released installs are not at risk. All four tags shipped productName MoonAliza, package name moonaliza and appId com.moonaliza.desktop, so the rename brings back the exe name, install folder, shortcut names and updater cache folder those installs already have. Only dev/CI installers built since e7cdd4a (Oct 4) carry Moonzila: workflow_dispatch artifacts (kept 14 days) and local npm run package:win builds.",
+          "Upgrading over a Moonzila-era install: APP_GUID is UUID v5 of appId, so it is unchanged. The new installer finds the same Software\\<guid> InstallLocation and Uninstall key, and runs the old uninstaller with /KEEP_APP_DATA --updated. In an interactive run, the directory page is prefilled with %LOCALAPPDATA%\\Programs\\Moonzila. instFilesPre (assistedInstaller.nsh:33-37) then appends \\MoonAliza, because that path does not contain APP_FILENAME. The app ends up in ...\\Programs\\Moonzila\\MoonAliza\\MoonAliza.exe. It works, but the old name stays in the path. A silent /S run shows no pages and keeps the old folder. The earlier MoonAliza-to-Moonzila rename had the same nesting effect.",
+          "Shortcuts and uninstall entry: allowToChangeInstallationDirectory turns keep-shortcuts off for non-updated runs (installUtil.nsh:86-93), and the new exe name is not found in the old folder. So the old uninstaller deletes Moonzila.lnk from the desktop and Start menu, and the new installer creates MoonAliza.lnk with AUMI com.moonaliza.desktop (unchanged). The uninstall entry keeps its key; DisplayName is rewritten to 'MoonAliza <version>' and Publisher follows author. Taskbar pins or custom shortcuts that point at Moonzila.exe will break, because the exe is renamed.",
+          "userData: no code reads productName or app.getName. src/main/index.ts:34 calls app.setName('MoonAliza') before getPath('userData') at :50; the --user-data-dir override is at :35-36. Released builds had productName and setName both MoonAliza, so %APPDATA%\\MoonAliza stays the same whichever one Electron 44 uses. The only exposure is a Moonzila-era dev install, and only if Electron took productName over setName, which contradicts decision 12. Evidence (expected, not run): the embedded browser-init string table in node_modules/electron/dist/electron lists setVersion, setDesktopName, v8Flags, setFlagsFromString and setAppPath, with no userData or userCache setPath. Verify with scripts/check-installed.mjs seed (old install) then verify (after upgrading); it asserts userData is equal.",
+          "Update feed: electron-builder.yml has no publish config, and electron-updater is a dependency that src never imports. electron-builder still auto-detects GitHub from the git origin (github.com/StepenkoAnatoli/MoonAliza) and writes app-update.yml. owner/repo come from the remote, not from productName; updaterCacheDirName follows package.json name. If name changes, Moonzila-era dev machines keep an orphan %LOCALAPPDATA%\\moonzila-updater\\installer.exe. The plan says the GitHub repo is named Selenic today, which would change the auto-detected repo field (outside this area).",
+          "Installer asset name: the default becomes 'MoonAliza Setup <version>.exe'. The 0.8.1 release published it as MoonAliza-Setup-0.8.1.exe, so a renamed upload step or notes may need to match.",
+          "No pinned hashes or signatures in this area are affected. Asar integrity and signing are recomputed on every build, and check-handoff hashes only docs/handoff. The upgrade, shortcut and userData points above come from reading electron-builder 26.15.3 NSIS templates and sources; none were run on Windows.",
+          "Precedent: e7cdd4a (Oct 4, MoonAliza to 'Monnzila') and 5082167 (spelling fix to Moonzila) both changed package.json name, productName and author, the package-lock name, electron-builder.yml productName, the workflow exe path and the script strings. Both kept appId com.moonaliza.desktop, app.setName('MoonAliza'), partitions, IPC names, MoonAlizaHost.exe (extraResources), env var names, fixture identities, repo URLs and the immutable docs/handoff, docs/research and docs/releases records. The check-fuses default path and its tests were added later (680a8c5, e3e55d5) with Moonzila written directly. `git log -S\"productName\"` over package.json and electron-builder.yml returns only merge 2a3dd9e; the rename commits are found with -S\"Monnzila\"."
+        ],
+        "questions": [
+          "package.json name: put back 'moonaliza' (the released value; it sets %LOCALAPPDATA%\\<name>-updater and app-update.yml updaterCacheDirName; decision 12 treated the package name as part of the rename) together with package-lock.json, or keep 'moonzila'? Recommendation: put back 'moonaliza'.",
+          "author / Publisher / copyright: should package.json author become 'MoonAliza'? It is the Publisher in Apps & features and the exe CompanyName and LegalCopyright.",
+          "Moonzila-era dev installs: an interactive upgrade nests the app in ...\\Programs\\Moonzila\\MoonAliza. No release ever shipped Moonzila, so is a note in the PR enough, or should the user reinstall (uninstall, then install fresh; app data is kept because deleteAppDataOnUninstall is false)?",
+          "Should the PR run scripts/check-installed.mjs seed/verify across an upgrade from a Moonzila-era build on Windows, to confirm userData continuity? Only the user's machine can run it.",
+          "Does a new decision entry supersede decision 12 (docs/specification/decisions.md) for the name, and should decision 13's 'Moonzila.exe' wording be updated? That file is outside this area."
+        ],
+        "commandsRun": [
+          "git -C /home/user/moonaliza status --short; git rev-parse --abbrev-ref HEAD; git rev-parse --short HEAD",
+          "git -C /home/user/moonaliza grep -n -I -i moonzila -- package.json electron-builder.yml scripts .github native",
+          "git -C /home/user/moonaliza grep -n -I -i -E 'moon[ _.-]?zila' -- package.json electron-builder.yml scripts .github native | wc -l",
+          "cat package.json electron-builder.yml .github/workflows/windows.yml scripts/check-fuses.mjs; sed -n scripts/check-live-provider.mjs scripts/research-kit-source.mjs scripts/verify-research-kit.ts scripts/check-installed.mjs scripts/check-handoff.mjs",
+          "git grep -n -I (setName|getName|productName|getPath|setPath|userData|electron-updater|autoUpdater) -- src scripts e2e tests",
+          "sed -n 1,80p src/main/index.ts; sed -n 160,262p tests/check-fuses.test.ts",
+          "git log -S\"productName\" --oneline -- package.json electron-builder.yml",
+          "git log -S\"Monnzila\" --oneline -- package.json electron-builder.yml; git log -S\"Moonzila\" --oneline -- package.json electron-builder.yml .github scripts",
+          "git show e7cdd4a / 5082167 (stat and packaging-file diffs)",
+          "git tag; git show <tag>:electron-builder.yml for v0.6.0-dev.1..v0.8.1-dev.1; grep docs/releases/0.8.1-dev.1.md",
+          "sed docs/specification/decisions.md line 17; sed docs/superpowers/plans/2026-10-02-research-jobs.md lines 418-420, 518-531",
+          "read node_modules/app-builder-lib/out/{appInfo.js,winPackager.js,targets/nsis/NsisTarget.js,targets/targetUtil.js,publish/PublishManager.js,options/CommonWindowsInstallerConfiguration.js}",
+          "read node_modules/app-builder-lib/templates/nsis/{common.nsh,assistedInstaller.nsh,multiUser.nsh,installSection.nsh,uninstaller.nsh,include/installer.nsh,include/installUtil.nsh,include/StrContains.nsh}",
+          "grep node_modules/electron/electron.d.ts for getName/setName/name docs",
+          "grep -a (read-only) node_modules/electron/dist/electron for the embedded init string table (productName, v8Flags, setAppPath, userCache)",
+          "git remote -v (credentials masked)"
+        ]
+      },
+      {
+        "area": "tests-e2e",
+        "filesCovered": [
+          "e2e/anthropic.spec.ts",
+          "e2e/build.spec.ts",
+          "e2e/commands.spec.ts",
+          "e2e/context-recovery.spec.ts",
+          "e2e/fixtures/anthropic-fake.ts",
+          "e2e/fixtures/collector-network.cjs",
+          "e2e/fixtures/ollama-status.ts",
+          "e2e/folder-free-chat.spec.ts",
+          "e2e/github-reading.spec.ts",
+          "e2e/local-models.spec.ts",
+          "e2e/recovery.spec.ts",
+          "e2e/research-collector.spec.ts",
+          "e2e/research-journeys.spec.ts",
+          "e2e/workbench.spec.ts",
+          "tests/activation.test.ts",
+          "tests/application.test.ts",
+          "tests/archive.test.ts",
+          "tests/check-fuses.test.ts",
+          "tests/command-broker.test.ts",
+          "tests/commands.test.ts",
+          "tests/download.test.ts",
+          "tests/file-journal.test.ts",
+          "tests/file-read.test.ts",
+          "tests/fixtures/github-tls.ts",
+          "tests/git.test.ts",
+          "tests/github-tls.test.ts",
+          "tests/guarded-process.test.ts",
+          "tests/handoff.test.ts",
+          "tests/managed-ollama.test.ts",
+          "tests/model-store.test.ts",
+          "tests/operations.test.ts",
+          "tests/owned-connection.test.ts",
+          "tests/paths.test.ts",
+          "tests/policy-guard-control.test.ts",
+          "tests/policy-route.test.ts",
+          "tests/project-policy-engine.test.ts",
+          "tests/project-tickets.test.ts",
+          "tests/provider-screen.test.ts",
+          "tests/provider-transport.test.ts",
+          "tests/research-collector-protocol.test.ts",
+          "tests/research-collector-settings.test.ts",
+          "tests/research-collector-supervisor.test.ts",
+          "tests/research-contracts.test.ts",
+          "tests/research-document.test.ts",
+          "tests/research-import.test.ts",
+          "tests/research-kit-collector-launch.test.ts",
+          "tests/research-kit-retain.test.ts",
+          "tests/research-kit.test.ts",
+          "tests/research-panel-cancel-review.test.tsx",
+          "tests/research-panel.test.tsx",
+          "tests/research-purge.test.ts",
+          "tests/research-review-e2e.test.ts",
+          "tests/research-review-engine.test.ts",
+          "tests/research-review-main-kit.test.ts",
+          "tests/research-review-main.test.ts",
+          "tests/research-review-native.test.ts",
+          "tests/review-workspace-layers.test.ts",
+          "tests/review-workspace.test.ts",
+          "tests/scheduler.test.ts",
+          "tests/snapshots.test.ts",
+          "tests/store.test.ts",
+          "tests/vault.test.ts",
+          "tests/workbench.test.tsx",
+          "checked for pins, no occurrence: tests/fixtures/anthropic-live/* (D1, D5-think-sonnet, D11, D12 .raw and .request.json)",
+          "checked for pins, no occurrence: tests/anthropic-transport.test.ts, tests/anthropic.test.ts (LIVE_SYSTEM, bodySha256 checks)",
+          "checked for pins, no occurrence: tests/fixtures/research-kit/*.zip (entry names and decompressed content), collector-golden/goldens.json, provenance.json, schema-v1..v3.sql"
+        ],
+        "occurrences": [
+          {
+            "file": "e2e/anthropic.spec.ts",
+            "lines": "78",
+            "text": "await page.getByLabel('Message Moonzila').fill(PROMPT);",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza', in the same commit as the source label",
+            "reason": "Follows the composer's screen-reader label at src/renderer/App.tsx:235 (DISPLAY). Playwright getByLabel matches a case-insensitive substring, and 'message moonzila' is not a substring of 'message moonaliza', so the test fails if only the source changes."
+          },
+          {
+            "file": "e2e/anthropic.spec.ts",
+            "lines": "19",
+            "text": "const COOKIE = { name: 'moonzila_e2e', value: 'provider-session-cookie' };",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only cookie, planted in the in-memory 'moonaliza-providers' partition and read back at :53 through COOKIE.name. It follows no source string and is never persisted or sent to a real system, so renaming it is harmless but buys nothing."
+          },
+          {
+            "file": "e2e/anthropic.spec.ts",
+            "lines": "33",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-anthropic-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix. The app gets an explicit --user-data-dir under it, so neither the app name nor any install depends on it."
+          },
+          {
+            "file": "e2e/build.spec.ts",
+            "lines": "42, 55",
+            "text": "await page.getByLabel('Message Moonzila').fill('Change before to after in hello.txt');",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows src/renderer/App.tsx:235, the composer label (DISPLAY). The Playwright substring match fails after a source-only rename."
+          },
+          {
+            "file": "e2e/build.spec.ts",
+            "lines": "47",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-edit-review.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A name for a test-output file. windows.yml:59 uploads test-results/ as a whole, and no doc or script names this file, so nothing reads it by name."
+          },
+          {
+            "file": "e2e/commands.spec.ts",
+            "lines": "45, 56, 64",
+            "text": "await page.getByLabel('Message Moonzila').fill('Inspect Git and run the project check'); await page.getByRole('button', { name: 'Send message' }).click();",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235."
+          },
+          {
+            "file": "e2e/commands.spec.ts",
+            "lines": "49",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-command-review.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A screenshot name in test output. It is uploaded as part of the test-results/ folder and nothing references it by name."
+          },
+          {
+            "file": "e2e/commands.spec.ts",
+            "lines": "11",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-commands-e2e-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "e2e/context-recovery.spec.ts",
+            "lines": "44, 46, 64, 72, 76",
+            "text": "await page.getByLabel('Message Moonzila').fill('Keep this draft');",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235. Line 76 also uses it to assert the draft is kept."
+          },
+          {
+            "file": "e2e/context-recovery.spec.ts",
+            "lines": "9",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-context-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "e2e/fixtures/anthropic-fake.ts",
+            "lines": "158",
+            "text": "need(typeof body.system === 'string' && body.system.startsWith('You are Moonzila, a coding assistant in ask mode.'), 'the system prompt is not the Ask-mode prom",
+            "category": "TEST_FOLLOWS",
+            "proposed": "Follow the lead's MODEL_FACING decision. If src/engine/application.ts:355 becomes 'You are MoonAliza, ...', use startsWith('You are MoonAliza, a coding assistant in ask mode.'); otherwise keep.",
+            "reason": "Follows the ask/build system prompt at src/engine/application.ts:355 (MODEL_FACING) through a plain prefix check, not a hash. No live recording or sha256 contains this prompt, because the 2026-10-12 probes sent 'You are a test assistant...'. If the source changes without this line, the Anthropic e2e journey fails."
+          },
+          {
+            "file": "e2e/fixtures/anthropic-fake.ts",
+            "lines": "33, 34, 71, 80, 88",
+            "text": "export const SIGNATURE_MARKER = 'MoonzilaE2eSignatureMarkerQ7x9Zr4Lw2Vb8Nc5Kt3Hp6';",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "Test-only ids in the fake's synthetic Anthropic stream: SIGNATURE_MARKER, TOOL_ID 'toolu_01MoonzilaE2eListFiles' and the message ids msg_01MoonzilaE2e*. anthropic.spec.ts:106-107 byte-scans userData for the marker, which depends on its uniqueness, not its spelling. The fake checks TOOL_ID at :179-180. No source string, recording or persisted data depends on these."
+          },
+          {
+            "file": "e2e/fixtures/anthropic-fake.ts",
+            "lines": "12, 24, 30, 39, 78, 110",
+            "text": "/** The version header Moonzila must send (E-08 l.50-54). */",
+            "category": "UNSURE",
+            "proposed": "'MoonAliza' (comment only, optional)",
+            "reason": "Code comments that name the app as the actor. They are not user-visible, not historical and have no runtime effect. The rule does not say whether in-code prose counts as docs."
+          },
+          {
+            "file": "e2e/fixtures/collector-network.cjs",
+            "lines": "163",
+            "text": "globalThis.__moonzilaE2eCollectorNetwork = install(require('node:child_process'), network);",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only global set by the -r preload harness and read at e2e/research-journeys.spec.ts:86. The current spec names it too (docs/specification/research-journeys.md:23). src never uses it. A rename must change all three together; nothing external breaks."
+          },
+          {
+            "file": "e2e/fixtures/collector-network.cjs",
+            "lines": "3",
+            "text": "// with `-r`, before the app's own main code runs. Moonzila gives a collector child a minimal environment",
+            "category": "UNSURE",
+            "proposed": "'MoonAliza' (comment only, optional)",
+            "reason": "A code comment that names the app. It is not user-visible and has no runtime effect, and it is unclear whether in-code prose counts as docs."
+          },
+          {
+            "file": "e2e/fixtures/ollama-status.ts",
+            "lines": "4, 8",
+            "text": "* A fake Ollama with its cloud features off. Under a local-only policy Moonzila asks",
+            "category": "UNSURE",
+            "proposed": "'MoonAliza' (comment only, optional)",
+            "reason": "Code comments with no runtime effect. Same open question as the other fixture comments."
+          },
+          {
+            "file": "e2e/folder-free-chat.spec.ts",
+            "lines": "35, 56",
+            "text": "await page.getByLabel('Message Moonzila').fill('Explore a garden idea'); await page.getByRole('button', { name: 'Send message' }).click();",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235."
+          },
+          {
+            "file": "e2e/folder-free-chat.spec.ts",
+            "lines": "38",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-general-chat.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A screenshot name in test output, read by nothing by name."
+          },
+          {
+            "file": "e2e/github-reading.spec.ts",
+            "lines": "20, 37",
+            "text": "const content = 'Moonzila repository evidence';",
+            "category": "TEST_FOLLOWS",
+            "proposed": "keep",
+            "reason": "Follows no source string. This is the fake GitHub README body (:37) that the fake model checks for (:20): arbitrary test data. The two lines must stay equal if either ever changes."
+          },
+          {
+            "file": "e2e/github-reading.spec.ts",
+            "lines": "51",
+            "text": "await page.getByLabel('Message Moonzila').fill('Read https://github.com/example/project'); await page.getByRole('button', { name: 'Send message' }).click();",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235."
+          },
+          {
+            "file": "e2e/github-reading.spec.ts",
+            "lines": "68",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-github-reading.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A screenshot name in test output."
+          },
+          {
+            "file": "e2e/local-models.spec.ts",
+            "lines": "8",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-hardware-e2e-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "e2e/local-models.spec.ts",
+            "lines": "17",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-hardware.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A screenshot name in test output."
+          },
+          {
+            "file": "e2e/recovery.spec.ts",
+            "lines": "37, 61",
+            "text": "await page.getByLabel('Message Moonzila').fill('Run the interruption fixture'); await page.getByRole('button', { name: 'Send message' }).click();",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235."
+          },
+          {
+            "file": "e2e/recovery.spec.ts",
+            "lines": "75",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-recovery.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A screenshot name in test output."
+          },
+          {
+            "file": "e2e/recovery.spec.ts",
+            "lines": "12",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-recovery-e2e-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "e2e/research-collector.spec.ts",
+            "lines": "21",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-collector-e2e-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "e2e/research-journeys.spec.ts",
+            "lines": "213",
+            "text": "await expect(confirm.getByText('A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result.')).toBeVisi",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'... MoonAliza stops following it ...'",
+            "reason": "Follows GITHUB_KEEPS_RUNNING at src/renderer/research-text.ts:143 (DISPLAY, the cancel-confirm dialog). The getByText substring match fails after a source-only rename. This spec skips when MOONALIZA_TEST_EXECUTABLE is set."
+          },
+          {
+            "file": "e2e/research-journeys.spec.ts",
+            "lines": "86",
+            "text": "const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonzilaE2eCollectorNetwork?: Harness }).__moonzilaE2eCollectorNetwork ?? nu",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "Reads the test-only global set at e2e/fixtures/collector-network.cjs:163, so it must stay paired with that line. The spec doc docs/specification/research-journeys.md:23 also names it."
+          },
+          {
+            "file": "e2e/research-journeys.spec.ts",
+            "lines": "44",
+            "text": "const root = await mkdtemp(join(tmpdir(), `moonzila-${name}-`));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "e2e/workbench.spec.ts",
+            "lines": "51",
+            "text": "await page.getByLabel('Message Moonzila').fill('Remember this conversation');",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235."
+          },
+          {
+            "file": "e2e/workbench.spec.ts",
+            "lines": "65, 66, 70",
+            "text": "expect(probeCookies).toEqual(['moonzila_e2e=local-session-cookie']);",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only cookie name, planted in the in-memory 'moonaliza-local' partition. Lines 65, 66 and 70 must stay consistent with each other. It is never persisted and no source string depends on it."
+          },
+          {
+            "file": "e2e/workbench.spec.ts",
+            "lines": "78",
+            "text": "await page.screenshot({ path: 'test-results/moonzila-workbench.png' });",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (renaming is optional)",
+            "reason": "A screenshot name in test output."
+          },
+          {
+            "file": "e2e/workbench.spec.ts",
+            "lines": "11",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-e2e-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/workbench.test.tsx",
+            "lines": "65, 66, 68, 78, 109, 110, 115, 123, 124, 127, 137, 139, 140, 142, 143, 145, 159, 160, 163, 164, 190",
+            "text": "await waitFor(() => expect(screen.getByLabelText('Message Moonzila').hasAttribute('disabled')).toBe(false));",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'Message MoonAliza'",
+            "reason": "Follows the composer label at src/renderer/App.tsx:235. Testing Library getByLabelText matches the whole label exactly by default and throws once the label changes."
+          },
+          {
+            "file": "tests/workbench.test.tsx",
+            "lines": "213",
+            "text": "const ANTHROPIC_DATA_USE = \"Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs; Claude Fable 5.1 requires 30-day ret",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'... which MoonAliza has not reviewed.'",
+            "reason": "A copy of ANTHROPIC_DATA_USE at src/renderer/App.tsx:259 (DISPLAY, the profile note). It ends with 'which Moonzila has not reviewed.' and is asserted with toContain at :260."
+          },
+          {
+            "file": "tests/application.test.ts",
+            "lines": "79",
+            "text": "expect(result.failure.message.replace(/’/g, \"'\")).toBe('Moonzila could not confirm that this Ollama keeps prompts on this computer, and this conversation i",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'MoonAliza could not confirm ...'",
+            "reason": "Follows LOCAL_MODEL_UNVERIFIED at src/engine/application.ts:414 (DISPLAY failure text) with an exact toBe. The comment at :76 says the text matches docs/specification/more-models.md word for word."
+          },
+          {
+            "file": "tests/application.test.ts",
+            "lines": "292",
+            "text": "const widened = 'The provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or not offered, or output that contained",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'... step MoonAliza could not use safely ...'",
+            "reason": "Follows PROVIDER_PROTOCOL_ERROR at src/engine/application.ts:414 (DISPLAY failure text)."
+          },
+          {
+            "file": "tests/application.test.ts",
+            "lines": "360",
+            "text": "const FROZEN_TEXT = 'This task outgrew the selected model\\'s context budget. This provider needs the earlier steps of a task sent back unchanged, so Moonzila co",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'... so MoonAliza could not shorten them ...'",
+            "reason": "Follows FROZEN_CONTEXT_LIMIT at src/engine/application.ts:45 (DISPLAY). It is compared exactly at :466 and :574."
+          },
+          {
+            "file": "tests/application.test.ts",
+            "lines": "17, 594",
+            "text": "const root = mkdtempSync(join(tmpdir(), 'moonzila-app-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "Test-only temp-dir prefixes ('moonzila-app-' and 'moonzila-app-review-')."
+          },
+          {
+            "file": "tests/check-fuses.test.ts",
+            "lines": "174",
+            "text": "expect([productName, output]).toEqual(['Moonzila', 'release']);",
+            "category": "TEST_FOLLOWS",
+            "proposed": "['MoonAliza', 'release'] if the installer/exe name is renamed",
+            "reason": "Follows productName in electron-builder.yml:2 (the installer and exe name, DISPLAY). Line :180 also requires the windows.yml fuse step to be exactly `node scripts/check-fuses.mjs release/win-unpacked/${productName}.exe`, so productName, windows.yml:38 and this pin must change in one commit, or npm test goes red on every push or PR."
+          },
+          {
+            "file": "tests/check-fuses.test.ts",
+            "lines": "238, 241, 243, 245",
+            "text": "expect(JSON.parse((await run()).stdout).path).toBe('release/win-unpacked/Moonzila.exe');",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'release/win-unpacked/MoonAliza.exe' together with scripts/check-fuses.mjs:5 and :31",
+            "reason": "Follows the default exe path in scripts/check-fuses.mjs:31, which derives from productName. The synthetic exe is generated on each run; there is no recording."
+          },
+          {
+            "file": "tests/file-read.test.ts",
+            "lines": "187, 191",
+            "text": "await writeFile(join(root, 'README.md'), 'Moonzila local checkout');",
+            "category": "TEST_FOLLOWS",
+            "proposed": "keep",
+            "reason": "Follows no source string. The test writes this README content and searches it back (:191 must equal :187). It is arbitrary test data."
+          },
+          {
+            "file": "tests/file-read.test.ts",
+            "lines": "16",
+            "text": "directory = await mkdtemp(join(tmpdir(), 'moonzila-reads-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/fixtures/github-tls.ts",
+            "lines": "61",
+            "text": "const caName = 'Moonzila test CA (generated per test run, not trusted outside tests)';",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "The common name of a CA generated on each test run and trusted only by the fake. No source reads it and nothing persists it."
+          },
+          {
+            "file": "tests/fixtures/github-tls.ts",
+            "lines": "87",
+            "text": "const dir = await mkdtemp(join(tmpdir(), 'moonzila-github-tls-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (if it is changed, tests/github-tls.test.ts:73 must change too)",
+            "reason": "A test-only temp-dir prefix, coupled to the leak check at tests/github-tls.test.ts:73."
+          },
+          {
+            "file": "tests/github-tls.test.ts",
+            "lines": "73",
+            "text": "const folders = async () => (await readdir(tmpdir())).filter(name => name.startsWith('moonzila-github-tls-')).sort();",
+            "category": "TEST_FOLLOWS",
+            "proposed": "keep, or change together with tests/fixtures/github-tls.ts:87",
+            "reason": "Follows the prefix at tests/fixtures/github-tls.ts:87. If the two drift apart, the 'leaves no temporary folder behind' test passes vacuously: it would compare zero matching folders before and after."
+          },
+          {
+            "file": "tests/provider-transport.test.ts",
+            "lines": "365, 372, 373",
+            "text": "{ role: 'tool', content: '# Moonzila', toolCallId: 'call-provider-3', toolName: 'read_file' },",
+            "category": "TEST_FOLLOWS",
+            "proposed": "keep",
+            "reason": "Lines 372 and 373 are byte-exact request-body pins for the openai-compatible and ollama transports. They follow this file's own input at :365 (a fake README read result), not a source string. They are self-generated, not live recordings and not sha256-pinned. Changing :365 would require the same edit at :372 and :373, and there is no reason to make it."
+          },
+          {
+            "file": "tests/research-contracts.test.ts",
+            "lines": "164",
+            "text": "const research = { id: 'r1', projectId: 'p1', revision: 1, status: 'collecting', topic: 't', clientRef: 'moonzila-r1', workflowRunId: '123', createdAt: '2026-10",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "An arbitrary clientRef that satisfies the schema, used only to validate ResearchSchema. Real clientRefs are 'mz-<hex>' (src/engine/research.ts:38) and are exchanged with the GitHub collector; this value never leaves the test."
+          },
+          {
+            "file": "tests/research-panel-cancel-review.test.tsx",
+            "lines": "33",
+            "text": "const COLLECTION_CANCELLED = 'Moonzila stopped following this collection. A run already started on GitHub was not cancelled there.';",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'MoonAliza stopped following this collection. ...'",
+            "reason": "A copy of the text at src/renderer/ResearchPanel.tsx:262 (DISPLAY). The :64 case (findByText) fails if it goes stale. The :57 case asserts the text is absent, so a stale copy would pass vacuously there."
+          },
+          {
+            "file": "tests/research-panel.test.tsx",
+            "lines": "119",
+            "text": "expect(screen.getByText(/could not be verified yet, because GitHub or the Research Kit was unavailable, waits until Moonzila restarts/)).toBeTruthy();",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'... waits until MoonAliza restarts'",
+            "reason": "Follows the collecting-status text at src/renderer/ResearchPanel.tsx:260 (DISPLAY). The regex includes the name, so it fails after a source-only rename."
+          },
+          {
+            "file": "tests/research-panel.test.tsx",
+            "lines": "429, 456",
+            "text": "expect(confirm.textContent).toMatch(/A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result/);",
+            "category": "TEST_FOLLOWS",
+            "proposed": "'... MoonAliza stops following it ...'",
+            "reason": "Follows GITHUB_KEEPS_RUNNING at src/renderer/research-text.ts:143 (DISPLAY)."
+          },
+          {
+            "file": "tests/research-panel.test.tsx",
+            "lines": "286 (two occurrences), 349, 553",
+            "text": "await act(async () => reads.replies[2]!.reject(new Error('The review workspace changed in a way Moonzila will not read through. Start the review again.')));",
+            "category": "TEST_FOLLOWS",
+            "proposed": "MoonAliza, to match the source (optional; green either way)",
+            "reason": "Mock-injected copies of DOCUMENT_REDACTION_UNAVAILABLE (src/main/bridge.ts:25; :286 has 'Moonzila cannot check...' and '...restarting Moonzila.') and DOCUMENT_UNSAFE (bridge.ts:24). The assertions use regexes without the name (:289, :355), so these copies cannot detect drift; updating them only keeps them faithful to the source."
+          },
+          {
+            "file": "tests/research-review-main.test.ts",
+            "lines": "28, 213, 217",
+            "text": "process.env.MOONZILA_TEST_SENTINEL = SENTINEL;",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only sentinel ('moonzila-test-sentinel-not-a-secret') and env var, used to prove the review child inherits no environment (:389) and to check redaction (:115). src reads no MOONZILA_* variable (grep of src returned nothing). Renaming both together would be harmless."
+          },
+          {
+            "file": "tests/research-review-main.test.ts",
+            "lines": "211",
+            "text": "root = await mkdtemp(join(tmpdir(), 'moonzila-review-main-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/activation.test.ts",
+            "lines": "30",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-activation-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix. The activation signature domain string in this file already says 'MoonAliza' and is not affected."
+          },
+          {
+            "file": "tests/archive.test.ts",
+            "lines": "10",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-zip-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/command-broker.test.ts",
+            "lines": "12",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-broker-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/commands.test.ts",
+            "lines": "46, 67",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-process-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "Test-only temp-dir prefixes ('moonzila-process-' and 'moonzila-engine-')."
+          },
+          {
+            "file": "tests/download.test.ts",
+            "lines": "10",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-download-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/file-journal.test.ts",
+            "lines": "12",
+            "text": "const root = mkdtempSync(join(tmpdir(), 'moonzila-files-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/git.test.ts",
+            "lines": "12, 53",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-git-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "Test-only temp-dir prefixes ('moonzila-git-' and 'moonzila-linked-')."
+          },
+          {
+            "file": "tests/guarded-process.test.ts",
+            "lines": "9",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-guard-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/handoff.test.ts",
+            "lines": "12",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-handoff-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/managed-ollama.test.ts",
+            "lines": "30",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-managed-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/model-store.test.ts",
+            "lines": "12",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-model-store-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/operations.test.ts",
+            "lines": "14",
+            "text": "const directory = mkdtempSync(join(tmpdir(), 'moonzila-operations-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/owned-connection.test.ts",
+            "lines": "10",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-owned-http-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/paths.test.ts",
+            "lines": "21, 28",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-paths-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/policy-guard-control.test.ts",
+            "lines": "19",
+            "text": "const root = mkdtempSync(join(tmpdir(), 'moonzila-guard-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/policy-route.test.ts",
+            "lines": "25, 229",
+            "text": "const root = mkdtempSync(join(tmpdir(), 'moonzila-route-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "Test-only temp-dir prefixes ('moonzila-route-' and 'moonzila-route-p2-')."
+          },
+          {
+            "file": "tests/project-policy-engine.test.ts",
+            "lines": "17",
+            "text": "const root = mkdtempSync(join(tmpdir(), 'moonzila-policy-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/project-tickets.test.ts",
+            "lines": "10",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-tickets-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/provider-screen.test.ts",
+            "lines": "32",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-screen-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-collector-protocol.test.ts",
+            "lines": "225",
+            "text": "const temp = await mkdtemp(join(tmpdir(), 'moonzila-collector-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix. The collector goldens (goldens.json) do not contain the name, so they are unaffected."
+          },
+          {
+            "file": "tests/research-collector-settings.test.ts",
+            "lines": "17",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-collector-settings-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-collector-supervisor.test.ts",
+            "lines": "33",
+            "text": "const root = options.root ?? await mkdtemp(join(tmpdir(), 'moonzila-supervisor-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-document.test.ts",
+            "lines": "134",
+            "text": "root = await mkdtemp(join(tmpdir(), 'moonzila-document-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-import.test.ts",
+            "lines": "68",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-import-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-kit-collector-launch.test.ts",
+            "lines": "29",
+            "text": "beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-collector-launch-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-kit-retain.test.ts",
+            "lines": "25",
+            "text": "beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-retain-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-kit.test.ts",
+            "lines": "15",
+            "text": "beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-research-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-purge.test.ts",
+            "lines": "151",
+            "text": "root = await mkdtemp(join(tmpdir(), 'moonzila-purge-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-review-e2e.test.ts",
+            "lines": "329",
+            "text": "root = await mkdtemp(join(tmpdir(), 'moonzila-review-e2e-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-review-engine.test.ts",
+            "lines": "51, 774",
+            "text": "const root = mkdtempSync(join(tmpdir(), 'moonzila-review-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix. This file imports REVIEW_SYSTEM_PROMPT (:9, :135), so it follows any change to that prompt automatically."
+          },
+          {
+            "file": "tests/research-review-main-kit.test.ts",
+            "lines": "24",
+            "text": "beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-review-kit-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/research-review-native.test.ts",
+            "lines": "24",
+            "text": "beforeAll(async () => { if (windows) root = await mkdtemp(join(tmpdir(), 'moonzila-review-native-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/review-workspace-layers.test.ts",
+            "lines": "29",
+            "text": "beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-review-layers-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/review-workspace.test.ts",
+            "lines": "34",
+            "text": "beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-review-workspace-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/scheduler.test.ts",
+            "lines": "200",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-scheduler-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/snapshots.test.ts",
+            "lines": "9",
+            "text": "const root = await mkdtemp(join(tmpdir(), 'moonzila-snapshots-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix. This file tests the app's file snapshots; it is not a snapshot or golden file."
+          },
+          {
+            "file": "tests/store.test.ts",
+            "lines": "21",
+            "text": "directory = mkdtempSync(join(tmpdir(), 'moonzila-store-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          },
+          {
+            "file": "tests/vault.test.ts",
+            "lines": "10",
+            "text": "const directory = await mkdtemp(join(tmpdir(), 'moonzila-vault-'));",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep",
+            "reason": "A test-only temp-dir prefix."
+          }
+        ],
+        "risks": [
+          "No byte- or sha256-pinned recording in tests/ or e2e/ contains the name, so none has to change and none may be re-recorded (verified by grep). This covers tests/fixtures/anthropic-live/* (D1-bearer, D5-think-sonnet step1/step2, D11-haiku, D12-opus), the bodySha256 checks in tests/anthropic-transport.test.ts:78-150 and tests/anthropic.test.ts:424-534, the research-kit zips (entry names and decompressed content), collector-golden/goldens.json, provenance.json and schema-v1..v3.sql. The live D1/D5/D11/D12 request bodies were sent by the 2026-10-12 probe runner with its own system prompt, 'You are a test assistant. Use the tools when the user asks for them.' (LIVE_SYSTEM at anthropic-transport.test.ts:46 and anthropic.test.ts:208), and carry no User-Agent header. Renaming the app's system prompt therefore moves no pinned hash, and those recordings stay valid as historical evidence of the probe prompt.",
+          "If the system prompt is renamed (MODEL_FACING): e2e/fixtures/anthropic-fake.ts:158 hard-codes the prefix 'You are Moonzila, a coding assistant in ask mode.', so the Anthropic e2e journey goes red unless it changes in the same commit. research-review-engine.test.ts follows REVIEW_SYSTEM_PROMPT automatically because it imports the constant. No test pins the folder-free prompt (src/engine/application.ts:356), so a rename or typo there goes undetected.",
+          "Prompt length: 'MoonAliza' is 1 byte longer than 'Moonzila', and estimateInput (src/engine/context.ts:56) counts bytes/2, so each renamed occurrence in a system prompt adds about 0.5 estimated tokens. tests/application.test.ts calibrates tight budgets (contextTokens 5_787 at :390, documented as 'holds two results at the excerpt but not three'; 5_142 at :453). I expect the margin to absorb this, but it is untested; run the suite after any prompt rename.",
+          "The composer label 'Message Moonzila' (src/renderer/App.tsx:235) is the selector for 38 test lines: 17 in e2e (Playwright getByLabel, a case-insensitive substring match that 'Message MoonAliza' does not satisfy) and 21 in tests/workbench.test.tsx (exact getByLabelText). Both npm test and npm run test:e2e run on every push and PR in .github/workflows/windows.yml, so a source-only rename turns CI red. scripts/check-live-provider.mjs:59 uses the same label, is not run in CI, and would go stale silently.",
+          "Renaming productName (the installer/exe name): tests/check-fuses.test.ts:174/180 reads electron-builder.yml and windows.yml and requires the fuse step to be `node scripts/check-fuses.mjs release/win-unpacked/${productName}.exe`. electron-builder.yml:2, windows.yml:38, scripts/check-fuses.mjs:5/31 and check-fuses.test.ts:174/238-245 must change in one commit, or npm test goes red. windows.yml:48 (the test-package fuse check) and :53 (MOONALIZA_TEST_EXECUTABLE=.../Moonzila.exe) are checked by no test and run only on workflow_dispatch, so a missed edit there shows up only on a manual packaging run, as a missing exe.",
+          "Install side effects of the exe rename (outside this area, not verified here): Moonzila.exe becomes MoonAliza.exe, which changes the Windows shortcut targets and names and possibly the default install folder and the uninstall entry's display name. appId com.moonaliza.desktop is unchanged, so I expect the uninstall registry key to stay the same; this needs confirming against electron-builder's NSIS docs. userData follows app.setName('MoonAliza') and is untouched by any test in this area, because e2e passes an explicit --user-data-dir.",
+          "Some tests would pass vacuously after a partial rename: research-panel-cancel-review.test.tsx:57 asserts the collection text is absent, and github-tls.test.ts:73 filters leftover folders by a prefix that must match tests/fixtures/github-tls.ts:87. research-panel.test.tsx:286/349/553 inject their own copies of the bridge.ts:24/25 messages and assert regexes without the name, so they can never catch drift from the source.",
+          "No test in tests/ or e2e/ pins the GitHub User-Agent strings 'Moonzila-public-repository-reader' (src/main/github.ts:16) or 'Moonzila-research-import' (src/main/research-import.ts:43), the window title, or a visible product heading. Whatever the lead decides for these DISPLAY and external strings, no test will catch a regression.",
+          "__moonzilaE2eCollectorNetwork is also named in the current spec docs/specification/research-journeys.md:23. Renaming the global in collector-network.cjs:163 and research-journeys.spec.ts:86 without updating that spec leaves the doc stale.",
+          "Naming is already mixed: check-fuses.test.ts uses the 'moonaliza-fuses-' prefix and a synthetic 'MoonAliza.exe', the cookie lines use the 'moonaliza-local'/'moonaliza-providers' partitions next to 'moonzila_e2e', and MOONALIZA_TEST_EXECUTABLE is already MoonAliza. A blanket case-insensitive replace confined to tests/ and e2e/ would keep the self-generated byte pins (provider-transport.test.ts:365/372/373) consistent and touch no recording. It would still change test-only identifiers for no product benefit, and it must not reach docs/evidence/ (for example, docs/evidence/2026-10-12-anthropic-probes/*.mjs/.ts reference MOONZILA_ANTHROPIC_API_KEY and are historical)."
+        ],
+        "questions": [
+          "Do the model-facing system prompts change to MoonAliza? They are src/engine/application.ts:355 (ask/build), :356 (folder-free) and src/engine/research-review.ts:83 (REVIEW_SYSTEM_PROMPT). If yes, e2e/fixtures/anthropic-fake.ts:158 must change in the same commit, and the suite must be re-run for the tight context-budget tests in tests/application.test.ts. No pinned recording is affected.",
+          "Does the installer/exe productName change (Moonzila.exe to MoonAliza.exe)? If yes, electron-builder.yml:2, package.json:3, scripts/check-fuses.mjs:5/31, .github/workflows/windows.yml:38/48/53 and tests/check-fuses.test.ts:174/238/241/243/245 must change together, and someone should confirm what happens to existing Windows shortcuts and uninstall entries.",
+          "Should the test-only identifiers keep their current names? Recommended: keep. They have no product effect, and renaming them would churn about 75 lines. They are the 56 temp-dir prefixes, the moonzila_e2e cookie, test-results/moonzila-*.png, SIGNATURE_MARKER/TOOL_ID/msg ids, __moonzilaE2eCollectorNetwork, MOONZILA_TEST_SENTINEL, the test CA name and clientRef 'moonzila-r1'. If they are renamed, the coupled pairs must move together: github-tls.ts:87 with github-tls.test.ts:73, and collector-network.cjs:163 with research-journeys.spec.ts:86 and docs/specification/research-journeys.md:23.",
+          "Do code comments in test fixtures that name the app count as docs to rename? They are e2e/fixtures/anthropic-fake.ts:12/24/30/39/78/110, collector-network.cjs:3 and ollama-status.ts:4/8.",
+          "The specs that tests quote word for word carry the same user-facing strings: docs/specification/more-models.md, more-models-phase2.md and research-review-ui.md, cited at tests/application.test.ts:76. Are these current docs to rename with the source, or historical records to keep? The dated docs/orchestration/2026-10-05-more-models/* reports are HISTORICAL_KEEP either way.",
+          "Should the mock-injected copies of the bridge messages in tests/research-panel.test.tsx:286/349/553 be updated to match the renamed source? The tests stay green either way.",
+          "Should arbitrary test-data strings stay as they are? Recommended: keep. They are '# Moonzila' (provider-transport.test.ts:365, mirrored byte for byte in :372/:373), 'Moonzila local checkout' (file-read.test.ts:187/191) and 'Moonzila repository evidence' (github-reading.spec.ts:20/37)."
+        ],
+        "commandsRun": [
+          "git -C /home/user/moonaliza rev-parse --abbrev-ref HEAD; git rev-parse --short HEAD (main-axuse, 6ed7e22)",
+          "git -C /home/user/moonaliza grep -n -I -i moonzila -- tests e2e (152 lines: 56 in e2e, 96 in tests)",
+          "git grep -n -I -i -E 'moon[ _.-]+zila|moonzil|m00nzila' -- tests e2e (no other variants)",
+          "git ls-files tests e2e | grep -i -E 'snap|golden|live|record|fixture'",
+          "head/grep of tests/fixtures/anthropic-live/*.request.json (system prompt is 'You are a test assistant...', bodySha256, no User-Agent, 0 hits)",
+          "unzip -p / unzip -l over tests/fixtures/research-kit/*.zip piped to grep -i -c moonzila (0 hits)",
+          "grep -n of tests/anthropic-transport.test.ts for sha256/LIVE_SYSTEM/system",
+          "git grep over src, scripts, electron-builder.yml and package.json for each source string the tests follow (App.tsx:235/259, application.ts:45/355/356/414, research-review.ts:83, ResearchPanel.tsx:260/262, research-text.ts:143, bridge.ts:24/25, check-fuses.mjs:31, github.ts:16, research-import.ts:43)",
+          "git grep over .github and docs for Moonzila.exe, test-results, __moonzilaE2e, moonzila_e2e and MOONZILA_TEST_SENTINEL",
+          "sed -n reads of context in tests/check-fuses.test.ts, tests/research-panel*.tsx, tests/application.test.ts, tests/provider-transport.test.ts, tests/github-tls.test.ts, e2e/fixtures/anthropic-fake.ts, e2e/workbench.spec.ts, e2e/anthropic.spec.ts, src/engine/context.ts, .github/workflows/windows.yml and electron-builder.yml",
+          "git grep -n -I -i -c moonzila -- docs/evidence/2026-10-12-anthropic-probes and grep -l -i user-agent on its *.request.json files (read-only check that the probe recordings carry no app prompt and no UA)",
+          "git -C /home/user/moonaliza status --short (0 lines; checkout unmodified)"
+        ]
+      },
+      {
+        "area": "docs",
+        "filesCovered": [
+          "README.md",
+          "HANDOFF.md",
+          "AGENTS.md",
+          "docs/ARCHITECTURE.md",
+          "docs/development-status.md",
+          "docs/specification/decisions.md",
+          "docs/specification/github-url-reading.md",
+          "docs/specification/hugging-face-verification.md",
+          "docs/specification/implementation-sources.md",
+          "docs/specification/interface.md",
+          "docs/specification/local-model-sources.md",
+          "docs/specification/managed-artifacts.md",
+          "docs/specification/managed-provider.md",
+          "docs/specification/managed-scheduler.md",
+          "docs/specification/model-store-selection.md",
+          "docs/specification/more-models-phase2.md",
+          "docs/specification/more-models.md",
+          "docs/specification/operate-mode.md",
+          "docs/specification/project-memory.md",
+          "docs/specification/research-collection.md",
+          "docs/specification/research-journeys.md",
+          "docs/specification/research-kit-integration-review.md",
+          "docs/specification/research-kit-offline.md",
+          "docs/specification/research-review-ui.md",
+          "docs/specification/research-review.md",
+          "docs/specification/tool-transport-sources.md",
+          "docs/specification/windows-ci.md",
+          "docs/superpowers/plans/2026-09-24-moonaliza.md",
+          "docs/superpowers/plans/2026-09-30-research-kit-offline.md",
+          "docs/superpowers/plans/2026-10-01-github-url-reading.md",
+          "docs/superpowers/plans/2026-10-02-research-jobs.md",
+          "docs/superpowers/plans/2026-10-03-coding-knowledge-base.md",
+          "docs/superpowers/plans/2026-10-03-operate-mode.md",
+          "docs/orchestration/** (34 files, counted)",
+          "docs/research/** (19 files, counted)",
+          "docs/evidence/** (9 files, counted)",
+          "docs/releases/** (0 occurrences)",
+          "docs/handoff/** (0 occurrences)",
+          "CONTEXT.md (does not exist)",
+          "CHANGELOG.md (does not exist)"
+        ],
+        "occurrences": [
+          {
+            "file": "README.md",
+            "lines": "1",
+            "text": "# Moonzila",
+            "category": "DISPLAY",
+            "proposed": "# MoonAliza",
+            "reason": "README title is the product name users see."
+          },
+          {
+            "file": "README.md",
+            "lines": "22, 24",
+            "text": "Moonzila first asks that Ollama whether its cloud features are off ... Moonzila sends no workspace header ... (Moonzila waits up to 10 minutes for each) ... so Moonzila cannot shorten them ... Moonzila stops a tool step",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza in each place",
+            "reason": "User instructions that name the product."
+          },
+          {
+            "file": "README.md",
+            "lines": "24",
+            "text": "...retention policy, which Moonzila has not reviewed. Moonzila's Anthropic connection is tested against requests and responses recorded from the live API",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza, in the same commit as src/renderer/App.tsx:259/267",
+            "reason": "The README repeats the Anthropic hint word for word (more-models-phase2.md:713). tests/workbench.test.tsx:213 pins the source sentence, so README and source must change together."
+          },
+          {
+            "file": "AGENTS.md",
+            "lines": "1, 5",
+            "text": "# Moonzila continuation / - Build the full Moonzila Windows desktop coding-agent product in working stages.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Current instructions that name the product."
+          },
+          {
+            "file": "AGENTS.md",
+            "lines": "101",
+            "text": "| Remote collector | none configured for Moonzila |",
+            "category": "DISPLAY",
+            "proposed": "none configured for MoonAliza",
+            "reason": "Product reference in the Research-Kit setup table. No collector convention depends on this text (before e7cdd4a it read MoonAliza)."
+          },
+          {
+            "file": "HANDOFF.md",
+            "lines": "1, 7",
+            "text": "# Moonzila: start here / Build the full Windows desktop coding-agent workbench named **Moonzila**",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Current start-here doc naming the product."
+          },
+          {
+            "file": "HANDOFF.md",
+            "lines": "15",
+            "text": "cd Moonzila",
+            "category": "DISPLAY",
+            "proposed": "cd MoonAliza",
+            "reason": "Bug fix: the line above clones MoonAliza.git, which creates a folder called MoonAliza, so `cd Moonzila` fails. This was the wording before e7cdd4a."
+          },
+          {
+            "file": "HANDOFF.md",
+            "lines": "25",
+            "text": "## Product name and Operate mode (October 3) ... The product is now called **Moonzila** (previously MoonAliza; [decision 12](docs/specification/decisions.md)).",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Keep the October 3 record and add a superseding line: 'Superseded October 12 (decision 14): the product is MoonAliza again; the kept identifiers never changed.' The lead may instead rewrite the paragraph as current state.",
+            "reason": "This dated section records the October 3 decision. It also tells the next developer what the current name is, so it cannot stay without a note."
+          },
+          {
+            "file": "HANDOFF.md",
+            "lines": "25",
+            "text": "The Windows workflow expects `release/win-unpacked/Moonzila.exe`, which follows from the new `productName`.",
+            "category": "DISPLAY",
+            "proposed": "`release/win-unpacked/MoonAliza.exe`, only if productName goes back in the same PR",
+            "reason": "The exe name is derived from productName. It must match .github/workflows/windows.yml:38,48,53 and scripts/check-fuses.mjs:5,31."
+          },
+          {
+            "file": "HANDOFF.md",
+            "lines": "83",
+            "text": "The plan records each decision. The app keeps the name Moonzila. Do not let research become mandatory for ordinary chat or existing projects.",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore the original 'The app keeps the name MoonAliza.' No superseding note is needed.",
+            "reason": "This records the October 2 decision. Its text before e7cdd4a was 'keeps the name MoonAliza'; the rename rewrote a past decision. Restoring it is accurate both historically and now."
+          },
+          {
+            "file": "docs/ARCHITECTURE.md",
+            "lines": "1",
+            "text": "# Moonzila architecture and current decisions",
+            "category": "DISPLAY",
+            "proposed": "# MoonAliza architecture and current decisions",
+            "reason": "Current doc title."
+          },
+          {
+            "file": "docs/ARCHITECTURE.md",
+            "lines": "46",
+            "text": "The product is named Moonzila since 2026-10-03 ([decision 12](specification/decisions.md)). The rename changed user-facing names and current documents only;",
+            "category": "DISPLAY",
+            "proposed": "State current fact: 'The product is named MoonAliza (decision 14, 2026-10-12; shown as Moonzila 2026-10-03 to 10-12, decision 12).' Keep the list of identifiers that never changed.",
+            "reason": "This doc records current decisions, so it must state the current name. The rename PR's source commit has to stage this file under the commit gate anyway."
+          },
+          {
+            "file": "docs/ARCHITECTURE.md",
+            "lines": "49",
+            "text": "creates a fresh `research` run ... with Moonzila's fixed instruction, records the edge",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza's fixed instruction",
+            "reason": "Product reference. The instruction itself (src/engine/research-review.ts:83-85, 'You are Moonzila, reviewing...') is MODEL_FACING source text, outside this area."
+          },
+          {
+            "file": "docs/development-status.md",
+            "lines": "9, 47, 190",
+            "text": "an error `finish_reason` or one Moonzila does not know / never grant Moonzila tool permission / no Research Kit process or Build gate has been added to Moonzila",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references in the status doc (47 and 190 read MoonAliza before e7cdd4a)."
+          },
+          {
+            "file": "docs/development-status.md",
+            "lines": "13",
+            "text": "The product name is Moonzila ([decision 12](specification/decisions.md)); installed-app identifiers keep the old spelling, see HANDOFF.md.",
+            "category": "DISPLAY",
+            "proposed": "'The product name is MoonAliza again (decision 14, October 12); installed-app identifiers never changed.' Keep the trailing October 3 verification sentence.",
+            "reason": "An undated 'Product name' section that states the current name."
+          },
+          {
+            "file": "docs/development-status.md",
+            "lines": "17",
+            "text": "The full Moonzila product remains the target. This is a working development checkpoint, not a completed agent or qualified release.",
+            "category": "DISPLAY",
+            "proposed": "The full MoonAliza product remains the target.",
+            "reason": "Product reference (the original October 2 checkpoint text read MoonAliza)."
+          },
+          {
+            "file": "docs/development-status.md",
+            "lines": "33",
+            "text": "Live unauthenticated verification listed the actual Moonzila repository and read its README at `146ba4e52a48baf7e843c6d197ce42c8ebb1c9c7`.",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore 'the actual MoonAliza repository' (the pre-e7cdd4a wording)",
+            "reason": "October 2 verification record. The repository read was StepenkoAnatoli/MoonAliza, so the 'Moonzila' wording falsifies the record."
+          },
+          {
+            "file": "docs/specification/decisions.md",
+            "lines": "1",
+            "text": "# Moonzila specification corrections",
+            "category": "DISPLAY",
+            "proposed": "# MoonAliza specification corrections",
+            "reason": "Current spec title."
+          },
+          {
+            "file": "docs/specification/decisions.md",
+            "lines": "3",
+            "text": "The user requested the full product under the name Moonzila. This file resolves the reviewed attachment's incomplete appendix",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore '...under the name MoonAliza.' (pre-e7cdd4a text)",
+            "reason": "Records the original September request, which was made under the name MoonAliza. e7cdd4a rewrote it."
+          },
+          {
+            "file": "docs/specification/decisions.md",
+            "lines": "17",
+            "text": "12. The product name is Moonzila (user request, 2026-10-03; previously MoonAliza). The first rename spelled it \"Monnzila\"; ... every place that rename touched now reads Moonzila.",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Keep the text and append 'Superseded by decision 14 (2026-10-12).' Add decision 14: the product name is MoonAliza again, with the same kept identifiers and an exact statement of what reverts (product name, window title, installer productName, UI, docs; package name and prompts as the lead decides).",
+            "reason": "A dated decision. Decisions are superseded, not rewritten."
+          },
+          {
+            "file": "docs/specification/decisions.md",
+            "lines": "19",
+            "text": "13. ... (user decision D2, 2026-10-04). The shipped `Moonzila.exe` turns the `enableNodeCliInspectArguments` fuse off",
+            "category": "DISPLAY",
+            "proposed": "`MoonAliza.exe` if productName goes back (or the neutral 'the shipped exe')",
+            "reason": "The exe name is incidental to decision 13 and follows productName. It is a current technical fact, not a naming record."
+          },
+          {
+            "file": "docs/specification/github-url-reading.md",
+            "lines": "3, 9",
+            "text": "Moonzila 0.8 adds `read_github` to General chat ... / Moonzila never follows API-provided download URLs or external targets",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Version 0.8 shipped as MoonAliza (docs/releases/0.8.1-dev.1.md is titled 'MoonAliza 0.8.1'). This restores the pre-e7cdd4a text."
+          },
+          {
+            "file": "docs/specification/github-url-reading.md",
+            "lines": "15",
+            "text": "Verification includes a real unauthenticated Moonzila root/README read at `146ba4e52a48baf7e843c6d197ce42c8ebb1c9c7`",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore 'MoonAliza root/README read' (pre-e7cdd4a)",
+            "reason": "A verification record of reading the MoonAliza repository. The current wording misstates what was read."
+          },
+          {
+            "file": "docs/specification/hugging-face-verification.md",
+            "lines": "3",
+            "text": "The user authorized use of a supplied Hugging Face token for building and checking Moonzila.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product reference (pre-e7cdd4a text). No credential value appears in it."
+          },
+          {
+            "file": "docs/specification/implementation-sources.md",
+            "lines": "3",
+            "text": "they are not proof that Moonzila passed runtime tests.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product reference."
+          },
+          {
+            "file": "docs/specification/interface.md",
+            "lines": "1, 9",
+            "text": "# Moonzila workbench / The crescent-like Moonzila mark is the visual signature.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "UI spec naming the product and its mark."
+          },
+          {
+            "file": "docs/specification/local-model-sources.md",
+            "lines": "24, 42",
+            "text": "an upstream checksum is not Moonzila signed activation metadata / Moonzila must not kill, upgrade or remove their models",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references. The activation signature domain string in source is a separate kept identifier."
+          },
+          {
+            "file": "docs/specification/managed-artifacts.md",
+            "lines": "31",
+            "text": "The real executable then started through Moonzila's native Job Object helper",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza's",
+            "reason": "Product reference. The helper file is MoonAlizaHost.exe, which is kept."
+          },
+          {
+            "file": "docs/specification/managed-provider.md",
+            "lines": "43",
+            "text": "The report is retained at `outputs/Moonzila-managed-provider-runtime-verification.json` in the parent workspace.",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "Restore the real file name `outputs/MoonAliza-managed-provider-runtime-verification.json`",
+            "reason": "This is a file name. The file is MoonAliza-... (docs/handoff/manifest.json:512, outputs/MoonAliza-managed-provider-checkpoint.md:21). e7cdd4a renamed only the reference, so the doc now names a file that does not exist."
+          },
+          {
+            "file": "docs/specification/managed-scheduler.md",
+            "lines": "39",
+            "text": "this checkpoint is also retained in the sibling outputs directory as `Moonzila-scheduler-runtime-verification.json`.",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "Restore `MoonAliza-scheduler-runtime-verification.json`",
+            "reason": "A file name. The real file is MoonAliza-scheduler-runtime-verification.json (docs/handoff/manifest.json:547), so the current reference is broken."
+          },
+          {
+            "file": "docs/specification/model-store-selection.md",
+            "lines": "11, 27",
+            "text": "Moonzila validates all cache paths first / This 30-day freshness interval is an initial Moonzila policy",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references."
+          },
+          {
+            "file": "docs/specification/more-models-phase2.md",
+            "lines": "106, 143, 147, 225, 313, 335, 365, 476, 544, 582, 742, 747, 1063, 1113",
+            "text": "How it maps onto Moonzila. / Half is Moonzila's own heuristic / which Moonzila never sends / `get_weather` is not a tool Moonzila offers / not by Moonzila",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Prose references to the product in the current Phase 2 design and as-built spec."
+          },
+          {
+            "file": "docs/specification/more-models-phase2.md",
+            "lines": "133, 665",
+            "text": "unchanged, so Moonzila could not shorten them while the task ran. / provider returned a tool call or step Moonzila could not use safely",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza, together with src/engine/application.ts:45 and :414",
+            "reason": "These quote user-facing engine messages. The spec must stay word-for-word with the source."
+          },
+          {
+            "file": "docs/specification/more-models-phase2.md",
+            "lines": "719, 730",
+            "text": "refers to its commercial data retention policy, which Moonzila has not reviewed.\" / (as built: \"Moonzila's Anthropic connection is tested against requests and responses recorded from",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza, together with src/renderer/App.tsx:259/267, tests/workbench.test.tsx:213 and README.md:24",
+            "reason": "These quote the Anthropic hint, which the spec says the renderer test pins whole."
+          },
+          {
+            "file": "docs/specification/more-models.md",
+            "lines": "3, 9, 73, 87",
+            "text": "The user's request, October 4: add more models to Moonzila / ## Where Moonzila starts (discovery, October 5) / claims only what Moonzila knows / Moonzila cannot verify",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references. Line 3 names the product, not a naming decision."
+          },
+          {
+            "file": "docs/specification/more-models.md",
+            "lines": "68",
+            "text": "- The engine shows: \"Moonzila could not confirm that this Ollama keeps prompts on this computer, and",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza, together with src/engine/application.ts:414 (LOCAL_MODEL_UNVERIFIED)",
+            "reason": "Quotes a user-facing error message from source."
+          },
+          {
+            "file": "docs/specification/operate-mode.md",
+            "lines": "5, 21, 23, 43, 72, 114, 131",
+            "text": "On October 3 the user asked whether Moonzila could later serve the KashMula project / It turns Moonzila into the operator's seat / Moonzila is the client",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references. Line 5 read MoonAliza before e7cdd4a, since the same request did the renaming."
+          },
+          {
+            "file": "docs/specification/operate-mode.md",
+            "lines": "13",
+            "text": "The same request renamed the product from MoonAliza to Moonzila. The rename is recorded in [decisions](decisions.md) item 12;",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Keep it and add 'Superseded on October 12: the product is MoonAliza again (decisions item 14).'",
+            "reason": "Records a past naming decision."
+          },
+          {
+            "file": "docs/specification/project-memory.md",
+            "lines": "7",
+            "text": "The user asked on October 2 that Moonzila keep where work stopped when they switch modes or conversations",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product reference (pre-e7cdd4a text read MoonAliza)."
+          },
+          {
+            "file": "docs/specification/research-collection.md",
+            "lines": "3, 7, 269",
+            "text": "the collection process that Moonzila owns / Moonzila does not dispatch or download through its own GitHub calls / Moonzila does not cancel the remote GitHub run.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references in the behaviour contract."
+          },
+          {
+            "file": "docs/specification/research-journeys.md",
+            "lines": "15, 39",
+            "text": "A packaged executable such as `release/win-unpacked/Moonzila.exe` loads `resources/app.asar` / `release-e2e/win-unpacked/Moonzila.exe`",
+            "category": "DISPLAY",
+            "proposed": "`MoonAliza.exe`, only together with the productName change",
+            "reason": "Exe paths are derived from productName. They must match .github/workflows/windows.yml:38,48,53 (including MOONALIZA_TEST_EXECUTABLE) and scripts/check-fuses.mjs:5,31."
+          },
+          {
+            "file": "docs/specification/research-journeys.md",
+            "lines": "23, 37",
+            "text": "It counts collector launches and rewrites on `globalThis.__moonzilaE2eCollectorNetwork` / `launch()` reads `globalThis.__moonzilaE2eCollectorNetwork`",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "keep (rename only together with e2e/fixtures/collector-network.cjs:163 and e2e/research-journeys.spec.ts:86)",
+            "reason": "Names a test-only global in code, so the doc must equal the code. It is not persisted or exchanged, so renaming it has no effect on installs or data."
+          },
+          {
+            "file": "docs/specification/research-kit-integration-review.md",
+            "lines": "3, 7, 11, 27, 31, 33, 52, 61",
+            "text": "Keep Research Kit as an external producer/validator and Moonzila as its consumer / - Moonzila `main` at `7f68fb21e3062baf816e16cf09021ac790ff7fb5`",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references. Line 7 names the reviewed repository, which was MoonAliza, so this also restores the pre-e7cdd4a text."
+          },
+          {
+            "file": "docs/specification/research-kit-offline.md",
+            "lines": "7",
+            "text": "`src/adapters/research-kit` owns Moonzila's strict job binding ... Moonzila reads a projection of relevant manifest fields",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references (2 on one line)."
+          },
+          {
+            "file": "docs/specification/research-review-ui.md",
+            "lines": "92, 94, 151",
+            "text": "\"The review workspace changed in a way Moonzila will not read through.\" / \"Moonzila cannot check this document ... Try again after restarting Moonzila.\"",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza, together with src/main/bridge.ts:24-25 and src/renderer/research-text.ts:143",
+            "reason": "These quote UI strings that tests/research-panel.test.tsx:286,349,429,456,553 and e2e/research-journeys.spec.ts:213 pin, so spec, source and tests must change together."
+          },
+          {
+            "file": "docs/specification/research-review.md",
+            "lines": "7, 16, 325",
+            "text": "and Moonzila then validates the exact bytes / Moonzila never parses or rewrites the corpus Markdown itself. / **Moonzila editing the Markdown itself**",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references."
+          },
+          {
+            "file": "docs/specification/research-review.md",
+            "lines": "140, 181",
+            "text": "whose user message is Moonzila's fixed review instruction / The run's user message is fixed Moonzila text: the three review steps",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "The doc only describes the instruction. Whether to change the model-facing REVIEW_SYSTEM_PROMPT 'You are Moonzila, reviewing...' (src/engine/research-review.ts:83) is the lead's MODEL_FACING decision."
+          },
+          {
+            "file": "docs/specification/tool-transport-sources.md",
+            "lines": "8",
+            "text": "The current adapters are nonstreaming. Moonzila validates bounded arguments, rejects duplicate IDs",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product reference."
+          },
+          {
+            "file": "docs/specification/windows-ci.md",
+            "lines": "55",
+            "text": "gh run list --repo StepenkoAnatoli/MoonAliza --branch feat/moonzila-desktop",
+            "category": "IDENTIFIER_KEEP",
+            "proposed": "Restore `--branch feat/moonaliza-desktop`",
+            "reason": "A git branch name. PR #2 was merged from feat/moonaliza-desktop (merge 49585e7). e7cdd4a renamed it to a branch that never existed, so this command returns nothing."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-09-24-moonaliza.md",
+            "lines": "1",
+            "text": "# Moonzila Implementation Plan",
+            "category": "DISPLAY",
+            "proposed": "# MoonAliza Implementation Plan",
+            "reason": "Current roadmap title. Keep the file name 2026-09-24-moonaliza.md; check-handoff verifies links to it."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-09-24-moonaliza.md",
+            "lines": "3",
+            "text": "...desktop coding-agent product described in the supplied Rework specification, renamed Moonzila.",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore '...renamed MoonAliza.' (pre-e7cdd4a)",
+            "reason": "Records that the Rework product was renamed MoonAliza on September 24. The current wording falsifies that."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-09-30-research-kit-offline.md",
+            "lines": "3",
+            "text": "distinguishing validity/research readiness from Moonzila permissions.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product reference."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-01-github-url-reading.md",
+            "lines": "19, 30",
+            "text": "Verify against public Moonzila without auth. / The standalone public Moonzila read and the new Electron conversation/restart workflow passed.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Both lines name the MoonAliza repository and an October 1 result, so this restores the pre-e7cdd4a text."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-02-research-jobs.md",
+            "lines": "5, 15, 24, 33, 61, 383, 401, 416, 432, 435, 437, 438, 460, 465, 487, 504, 512, 535, 540, 552, 562, 564, 572",
+            "text": "whose readiness Moonzila can show / A Moonzila-side switch / Moonzila never merges / any folder above Moonzila's data folder / Moonzila stays local-first",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references in plan prose and user requests. Line 416's data folder really is %APPDATA%\\MoonAliza (app.setName), so the rename makes it accurate."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-02-research-jobs.md",
+            "lines": "67, 72, 100, 115, 159",
+            "text": "- Checks on Linux, Node 24.21.0, cwd `/home/user/moonzila`: / - Full Linux gate, cwd `/home/user/moonzila`: 506 passed and 75 failed",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore the recorded `/home/user/moonaliza` (do not leave as is, and do not treat it as a display rename)",
+            "reason": "Recorded verification working directories. They read /home/user/moonaliza (the real checkout path) until e7cdd4a rewrote them."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-02-research-jobs.md",
+            "lines": "251, 352",
+            "text": "`e3e55d5`: the test-only package (... decision 13, the exe name `Moonzila.exe`). / **Watch:** draft PR #31 (another session) renames the product to Moonzila",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep",
+            "reason": "Dated progress records of what a commit or PR did, and they are accurate."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-02-research-jobs.md",
+            "lines": "420",
+            "text": "The rename back to MoonAliza (from the display name Moonzila) is its own pull request after More models Phase 2 merges",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep (optionally add the PR number once it opens)",
+            "reason": "This is the current naming decision itself and it is correct as written."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-02-research-jobs.md",
+            "lines": "440",
+            "text": "User request, October 12 (Selenic, formerly Moonzila): the app should work independently",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep (optionally append '; now MoonAliza again')",
+            "reason": "Records the names that were in force when the request was made."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-02-research-jobs.md",
+            "lines": "518, 520, 527",
+            "text": "## App name (decided October 2: keep Moonzila) / ...then chose to keep Moonzila after a web check (October 2) / Moonzila is distinctive and already findable.",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "Restore 'keep MoonAliza' / 'chose to keep MoonAliza' / 'MoonAliza is distinctive' (pre-e7cdd4a)",
+            "reason": "On October 2 the user decided to keep MoonAliza; the name Moonzila did not exist until October 3. e7cdd4a and 5082167 rewrote this decision, and the heading quoted in this task is that rewritten text."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-03-coding-knowledge-base.md",
+            "lines": "66, 168",
+            "text": "Moonzila never fetches from `docs.oracle.com`. / so Moonzila itself never redistributes a set.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references in a proposed plan."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-03-coding-knowledge-base.md",
+            "lines": "164",
+            "text": "  - the note \"converted to plain text by Moonzila\".",
+            "category": "MODEL_FACING",
+            "proposed": "\"converted to plain text by MoonAliza\"",
+            "reason": "A planned note in tool results that is both sent to the model and shown to users (MDN change-note requirement). It is not implemented (no match in src, scripts or tests), so nothing downstream is pinned."
+          },
+          {
+            "file": "docs/superpowers/plans/2026-10-03-operate-mode.md",
+            "lines": "9, 12, 116",
+            "text": "**Goal:** Moonzila is the operator's seat / The loop itself never runs in Moonzila. / through the runtime, not Moonzila.",
+            "category": "DISPLAY",
+            "proposed": "MoonAliza",
+            "reason": "Product references in a current stage plan."
+          },
+          {
+            "file": "docs/orchestration/2026-10-03-task5-research-review/**",
+            "lines": "10 lines in 7 files (RUN.md 3, REPORT-P5.md 2, REQUIREMENTS-P5.md, TRACEABILITY-P5.md, briefs/p4-common.md, briefs/p5-common.md, reports/p5-four-dimension-1.md 1 each)",
+            "text": "(per-directory count; e.g. run ledger and briefs naming Moonzila)",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep",
+            "reason": "A dated run directory (ledger, briefs, reports). File names like RUN.md are undated, but the directory is dated."
+          },
+          {
+            "file": "docs/orchestration/2026-10-05-more-models/**",
+            "lines": "446 lines in 27 files (reports/2026-10-10-ideas-review-workflow.json 234, reports/2026-10-10-ideas-review.md 86, p2-wave2-workflow.json 13, discovery-1.json 12, inputs/*.txt 20, RUN.md 6, REQUIREMENTS-P2.md 5, DECISIONS-P2.md 5, rest 1-8)",
+            "text": "(per-directory count; includes MOONZILA_ANTHROPIC_API_KEY in DAY-ONE-P2.md:3 and RUN.md:138, and SmartRouter's own file names docs/MOONZILA_ADVISORY_UI.md, docs/HANDOFF_MOONZILA.md)",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep; append new RUN.md entries using MoonAliza and leave old entries unedited",
+            "reason": "A dated run directory. RUN.md, MANDATE.md and REQUIREMENTS-P2.md have undated names, but RUN.md is an append-only ledger that is still live for Phases 3-5. The SmartRouter file names belong to another repository, and inputs/*.txt are captured user inputs."
+          },
+          {
+            "file": "docs/research/**",
+            "lines": "72 lines in 19 files: 2026-10-04-playwright-fused-electron 2 (BRIEF, DISCOVERY); 2026-10-05-coding-model-shortlist 31 (8 files); 2026-10-05-provider-wire-formats 39 (9 files)",
+            "text": "e.g. plan.json topic: \"Which cloud and local coding models are worth offering in Moonzila as of 2026-10-05...\"",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep",
+            "reason": "These are dated Research-Kit corpora. The plan*.json `topic` is fixed (decompose refuses a changed topic, ADR-0056), and edits to DISCOVERY, EVIDENCE or BRIEF would be judged by each nested project's own gate. No raw capture contains the name."
+          },
+          {
+            "file": "docs/evidence/**",
+            "lines": "31 lines in 9 files: 2026-10-11-gemini-probes (.md 14, lib.ts 1, replay-accumulator.ts 1, u06-tool-calls.ts 1, wire-probes.ts 4); 2026-10-12-anthropic-probes (.md 3, compat.ts 3, probe-lib.mjs 3, scan.mjs 1)",
+            "text": "Moonzila's exact body on the compatible endpoint / process.env.MOONZILA_ANTHROPIC_API_KEY",
+            "category": "HISTORICAL_KEEP",
+            "proposed": "keep",
+            "reason": "Dated live-probe evidence and the scripts that produced it. MOONZILA_ANTHROPIC_API_KEY is the env var name for the operator's saved key: renaming it in future probes means re-saving the key, and Claude Code reserves ANTHROPIC_API_KEY (RUN.md:138). No raw capture (21 + ~130 files) contains the name."
+          }
+        ],
+        "risks": [
+          "Blind replace: a case-insensitive replace over docs/ would rewrite 559 historical lines (orchestration 456, research 72, evidence 31). It could also break the nested Research-Kit projects: plan.json topics (ADR-0056) and the quotes and briefs their gates check. Edit only the 142 current-doc lines.",
+          "Already-corrupted text: the earlier renames (e7cdd4a MoonAliza->Monnzila, 5082167 ->Moonzila) rewrote facts and broke references in current docs. Affected: the windows-ci.md:55 branch, managed-provider.md:43 and managed-scheduler.md:39 file names, five research-jobs.md cwd lines, HANDOFF.md:15 `cd`, and the October 2 decision (HANDOFF.md:83, research-jobs.md:518/520/527). Restore these from `git show e7cdd4a^:<file>` rather than inventing new wording.",
+          "Exe name: if productName changes, the exe becomes MoonAliza.exe. .github/workflows/windows.yml:38,48,53 (including MOONALIZA_TEST_EXECUTABLE) and scripts/check-fuses.mjs:5,31 must change in the same commit or the Windows fuse check and packaged e2e fail. The docs that name the exe (HANDOFF.md:25, decisions.md:19, research-journeys.md:15,39) must match.",
+          "Installer (expected from electron-builder NSIS behaviour, not verified here): per-user shortcut names, install folder and uninstall display name follow productName, while appId com.moonaliza.desktop identifies the install. No committed release record ever named a Moonzila installer: the last is 0.8.1-dev.1 (2026-10-01, 'MoonAliza 0.8.1') and package.json is still 0.8.1. Only developer or CI-packaged Moonzila builds could leave a 'Moonzila' shortcut or uninstall entry. Research this before claiming upgrade behaviour.",
+          "User data folder: app.setName('MoonAliza') (src/main/index.ts:34) decides %APPDATA%\\MoonAliza and must not change. Docs that call it 'Moonzila's data folder' (research-jobs.md:416) become accurate after the rename.",
+          "Update feed: none is configured. electron-builder.yml has no publish key, the package scripts use --publish never, and src imports no autoUpdater, although electron-updater 6.8.9 is a dependency. The 'keep the update feed' rule has nothing to act on today.",
+          "Pinned strings: the docs quote UI and engine strings that tests pin (tests/research-panel.test.tsx:286,349,429,456,553; tests/workbench.test.tsx:213; e2e/research-journeys.spec.ts:213). The spec and README quotes must change in the same commit as src or they drift from the code.",
+          "Model-facing source (outside docs): the prompts 'You are Moonzila...' (src/engine/application.ts:355-356, src/engine/research-review.ts:83) and the User-Agent 'Moonzila-public-repository-reader' (src/main/github.ts:16). e2e/fixtures/anthropic-fake.ts:158 pins the prompt prefix 'You are Moonzila, a coding assistant in ask mode.' No recorded request under docs/evidence contains the name, so no evidence hash would change.",
+          "Commit gate: the rename's source commit touches src/scripts, so it must stage docs/ARCHITECTURE.md (AGENTS.md gate row). scripts/check-handoff.mjs checks links in AGENTS, HANDOFF, README, development-status and windows-ci. Do not rename link targets such as 2026-09-24-moonaliza.md (e7cdd4a broke this once).",
+          "Repository name: research-jobs.md:420 says the GitHub repository is named Selenic today. The StepenkoAnatoli/MoonAliza URLs in HANDOFF and windows-ci depend on GitHub's redirect until the user renames it back, so keep the URLs unchanged."
+        ],
+        "questions": [
+          "Decision record: should decision 14 ('the product name is MoonAliza again, 2026-10-12') be added to docs/specification/decisions.md, with decision 12 marked superseded and superseding notes at operate-mode.md:13 and HANDOFF.md:25? Should ARCHITECTURE.md:46 and development-status.md:13 be rewritten as current state?",
+          "Restoring records: may the pre-e7cdd4a wording be restored where the October 3/4 rename rewrote records or broke references? That covers the cwd x5, the feat/moonaliza-desktop branch, two output file names, the October 2 'keep MoonAliza' decision, decisions.md:3, 2026-09-24 plan:3, github-url-reading.md:15 and development-status.md:33. This undoes a falsification rather than rewriting history.",
+          "Exe name: does productName go back to MoonAliza in this PR? That changes the exe, installer and shortcut names, and the docs' exe paths follow whichever choice is made.",
+          "package.json: should name \"moonzila\" and author \"Moonzila\" go back? Decision 12 listed the package name as renamed, and the October 2 rule does not mention it.",
+          "Model-facing text: should the 'You are Moonzila' system prompts and the GitHub User-Agent change? Downstream, e2e/fixtures/anthropic-fake.ts:158 must follow; no recorded evidence or hash is affected.",
+          "Identifiers: keep MOONZILA_ANTHROPIC_API_KEY (the operator's saved key name) and the test-only __moonzilaE2eCollectorNetwork global, or rename them in lockstep with code?",
+          "Dated user requests: should sentences like 'User request, October 4: add more models to Moonzila' be renamed as product references (my proposal, and what e7cdd4a did to the October 2 requests) or kept word for word? Explicit naming records (research-jobs.md:352, 420, 440) stay either way.",
+          "Name-check corpora: the plan cites docs/research/2026-10-12-moonaliza-name-check (plus the Selenic and Selunara checks), which are not on main-axuse. Should decision 14 cite them once they merge?",
+          "Merge #40: the user asked 'Merge #40?', but local history already has PR #40 merged at 2fb13ac, and HEAD 6ed7e22 records it. Please confirm the user now wants the rename PR, which the plan schedules after Phase 2."
+        ],
+        "commandsRun": [
+          "git -C /home/user/moonaliza status --short; git log -1 --oneline; git branch --show-current",
+          "git -C /home/user/moonaliza grep -n -I -i moonzila -- README.md HANDOFF.md AGENTS.md docs (701 lines; CONTEXT.md and CHANGELOG.md do not exist)",
+          "git grep -c -I -i moonzila -- <each path> (per-file and per-directory counts)",
+          "git grep -n -I -i -E 'monnzila|moon[ _.-]+zila' -- README.md HANDOFF.md AGENTS.md docs (variants)",
+          "git grep -n -I -o -i '.{0,70}moonzila.{0,60}' -- docs/specification docs/superpowers (exact excerpts)",
+          "sed -n on HANDOFF.md, AGENTS.md, README.md, docs/ARCHITECTURE.md, docs/development-status.md, decisions.md, operate-mode.md, more-models-phase2.md, research-jobs.md, windows-ci.md, coding-knowledge-base.md",
+          "git log --oneline -i --grep='moonzila|monnzila|rename'; git show --stat 5082167; git show e7cdd4a --word-diff=plain -- README.md AGENTS.md HANDOFF.md docs/ARCHITECTURE.md docs/specification docs/superpowers",
+          "git log --oneline --merges (PR #2 from feat/moonaliza-desktop at 49585e7; PR #40 at 2fb13ac)",
+          "git grep (read-only, outside area, for risks): package.json, electron-builder.yml, .github/workflows/windows.yml, scripts/check-fuses.mjs, src/main/index.ts, src/main/github.ts, src/main/bridge.ts, src/engine, src/renderer, tests, e2e, scripts/check-handoff.mjs",
+          "git grep -I 'MOONZILA' (env var and external file names); git ls-files docs/evidence; head docs/releases/0.8.1-dev.1.md"
+        ]
+      }
+    ],
+    "critic": {
+      "missedFiles": [
+        "/home/user/moonaliza/package-lock.json"
+      ],
+      "missedOccurrences": [
+        {
+          "file": "package-lock.json",
+          "lines": "2, 8",
+          "text": "\"name\": \"moonzila\",",
+          "category": "IDENTIFIER_KEEP",
+          "proposed": "Change it in the same commit as package.json:2. If the package name goes back to 'moonaliza', change both lines (both earlier renames, e7cdd4a and 5082167, edited these two lines). Otherwise keep.",
+          "reason": "The lockfile's root name copies package.json name. Users never see it, and on its own it affects no install, data folder or update feed. If it drifts from package.json, the next npm install rewrites it (expected, not run)."
+        },
+        {
+          "file": "electron-builder.yml",
+          "lines": "2 (derived, not literal)",
+          "text": "productName: Moonzila -> NSIS UNINSTALL_FILENAME \"Uninstall ${PRODUCT_FILENAME}.exe\" (app-builder-lib 26.15.3 templates/nsis/common.nsh:17) and registry ShortcutName (include/installer.nsh:106)",
+          "category": "DISPLAY",
+          "proposed": "Nothing to edit separately. Both follow productName. List them in the PR's upgrade notes.",
+          "reason": "The packaging sweep listed the exe, installer, install folder, shortcuts, DisplayName and FileDescription, but not the uninstaller file name 'Uninstall Moonzila.exe' or the ShortcutName value saved in the install key. Both change with productName. An upgrade runs the old uninstaller through the UninstallString stored in the registry, so I expect it to keep working, but that was not checked on Windows."
+        },
+        {
+          "file": "src/engine/research.ts",
+          "lines": "38",
+          "text": "export function newClientRef(): string { return `mz-${randomUUID().replaceAll('-', '')}`; }",
+          "category": "IDENTIFIER_KEEP",
+          "proposed": "keep",
+          "reason": "Case-insensitive grep does not match this, but someone could take 'mz-' for a Moonzila abbreviation. It is not one: 2e96350 added it on 2026-10-02, before the name Moonzila existed. It is stored (research.client_ref), sent to the collector (--client-ref, the artifact name research-kit-corpus-v1-<clientRef>.zip) and checked (CLIENT-REF-MISMATCH). Renaming it would break the identity match for jobs already in flight."
+        }
+      ],
+      "disagreements": [
+        {
+          "file": "src/main/engine.ts",
+          "lines": "41",
+          "issue": "Marked UNSURE, but it can be decided. 'Moonzila engine' is the utilityProcess serviceName. e7cdd4a changed it from 'MoonAliza engine', and that commit's report lists it among the strings it renamed. Nothing in src or tests reads it, and it is not stored.",
+          "recommended": "Change it back to 'MoonAliza engine' (the value before October 4). Nothing breaks."
+        },
+        {
+          "file": "src/engine/research-review.ts:85, src/main/anthropic.ts:350, src/main/inference.ts:23, src/adapters/research-kit/collector.ts:7, src/adapters/research-kit/contracts.ts:3, e2e/fixtures/anthropic-fake.ts:12/24/30/39/78/110, e2e/fixtures/collector-network.cjs:3, e2e/fixtures/ollama-status.ts:4/8 vs scripts/check-fuses.mjs:3, scripts/research-kit-source.mjs:10",
+          "lines": "as listed",
+          "issue": "The sweeps classify the same kind of text three ways. Code comments that name the product are UNSURE in main-engine and tests-e2e but DISPLAY in packaging. e7cdd4a renamed the collector.ts:7 and contracts.ts:3 comments from MoonAliza, so the earlier rename treated comments as in scope.",
+          "recommended": "Use one rule for every comment. I recommend renaming all of them to MoonAliza: no runtime or test effect, and it matches what the earlier rename did. Do not leave some comments renamed and others not."
+        },
+        {
+          "file": "package.json",
+          "lines": "2",
+          "issue": "Marked UNSURE, but it is an IDENTIFIER that is stored on users' machines: electron-builder's updaterCacheDirName (%LOCALAPPDATA%\\<name>-updater) and app-update.yml. All four release tags (v0.6.0-dev.1 to v0.8.1-dev.1) shipped name 'moonaliza' and author 'MoonAliza' (checked with git show <tag>:package.json).",
+          "recommended": "Change it back to 'moonaliza', with package-lock.json:2,8 in the same commit. That matches every released install. Only dev/CI builds made since October 4 keep an orphan moonzila-updater folder."
+        },
+        {
+          "file": "tests/provider-transport.test.ts:365/372/373, tests/file-read.test.ts:187/191, e2e/github-reading.spec.ts:20/37",
+          "lines": "as listed",
+          "issue": "Marked TEST_FOLLOWS, but they follow no source string. They are data the test writes itself. Separately, the temp-dir prefixes, cookie, screenshot names, sentinel and CA name are marked IDENTIFIER_KEEP, but none of them is stored, exchanged with another system or names code, and e7cdd4a renamed most of them from moonaliza-*.",
+          "recommended": "Treat both groups as test-owned literals: keep them, or put back the moonaliza-* values in coupled sets. Never do a partial replace. provider-transport.test.ts:372/373 are byte-exact snapshots of line 365. github-tls.ts:87 and github-tls.test.ts:73 must match, or the leak test passes without checking anything."
+        },
+        {
+          "file": "docs/superpowers/plans/2026-10-02-research-jobs.md:67,72,100,115,159,518,520,527; HANDOFF.md:83; docs/specification/decisions.md:3; docs/development-status.md:33; docs/specification/github-url-reading.md:15; docs/superpowers/plans/2026-09-24-moonaliza.md:3",
+          "lines": "as listed",
+          "issue": "Labelled HISTORICAL_KEEP, but the proposal edits them, which contradicts the label. I checked the text before the rename with git show e7cdd4a^ and 9b1a489. It read 'keep MoonAliza', 'The app keeps the name MoonAliza.', 'under the name MoonAliza', 'renamed MoonAliza', 'MoonAliza root/README' and cwd '/home/user/moonaliza'. These are dated records that e7cdd4a and 5082167 falsified, not records to keep as they are. The heading the computed task quotes as the rule, 'App name (decided October 2: keep Moonzila)', is itself one of the falsified lines.",
+          "recommended": "Classify them as 'falsified record, restore from e7cdd4a^'. The lead must approve this explicitly, because the rule says dated records are never rewritten. The commit report should say it is undoing a rewrite."
+        },
+        {
+          "file": "docs/specification/managed-provider.md:43, docs/specification/managed-scheduler.md:39, docs/specification/windows-ci.md:55, HANDOFF.md:15",
+          "lines": "as listed",
+          "issue": "Labelled IDENTIFIER_KEEP (and DISPLAY for HANDOFF:15), with a proposal to restore. They are broken references, not identifiers to keep. docs/handoff/manifest.json:512 and :547 name outputs/MoonAliza-*-runtime-verification.json. PR #2 was merged from feat/moonaliza-desktop (49585e7). The clone on HANDOFF.md:14 makes a MoonAliza folder, so 'cd Moonzila' fails.",
+          "recommended": "Fix all four whatever the other naming decisions are. They are bug fixes."
+        },
+        {
+          "file": "docs/specification/operate-mode.md",
+          "lines": "5 (and 21, 23, 43, 72, 114, 131)",
+          "issue": "The docs sweep says line 5 'read MoonAliza before e7cdd4a'. That is wrong. The file was added in 07f030c (2026-10-04), and at e7cdd4a^ it already read 'Monnzila'; 5082167 then changed it to 'Moonzila'. Renaming these lines is not a restoration.",
+          "recommended": "Renaming the product references is fine as a docs change, but justify it as a display rename. Keep line 13 and add the superseding note."
+        },
+        {
+          "file": "docs/specification/more-models.md",
+          "lines": "3",
+          "issue": "Classified DISPLAY. But 'The user's request, October 4: add more models to Moonzila' is an accurate dated quote: on October 4 the product was named Moonzila. This file was not touched by e7cdd4a, so renaming it rewrites a record rather than restoring one.",
+          "recommended": "Keep dated user-request sentences that were written while the product was named Moonzila, or let the lead set one rule. Rename the undated product references in the same spec."
+        },
+        {
+          "file": "docs/specification/decisions.md",
+          "lines": "19",
+          "issue": "Classified DISPLAY. Decision 13 is a dated user decision (D2, 2026-10-04), and 'Moonzila.exe' was accurate when it was recorded.",
+          "recommended": "Either leave decision 13 as written and have decision 14 state the exe is MoonAliza.exe again, or use the neutral 'the shipped exe'. The lead decides."
+        },
+        {
+          "file": "tests/check-fuses.test.ts",
+          "lines": "174, 238, 241, 243, 245",
+          "issue": "The tests sweep makes this conditional ('if the installer/exe name is renamed'). The recorded rule names the installer name as something that changes, so it is in scope.",
+          "recommended": "Treat it as required. Change electron-builder.yml:2, package.json:3, windows.yml:38/48/53, check-fuses.mjs:5/31, these test lines and the docs exe paths in one commit."
+        }
+      ],
+      "crossAreaRisks": [
+        "Binary and name checks: `git grep -a -l -i moonzila` lists the same files as `-I`, so no binary file carries the name. Unzipping all 15 tests/fixtures/research-kit/*.zip found the name in no entry name and no content. No icon, .ico, .png, .svg, .nsh or .rc file exists outside docs/handoff. electron-builder.yml has no icon, so the exe and installer use Electron's default icon. Their version resources are generated at build time from productName and author. The only tracked images are 7 screenshots from 2026-09-30, docs/handoff/outputs/MoonAliza-*.png, which are immutable records with no name in their text chunks. No tracked file, folder, branch or tag name contains moonzila. native/ contains no name.",
+        "Lockstep groups. Each group goes red, or silently stale, if it is split: (a) the composer label App.tsx:235, 17 e2e getByLabel calls (Playwright's case-insensitive substring match fails on 'Message MoonAliza'), 21 exact getByLabelText calls in tests/workbench.test.tsx, and scripts/check-live-provider.mjs:59, which is manual, not in CI and would go stale silently; (b) productName: electron-builder.yml:2, windows.yml:38/48/53, check-fuses.mjs:5/31, check-fuses.test.ts:174/238-245, plus the docs exe paths; (c) application.ts:355 and e2e/fixtures/anthropic-fake.ts:158 (a startsWith prefix check, no hash); (d) application.ts:45/414 with tests/application.test.ts:79/292/360, more-models.md:68 and more-models-phase2.md:133/665; (e) ResearchPanel.tsx:260/262 and research-text.ts:143 with research-panel.test.tsx:119/429/456, research-panel-cancel-review.test.tsx:33, e2e/research-journeys.spec.ts:213 and research-review-ui.md:92/94/151; (f) App.tsx:259 with workbench.test.tsx:213, README.md:24, more-models-phase2.md:719 and the 'word for word' comment at App.tsx:255-256; (g) index.html:2 with index.ts:305; (h) package.json:2 with package-lock.json:2/8.",
+        "Byte- and hash-pinned recordings: none is affected (checked). The claim 'complete() sends the body the live API accepted, byte for byte' (tests/anthropic-transport.test.ts:115, tests/anthropic.test.ts:478/519) drives complete() with its own messages and the probe prompt LIVE_SYSTEM ('You are a test assistant...'), never the app's system prompt. tests/fixtures/anthropic-live/* and the docs/evidence/2026-10-12-anthropic-probes *.request.json files contain no name and no app User-Agent. The byte-exact snapshots in tests/provider-transport.test.ts:372/373 are generated by the test itself from line 365, not live recordings. The collector goldens use 'moonaliza-fixture' and must stay as they are.",
+        "Context-budget tests (expected, not run): 'MoonAliza' is 1 byte longer than 'Moonzila', and estimateInput is ceil(bytes/2)+..., so renaming the system prompt adds at most 1 estimated token per request. The threeReads budget (tests/application.test.ts:390, 5_787) has a margin of about one 3,072-byte excerpt. The frozen CONTEXT_LIMIT case (:453, 5_142) needs step 2 to fit and step 3 to overflow, and its margin was never measured. Run the full suite after the prompt change.",
+        "Tests that would pass without checking anything after a partial rename: research-panel-cancel-review.test.tsx:57 asserts the text is absent; github-tls.test.ts:73 filters by a prefix that must equal tests/fixtures/github-tls.ts:87; research-panel.test.tsx:286/349/553 inject their own copies of the bridge.ts:24/25 messages and match regexes without the name. No test pins the folder-free prompt (application.ts:356), the GitHub User-Agents, serviceName, the window title or the brand heading, so mistakes in those go undetected.",
+        "Installer upgrade over a Moonzila-era dev or CI install (from reading the templates, not run on Windows): APP_GUID comes from appId and does not change. The old uninstaller ('Uninstall Moonzila.exe', run through the stored UninstallString) removes the Moonzila.lnk shortcuts. An interactive upgrade nests the app in ...\\Programs\\Moonzila\\MoonAliza\\. Taskbar pins that point at Moonzila.exe break. Released installs are not affected: all four tags shipped productName MoonAliza, name moonaliza and author MoonAliza, so the rename restores what those installs already have. The installer is unsigned, so there is no signature to break. userData follows app.setName('MoonAliza') at src/main/index.ts:34, which is unchanged. No code reads productName or app.getName.",
+        "Docs that understate the October 3 rename: docs/ARCHITECTURE.md:46 and HANDOFF.md:25 say it changed 'user-facing names and current documents only'. e7cdd4a's own report and decision 12 say it also changed the system prompts, the GitHub User-Agents, the engine serviceName, the package name and test identifiers. Decision 14 should state exactly what goes back.",
+        "Commit gate in the moonaliza repository: the root has a gated research/ corpus, and AGENTS.md says a commit that touches src/ or scripts/ must stage docs/ARCHITECTURE.md, and that commits outside research/ need the root preflight to PASS. The rename's source commits must stage ARCHITECTURE.md (it changes anyway at line 46). A blind replace over docs/ would rewrite 559 historical lines and touch nested Research-Kit projects whose plan.json topics are fixed (ADR-0056).",
+        "Saved user data: run.failed messages and branched-conversation handoff text ('Moonzila:') already stored in users' state.sqlite keep the old name, and saved assistant messages are replayed to the model as history. This is harmless mixed naming. Do not migrate it.",
+        "Recorded user decision: docs/orchestration/2026-10-05-more-models/USER-DECISIONS-P2.md:81-87 quotes the data-use sentence ending 'which Moonzila has not reviewed' and says a test pins it word for word. A plain grep misses it because the line wraps. It is historical and stays. After the rename, the source and the approved quote differ only in the product name, which the user's October 12 decision covers.",
+        "GitHub repository: origin is https://github.com/StepenkoAnatoli/MoonAliza.git. The REST proxy refused the redirected (renamed) repository path, and StepenkoAnatoli/Selenic is not enabled for this session, so I could not read PR or repository state from GitHub. The repository URLs in HANDOFF.md and windows-ci.md rely on GitHub's rename redirect, which stops working if anyone creates a new repository named MoonAliza instead of renaming Selenic back."
+      ],
+      "decisionsForLead": [
+        "The user's only words were 'Merge #40?'. Local evidence says #40 is already merged: 2fb13ac 'Merge pull request #40: More models, Phase 2' is origin/main as of the 2026-10-12 16:50 fetch. HEAD 6ed7e22 on main-axuse is two docs commits ahead (64864bd, 6ed7e22) and records the merge. I could not check #40's state on GitHub (the repository was renamed and API access is not enabled here). Answer the merge question first: there appears to be nothing left to merge. Confirm the user wants the rename PR started, which the plan schedules after Phase 2. This run merged nothing and changed nothing.",
+        "System prompts application.ts:355/356 and research-review.ts:83, plus the handoff label App.tsx:158: rename all four together? Recommendation: yes. 355 and 356 read 'You are MoonAliza' until e7cdd4a, so this restores them. Costs: anthropic-fake.ts:158 must change with them, and the suite must be re-run for the context-budget tests. No pinned recording is affected.",
+        "GitHub User-Agents (github.ts:16, research-import.ts:43) and serviceName (engine.ts:41): change them back to the MoonAliza-* values they had before October 4? Nothing reads or pins them.",
+        "productName (Moonzila.exe becomes MoonAliza.exe, 'MoonAliza Setup <v>.exe', 'Uninstall MoonAliza.exe'): the rule puts the installer name in scope. Is a PR note about the nested folder on Moonzila-era dev installs enough, or should the user run scripts/check-installed.mjs seed/verify across an upgrade on Windows?",
+        "package.json name and author: put back 'moonaliza' and 'MoonAliza' (the released values, which set updaterCacheDirName, Publisher and CompanyName), with package-lock.json:2/8? The rule names neither.",
+        "Records falsified by the October 3/4 renames: may they be restored from e7cdd4a^? These are research-jobs.md:518/520/527 (the heading the task quotes as the rule) and :67/72/100/115/159 (cwd), HANDOFF.md:83, decisions.md:3, development-status.md:33, github-url-reading.md:15 and 2026-09-24-moonaliza.md:3. Separately, fix the four broken references without waiting on that decision: managed-provider.md:43, managed-scheduler.md:39, windows-ci.md:55 and HANDOFF.md:15.",
+        "Decision record: add decision 14 ('the product is MoonAliza again, 2026-10-12'), mark decision 12 superseded, and add superseding notes at operate-mode.md:13 and HANDOFF.md:25? Should decision 13's 'Moonzila.exe' be left as written or made neutral? Decision 14 should list exactly what reverts and what was never renamed.",
+        "Dated user-request sentences written while the product was named Moonzila (more-models.md:3, operate-mode.md:5, the later research-jobs.md entries): keep them as accurate records, or rename them as product references? Choose one rule.",
+        "Code comments that name the product (src, scripts, e2e fixtures): choose one rule for all of them. I recommend renaming.",
+        "Test-only identifiers (56 temp-dir prefixes, the moonzila_e2e cookie, test-results/moonzila-*.png, MOONZILA_TEST_SENTINEL, __moonzilaE2eCollectorNetwork including docs/specification/research-journeys.md:23/37, the test CA name, clientRef 'moonzila-r1', SIGNATURE_MARKER, TOOL_ID and msg ids): keep them, or put back the moonaliza-* values e7cdd4a replaced? If they change, the coupled pairs must move together.",
+        "Composer selector: update the 40 'Message Moonzila' selectors in place, or first move e2e and unit tests to a name-free hook (#prompt or a test id) in a separate commit?",
+        "MOONZILA_ANTHROPIC_API_KEY, the operator's environment variable used by the probe scripts under docs/evidence: keep that name for future live probes, or rename it, which means re-saving the key? The probe scripts themselves are historical and stay.",
+        "Specs quoted word for word (more-models.md, more-models-phase2.md, research-review-ui.md): treat them as current docs and rename them with the source (recommended)? The dated docs/orchestration records stay either way.",
+        "Commit split for the revert test: for example, (1) source, tests and e2e for the UI strings and prompts, (2) packaging (productName, package name, workflow, check-fuses), (3) docs and decision 14 plus restored records. Each lockstep group above must stay inside one commit."
+      ]
+    }
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Sweep"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Critic"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "sweep:main-engine",
+      "phaseIndex": 1,
+      "phaseTitle": "Sweep",
+      "agentId": "ab0032793b95d49f6",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791824038102,
+      "queuedAt": 1791824038037,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "main-engine",
+      "promptPreview": "Read-only task in the git checkout /home/user/moonaliza (branch main-axuse, head 6ed7e22; Electron/TypeScript desktop app). Do NOT edit, create or delete any file in it, do not run git commands that change state, do not run the app or the test suite. Never print or copy credentials.\n\nContext: the product's display name is \"Moonzila\". The user decided (October 12) to rename what users see back to \"…",
+      "promptFramed": true,
+      "lastProgressAt": 1791824332091,
+      "tokens": 149592,
+      "toolCalls": 42,
+      "durationMs": 293985,
+      "resultPreview": "{\"area\":\"main-engine\",\"filesCovered\":[\"/home/user/moonaliza/src/engine/application.ts\",\"/home/user/moonaliza/src/engine/research-review.ts\",\"/home/user/moonaliza/src/main/bridge.ts\",\"/home/user/moonaliza/src/main/index.ts\",\"/home/user/moonaliza/src/main/engine.ts\",\"/home/user/moonaliza/src/main/github.ts\",\"/home/user/moonaliza/src/main/research-import.ts\",\"/home/user/moonaliza/src/main/anthropic.t…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "sweep:renderer",
+      "phaseIndex": 1,
+      "phaseTitle": "Sweep",
+      "agentId": "a4f9ca60054c270f3",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791824038103,
+      "queuedAt": 1791824038037,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "renderer",
+      "promptPreview": "Read-only task in the git checkout /home/user/moonaliza (branch main-axuse, head 6ed7e22; Electron/TypeScript desktop app). Do NOT edit, create or delete any file in it, do not run git commands that change state, do not run the app or the test suite. Never print or copy credentials.\n\nContext: the product's display name is \"Moonzila\". The user decided (October 12) to rename what users see back to \"…",
+      "promptFramed": true,
+      "lastProgressAt": 1791824206039,
+      "tokens": 122180,
+      "toolCalls": 17,
+      "durationMs": 167085,
+      "resultPreview": "{\"area\":\"renderer\",\"filesCovered\":[\"/home/user/moonaliza/src/renderer/App.tsx\",\"/home/user/moonaliza/src/renderer/LocalModelPanel.tsx\",\"/home/user/moonaliza/src/renderer/RecoveryPanel.tsx\",\"/home/user/moonaliza/src/renderer/ResearchPanel.tsx\",\"/home/user/moonaliza/src/renderer/index.html\",\"/home/user/moonaliza/src/renderer/research-text.ts\"],\"occurrences\":[{\"file\":\"src/renderer/App.tsx\",\"lines\":\"1…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "sweep:packaging",
+      "phaseIndex": 1,
+      "phaseTitle": "Sweep",
+      "agentId": "aae8b3001cf908fb6",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791824208483,
+      "queuedAt": 1791824038038,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "packaging",
+      "promptPreview": "Read-only task in the git checkout /home/user/moonaliza (branch main-axuse, head 6ed7e22; Electron/TypeScript desktop app). Do NOT edit, create or delete any file in it, do not run git commands that change state, do not run the app or the test suite. Never print or copy credentials.\n\nContext: the product's display name is \"Moonzila\". The user decided (October 12) to rename what users see back to \"…",
+      "promptFramed": true,
+      "lastProgressAt": 1791824664607,
+      "tokens": 196568,
+      "toolCalls": 57,
+      "durationMs": 456122,
+      "resultPreview": "{\"area\":\"packaging\",\"filesCovered\":[\"/home/user/moonaliza/package.json\",\"/home/user/moonaliza/electron-builder.yml\",\"/home/user/moonaliza/.github/workflows/windows.yml\",\"/home/user/moonaliza/scripts/build-native.mjs\",\"/home/user/moonaliza/scripts/build.mjs\",\"/home/user/moonaliza/scripts/capture-collector-golden.ts\",\"/home/user/moonaliza/scripts/check-fuses.mjs\",\"/home/user/moonaliza/scripts/check-…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "sweep:tests-e2e",
+      "phaseIndex": 1,
+      "phaseTitle": "Sweep",
+      "agentId": "ab13e94dc2e79d592",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791824334050,
+      "queuedAt": 1791824038038,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "tests-e2e",
+      "promptPreview": "Read-only task in the git checkout /home/user/moonaliza (branch main-axuse, head 6ed7e22; Electron/TypeScript desktop app). Do NOT edit, create or delete any file in it, do not run git commands that change state, do not run the app or the test suite. Never print or copy credentials.\n\nContext: the product's display name is \"Moonzila\". The user decided (October 12) to rename what users see back to \"…",
+      "promptFramed": true,
+      "lastProgressAt": 1791824805501,
+      "tokens": 174253,
+      "toolCalls": 45,
+      "durationMs": 471449,
+      "resultPreview": "{\"area\":\"tests-e2e\",\"filesCovered\":[\"e2e/anthropic.spec.ts\",\"e2e/build.spec.ts\",\"e2e/commands.spec.ts\",\"e2e/context-recovery.spec.ts\",\"e2e/fixtures/anthropic-fake.ts\",\"e2e/fixtures/collector-network.cjs\",\"e2e/fixtures/ollama-status.ts\",\"e2e/folder-free-chat.spec.ts\",\"e2e/github-reading.spec.ts\",\"e2e/local-models.spec.ts\",\"e2e/recovery.spec.ts\",\"e2e/research-collector.spec.ts\",\"e2e/research-journey…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "sweep:docs",
+      "phaseIndex": 1,
+      "phaseTitle": "Sweep",
+      "agentId": "a95521beb4f63ffed",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791824666625,
+      "queuedAt": 1791824038038,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "docs",
+      "promptPreview": "Read-only task in the git checkout /home/user/moonaliza (branch main-axuse, head 6ed7e22; Electron/TypeScript desktop app). Do NOT edit, create or delete any file in it, do not run git commands that change state, do not run the app or the test suite. Never print or copy credentials.\n\nContext: the product's display name is \"Moonzila\". The user decided (October 12) to rename what users see back to \"…",
+      "promptFramed": true,
+      "lastProgressAt": 1791825198232,
+      "tokens": 178354,
+      "toolCalls": 47,
+      "durationMs": 531605,
+      "resultPreview": "{\"area\":\"docs\",\"filesCovered\":[\"README.md\",\"HANDOFF.md\",\"AGENTS.md\",\"docs/ARCHITECTURE.md\",\"docs/development-status.md\",\"docs/specification/decisions.md\",\"docs/specification/github-url-reading.md\",\"docs/specification/hugging-face-verification.md\",\"docs/specification/implementation-sources.md\",\"docs/specification/interface.md\",\"docs/specification/local-model-sources.md\",\"docs/specification/managed-…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "critic",
+      "phaseIndex": 2,
+      "phaseTitle": "Critic",
+      "agentId": "a1ba755682deacec1",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791825200723,
+      "queuedAt": 1791825200670,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Read-only task in the git checkout /home/user/moonaliza (branch main-axuse, head 6ed7e22; Electron/TypeScript desktop app). Do NOT edit, create or delete any file in it, do not run git commands that change state, do not run the app or the test suite. Never print or copy credentials.\n\nContext: the product's display name is \"Moonzila\". The user decided (October 12) to rename what users see back to \"…",
+      "promptFramed": true,
+      "lastProgressAt": 1791825729682,
+      "tokens": 228506,
+      "toolCalls": 53,
+      "durationMs": 528957,
+      "resultPreview": "{\"missedFiles\":[\"/home/user/moonaliza/package-lock.json\"],\"missedOccurrences\":[{\"file\":\"package-lock.json\",\"lines\":\"2, 8\",\"text\":\"\\\"name\\\": \\\"moonzila\\\",\",\"category\":\"IDENTIFIER_KEEP\",\"proposed\":\"Change it in the same commit as package.json:2. If the package name goes back to 'moonaliza', change both lines (both earlier renames, e7cdd4a and 5082167, edited these two lines). Otherwise keep.\",\"reaso…"
+    }
+  ],
+  "totalTokens": 1049453,
+  "totalToolCalls": 261
+}
