@@ -780,6 +780,23 @@ test.each([Number.NaN, -1])('post() treats a retry delay of %s as no delay: the 
   } finally { vi.useRealTimers(); }
 });
 
+test('post() honours a retry delay of 0 as an immediate retry: the refused body is cancelled, then the request is sent again (F-14)', async () => {
+  // F-14: a 429 whose integer retry-after is 0 waits 0 seconds, so 0 is a delay, not "no delay". Guard: the lower bound
+  // of `!(delay >= 0)` in post() (mutation R19: `!(delay > 0)`; a delay of 0 then surfaces the refusal with no retry).
+  vi.useFakeTimers();
+  try {
+    const part = retrying([0]);
+    const run = posting(part, [503, 200]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run.settled(), 'settled with no time passing').toBe(true);
+    expect(await run.outcome).toEqual({ status: 200 });
+    expect(run.fetched()).toBe(2);
+    expect(run.log).toEqual(['fetch 1 503', 'cancelled 1', 'fetch 2 200']);
+    expect(part.retryDelayMs).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount(), 'no wait pending').toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
 test('post() never retries without a retry rule, and with retry: false never asks the rule (F-14)', async () => {
   // Guard for retry: false: post() honours the flag (mutation: ignore it; the refusal then waits and is fetched again).
   vi.useFakeTimers();
