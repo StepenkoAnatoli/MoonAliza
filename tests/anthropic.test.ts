@@ -360,11 +360,19 @@ describe('captured and built streams, folded and mapped', () => {
     expect(completion.content).toBe('Listing.');
   });
 
-  test('a tool_use block with no input delta takes its start object\'s `input`', async () => {
-    // E-10 l.321: the start carries `"input":{}`; a tool with no arguments may send no partial JSON (D14 records it).
-    // Guard: an empty join takes the start's input (mutation: parse the empty join, which fails).
+  test('a tool_use block with no input delta takes its start object\'s `input`, `{}` or not (spec 5.5)', async () => {
+    // Built from E-10 shapes, not a capture. E-10 l.321 and every live start carry `"input":{}`; D14 shows an
+    // argument-free tool sending one `""` delta (the D11 live test pins it), so a start with no delta at all is built here.
+    // The second start's input is not `{}`, which no capture shows, so that the rule "an empty join takes the start
+    // object's `input`" differs from a constant `{}`.
+    // Guards: an empty join takes the start's input (mutation: parse the empty join, which fails; mutation:
+    // `let input: unknown = {};`, which gives the second call `{}` and an input-free state).
     const completion = await map(builtStream([{ start: { type: 'tool_use', id: 'toolu_01', name: 'list_files', input: {} } }]));
     expect(completion.toolCalls).toEqual([{ id: 'toolu_01', name: 'list_files', input: {} }]);
+    expect(await map(builtStream([{ start: { type: 'tool_use', id: 'toolu_01', name: 'list_files', input: { path: 'src' } } }]))).toEqual({
+      content: '', outcome: 'tool_calls', toolCalls: [{ id: 'toolu_01', name: 'list_files', input: { path: 'src' } }], usage: { inputTokens: 10, outputTokens: 5 },
+      providerState: { format: 'anthropic-messages@1', appendOnly: false, data: '{"content":[{"type":"tool_use","id":"toolu_01","name":"list_files","input":{"path":"src"}}]}' },
+    });
   });
 });
 
