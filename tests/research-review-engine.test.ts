@@ -48,7 +48,7 @@ const answer = (content = 'Review done.'): Completion => ({ content, outcome: 'c
 
 interface Options { script?: Step[]; kit?: (name: string, input: { force?: true }) => Promise<ReviewToolResult>; extraHost?: boolean; topic?: string; jobId?: string }
 function harness(options: Options = {}) {
-  const root = mkdtempSync(join(tmpdir(), 'moonzila-review-')); roots.push(root);
+  const root = mkdtempSync(join(tmpdir(), 'moonaliza-review-')); roots.push(root);
   const data = join(root, 'data'); const project = join(root, 'project');
   mkdirSync(data); mkdirSync(project);
   const store = new Store(join(data, 'state.sqlite')); stores.push(store);
@@ -771,7 +771,7 @@ describe('engine guards (Phase 3 mutation survivors)', () => {
   });
 
   test('research.review.context refuses a job whose journaled verification does not parse', () => {
-    const root = mkdtempSync(join(tmpdir(), 'moonzila-review-')); roots.push(root);
+    const root = mkdtempSync(join(tmpdir(), 'moonaliza-review-')); roots.push(root);
     const store = new Store(join(root, 'state.sqlite')); stores.push(store);
     store.putProject({ id: 'p1', rootPath: root, pathLabel: root, name: 'Example', trusted: true, trustRevision: 1, policy: { revision: 1, inference: 'local-only', research: 'public-technical' }, missing: false, createdAt: at });
     store.createResearch({ id: 'bad', projectId: 'p1', topic: 't', inputs: { queries: [], urls: [], preferDomains: [], depth: 'quick', maxPages: 8 }, clientRef: 'mz-bad', researchLevel: 'public-technical', policyRevision: 1, trustRevision: 1 }, { actor: 'user' });

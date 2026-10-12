@@ -25,7 +25,7 @@ const fixture = resolve('tests/fixtures/research-kit/collected.zip');
 const kitRoot = resolve('.build/research-kit-external/research-kit');
 const at = '2026-10-04T00:00:00.000Z';
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
-const SENTINEL = 'moonzila-test-sentinel-not-a-secret';
+const SENTINEL = 'moonaliza-test-sentinel-not-a-secret';
 
 type Kind = 'preflight' | 'brief' | 'create' | 'validate';
 const kindOf = (request: OwnedCommand): Kind => {
@@ -208,13 +208,13 @@ const settled = (status: string) => ['approved', 'not_ready', 'cancelled'].inclu
 const path = (...parts: string[]) => join(...parts);
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), 'moonzila-review-main-'));
+  root = await mkdtemp(join(tmpdir(), 'moonaliza-review-main-'));
   nodeSha256 = digest(await readFile(process.execPath)); fixtureBytes = await readFile(fixture); fixtureSha = digest(fixtureBytes);
-  process.env.MOONZILA_TEST_SENTINEL = SENTINEL;
+  process.env.MOONALIZA_TEST_SENTINEL = SENTINEL;
 });
 afterEach(async () => { for (const h of harnesses.splice(0)) { await h.review.close(); await h.kit.close(); h.store.close(); } });
 afterAll(async () => {
-  delete process.env.MOONZILA_TEST_SENTINEL;
+  delete process.env.MOONALIZA_TEST_SENTINEL;
   if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); }
 });
 

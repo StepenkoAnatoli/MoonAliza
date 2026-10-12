@@ -103,7 +103,7 @@ What the evidence requires:
   (H-E03 l.512); "send every assistant turn back exactly as you received it and add new messages only at
   the end" (l.514); append-only is the first remedy E-12 l.291 names.
 
-How it maps onto Moonzila. A run is one prompt and its tool loop, which is one tool-use turn. Its system
+How it maps onto MoonAliza. A run is one prompt and its tool loop, which is one tool-use turn. Its system
 prompt and tools are fixed before the loop (`application.ts:339-354`); the only mid-run edits are
 dropping history turns (`context.ts:41`) and cutting earlier results to the 0-byte excerpt (`:43`) at
 a later step. History keeps only earlier runs' final texts (`application.ts:347`), which is allowed.
@@ -130,7 +130,7 @@ Rules (`src/engine/context.ts`, `application.ts`):
    overflow: the local estimate (`fits` false, `:360`) or the provider (a 400 "prompt is too long"
    crossing from main as CONTEXT_LIMIT). The public code stays CONTEXT_LIMIT: "This task outgrew the
    selected model's context budget. This provider needs the earlier steps of a task sent back
-   unchanged, so Moonzila could not shorten them while the task ran. Saved messages and any applied
+   unchanged, so MoonAliza could not shorten them while the task ran. Saved messages and any applied
    changes remain available; commands are not retried. Split the task into smaller requests, or open
    Model profiles to check the model's supported context and response reserve." The existing text
    (`:393`) says "after reducing saved tool excerpts", which a frozen run did not do. The frozen text
@@ -140,11 +140,11 @@ Rules (`src/engine/context.ts`, `application.ts`):
 
 Why the reserve: without it, step 1 trims history to just under the budget, and step 2 adds an
 assistant message whose signature carries the encrypted full thinking (H-E03 l.137) plus up to eight
-results, so every tool run in a long session would end at step 2. Half is Moonzila's own heuristic,
+results, so every tool run in a long session would end at step 2. Half is MoonAliza's own heuristic,
 not an external fact; on a 1M-window model with a 128K response reserve it still leaves about 436K
 estimated tokens for system, history and prompt.
 
-Why A: it rests only on captured facts and Moonzila's code; it needs no request field, so one request
+Why A: it rests only on captured facts and MoonAliza's code; it needs no request field, so one request
 shape serves all four shortlisted models whatever the account's age; and it keeps the reasoning
 continuity replay exists for (H-E03 l.376-378) or fails visibly.
 
@@ -222,7 +222,7 @@ timer after the checks changes no error); `post()`; `part.read`; the cancellatio
   120,000 for `chatKind` (today's value, unchanged for the existing kinds, with a test that their
   requests still abort at 120 s) and 600,000 for `anthropicKind`. Anthropic's own curl example for
   Messages sets `--max-time 600` (E-09 l.1089); its advice for a 504 on a long-running request is to
-  stream it (E-12 l.36), which Moonzila already does; and its SDKs check non-streaming requests against
+  stream it (E-12 l.36), which MoonAliza already does; and its SDKs check non-streaming requests against
   a 10-minute timeout (E-12 l.122). Thinking tokens are generated before the answer and count toward
   `max_tokens` (E-13 l.48), so a step on an always-thinking model can run long (engineering judgment;
   D12 measures it). The vault grant is checked on entry only (`src/main/vault.ts:156-161`), so the
@@ -310,7 +310,7 @@ whether the fake (or the proxy) was reached, the headers it saw and the error ot
    `Authorization: Basic` (the request sent without a key, so no explicit `Authorization`). The Phase 1
    breaker saw the locality status request, already `credentials: 'omit'`, refuse such a challenge in
    4 ms "with no login event" (`docs/orchestration/2026-10-05-more-models/reports/p1-integration-review.json`).
-   Cases 2 and 3 run as the app ships, with no `login` handler (Moonzila registers none: nothing in
+   Cases 2 and 3 run as the app ships, with no `login` handler (MoonAliza registers none: nothing in
    `src/main` listens for `login`), and again with a harness `app.on('login')` handler that answers the
    challenge. Electron documents that event for requests from a `webContents` or a utility process
    ("Emitted when `webContents` or Utility process wants to do basic auth",
@@ -332,7 +332,7 @@ whether the fake (or the proxy) was reached, the headers it saw and the error ot
    verdict rests on case 1 alone. That verdict means commit 3 breaks no path that works as the app ships
    today among those run; it is not evidence that proxy authentication is unaffected (a configuration
    that authenticates today, through Windows-integrated sign-in, a client certificate or a `login`
-   handler, is not among them: known limit below). The harness-handler runs decide nothing: Moonzila has
+   handler, is not among them: known limit below). The harness-handler runs decide nothing: MoonAliza has
    no `login` handler, so a difference that exists only with one affects no user and would cost the
    cookie protection (INV-5) for no one's benefit; their outcomes are recorded with the out-of-scope
    `login`-handler item ("Recorded for later"). Every outcome goes in U2's unit report and the
@@ -362,7 +362,7 @@ whether the fake (or the proxy) was reached, the headers it saw and the error ot
 *Known limit (named in the README and in commit 3's report, if commit 3 stays):* besides cookies,
 `credentials: 'omit'` withholds the session's HTTP authentication (Phase 1 saw `session.fetch` carry
 both by default, `docs/specification/more-models.md:121-122`) and, by the Fetch standard's definition of
-credentials (not in Moonzila's corpus), TLS client certificates. So an existing `openai-compatible` user
+credentials (not in MoonAliza's corpus), TLS client certificates. So an existing `openai-compatible` user
 of a gateway that needs Windows-integrated sign-in (NTLM or Negotiate), at a proxy or at the server, or
 a client certificate (an mTLS gateway), could lose access with commit 3. None of these can be tested
 here (no Windows domain or Negotiate server, and no client certificate installed where Chromium would
@@ -473,7 +473,7 @@ produce them; they are tested at the encoder only.
 
 #### 5.4 Stream reader (readAnthropic, on readSseEvents)
 
-- The body of a 200 is read as server-sent events whatever its `Content-Type` says: Moonzila always asks
+- The body of a 200 is read as server-sent events whatever its `Content-Type` says: MoonAliza always asks
   for a stream, no capture states the label a live answer carries, and D3 records it. A body that is not
   valid SSE events still fails as it does today: `readSseEvents` throws PROVIDER_INVALID_RESPONSE for a
   `data:` payload that is not JSON or bytes that are not UTF-8 (`provider-stream.ts:23`, `:28`, `:37-39`)
@@ -541,7 +541,7 @@ produce them; they are tested at the encoder only.
 | `tool_use` | tool_calls, when there is at least one `tool_use` block, every input parses to a bounded object (an empty join takes the start object's `input`, `{}`, E-10 l.321), every thinking block has a non-empty signature, no block is not replayable, and the calls pass `InferenceToolCallsSchema`, offered names and unused ids (as `parseCalls`, `inference.ts:75-85`); otherwise PROVIDER_INVALID_RESPONSE |
 | `max_tokens`, `model_context_window_exceeded` | incomplete ("Treat the response as truncated", E-11 l.28) |
 | `refusal` | blocked; "a normal HTTP 200 response, not an error" (E-11 l.379); keyed on `stop_reason` only (contradiction below) |
-| `pause_turn` | PROVIDER_FINISH_FAILED: it belongs to server tools, which Moonzila never sends (E-11 l.26, l.347) |
+| `pause_turn` | PROVIDER_FINISH_FAILED: it belongs to server tools, which MoonAliza never sends (E-11 l.26, l.347) |
 | any other value | PROVIDER_FINISH_FAILED (the Phase 1 rule) |
 
 - `content` is the text blocks joined in order with no separator: the blocks are consecutive parts of
@@ -579,7 +579,7 @@ holding the provider's text, never as tool calls.
 *Known limit (fail-closed):* H-E03 l.485: when a response stops on `max_tokens`,
 `model_context_window_exceeded` or `stop_sequence` soon after a tool call or tool result, its last block
 can be a progress-update block standing in for unfinished work, and Anthropic's continuation is to pass
-the turn back unchanged with a `tool_result` for each `tool_use`. Moonzila maps those stops to
+the turn back unchanged with a `tool_result` for each `tool_use`. MoonAliza maps those stops to
 incomplete (a `tool_use` block under `stop_sequence` included, the Phase 1 rule): the partial text is
 saved, no tool runs, no state is kept, and the run fails. Continuing such a turn would mean executing
 calls from an incomplete outcome, which Phase 1 forbids. For `max_tokens`, a larger maximum response
@@ -662,7 +662,7 @@ against it and the 600 s timeout.
   dropped by the engine, `src/engine/index.ts:60-61`, and the run waits for its deadline), as Phase 1
   did for LOCAL_MODEL_UNVERIFIED (`tests/provider-transport.test.ts:252-256`). The engine already maps
   the code to its own message (`application.ts:393`), which U0 widens to cover both causes: "The
-  provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or
+  provider returned a tool call or step MoonAliza could not use safely: a tool call that was invalid or
   not offered, or output that contained a saved credential. Nothing from that step was run or saved."
   It is an existing public code (`src/shared/errors.ts:11`). The `failures` entry is shared, so the
   widened text applies to every kind and every cause that raises the code: the engine's own check of an
@@ -716,7 +716,7 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
     Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless
     Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs
     and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page
-    refers to its commercial data retention policy, which Moonzila has not reviewed." Clause by clause:
+    refers to its commercial data retention policy, which MoonAliza has not reviewed." Clause by clause:
     "Anthropic may not train models on Customer Content from Services", Customer Content being Inputs
     and Outputs (SL-E11 l.26; those terms govern API keys, l.12); SL-E17 l.45 and l.140; SL-E17 l.241
     ("if a chat or session is flagged, Anthropic may retain inputs and outputs for up to 2 years");
@@ -727,7 +727,7 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
     excepted, and the hint neither repeats it nor says the page is silent on retention. The hint never
     says "not retained";
   - this adapter is built from Anthropic's documentation and is not yet checked against the live API
-    (as built: "Moonzila's Anthropic connection is tested against requests and responses recorded from
+    (as built: "MoonAliza's Anthropic connection is tested against requests and responses recorded from
     the live API; the app itself has not yet been run against it", after the 2026-10-12 probes, U4-R5).
   No token values are prefilled: presets are Phase 4.
 - README: the kind, its endpoint, single-workspace keys, always cloud (refused in local-only
@@ -739,12 +739,12 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
   verdict keeps commit 3, the README also gets section 4's credentials sentence, which concerns every
   kind.
 - **Locality.** `validateEndpoint` labels every `anthropic` endpoint `external`, loopback included. A
-  loopback server can implement this API and forward to a cloud, and Moonzila cannot verify that it
+  loopback server can implement this API and forward to a cloud, and MoonAliza cannot verify that it
   does not: Ollama serves `/v1/messages` (E-31 l.1987-1988) through `cloudPassthroughMiddleware` and
   `ChatHandler`, which hands a cloud-sourced model to `proxyCloudJSONRequest` (E-31 l.2552-2558; the
   file shows the call, not its destination). That the destination is ollama.com is E-29's: its local
   API forwards cloud models after `ollama signin` (E-29 l.53-62), and ollama.com hosts an
-  Anthropic-compatible `/v1/messages` (E-29 l.30). Moonzila's
+  Anthropic-compatible `/v1/messages` (E-29 l.30). MoonAliza's
   `/api/status` check speaks only to the `ollama` kind's native API. Under local-only the existing
   policy refuses an `anthropic` profile before any byte (`src/engine/policy.ts:77`): at `run.start`, and
   a switch to local-only during a run cancels the run (S-3, section 8); under cloud-allowed
@@ -1060,7 +1060,7 @@ capture".
   not a vitest file.
 - **Windows e2e** (U5; `e2e/anthropic.spec.ts`, `e2e/workbench.spec.ts`): an Anthropic profile on a
   loopback fake whose streams are built from E-10 shapes and marked so (the E-10 tool example's
-  `get_weather` is not a tool Moonzila offers): Test connection answered by a built `end_turn` text
+  `get_weather` is not a tool MoonAliza offers): Test connection answered by a built `end_turn` text
   stream; then the project is made cloud-allowed through the UI, as
   `e2e/context-recovery.spec.ts:50` does: with the Anthropic profile selected in the trusted, local-only
   project, click "Review cloud access" in the privacy notice (`src/renderer/App.tsx:234`), then "Allow
@@ -1110,7 +1110,7 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   requests (README). U5's e2e asserts no `cookie` header with one planted in the provider session (with a
   positive control from that session without `omit`) and in the local session.
 - **Live probes, 2026-10-12** (`docs/evidence/2026-10-12-anthropic-probes.md`, US$0.47 booked of the
-  US$3 cap, the native shape of section 5 sent by a probe script, not by Moonzila): Bearer is accepted
+  US$3 cap, the native shape of section 5 sent by a probe script, not by MoonAliza): Bearer is accepted
   (an unauthenticated request's 401 still names `x-api-key`); the over-window refusal is 400
   `invalid_request_error` "prompt is too long: 340027 tokens > 200000 maximum", which the overflow rule
   matches unchanged; streams are LF-only, each `event:` equals its data `type`, and the one `ping` sits

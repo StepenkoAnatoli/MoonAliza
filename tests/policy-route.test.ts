@@ -22,7 +22,7 @@ const deferred = () => { let resolve!: () => void; const promise = new Promise<v
 const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setImmediate(resolve)); };
 
 function fixture() {
-  const root = mkdtempSync(join(tmpdir(), 'moonzila-route-')); roots.push(root);
+  const root = mkdtempSync(join(tmpdir(), 'moonaliza-route-')); roots.push(root);
   const store = new Store(join(root, 'state.sqlite'));
   store.putProject({ id: 'p1', rootPath: root, pathLabel: root, name: 'Example', trusted: true, trustRevision: 1, policy: { revision: 1, inference: 'cloud-allowed', research: 'off' }, missing: false, createdAt: at });
   store.putProfile({ id: 'profile1', name: 'Local', kind: 'ollama', endpoint: 'http://127.0.0.1:11434', model: 'test', contextTokens: 8192, outputTokens: 512, locality: 'local', revision: 1, revisionId: 'v1', createdAt: at, updatedAt: at });
@@ -226,7 +226,7 @@ test('BRK-1b: an id reused with a different input is REQUEST_CONFLICT with nothi
 // Mutation audit P4-38: the stop loop is filtered to the updated project.
 test('an update in project p1 never aborts, revokes or holds a run in project p2 (the route\'s project filter)', async () => {
   const { store, route, active, revoked, held, released, liveRun, update } = fixture();
-  const otherRoot = mkdtempSync(join(tmpdir(), 'moonzila-route-p2-')); roots.push(otherRoot);
+  const otherRoot = mkdtempSync(join(tmpdir(), 'moonaliza-route-p2-')); roots.push(otherRoot);
   const otherPolicy = { revision: 1, inference: 'cloud-allowed' as const, research: 'public-technical' as const };
   store.putProject({ id: 'p2', rootPath: otherRoot, pathLabel: otherRoot, name: 'Other', trusted: true, trustRevision: 1, policy: otherPolicy, missing: false, createdAt: at });
   store.putSession({ id: 's3', projectId: 'p2', policy: { revision: 0, inference: 'cloud-allowed' }, title: 'Other work', createdAt: at, updatedAt: at });

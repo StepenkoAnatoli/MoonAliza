@@ -29,7 +29,7 @@ function cryptor() {
 }
 /** A vault holding `secrets`, and its redact as infer() passes it. `broken`: every later decryption fails. */
 async function vaultWith(secrets: string[], options: { broken?: boolean } = {}) {
-  const directory = await mkdtemp(join(tmpdir(), 'moonzila-screen-')); roots.push(directory);
+  const directory = await mkdtemp(join(tmpdir(), 'moonaliza-screen-')); roots.push(directory);
   const crypt = cryptor(); let broken = false;
   const vault = new Vault(directory, { ...crypt, decryptString: value => { if (broken) throw new Error('decrypt failed'); return crypt.decryptString(value); } });
   await vault.initialize('epoch-1');

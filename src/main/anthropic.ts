@@ -347,7 +347,7 @@ export function anthropicOutcome(fold: AnthropicFold, check: { tools: readonly T
     case 'max_tokens': case 'model_context_window_exceeded': return completion({ ...usage, content: answerText(fold.blocks), outcome: 'incomplete' });
     // "a normal HTTP 200 response, not an error" (E-11 l.379).
     case 'refusal': return completion({ ...usage, content: answerText(fold.blocks), outcome: 'blocked' });
-    // pause_turn belongs to server tools, which Moonzila never sends (E-11 l.26, l.347); any other value is a failure.
+    // pause_turn belongs to server tools, which MoonAliza never sends (E-11 l.26, l.347); any other value is a failure.
     default: return fail('PROVIDER_FINISH_FAILED');
   }
 }

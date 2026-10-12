@@ -20,7 +20,7 @@ export function validateEndpoint(kind: ProviderKind, value: string): { endpoint:
   const loopback = ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname);
   if ((url.protocol !== 'https:' && !(loopback && url.protocol === 'http:')) || (kind === 'ollama' && !loopback)) throw new Error('INVALID_ENDPOINT');
   // An anthropic endpoint is external even on loopback: a local server can implement this API and forward to a cloud
-  // (Ollama serves /v1/messages and proxies cloud models), which Moonzila cannot verify (more-models-phase2.md section 7).
+  // (Ollama serves /v1/messages and proxies cloud models), which MoonAliza cannot verify (more-models-phase2.md section 7).
   return { endpoint: url.href.replace(/\/+$/, ''), locality: loopback && kind !== 'anthropic' ? 'local' : 'external' };
 }
 

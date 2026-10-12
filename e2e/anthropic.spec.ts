@@ -16,7 +16,7 @@ const MODEL = 'claude-e2e-fixture';
 const MAX_TOKENS = 3072;
 const PROMPT = 'List the project folder.';
 const PROJECT_FILE = 'notes.txt';
-const COOKIE = { name: 'moonzila_e2e', value: 'provider-session-cookie' };
+const COOKIE = { name: 'moonaliza_e2e', value: 'provider-session-cookie' };
 
 async function files(directory: string): Promise<string[]> {
   const found: string[] = [];
@@ -30,7 +30,7 @@ async function files(directory: string): Promise<string[]> {
 test('an Anthropic profile passes Test connection and replays a thinking step unchanged in a cloud-allowed project', async () => {
   // One desktop launch and shutdown, a tool round trip and a userData scan, on a CI host.
   test.setTimeout(120_000);
-  const root = await mkdtemp(join(tmpdir(), 'moonzila-anthropic-'));
+  const root = await mkdtemp(join(tmpdir(), 'moonaliza-anthropic-'));
   const project = join(root, 'Anthropic project'); await mkdir(project);
   await writeFile(join(project, PROJECT_FILE), 'Anthropic journey fixture.\n');
   const data = join(root, 'app-data'); await mkdir(data);
@@ -75,7 +75,7 @@ test('an Anthropic profile passes Test connection and replays a thinking step un
     await page.getByRole('button', { name: 'Open project' }).click(); await page.getByRole('button', { name: 'Trust and open' }).click();
     await expect(page.getByRole('heading', { name: 'Anthropic project' })).toBeVisible();
     await page.getByLabel('Model profile', { exact: true }).selectOption({ label: 'Anthropic fixture' });
-    await page.getByLabel('Message Moonzila').fill(PROMPT);
+    await page.getByLabel('Message MoonAliza').fill(PROMPT);
     await expect(page.getByRole('button', { name: 'Send message' })).toBeDisabled();
     await page.getByRole('button', { name: 'Review cloud access' }).click(); await page.getByRole('button', { name: 'Allow for this project' }).click();
     await expect(page.getByRole('button', { name: 'Send message' })).toBeEnabled(); expect(fake.requests).toHaveLength(1);

@@ -326,7 +326,7 @@ const bindingAt = (jobRevision: number) => ({ projectId: 'p', projectRevision: 1
 const savedTool = (world: World, sessionId: string, toolName: string) => store(world).listMessages(sessionId).filter(message => message.role === 'tool' && message.toolName === toolName).map(message => JSON.parse(message.content) as Record<string, unknown>);
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), 'moonzila-review-e2e-'));
+  root = await mkdtemp(join(tmpdir(), 'moonaliza-review-e2e-'));
   nodeSha256 = digest(await readFile(process.execPath)); fixtureBytes = await readFile(fixture); fixtureSha = digest(fixtureBytes);
 });
 afterEach(async () => {

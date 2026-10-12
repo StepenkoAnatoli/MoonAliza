@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 test('trusted project, encrypted profile, real IPC inference and durable history', async () => {
   // Includes two real desktop launches and shutdowns, including on an 8 GiB Windows host.
   test.setTimeout(120_000);
-  const directory = await mkdtemp(join(tmpdir(), 'moonzila-e2e-'));
+  const directory = await mkdtemp(join(tmpdir(), 'moonaliza-e2e-'));
   const project = join(directory, 'Example project'); await mkdir(project);
   const data = join(directory, 'app-data'); await mkdir(data);
   // One status request per model step, before the chat request (the locality check runs in the real app).
@@ -48,7 +48,7 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     await page.getByLabel('API key').fill('test-only-credential-marker');
     await page.getByRole('button', { name: 'Save profile' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.getByLabel('Message Moonzila').fill('Remember this conversation');
+    await page.getByLabel('Message MoonAliza').fill('Remember this conversation');
     // A CI desktop can constrain the window below the details-pane breakpoint.
     // Exercise actual pointer hit testing, including the minimum supported width.
     for (const width of [960, 1180, 1440, 1024]) {
@@ -62,12 +62,12 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     // memory, so it is planted in this launch): chat requests are sent with `credentials: 'omit'` (INV-5), so the chat
     // request must not carry it. Red with that field deleted from post() (src/main/inference.ts).
     const origin = `http://127.0.0.1:${port}`;
-    await app.evaluate(async ({ session }, url) => { await session.fromPartition('moonaliza-local').cookies.set({ url, name: 'moonzila_e2e', value: 'local-session-cookie' }); }, origin);
-    expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-local').cookies.get({ url })).map(cookie => cookie.name), origin)).toEqual(['moonzila_e2e']);
+    await app.evaluate(async ({ session }, url) => { await session.fromPartition('moonaliza-local').cookies.set({ url, name: 'moonaliza_e2e', value: 'local-session-cookie' }); }, origin);
+    expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-local').cookies.get({ url })).map(cookie => cookie.name), origin)).toEqual(['moonaliza_e2e']);
     // Positive control: the same session sends that cookie to this origin when a request does not omit credentials, so
     // the assertion below checks a cookie that would otherwise ride along (integration review P2-SPEC-3).
     expect(await app.evaluate(async ({ session }, url) => (await session.fromPartition('moonaliza-local').fetch(url)).status, `${origin}/cookie-probe`)).toBe(204);
-    expect(probeCookies).toEqual(['moonzila_e2e=local-session-cookie']);
+    expect(probeCookies).toEqual(['moonaliza_e2e=local-session-cookie']);
     await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByText('Fixture model response', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
@@ -75,7 +75,7 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     // The chat request carries the profile's key (more-models-phase2.md, Windows e2e), and not the planted cookie. Red
     // with the Authorization entry removed from the chat kinds' headers (src/main/inference.ts).
     expect(chatHeaders).toStrictEqual([{ authorization: 'Bearer test-only-credential-marker', cookie: undefined }]);
-    await page.screenshot({ path: 'test-results/moonzila-workbench.png' });
+    await page.screenshot({ path: 'test-results/moonaliza-workbench.png' });
     const invalid = await page.evaluate(async () => {
       try { await window.moonaliza.invoke('project.pick', { path: 'C:\\private' }); return false; } catch { return true; }
     });

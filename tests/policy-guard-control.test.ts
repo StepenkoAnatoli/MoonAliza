@@ -16,7 +16,7 @@ const at = '2026-10-04T00:00:00.000Z';
 const MANY = 10_001;
 
 function fixture() {
-  const root = mkdtempSync(join(tmpdir(), 'moonzila-guard-')); roots.push(root);
+  const root = mkdtempSync(join(tmpdir(), 'moonaliza-guard-')); roots.push(root);
   const store = new Store(join(root, 'state.sqlite')); stores.push(store);
   store.putProject({ id: 'p1', rootPath: root, pathLabel: root, name: 'Example', trusted: true, trustRevision: 1, policy: { revision: 1, inference: 'local-only', research: 'off' }, missing: false, createdAt: at });
   store.putProfile({ id: 'profile1', name: 'Local', kind: 'ollama', endpoint: 'http://127.0.0.1:11434', model: 'test', contextTokens: 8192, outputTokens: 512, locality: 'local', revision: 1, revisionId: 'v1', createdAt: at, updatedAt: at });

@@ -4,7 +4,7 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-05 |
-| Last checkpoint | 2026-10-12 - Phase 2 integrated, integration review fixed and re-reviewed; gate, PR and Windows CI next |
+| Last checkpoint | 2026-10-12 - Phase 2 MERGED (PR #40, `2fb13ac`) |
 | Engagement      | Full (provider adapters, downloads, signed catalogue, external services) |
 | Working branch  | `main-axuse`, restarted from `main` @ `b490e50` (PR #37 merge) |
 | Skills          | auto-build, lead-orchestrator, careful-coding, Research-Kit 0.9.5 |
@@ -17,14 +17,14 @@
 | 2 Requirements | DONE (Phase 1, Phase 2) | REQUIREMENTS-P1.md, REQUIREMENTS-P2.md | 2026-10-12 |
 | 3 Design | DONE (phase plan; Phases 1 and 2 in full) | docs/specification/more-models.md, docs/specification/more-models-phase2.md; DECISIONS-P2.md, BREAKDOWN-P2.md, DAY-ONE-P2.md, USER-DECISIONS-P2.md | 2026-10-12 |
 | 4 Mandate | DONE: user, 2026-10-11, "you have full access. continue"; the lead took the recommended option for each held question (no one approved them individually) | MANDATE.md | 2026-10-11 |
-| 5 Build | Phase 1 MERGED (PR #39, `05221ad`); Phase 2 INTEGRATED and REVIEWED on `main-axuse` | units below | 2026-10-12 |
+| 5 Build | Phase 1 MERGED (PR #39, `05221ad`); Phase 2 MERGED (PR #40, `2fb13ac`); Phases 3-5 wait until after independent operation (user, October 12) | units below | 2026-10-12 |
 | 6 Harden | PENDING: break-test on `main` once Phase 2 merges (covering Phases 1-2), again before the final report. Phase 1 had the integration breaker in real Electron and a blind-spot sweep | - | - |
 | 7 Audit | PENDING: gap-audit with Stage 6's timing | - | - |
 | 8 Deliver and merge | PENDING | - | - |
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Phase 2: pinned Linux gate on the head, draft PR, Windows CI green on the exact head, merge (method merge), fast-forward `main-axuse`. Then the rename PR (Moonzila -> MoonAliza display name).
+The rename PR (Moonzila -> MoonAliza display name; app IDs and data folder kept), then break-test on `main` covering Phases 1-2 (stage 6), then the independent-operation track. More models Phases 3-5 resume after it.
 
 ## Task statement
 User, 2026-10-04: "Can we add more models to moonzila?" then "add it as its own task after Task 5. Yes". User, 2026-10-05: "continue"; chose "More models" as the next task and "I'll add a new key" for research collection.
@@ -142,3 +142,4 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 - 2026-10-12: U3 live follow-up (`reports/p2-u3-live.json`): every live fact passed on the unchanged adapter; tests only (U3-W1, seven recordings byte-pinned, two review findings); ACCEPT. U3 integrated (18 commits; the commit gate refused the first pick because keeping our side of the ARCHITECTURE conflict left no ARCHITECTURE change staged beside a `src/` change; resolved by adding each commit's own ARCHITECTURE delta). U3 review S4 notes fixed (`3e88117`: `.gitattributes` keeps the live fixtures byte-exact; header; the probe report's padding description corrected). Checks on `3e88117`: typecheck, lint, 6 files 438 tests green. Wave 2 launched.
 - 2026-10-12: wave 2 returned (`reports/p2-wave2-workflow.json`, 4 agents): U4 and U5 each ACCEPT in one round, S4 notes only. Integrated and pushed through `2d3fa59`; `8127c98` adds the AGENTS.md provider-state row (D-2) and the development status. Integration review launched on `2d3fa59` (spec, breaker in real Electron, invariants, mutation; all read e2e/). The container restarted mid-review; the workflow was resumed from its journal (`wf_06c97f06-79e`). Lead docs while it runs: spec "As built (Phase 2)" and the Recorded-for-later items (`080795e`); U4-R5 hint wording (`cd83bd3`), U4-R4 inline style (`797123d`), U5-R2 guard names (`763f694`), each red-first where a test applies. Windows CI run 38263208706 on `2d3fa59` in progress; `763f694` pushed.
 - 2026-10-12: integration review returned (`reports/p2-integration-review.json`; spec, breaker in real Electron, invariants, mutation 124/128 killed; pinned gate at `2d3fa59`: 74 failed, all baseline). Three S2 and three S3 fixed red-first where code (`48dd054`, `23545c3`, `c540092`) or in docs (`cd83bd3`, `080795e`, `5d91a95`); P2-BRK-1 documented as a known limit. Refute-first re-review of `2d3fa59..5d91a95`: code fixes hold (mutations red, Electron probe verified), FIX for docs RR-1..RR-4 and one test case RR-5, all fixed here and in `9113f3d`.
+- 2026-10-12: Phase 2 merged. Pinned Linux gate on `f8e963d` (`/home/user/task5-handoff/results/p2-final-f8e963d`): typecheck, lint and build 0; 1542 tests, 74 failed, the baseline names, 0 new, 0 empty (`459a2cd` changes only an e2e spec, which that gate does not run). Windows CI on `f8e963d`: the PR run green, the push run red once - `e2e/anthropic.spec.ts` sorts first, takes the runner's cold first Electron launch, and its first check used the 5 s assertion default; the run's failure snapshot shows the heading rendered after it. Fixed in `459a2cd` (30 s, as the other specs give slow steps); both Windows runs green on `459a2cd`. The first merge call returned HTTP 500 with nothing merged (PR still open, `main` unchanged); the retry merged PR #40 with method merge at the pinned head: merge commit `2fb13ac` (parents `05221ad`, `459a2cd`; same tree as `459a2cd`). `main-axuse` fast-forwarded. Phase 2 worktrees and build branches removed after checking every build commit is in `main` (five differ by patch-id only in their ARCHITECTURE conflict resolution; 0 differing lines elsewhere). Also on 2026-10-12: the user asked whether the app can sign in to GitHub, Codex and Claude; a Research-Kit check (`research/app-sign-in`, `5389cd1`, 8 credits) found GitHub allowed (device flow), Claude.ai sign-in not allowed, Sign in with ChatGPT not stated; recorded in the plan (`64864bd`).

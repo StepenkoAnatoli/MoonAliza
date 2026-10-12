@@ -116,7 +116,7 @@ test('status follows notices for this project by revision, and cancel is offered
   notify(job({ revision: 3, status: 'collecting', workflowRunId: '77' }));
   expect(screen.getByTestId('research-status').textContent).toBe('Collecting on GitHub · GitHub run 77');
   expect(screen.getByText(/run deleted by the repository's retention setting/)).toBeTruthy();
-  expect(screen.getByText(/could not be verified yet, because GitHub or the Research Kit was unavailable, waits until Moonzila restarts/)).toBeTruthy();
+  expect(screen.getByText(/could not be verified yet, because GitHub or the Research Kit was unavailable, waits until MoonAliza restarts/)).toBeTruthy();
   notify(job({ revision: 2, status: 'dispatching' }));
   notify(job({ id: 'other', projectId: 'p2', revision: 9, status: 'failed', failure: 'RUN_FAILED', createdAt: '2026-10-04T00:00:00Z' }));
   expect(screen.getByTestId('research-status').textContent).toBe('Collecting on GitHub · GitHub run 77');
@@ -283,7 +283,7 @@ test('an approved job whose package no longer verifies reads Unverified, never R
 
 test('a rejected check reads Cannot check with the public message, neither Ready nor Unverified, and can be checked again', async () => {
   let attempt = 0;
-  const { api, calls } = bridge({ jobs: [approved()], routes: { 'research.document.read': () => { attempt += 1; if (attempt === 1) throw new Error('Moonzila cannot check this document for saved keys right now, so it is not shown. Try again after restarting Moonzila.'); return { text: 'x', truncated: false, source: 'reviewed', verified: true }; } } });
+  const { api, calls } = bridge({ jobs: [approved()], routes: { 'research.document.read': () => { attempt += 1; if (attempt === 1) throw new Error('MoonAliza cannot check this document for saved keys right now, so it is not shown. Try again after restarting MoonAliza.'); return { text: 'x', truncated: false, source: 'reviewed', verified: true }; } } });
   render(<ResearchPanel api={api} project={project} openConversation={() => {}} />);
   await waitFor(() => expect(screen.getByTestId('research-status').textContent).toBe('Cannot check the reviewed package now'));
   expect(screen.getByText(/cannot check this document for saved keys/)).toBeTruthy();
@@ -346,7 +346,7 @@ test('the reader shows the brief as untrusted plain text in a pre, with its sour
 
 test('the reader shows workspace text as not verified, and a refused read shows its public message', async () => {
   let refuse = false;
-  const { api } = bridge({ jobs: [job({ status: 'reviewing', revision: 3, reviewSessionId: 's-review' })], routes: { 'research.document.read': () => { if (refuse) throw new Error('The review workspace changed in a way Moonzila will not read through. Start the review again.'); return { text: 'draft', truncated: false, source: 'workspace', verified: false }; } } });
+  const { api } = bridge({ jobs: [job({ status: 'reviewing', revision: 3, reviewSessionId: 's-review' })], routes: { 'research.document.read': () => { if (refuse) throw new Error('The review workspace changed in a way MoonAliza will not read through. Start the review again.'); return { text: 'draft', truncated: false, source: 'workspace', verified: false }; } } });
   render(<ResearchPanel api={api} project={project} openConversation={() => {}} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Read the brief' }));
   await waitFor(() => expect(screen.getByTestId('research-reader-source').textContent).toBe('Brief · review workspace · not verified'));
@@ -426,7 +426,7 @@ test('research off: Allow research opens a confirmation with every disclosure, a
   expect(confirm.textContent).toMatch(/topic, search queries and URLs of a collection are sent to your collector repository on GitHub and are readable there/);
   expect(confirm.textContent).toMatch(/Only public web pages are fetched/);
   expect(confirm.textContent).toMatch(/No project files are sent/);
-  expect(confirm.textContent).toMatch(/A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result/);
+  expect(confirm.textContent).toMatch(/A collection already started on GitHub keeps running there; MoonAliza stops following it and does not use its result/);
   expect(confirm.textContent).not.toMatch(/private/i);
   fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
   expect(screen.queryByRole('group', { name: 'Allow public research?' })).toBeNull();
@@ -453,7 +453,7 @@ test('research on: Turn research off asks first, warns what stops, and sends off
   expect(policyCalls(calls)).toEqual([]);
   const confirm = screen.getByRole('group', { name: 'Turn research off?' });
   expect(confirm.textContent).toMatch(/Waiting and running research jobs, collections and reviews, stop/);
-  expect(confirm.textContent).toMatch(/A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result/);
+  expect(confirm.textContent).toMatch(/A collection already started on GitHub keeps running there; MoonAliza stops following it and does not use its result/);
   fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
   expect(policyCalls(calls)).toEqual([]);
   fireEvent.click(screen.getByRole('button', { name: 'Turn research off' }));
@@ -550,7 +550,7 @@ test('a brief reply or refusal arriving after the evidence table was requested i
   fireEvent.click(screen.getByRole('button', { name: 'Read the brief' }));
   fireEvent.click(screen.getByRole('button', { name: 'Read the evidence table' }));
   await waitFor(() => expect(reads.replies).toHaveLength(4));
-  await act(async () => reads.replies[2]!.reject(new Error('The review workspace changed in a way Moonzila will not read through. Start the review again.')));
+  await act(async () => reads.replies[2]!.reject(new Error('The review workspace changed in a way MoonAliza will not read through. Start the review again.')));
   expect(within(reader).queryByRole('alert')).toBeNull();
   expect(within(reader).getByText('Reading the evidence table…')).toBeTruthy();
   await act(async () => reads.replies[3]!.resolve(workspaceReply('EVIDENCE AGAIN')));

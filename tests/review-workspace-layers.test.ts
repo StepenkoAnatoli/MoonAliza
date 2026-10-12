@@ -26,7 +26,7 @@ const { materialise, treeInventory } = await import('../src/main/review-workspac
 let root: string; let n = 0;
 const fresh = async () => { const dir = join(root, `case-${++n}`); await mkdir(dir); return dir; };
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
-beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-review-layers-')); });
+beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-review-layers-')); });
 afterEach(() => { swapLstat(); });
 afterAll(async () => { if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
 

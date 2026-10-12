@@ -30,7 +30,7 @@ function bridge({ jobs = [] as Research[], routes = {} as Record<string, (params
 }
 const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
 const COLLECTION_CANCELLING = 'Stopping the collector. A run already started on GitHub is not cancelled there.';
-const COLLECTION_CANCELLED = 'Moonzila stopped following this collection. A run already started on GitHub was not cancelled there.';
+const COLLECTION_CANCELLED = 'MoonAliza stopped following this collection. A run already started on GitHub was not cancelled there.';
 
 test.each(['reviewing', 'packaging'] as const)('Cancel review on a %s job asks first; Keep the review sends nothing, and only the confirm cancels', async status => {
   // Guard: the confirmation (mutation: Cancel review calls research.cancel at once).

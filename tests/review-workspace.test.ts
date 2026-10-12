@@ -31,7 +31,7 @@ function crafted(declared: Record<string, string>, actual: Record<string, string
   return storedZip([...Object.entries(actual).map(([path, content]): [string, string] => [`project/${path}`, content]), ['manifest.json', JSON.stringify({ files, source })]]);
 }
 
-beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonzila-review-workspace-')); });
+beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-review-workspace-')); });
 afterAll(async () => { if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
 
 test('materialisation writes exactly the manifest\'s project files, checked by hash, and nothing outside project/', async () => {

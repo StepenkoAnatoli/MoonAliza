@@ -41,7 +41,7 @@ async function files(directory: string): Promise<string[]> {
  * into the harness route that answers the verified import's run read from the fake; without it that read is refused.
  */
 async function journey(name: string, { routeRunRead = false }: { routeRunRead?: boolean } = {}) {
-  const root = await mkdtemp(join(tmpdir(), `moonzila-${name}-`));
+  const root = await mkdtemp(join(tmpdir(), `moonaliza-${name}-`));
   const data = join(root, 'data'); const project = join(root, 'Research project');
   await mkdir(join(data, 'research-kit'), { recursive: true }); await mkdir(project);
   const nodeSha256 = createHash('sha256').update(await readFile(process.execPath)).digest('hex');
@@ -83,7 +83,7 @@ const read = async (page: Page, id: string) => (await invoke<{ research: Job }>(
 const count = (fake: FakeGitHub, method: string, path: string) => fake.seen.filter(request => request.method === method && request.path === path).length;
 type Outcome = { code: number | null; status: string | null; clientRef: string | null; state: string | null };
 type Harness = { collectors: number; rewritten: number; outcomes: Outcome[]; refusedFetches: string[] };
-const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonzilaE2eCollectorNetwork?: Harness }).__moonzilaE2eCollectorNetwork ?? null);
+const network = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __moonalizaE2eCollectorNetwork?: Harness }).__moonalizaE2eCollectorNetwork ?? null);
 
 test('The harness is loaded into main before the app, and the product never sees its variable', async () => {
   const { root, fake, launch } = await journey('journey-harness');
@@ -210,7 +210,7 @@ test.describe('research journeys', () => {
       await expect(confirm.getByText('The topic, search queries and URLs of a collection are sent to your collector repository on GitHub and are readable there.')).toBeVisible();
       await expect(confirm.getByText('Only public web pages are fetched.')).toBeVisible();
       await expect(confirm.getByText('No project files are sent.')).toBeVisible();
-      await expect(confirm.getByText('A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result.')).toBeVisible();
+      await expect(confirm.getByText('A collection already started on GitHub keeps running there; MoonAliza stops following it and does not use its result.')).toBeVisible();
       await confirm.getByRole('button', { name: 'Allow public research' }).click();
 
       await expect(dialog.getByText('Research is on for this project: public web pages only.')).toBeVisible();

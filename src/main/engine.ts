@@ -38,7 +38,7 @@ export class Engine {
     this.hooks.restarted(epoch);
     const env: NodeJS.ProcessEnv = {};
     for (const name of ['SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'PATH', 'USERPROFILE', 'LOCALAPPDATA']) if (process.env[name]) env[name] = process.env[name];
-    const child = this.fork(this.entry, [this.database, epoch], { env, stdio: 'ignore', serviceName: 'Moonzila engine' });
+    const child = this.fork(this.entry, [this.database, epoch], { env, stdio: 'ignore', serviceName: 'MoonAliza engine' });
     this.child = child;
     this.ready = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => { reject(new Error('ENGINE_UNAVAILABLE')); child.kill(); }, 20_000);

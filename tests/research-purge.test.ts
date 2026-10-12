@@ -148,7 +148,7 @@ function documents(w: World, overrides: Partial<DocumentDeps> = {}): DocumentDep
 }
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), 'moonzila-purge-'));
+  root = await mkdtemp(join(tmpdir(), 'moonaliza-purge-'));
   nodeSha256 = digest(await readFile(process.execPath));
   collectedBytes = await readFile(collectedFixture); approvedBytes = await readFile(approvedFixture);
 });

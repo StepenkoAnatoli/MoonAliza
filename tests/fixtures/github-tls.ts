@@ -58,7 +58,7 @@ export async function generateTestTls(): Promise<TestTls> {
   // Not extractable: subtle.exportKey refuses it, so the CA's private key cannot reach a file.
   const ca = await subtle.generateKey(ALGORITHM, false, ['sign', 'verify']);
   const leaf = await subtle.generateKey(ALGORITHM, true, ['sign', 'verify']);
-  const caName = 'Moonzila test CA (generated per test run, not trusted outside tests)';
+  const caName = 'MoonAliza test CA (generated per test run, not trusted outside tests)';
   const caCertificate = await certificate({
     subject: caName, issuer: caName, publicKey: ca.publicKey, signingKey: ca.privateKey,
     extensions: self => [
@@ -84,7 +84,7 @@ export async function generateTestTls(): Promise<TestTls> {
   const caPem = pem('CERTIFICATE', caCertificate.toSchema(true).toBER(false));
   const leafPem = pem('CERTIFICATE', leafCertificate.toSchema(true).toBER(false));
   const leafKeyPem = pem('PRIVATE KEY', await subtle.exportKey('pkcs8', leaf.privateKey));
-  const dir = await mkdtemp(join(tmpdir(), 'moonzila-github-tls-'));
+  const dir = await mkdtemp(join(tmpdir(), 'moonaliza-github-tls-'));
   const caPath = join(dir, 'ca.pem'); const leafPath = join(dir, 'leaf.pem');
   try {
     await writeFile(caPath, caPem); await writeFile(leafPath, leafPem);
