@@ -32,16 +32,21 @@ test('an irreducible prompt is rejected and output reserve and declarations coun
 
 // More models Phase 2, U1 (docs/specification/more-models-phase2.md section 3; REQUIREMENTS-P2 F-17).
 test('the estimate counts an anthropic-messages@1 message as its state and other states with their message', () => {
-  // Guards (mutations of estimateInput): count every message whole (the anthropic case goes red); project every state
-  // whatever its format (the other-format case goes red).
+  // Guards (mutations of estimateInput): count every message whole (the anthropic cases go red); project every state
+  // whatever its format (the other-format case goes red); project only an appendOnly state (the appendOnly-false
+  // anthropic case goes red: spec 5.5 gives every Anthropic tool step a state that 5.3 replays whole, and sets
+  // appendOnly only when a thinking block is present, so a tool step without one, such as Haiku 4.5's (section 3
+  // rule 5), carries it with appendOnly false; U1-REV2-1).
   const formula = (messages: unknown[]) => Math.ceil(Buffer.byteLength(JSON.stringify({ messages, tools: [] }), 'utf8') / 2) + 256 + messages.length * 8;
   const call = { id: 'c1', name: 'read_file', input: { path: 'p'.repeat(3000) } };
   const data = JSON.stringify({ content: [{ type: 'thinking', thinking: '', signature: 's'.repeat(2000) }, { type: 'text', text: 't'.repeat(3000) }, { type: 'tool_use', ...call }] });
   const plain: InferenceMessage = { role: 'assistant', content: 't'.repeat(3000), toolCalls: [call] };
   const whole: InferenceMessage = { ...plain, providerState: { format: PROVIDER_STATE_FORMATS.anthropic, appendOnly: true, data } };
+  const unfrozen: InferenceMessage = { ...plain, providerState: { format: PROVIDER_STATE_FORMATS.anthropic, appendOnly: false, data } };
   const other: InferenceMessage = { ...plain, providerState: { format: 'other-dialect@1', appendOnly: true, data } };
   expect([...WHOLE_REPLAY_FORMATS]).toEqual(['anthropic-messages@1']);
   expect(estimateInput([system, whole], [])).toBe(formula([system, { role: 'assistant', providerState: data }]));
+  expect(estimateInput([system, unfrozen], [])).toBe(formula([system, { role: 'assistant', providerState: data }]));
   expect(estimateInput([system, other], [])).toBe(formula([system, other]));
   expect(estimateInput([system, plain], [])).toBe(formula([system, plain]));
 });
