@@ -633,18 +633,18 @@ test.each(preCheckRefusals)('a call refused by the %s check leaves no timer behi
 });
 
 type PostPart = Parameters<typeof post>[3];
-/** A refused or accepted answer whose body records its own cancellation. */
-const answerWith = (status: number, log: string[], label: string, text = `body ${label}`) => new Response(new ReadableStream<Uint8Array>({
+/** A refused or accepted answer whose body records its own cancellation, then runs `onCancel` if one is given. */
+const answerWith = (status: number, log: string[], label: string, text = `body ${label}`, onCancel?: () => void) => new Response(new ReadableStream<Uint8Array>({
   start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); },
-  cancel() { log.push(`cancelled ${label}`); },
+  cancel() { log.push(`cancelled ${label}`); onCancel?.(); },
 }), { status });
-function posting(part: PostPart, statuses: number[], options: { retry?: boolean; timeoutMs?: number; stop?: AbortController; deadline?: AbortController; texts?: string[] } = {}) {
+function posting(part: PostPart, statuses: number[], options: { retry?: boolean; timeoutMs?: number; stop?: AbortController; deadline?: AbortController; texts?: string[]; onCancel?: () => void } = {}) {
   const log: string[] = []; let fetches = 0;
   const stop = options.stop ?? new AbortController();
   const fetcher = async () => {
     const status = statuses[fetches] ?? 500; const text = options.texts?.[fetches]; fetches += 1;
     log.push(`fetch ${fetches} ${status}`);
-    return answerWith(status, log, String(fetches), text);
+    return answerWith(status, log, String(fetches), text, options.onCancel);
   };
   let settled = false;
   // With a deadline controller, `signal` is Stop joined with it and `stop` is Stop alone, as complete() passes them.
@@ -732,6 +732,34 @@ test('Stop during a retry wait ends the call as RUN_CANCELLED with no further fe
     await vi.advanceTimersByTimeAsync(5000);
     expect(late.fetched()).toBe(1);
     expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test('a Stop or deadline that fires while the refused body is cancelled ends the call before any wait, with no further fetch (F-14)', async () => {
+  // The window between a refused answer and its wait is post()'s `await response.body?.cancel()`. Here the refused
+  // body's own cancel() presses Stop (first run) or ends the deadline (second run), so the signal has already aborted
+  // when the wait begins. Guard: `if (signal.aborted) abort()` in pause() (mutation R1: only add the abort listener; an
+  // abort that already fired never reaches it, so the call waits the full delay and sends the request again).
+  vi.useFakeTimers();
+  try {
+    const stop = new AbortController();
+    const part = retrying([1000, 1000]);
+    const run = posting(part, [503, 200], { stop, deadline: new AbortController(), onCancel: () => stop.abort() });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run.settled(), 'settled at once').toBe(true);
+    expect(await run.outcome).toEqual({ error: 'RUN_CANCELLED' });
+    expect(run.fetched()).toBe(1);
+    expect(run.log).toEqual(['fetch 1 503', 'cancelled 1']);
+    expect(part.retryDelayMs).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount(), 'no wait pending').toBe(0);
+
+    const deadline = new AbortController();
+    const late = posting(retrying([1000, 1000]), [503, 200], { deadline, onCancel: () => deadline.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')) });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(late.settled(), 'settled at once').toBe(true);
+    expect(await late.outcome).toMatchObject({ name: 'TimeoutError' });
+    expect(late.fetched()).toBe(1);
+    expect(vi.getTimerCount(), 'no wait pending').toBe(0);
   } finally { vi.useRealTimers(); }
 });
 
