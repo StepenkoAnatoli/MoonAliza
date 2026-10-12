@@ -4,7 +4,7 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-12 |
-| Last checkpoint | 2026-10-12 - builder made the four commits on `build/rename` (`71e8490`, `c5b740c`, `5c0ec78`, then the docs commit) |
+| Last checkpoint | 2026-10-12 - built, reviewed (ACCEPT after one fix round), integrated onto `main-axuse`; gate and PR next |
 | Engagement      | Light (one builder, then independent reviewers; installer naming is user-facing) |
 | Working branch  | `main-axuse` (from `main` @ `2fb13ac` plus docs `64864bd`, `6ed7e22`); builder on `build/rename` |
 | Base / baseline | pinned Linux gate: 74 known failures (`/home/user/task5-handoff/baseline-failing.json`) |
