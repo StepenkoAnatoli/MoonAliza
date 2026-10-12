@@ -40,7 +40,9 @@ test('an Anthropic profile passes Test connection and replays a thinking step un
   let app: ElectronApplication | undefined;
   try {
     app = await launch(); const page = await app.firstWindow();
-    await expect(page.getByText('Your work starts here')).toBeVisible();
+    // This spec sorts first, so it takes the runner's cold first launch: the 5 s assertion default is too short there
+    // (run 38270784820: the heading rendered after it). The other specs' first steps are actions, bounded by the test.
+    await expect(page.getByText('Your work starts here')).toBeVisible({ timeout: 30_000 });
 
     // A cookie for the fake's origin in the provider session (src/main/index.ts, partition `moonaliza-providers`, held
     // in memory, so it is planted in this launch). Chat requests are sent with `credentials: 'omit'` (INV-5), so the
