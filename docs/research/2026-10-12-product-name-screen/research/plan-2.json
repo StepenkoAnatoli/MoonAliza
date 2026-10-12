@@ -1,0 +1,58 @@
+{
+  "topic": "Product-name screen for a Windows desktop AI coding assistant: is there an obvious conflict for Moonwright, Lunarch, Perilune, Selunara or Tidewright as the name of an AI coding assistant or developer software (US trademark index, web search, GitHub, .com domain)",
+  "notes": "Run 2 (9 pages, about 9 credits; the project stands at 8 of 20 before it - run 1 collected 8 of 8). Run 1 showed no clear conflict for any name: Justia's index lists no mark for MOONWRIGHT, SELUNARA or TIDEWRIGHT, two PERILUNE filings for alcoholic beverages (Jackson Family Farms) and, for lunarch, the owner LUNARCH STUDIOS INC. (game software, mark PRISMATA); GitHub's search (71 repositories, complete) has no repository for moonwright or selunara and none above 123 stars. So no source is skipped for any name. Google rendered real results through this transport for Moonwright (full capture), and DuckDuckGo lite answered No results found while Google listed pages containing the word - so the web search for the other four names is Google, in the same query shape. RDAP for all five .com names, from Verisign's .com RDAP server (rendered for selenic.com in the sibling project).",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 9,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://www.google.com/search?q=%22Lunarch%22+software+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-02: one web search for Lunarch with software or AI - a current software or AI product or company using the name"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Perilune%22+software+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-03: one web search for Perilune with software or AI - a current software or AI product or company using the name"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Selunara%22+software+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-04: one web search for Selunara with software or AI - a current software or AI product or company using the name"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Tidewright%22+software+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-05: one web search for Tidewright with software or AI - a current software or AI product or company using the name"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/moonwright.com",
+      "type": "P",
+      "why": "U-01: the .com registry's RDAP record for moonwright.com - registered, since when, through whom"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/lunarch.com",
+      "type": "P",
+      "why": "U-02: the .com registry's RDAP record for lunarch.com - registered, since when, through whom"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/perilune.com",
+      "type": "P",
+      "why": "U-03: the .com registry's RDAP record for perilune.com - registered, since when, through whom"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/selunara.com",
+      "type": "P",
+      "why": "U-04: the .com registry's RDAP record for selunara.com - registered, since when, through whom"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/tidewright.com",
+      "type": "P",
+      "why": "U-05: the .com registry's RDAP record for tidewright.com - registered, since when, through whom"
+    }
+  ]
+}

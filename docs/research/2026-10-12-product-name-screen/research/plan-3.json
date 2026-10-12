@@ -1,0 +1,28 @@
+{
+  "topic": "Product-name screen for a Windows desktop AI coding assistant: is there an obvious conflict for Moonwright, Lunarch, Perilune, Selunara or Tidewright as the name of an AI coding assistant or developer software (US trademark index, web search, GitHub, .com domain)",
+  "notes": "Run 3 (3 pages, at most 3 credits; the project stands at 16 of 20 before it - doctor balance 330, from 346 at the start; run 2's failed Google page was not charged). (1) Run 2's Google search for Tidewright failed on every Firecrawl engine (ledger fail entry), while the same query shape rendered for the other four names; it is retried once, unchanged. If it fails again, the Tidewright web search stays a gap named in U-05, and no other engine is tried (DuckDuckGo lite answered No results found for Moonwright where Google listed pages containing the word, so its absence would prove nothing). (2) Justia's index points to two PERILUNE filings (serials 87826530 and 90875622, Jackson Family Farms, alcoholic beverages) but shows neither status nor class number; the USPTO's own TSDR records give both, as the order asks when an index points to a mark for the exact name.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 3,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://www.google.com/search?q=%22Tidewright%22+software+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-05: one web search for Tidewright with software or AI - a current software or AI product or company using the name (retry of run 2's failed fetch)"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn90875622",
+      "type": "P",
+      "why": "U-03: the USPTO's status record for PERILUNE, serial 90875622 (filed 2021, Jackson Family Farms) - status, class, goods"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn87826530",
+      "type": "P",
+      "why": "U-03: the USPTO's status record for PERILUNE, serial 87826530 (filed 2018, Jackson Family Farms) - status, class, goods"
+    }
+  ]
+}

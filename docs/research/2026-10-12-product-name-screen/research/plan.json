@@ -1,0 +1,53 @@
+{
+  "topic": "Product-name screen for a Windows desktop AI coding assistant: is there an obvious conflict for Moonwright, Lunarch, Perilune, Selunara or Tidewright as the name of an AI coding assistant or developer software (US trademark index, web search, GitHub, .com domain)",
+  "notes": "Run 1 (8 pages, about 8 credits of the project's 20; phase 0 was a dry run and spent nothing; Firecrawl balance 346 before, from doctor). No queries: a Firecrawl search costs about 2 credits and keeps no capture of its result list, so an absence could not be shown; each web search is instead a search results page fetched by URL, which is captured. Sources follow the sibling project docs/research/2026-10-12-selenic-name-check: Justia's trademark search (rendered for selenic, full capture), GitHub's stars-sorted repository search (rendered). The five names go into ONE GitHub query joined with OR (GitHub allows up to five operators), per_page 100, to spend 1 credit instead of 5; if total_count passes 100 a per-name follow-up decides. Web search engine: none was captured in the sibling project; a planning curl on 2026-10-12 (not evidence) found Bing serving unrelated results to a non-browser client, Google answering with a JavaScript-required page and DuckDuckGo refusing the container's proxy, so this run probes two engines on Moonwright only - Google (Firecrawl renders JavaScript) and DuckDuckGo lite (the kit's own keyless search endpoint, lib/http-transport.mjs) - and run 2 uses whichever rendered results for the other four names. RDAP (.com) is held for run 2, so a name whose trademark or web search already shows a clear conflict can skip it. A planning DNS lookup on 2026-10-12 (dns.google, not evidence) found all five .com names delegated, so each RDAP lookup is expected to answer 200 with a record.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 8,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://trademarks.justia.com/search?q=moonwright",
+      "type": "S",
+      "why": "U-01: every US trademark filing whose text contains MOONWRIGHT, from Justia's index of USPTO data - owner, class, status"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=lunarch",
+      "type": "S",
+      "why": "U-02: every US trademark filing whose text contains LUNARCH, from Justia's index of USPTO data - owner, class, status"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=perilune",
+      "type": "S",
+      "why": "U-03: every US trademark filing whose text contains PERILUNE, from Justia's index of USPTO data - owner, class, status"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=selunara",
+      "type": "S",
+      "why": "U-04: every US trademark filing whose text contains SELUNARA, from Justia's index of USPTO data - owner, class, status"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=tidewright",
+      "type": "S",
+      "why": "U-05: every US trademark filing whose text contains TIDEWRIGHT, from Justia's index of USPTO data - owner, class, status"
+    },
+    {
+      "url": "https://api.github.com/search/repositories?q=moonwright+OR+lunarch+OR+perilune+OR+selunara+OR+tidewright&sort=stars&order=desc&per_page=100",
+      "type": "P",
+      "why": "U-01, U-02, U-03, U-04, U-05: every GitHub repository matching any of the five names, most-starred first - the top repository and its stars per name"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Moonwright%22+software+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-01: one web search for Moonwright with software or AI - a current software or AI product or company using the name (probe: does this engine render results through this transport)"
+    },
+    {
+      "url": "https://lite.duckduckgo.com/lite/?q=%22Moonwright%22+software+OR+AI",
+      "type": "S",
+      "why": "U-01: the same web search on DuckDuckGo lite - a current software or AI product or company using the name (probe: does this engine render results through this transport)"
+    }
+  ]
+}
