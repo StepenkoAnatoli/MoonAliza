@@ -130,7 +130,7 @@ Rules (`src/engine/context.ts`, `application.ts`):
    overflow: the local estimate (`fits` false, `:360`) or the provider (a 400 "prompt is too long"
    crossing from main as CONTEXT_LIMIT). The public code stays CONTEXT_LIMIT: "This task outgrew the
    selected model's context budget. This provider needs the earlier steps of a task sent back
-   unchanged, so Moonzila could not shorten them while the task ran. Saved messages and any applied
+   unchanged, so MoonAliza could not shorten them while the task ran. Saved messages and any applied
    changes remain available; commands are not retried. Split the task into smaller requests, or open
    Model profiles to check the model's supported context and response reserve." The existing text
    (`:393`) says "after reducing saved tool excerpts", which a frozen run did not do. The frozen text
@@ -662,7 +662,7 @@ against it and the 600 s timeout.
   dropped by the engine, `src/engine/index.ts:60-61`, and the run waits for its deadline), as Phase 1
   did for LOCAL_MODEL_UNVERIFIED (`tests/provider-transport.test.ts:252-256`). The engine already maps
   the code to its own message (`application.ts:393`), which U0 widens to cover both causes: "The
-  provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or
+  provider returned a tool call or step MoonAliza could not use safely: a tool call that was invalid or
   not offered, or output that contained a saved credential. Nothing from that step was run or saved."
   It is an existing public code (`src/shared/errors.ts:11`). The `failures` entry is shared, so the
   widened text applies to every kind and every cause that raises the code: the engine's own check of an
@@ -716,7 +716,7 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
     Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless
     Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs
     and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page
-    refers to its commercial data retention policy, which Moonzila has not reviewed." Clause by clause:
+    refers to its commercial data retention policy, which MoonAliza has not reviewed." Clause by clause:
     "Anthropic may not train models on Customer Content from Services", Customer Content being Inputs
     and Outputs (SL-E11 l.26; those terms govern API keys, l.12); SL-E17 l.45 and l.140; SL-E17 l.241
     ("if a chat or session is flagged, Anthropic may retain inputs and outputs for up to 2 years");
@@ -727,7 +727,7 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
     excepted, and the hint neither repeats it nor says the page is silent on retention. The hint never
     says "not retained";
   - this adapter is built from Anthropic's documentation and is not yet checked against the live API
-    (as built: "Moonzila's Anthropic connection is tested against requests and responses recorded from
+    (as built: "MoonAliza's Anthropic connection is tested against requests and responses recorded from
     the live API; the app itself has not yet been run against it", after the 2026-10-12 probes, U4-R5).
   No token values are prefilled: presets are Phase 4.
 - README: the kind, its endpoint, single-workspace keys, always cloud (refused in local-only

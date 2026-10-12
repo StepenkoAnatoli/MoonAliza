@@ -89,9 +89,9 @@ The panel shows the current job (the first active one, otherwise the newest), as
 | status with nothing to read; a workspace that exists without the document | `DOCUMENT_NOT_AVAILABLE` | "There is no brief or evidence table to read for this research yet." |
 | `approved`: the reviewed package is missing, or its bytes no longer verify | result `verified: false`, `text: ''`, `source: 'reviewed'` | none (the panel shows "Unverified") |
 | `collected`, or the collected fallback: the package is missing or no longer verifies | `DOCUMENT_UNVERIFIED` | "This document no longer matches what was collected, so it is not shown. Start a new collection." |
-| a link, junction, second hard link or replaced file in the workspace | `DOCUMENT_UNSAFE` | "The review workspace changed in a way Moonzila will not read through. Start the review again." |
+| a link, junction, second hard link or replaced file in the workspace | `DOCUMENT_UNSAFE` | "The review workspace changed in a way MoonAliza will not read through. Start the review again." |
 | the validator cannot run | `RESEARCH_KIT_UNAVAILABLE` | the existing message (install or repair the kit) fits and is reused |
-| redaction cannot run (the vault throws `REDACTION_UNAVAILABLE`) | `DOCUMENT_REDACTION_UNAVAILABLE` | "Moonzila cannot check this document for saved keys right now, so it is not shown. Try again after restarting Moonzila." |
+| redaction cannot run (the vault throws `REDACTION_UNAVAILABLE`) | `DOCUMENT_REDACTION_UNAVAILABLE` | "MoonAliza cannot check this document for saved keys right now, so it is not shown. Try again after restarting MoonAliza." |
 | the whole document is larger than 4 MiB | `DOCUMENT_TOO_LARGE` | "This document is too large to show safely." |
 
 - Mapping from the adapter: `verifyRetained` throws `STALE_VERIFICATION` for a missing or non-verifying package (the "missing or no longer verifies" rows) and `INSTALLATION_INVALID` when this machine's kit is at fault (`RESEARCH_KIT_UNAVAILABLE`). `CANCELLED` is not a reader outcome: the reader passes no signal that the panel can abort.
@@ -148,7 +148,7 @@ Exact-match redaction cannot catch a fragment of a secret that the document itse
 - The panel shows the refusal as "Finish or stop the running task first" and does not retry.
 - Turning research off while a review run is active is allowed, because stopping research is the point of it.
 
-**What it cannot stop.** Both confirmations say that a collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result.
+**What it cannot stop.** Both confirmations say that a collection already started on GitHub keeps running there; MoonAliza stops following it and does not use its result.
 
 **Never offered:** `private-connected`. An untrusted project shows the existing "Trust this project" text and no switch.
 

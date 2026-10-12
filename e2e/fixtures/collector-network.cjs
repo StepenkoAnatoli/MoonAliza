@@ -1,6 +1,6 @@
 'use strict';
 // Test-only. Never bundled or packaged: it lives under e2e/ and reaches the app only when a spec passes it to Electron
-// with `-r`, before the app's own main code runs. Moonzila gives a collector child a minimal environment
+// with `-r`, before the app's own main code runs. MoonAliza gives a collector child a minimal environment
 // (collectorEnvironment), so the real pinned kit cannot be pointed at tests/fixtures/fake-github.ts by any setting.
 // This adds exactly two variables, HTTPS_PROXY (a loopback proxy) and NODE_EXTRA_CA_CERTS (the test CA), to the
 // environment block of a collect-remote.mjs launch on its way into the native helper. It also refuses every request main itself sends

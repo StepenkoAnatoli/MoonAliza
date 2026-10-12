@@ -210,7 +210,7 @@ test.describe('research journeys', () => {
       await expect(confirm.getByText('The topic, search queries and URLs of a collection are sent to your collector repository on GitHub and are readable there.')).toBeVisible();
       await expect(confirm.getByText('Only public web pages are fetched.')).toBeVisible();
       await expect(confirm.getByText('No project files are sent.')).toBeVisible();
-      await expect(confirm.getByText('A collection already started on GitHub keeps running there; Moonzila stops following it and does not use its result.')).toBeVisible();
+      await expect(confirm.getByText('A collection already started on GitHub keeps running there; MoonAliza stops following it and does not use its result.')).toBeVisible();
       await confirm.getByRole('button', { name: 'Allow public research' }).click();
 
       await expect(dialog.getByText('Research is on for this project: public web pages only.')).toBeVisible();

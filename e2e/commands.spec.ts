@@ -42,7 +42,7 @@ test('Build reviews real command execution, receives failure evidence, and stops
     await page.getByRole('button', { name: 'Model profiles', exact: true }).click();
     await page.getByLabel('Profile name').fill('Command model fixture'); await page.getByLabel('Endpoint').fill(`http://127.0.0.1:${port}`); await page.getByLabel('Model name').fill('fixture-commands');
     await page.getByRole('button', { name: 'Save profile' }).click(); await page.getByLabel('Mode', { exact: true }).selectOption('build');
-    await page.getByLabel('Message Moonzila').fill('Inspect Git and run the project check'); await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByLabel('Message MoonAliza').fill('Inspect Git and run the project check'); await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByRole('button', { name: 'Approve command' })).toBeVisible({ timeout: 30000 });
     await expect(readFile(join(project, 'check-ran.txt'))).rejects.toThrow();
     await expect(page.getByLabel('Command arguments')).toContainText('check.cjs');
@@ -53,7 +53,7 @@ test('Build reviews real command execution, receives failure evidence, and stops
     expect(evidence[0]?.code).toBe(0); expect(evidence[0]?.output).toContain('check.cjs');
     expect(evidence[1]?.code).toBe(7); expect(evidence[1]?.output).toContain('CHECK FAILED');
     expect(await readFile(join(project, 'check-ran.txt'), 'utf8')).toBe('yes');
-    await page.getByLabel('Message Moonzila').fill('Start the process tree'); await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByLabel('Message MoonAliza').fill('Start the process tree'); await page.getByRole('button', { name: 'Send message' }).click();
     await page.getByRole('button', { name: 'Approve command' }).click();
     await expect.poll(async () => readFile(join(project, 'pids.json'), 'utf8').catch(() => ''), { timeout: 30000 }).not.toBe('');
     const pids = JSON.parse(await readFile(join(project, 'pids.json'), 'utf8')) as number[];
@@ -61,7 +61,7 @@ test('Build reviews real command execution, receives failure evidence, and stops
     await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
     await expect(page.getByText('Command · Stopped', { exact: true })).toBeVisible();
     for (const pid of pids) expect(() => process.kill(pid, 0)).toThrow();
-    await page.getByLabel('Message Moonzila').fill('Start the process tree again'); await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByLabel('Message MoonAliza').fill('Start the process tree again'); await page.getByRole('button', { name: 'Send message' }).click();
     await page.getByRole('button', { name: 'Decline command' }).click();
     await expect(page.getByText('The proposed action was declined. No further actions were taken.', { exact: true })).toBeVisible();
   } finally { await app.close(); await new Promise<void>(done => server.close(() => done())); await rm(root, { recursive: true, force: true }); }

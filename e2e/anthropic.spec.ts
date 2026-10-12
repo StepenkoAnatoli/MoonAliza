@@ -75,7 +75,7 @@ test('an Anthropic profile passes Test connection and replays a thinking step un
     await page.getByRole('button', { name: 'Open project' }).click(); await page.getByRole('button', { name: 'Trust and open' }).click();
     await expect(page.getByRole('heading', { name: 'Anthropic project' })).toBeVisible();
     await page.getByLabel('Model profile', { exact: true }).selectOption({ label: 'Anthropic fixture' });
-    await page.getByLabel('Message Moonzila').fill(PROMPT);
+    await page.getByLabel('Message MoonAliza').fill(PROMPT);
     await expect(page.getByRole('button', { name: 'Send message' })).toBeDisabled();
     await page.getByRole('button', { name: 'Review cloud access' }).click(); await page.getByRole('button', { name: 'Allow for this project' }).click();
     await expect(page.getByRole('button', { name: 'Send message' })).toBeEnabled(); expect(fake.requests).toHaveLength(1);

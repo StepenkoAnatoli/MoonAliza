@@ -9,7 +9,7 @@ import { createServer, type IncomingHttpHeaders } from 'node:http';
  * so the journey stops at the first wrong request and the spec can say why. A fake that accepted anything would
  * prove nothing (BREAKDOWN-P2 row U5, pre-mortem 2).
  *
- * No `/api/status` (Phase 1's P1-CI-1): Moonzila asks it only of an `ollama` profile in a local-only conversation
+ * No `/api/status` (Phase 1's P1-CI-1): MoonAliza asks it only of an `ollama` profile in a local-only conversation
  * (src/main/ollama-locality.ts). This fake serves an `anthropic` profile, never checked that way, and the journey
  * makes its project cloud-allowed before the run; a status request would be refused here like any other.
  *
@@ -21,13 +21,13 @@ import { createServer, type IncomingHttpHeaders } from 'node:http';
  * on tool_use. The live data lines' trailing space padding is left out (U3 pins it from the recordings).
  */
 
-/** The version header Moonzila must send (E-08 l.50-54). */
+/** The version header MoonAliza must send (E-08 l.50-54). */
 const ANTHROPIC_VERSION = '2023-06-01';
 
 /**
  * The step-1 thinking signature: built for this test, not copied from E-10 l.407 (whose example signature is elided
  * with "..."). Base64-alphabet letters and digits only, so JSON never escapes it and one form matches at any depth of
- * nesting; long enough not to occur by chance. It reaches Moonzila only inside the provider state, so after the app
+ * nesting; long enough not to occur by chance. It reaches MoonAliza only inside the provider state, so after the app
  * closes it must be found nowhere under userData (the spec's byte scan).
  */
 export const SIGNATURE_MARKER = 'MoonzilaE2eSignatureMarkerQ7x9Zr4Lw2Vb8Nc5Kt3Hp6';
@@ -36,7 +36,7 @@ export const STEP1_TEXT = 'I will list the project folder first.';
 export const STEP2_TEXT = 'The project folder was listed through the Anthropic fixture.';
 
 /**
- * Step 1's content array as Moonzila must replay it in request 2: each block's start object with its deltas applied,
+ * Step 1's content array as MoonAliza must replay it in request 2: each block's start object with its deltas applied,
  * in index order, the tool input parsed from its partial JSON, every other field (`caller`) kept (E-10 l.59; the
  * D5 live step 2 replayed `caller` verbatim and was accepted).
  */
@@ -75,7 +75,7 @@ const testAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eTestConnec
 /**
  * Step 1: a thinking block (empty thinking, the marker as its signature), a text block and a `list_files` call with
  * `{"path": "."}`, stopping with `tool_use`. `list_files` is offered in Ask mode (src/tools/reads.ts:23); E-10's
- * `get_weather` is not a Moonzila tool and would fail the step as PROVIDER_INVALID_RESPONSE.
+ * `get_weather` is not a MoonAliza tool and would fail the step as PROVIDER_INVALID_RESPONSE.
  */
 const stepOneAnswer = (model: string) => stream(model, 'msg_01MoonzilaE2eStepOne', [
   { start: { type: 'thinking', thinking: '', signature: '' }, deltas: [{ type: 'thinking_delta', thinking: '' }, { type: 'signature_delta', signature: SIGNATURE_MARKER }] },
@@ -107,7 +107,7 @@ export interface RecordedRequest { turn: Turn | 'unexpected'; method: string; pa
 export interface AnthropicFake {
   /** `http://127.0.0.1:<port>`, the origin a cookie is planted for. */
   origin: string;
-  /** The profile endpoint, `<origin>/v1`: Moonzila posts to `<endpoint>/messages`. */
+  /** The profile endpoint, `<origin>/v1`: MoonAliza posts to `<endpoint>/messages`. */
   endpoint: string;
   /** Every request but the cookie probe, in arrival order, refused or not. */
   requests: RecordedRequest[];
@@ -155,7 +155,7 @@ function check(turn: Turn, method: string, path: string, headers: IncomingHttpHe
     need(canonical(messages) === canonical([{ role: 'user', content: expected.prompt }]), 'request 1 is not exactly the prompt as one user message');
     // Ask mode, as the run's system message names it, offering list_files and no write tool: red when the journey
     // starts the run in plan or build mode, or the engine offers Ask mode a write tool.
-    need(typeof body.system === 'string' && body.system.startsWith('You are Moonzila, a coding assistant in ask mode.'), 'the system prompt is not the Ask-mode prompt');
+    need(typeof body.system === 'string' && body.system.startsWith('You are MoonAliza, a coding assistant in ask mode.'), 'the system prompt is not the Ask-mode prompt');
     need(toolNames(body).includes('list_files') && !toolNames(body).includes('write_file'), `the tools are not Ask mode's: ${canonical(toolNames(body))}`);
     return failed;
   }

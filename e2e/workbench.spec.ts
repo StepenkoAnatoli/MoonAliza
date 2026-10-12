@@ -48,7 +48,7 @@ test('trusted project, encrypted profile, real IPC inference and durable history
     await page.getByLabel('API key').fill('test-only-credential-marker');
     await page.getByRole('button', { name: 'Save profile' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.getByLabel('Message Moonzila').fill('Remember this conversation');
+    await page.getByLabel('Message MoonAliza').fill('Remember this conversation');
     // A CI desktop can constrain the window below the details-pane breakpoint.
     // Exercise actual pointer hit testing, including the minimum supported width.
     for (const width of [960, 1180, 1440, 1024]) {

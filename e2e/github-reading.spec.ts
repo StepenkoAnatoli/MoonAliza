@@ -48,7 +48,7 @@ test('General chat reads a supplied GitHub URL through main and saves cited resu
     await page.getByRole('button', { name: 'Model profiles', exact: true }).click();
     await page.getByLabel('Profile name').fill('GitHub fixture'); await page.getByLabel('Endpoint').fill(`http://127.0.0.1:${port}`);
     await page.getByLabel('Model name').fill('fixture'); await page.getByRole('button', { name: 'Save profile' }).click();
-    await page.getByLabel('Message Moonzila').fill('Read https://github.com/example/project'); await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByLabel('Message MoonAliza').fill('Read https://github.com/example/project'); await page.getByRole('button', { name: 'Send message' }).click();
     // Wait for the durable outcome, not a five-second end-to-end timing assumption.
     // A failed/cancelled run ends the wait too, and must fail the assertion below.
     let outcome = '';

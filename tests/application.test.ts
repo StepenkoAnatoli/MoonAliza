@@ -76,7 +76,7 @@ test('an unverified local Ollama fails the run with an actionable message, never
   // The message is the spec's, word for word (docs/specification/more-models.md, Phase 1 design 2, "The engine shows:"):
   // every refusal reads true - cloud on, an Ollama without /api/status, or one not running (review U2-R4) - and it names
   // every remedy step. The engine writes the apostrophe typographically, as its other messages do.
-  expect(result.failure.message.replace(/\u2019/g, "'")).toBe('Moonzila could not confirm that this Ollama keeps prompts on this computer, and this conversation is local only. Ollama can send prompts to ollama.com cloud models unless its cloud features are off. Check that Ollama is running and up to date, turn off its cloud features (set OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama\'s server.json), restart Ollama, then try again.');
+  expect(result.failure.message.replace(/\u2019/g, "'")).toBe('MoonAliza could not confirm that this Ollama keeps prompts on this computer, and this conversation is local only. Ollama can send prompts to ollama.com cloud models unless its cloud features are off. Check that Ollama is running and up to date, turn off its cloud features (set OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama\'s server.json), restart Ollama, then try again.');
 });
 
 test('result retrieval cannot cross conversation boundaries or rerun an operation', async () => {
@@ -289,7 +289,7 @@ test('a tool step\'s provider state goes back on the next step of its run and ne
 
 test('a protocol refusal from main, and the engine\'s own unoffered-call check, end the run with the widened message', async () => {
   // Spec section 6 and REQUIREMENTS-P2 F-23: one shared text for every cause of PROVIDER_PROTOCOL_ERROR, never retried.
-  const widened = 'The provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.';
+  const widened = 'The provider returned a tool call or step MoonAliza could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.';
   for (const infer of [
     async () => { throw new Error('PROVIDER_PROTOCOL_ERROR'); },
     async () => ({ content: '', outcome: 'tool_calls' as const, toolCalls: [{ id: 'unoffered', name: 'not_a_tool', input: {} }] }),
@@ -357,7 +357,7 @@ test.each(['session', 'project'] as const)('a switch to local-only by %s.policy.
 // More models Phase 2, U1: append-only Anthropic runs (more-models-phase2.md section 3; REQUIREMENTS-P2 F-15, F-16, T-3).
 // The states are built for these tests in the anthropic-messages@1 shape (the engine never parses them); markers are
 // base64-alphabet only.
-const FROZEN_TEXT = 'This task outgrew the selected model\'s context budget. This provider needs the earlier steps of a task sent back unchanged, so Moonzila could not shorten them while the task ran. Saved messages and any applied changes remain available; commands are not retried. Split the task into smaller requests, or open Model profiles to check the model\'s supported context and response reserve.';
+const FROZEN_TEXT = 'This task outgrew the selected model\'s context budget. This provider needs the earlier steps of a task sent back unchanged, so MoonAliza could not shorten them while the task ran. Saved messages and any applied changes remain available; commands are not retried. Split the task into smaller requests, or open Model profiles to check the model\'s supported context and response reserve.';
 const TODAY_TEXT = 'This request exceeds the selected model\'s context budget after reducing saved tool excerpts. Open Model profiles to check the model\'s supported context and response reserve, shorten the request, or start a fresh conversation. Saved messages and any applied changes remain available; commands are not retried.';
 const plainQuotes = (text: string) => text.replace(/’/g, "'");
 function thinkingState(appendOnly: boolean, signature: string, call: { id: string; path: string }, text: string): ProviderState {

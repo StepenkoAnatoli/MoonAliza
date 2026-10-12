@@ -34,7 +34,7 @@ test('Recovery survives restart, preserves conflicts and never replays an uncert
     await page.getByRole('button', { name: 'Model profiles', exact: true }).click();
     await page.getByLabel('Profile name').fill('Recovery fixture'); await page.getByLabel('Endpoint').fill(`http://127.0.0.1:${port}`); await page.getByLabel('Model name').fill('fixture');
     await page.getByRole('button', { name: 'Save profile' }).click(); await page.getByLabel('Mode', { exact: true }).selectOption('build');
-    await page.getByLabel('Message Moonzila').fill('Run the interruption fixture'); await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByLabel('Message MoonAliza').fill('Run the interruption fixture'); await page.getByRole('button', { name: 'Send message' }).click();
     await page.getByRole('button', { name: 'Approve command' }).click();
     await expect(page.getByText('Command outcome unknown', { exact: true })).toBeVisible({ timeout: 30000 });
     expect(requests).toBe(1); expect(await readFile(join(project, 'executions.txt'), 'utf8')).toBe('once\n');
@@ -58,7 +58,7 @@ test('Recovery survives restart, preserves conflicts and never replays an uncert
     app = await launch(); page = await app.firstWindow();
     await expect(page.getByText('Recovery · 3 needs review', { exact: true })).toBeVisible();
     await page.getByLabel('Mode', { exact: true }).selectOption('build');
-    await page.getByLabel('Message Moonzila').fill('Continue after recovery'); await page.getByRole('button', { name: 'Send message' }).click();
+    await page.getByLabel('Message MoonAliza').fill('Continue after recovery'); await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByText('Review interrupted operations in Recovery before starting another Build task.', { exact: true })).toBeVisible();
     expect(requests).toBe(1);
     const matching = page.locator('article.recovery-item').filter({ hasText: 'matching.txt' });
