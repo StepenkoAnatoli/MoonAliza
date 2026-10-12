@@ -6,7 +6,7 @@ The user's request, October 4: add more models to Moonzila, research first. The 
 `docs/orchestration/2026-10-05-more-models/RUN.md`; the decisions below are recorded in its
 `MANDATE.md`.
 
-## Where Moonzila starts (discovery, October 5)
+## Where MoonAliza starts (discovery, October 5)
 
 - Only `openai-compatible` and `ollama` run. `anthropic` and `openai-responses` are declared in
   `ProfileKindSchema` but `complete()` throws NOT_IMPLEMENTED for them (`src/main/inference.ts`).
@@ -70,7 +70,7 @@ its prompt off the machine.
   features are off. Check that Ollama is running and up to date, turn off its cloud features (set
   OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama's server.json), restart Ollama, then try
   again." One message covers every refusal - cloud reported on, an Ollama without `/api/status`, one not
-  running - so it claims only what Moonzila knows (unit review U2-R4). No retry.
+  running - so it claims only what MoonAliza knows (unit review U2-R4). No retry.
 - Under a cloud-allowed policy nothing changes.
 - The managed runtime already makes the same check at startup (`src/models/managed-ollama.ts`); this
   extends it to profiles the user points at their own Ollama.
@@ -84,7 +84,7 @@ with cloud on between runs; (c) the finer per-model rule (the model's `remote_ho
 off until the day-one probe U-18 (10) records it (wire design point 8).
 
 *Known limit:* an `openai-compatible` profile on a loopback address (Ollama's `/v1`, LM Studio, a
-local proxy) is still labelled local without a check. Moonzila cannot verify what a generic local
+local proxy) is still labelled local without a check. MoonAliza cannot verify what a generic local
 server forwards to. Recorded for the locality label work in a later phase.
 
 ### Tests the builders owe
