@@ -1,0 +1,17 @@
+# Sources
+
+Every page this project has fetched, and what it was used for. `P` primary/official
+carries the design, `S` secondary is context, `L` lead-only is a hint and never proof.
+
+| URL | Type | Title | Retrieved | Used for |
+|---|---|---|---|---|
+| https://trademarks.justia.com/search?q=moonaliza | S | moonaliza Trademarks - Justia Trademarks | 2026-10-12 | U-01: Justia's index of USPTO filings for the exact string moonaliza - any MOONALIZA mark, its owner and goods |
+| https://trademarks.justia.com/search?q=moon+aliza | S | moon aliza Trademarks - Justia Trademarks | 2026-10-12 | U-02: Justia's index for the two words moon aliza (unquoted, so a query Justia does not treat as a phrase still returns, not hides, a MOON ALIZA mark) - any MOON ALIZA mark |
+| https://trademarks.justia.com/search?q=moonalisa | S | moonalisa Trademarks - Justia Trademarks | 2026-10-12 | U-03: Justia's index for the variant moonalisa |
+| https://trademarks.justia.com/search?q=monaliza | S | monaliza Trademarks - Justia Trademarks | 2026-10-12 | U-03: Justia's index for the variant monaliza |
+| https://trademarks.justia.com/search?q=mona+lisa&category=9 | S | mona lisa Trademarks in Electrical and scientific apparatus - Justia Trademarks | 2026-10-12 | U-04: Justia's index for the words mona lisa (unquoted, as above), filtered to its category Electrical and scientific apparatus (International Class 9, which holds downloadable software) |
+| https://trademarks.justia.com/search?q=mona+lisa&category=39 | S | mona lisa Trademarks in Computer and scientific - Justia Trademarks | 2026-10-12 | U-04: Justia's index for the words mona lisa (unquoted, as above), filtered to its category Computer and scientific (International Class 42, which holds software services and SaaS) |
+| https://www.google.com/search?q=%22MoonAliza%22+software+OR+app+OR+AI&hl=en&gl=us | S | "MoonAliza" software OR app OR AI - Google Search | 2026-10-12 | U-07: page 1 of a Google search for "MoonAliza" software OR app OR AI (US, English) - any software or AI product or company named MoonAliza, and what moonaliza.com is |
+| https://api.github.com/search/repositories?q=moonaliza+in:name,description,topics,readme&sort=stars&order=desc&per_page=100 | P | repositories | 2026-10-12 | U-08: GitHub's repository search for moonaliza in names, descriptions, topics and READMEs, most-starred first |
+| https://api.github.com/search/users?q=moonaliza&per_page=100 | P | users | 2026-10-12 | U-09: GitHub's user and organisation search for moonaliza - whether the login moonaliza (github.com/moonaliza) exists |
+| https://rdap.verisign.com/com/v1/domain/moonaliza.com | P | moonaliza-com | 2026-10-12 | U-10: the .com registry's RDAP record for moonaliza.com - registered since when, through whom, on which nameservers |

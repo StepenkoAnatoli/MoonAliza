@@ -1,0 +1,63 @@
+{
+  "topic": "Is MoonAliza free to use as the product name of a Windows desktop AI coding assistant (the product's original name; its installed identifiers already use it): US marks for MOONALIZA, MOON ALIZA, MOONALISA and MONALIZA, and live MONA LISA marks in software classes; software and AI products named MoonAliza; GitHub repositories and the moonaliza account; moonaliza domains",
+  "notes": "Run 1: 10 owning pages and search endpoints named directly, no queries (maxScrapes 10). Budget: at most 10 Firecrawl credits for the whole project including phase 0; phase 0 ran as decompose.mjs --dry-run and spent nothing (doctor balance 305 before any fetch), so this one run is the whole budget and nothing is left for a follow-up. What the budget left out, and why: TSDR records for any Justia hit (U-01 to U-04 say what each hit's status rests on and give the TSDR URL as the day-one step); the RDAP records for moonaliza.app, .dev and .ai, which a planning curl found answering 404 (an unregistered name; the kit keeps no capture of an error page, so a credit would not have proved it either, U-11); what moonaliza.com serves (U-12). URL provenance: the Justia, Google, GitHub and Verisign RDAP endpoint shapes come from the sibling projects' plans (docs/research/2026-10-12-selunara-name-check/research/plan*.json, docs/research/2026-10-12-product-name-screen/research/plan*.json), which record that they rendered for this transport. Justia's category filter ids come from the filter links in the sibling's capture of Justia's seluna search (its research/raw/2026-10-12-seluna-trademarks-justia-trademarks-justia-1279d2b2.source.html): category=9 is labelled Electrical and scientific apparatus (International Class 9) and category=39 Computer and scientific (Class 42) - SELUNA 99332277, in Classes 9, 10, 35, 42 and 44 by TSDR, is listed under categories 9, 10, 37, 39 and 43. Planning curls and DNS lookups on 2026-10-12 (status codes and address records only, not evidence): the Verisign RDAP record for moonaliza.com answers 200 and moonaliza.com and www.moonaliza.com resolve to 50.6.153.205; the RDAP records for moonaliza.app and moonaliza.dev (pubapi.registry.google) and moonaliza.ai (rdap.identitydigital.services) answer 404; Justia and GitHub's API answered this machine's curl with 403, so their state was not checked before collection. The two-word searches are sent unquoted: a quoted phrase that the index does not support could come back empty and read as an absence, while an unquoted one can only return more than asked, which the capture shows. Not attempted: tmsearch.uspto.gov, TMview and the WIPO Global Brand Database (U-05, U-06; the sibling projects showed this transport cannot read them).",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 10,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://trademarks.justia.com/search?q=moonaliza",
+      "type": "S",
+      "why": "U-01: Justia's index of USPTO filings for the exact string moonaliza - any MOONALIZA mark, its owner and goods"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=moon+aliza",
+      "type": "S",
+      "why": "U-02: Justia's index for the two words moon aliza (unquoted, so a query Justia does not treat as a phrase still returns, not hides, a MOON ALIZA mark) - any MOON ALIZA mark"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=moonalisa",
+      "type": "S",
+      "why": "U-03: Justia's index for the variant moonalisa"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=monaliza",
+      "type": "S",
+      "why": "U-03: Justia's index for the variant monaliza"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=mona+lisa&category=9",
+      "type": "S",
+      "why": "U-04: Justia's index for the words mona lisa (unquoted, as above), filtered to its category Electrical and scientific apparatus (International Class 9, which holds downloadable software)"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=mona+lisa&category=39",
+      "type": "S",
+      "why": "U-04: Justia's index for the words mona lisa (unquoted, as above), filtered to its category Computer and scientific (International Class 42, which holds software services and SaaS)"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22MoonAliza%22+software+OR+app+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-07: page 1 of a Google search for \"MoonAliza\" software OR app OR AI (US, English) - any software or AI product or company named MoonAliza, and what moonaliza.com is"
+    },
+    {
+      "url": "https://api.github.com/search/repositories?q=moonaliza+in:name,description,topics,readme&sort=stars&order=desc&per_page=100",
+      "type": "P",
+      "why": "U-08: GitHub's repository search for moonaliza in names, descriptions, topics and READMEs, most-starred first"
+    },
+    {
+      "url": "https://api.github.com/search/users?q=moonaliza&per_page=100",
+      "type": "P",
+      "why": "U-09: GitHub's user and organisation search for moonaliza - whether the login moonaliza (github.com/moonaliza) exists"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/moonaliza.com",
+      "type": "P",
+      "why": "U-10: the .com registry's RDAP record for moonaliza.com - registered since when, through whom, on which nameservers"
+    }
+  ]
+}
