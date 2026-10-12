@@ -171,7 +171,7 @@ test('the Windows workflow runs the fuse check on the packaged exe, under the sa
   const config = await readFile(resolve('electron-builder.yml'), 'utf8');
   const productName = /^productName:\s*(\S+)\s*$/m.exec(config)?.[1];
   const output = /^directories:\s*\r?\n(?: {2}.*\r?\n)*? {2}output:\s*(\S+)\s*$/m.exec(config)?.[1];
-  expect([productName, output]).toEqual(['Moonzila', 'release']);
+  expect([productName, output]).toEqual(['MoonAliza', 'release']);
   const packaging = steps.findIndex(step => step.run === 'npm run package:win');
   const fuseCheck = steps.findIndex(step => step.run?.startsWith('node scripts/check-fuses.mjs'));
   expect(packaging).toBeGreaterThanOrEqual(0);
@@ -235,14 +235,14 @@ test('a required fuse byte that is none of the documented states is named by its
   expect(failure).toMatchObject({ code: 1 }); expect(failure?.stderr).toContain('EnableNodeCliInspectArguments expected disabled, found unknown byte 120');
 });
 
-test('with no path the check reads release/win-unpacked/Moonzila.exe from the working directory, in both modes', async () => {
+test('with no path the check reads release/win-unpacked/MoonAliza.exe from the working directory, in both modes', async () => {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-fuses-default-')); directories.push(root);
   await mkdir(join(root, 'release', 'win-unpacked'), { recursive: true });
-  await copyFile(await executable(HARDENED), join(root, 'release', 'win-unpacked', 'Moonzila.exe'));
+  await copyFile(await executable(HARDENED), join(root, 'release', 'win-unpacked', 'MoonAliza.exe'));
   const run = (...args: string[]) => promisify(execFile)(process.execPath, [resolve('scripts/check-fuses.mjs'), ...args], { cwd: root, windowsHide: true, timeout: 15000, maxBuffer: 65536 });
-  expect(JSON.parse((await run()).stdout).path).toBe('release/win-unpacked/Moonzila.exe');
+  expect(JSON.parse((await run()).stdout).path).toBe('release/win-unpacked/MoonAliza.exe');
   // --test-package with no path reads the same shipped exe, which is not a test package.
-  await expect(run('--test-package')).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('release/win-unpacked/Moonzila.exe') });
+  await expect(run('--test-package')).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('release/win-unpacked/MoonAliza.exe') });
 });
 
 /** The text of one workflow step, from its `- name:` line to the next step. */

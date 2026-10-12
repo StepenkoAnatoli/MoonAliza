@@ -1,5 +1,5 @@
 appId: com.moonaliza.desktop
-productName: Moonzila
+productName: MoonAliza
 directories:
   output: release
 files:
