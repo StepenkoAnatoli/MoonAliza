@@ -429,6 +429,8 @@ User request, October 12 (Selenic, formerly Moonzila): the app should work indep
 
 Order (user, October 12): after More models Phase 2 and the Selenic rename, this work comes next - project memory, then self-unblocking with research, then missions - and More models Phases 3-5 wait until after it.
 
+Scope (user, October 12, "make it work like this"): the track includes an in-app agent orchestrator (plan, parallel worker agents, independent review, resume) and, once the user's SmartRouter (github.com/StepenkoAnatoli/SmartRouter) is finished, its integration. A read-only discovery of SmartRouter's status and integration contract, and of the orchestration gap in the app, runs before the track is designed; it decides whether the user's request changes More models MANDATE decision 3 (selection authority stays the app's deterministic selector), which would then go to the user.
+
 Open for the brainstorm (not decided):
 - How the notification reaches the user (the run's conversation, a notice in the workbench, both) and what counts as "cannot solve": a research job that ends `not_ready`, findings that do not cover the blocker, or a fix that still fails.
 - What "blocked" means: a failed command or test, an unknown API, a refused tool, a budget ended; and how many self-attempts come first.
