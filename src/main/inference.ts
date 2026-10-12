@@ -4,6 +4,7 @@ import { BoundedJsonObjectSchema, CompletionSchema, InferenceMessagesSchema, Inf
 import { IdSchema, type ToolCall, type ToolSpec } from '../shared';
 import { TokenUsageSchema, type TokenUsage } from '../shared/context';
 import { OllamaAccumulator, OpenAIAccumulator, readNdjson, readSse } from './provider-stream';
+import type { CheckedTranscript, KindPart } from './provider-kind';
 
 export type ProviderKind = 'openai-compatible' | 'openai-responses' | 'anthropic' | 'ollama';
 export interface InferenceProfile { kind: ProviderKind; endpoint: string; model: string; outputTokens: number; contextTokens?: number }
@@ -17,7 +18,9 @@ export function validateEndpoint(kind: ProviderKind, value: string): { endpoint:
   if (url.username || url.password || url.search || url.hash || value.length > 2048) throw new Error('INVALID_ENDPOINT');
   const loopback = ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname);
   if ((url.protocol !== 'https:' && !(loopback && url.protocol === 'http:')) || (kind === 'ollama' && !loopback)) throw new Error('INVALID_ENDPOINT');
-  return { endpoint: url.href.replace(/\/+$/, ''), locality: loopback ? 'local' : 'external' };
+  // An anthropic endpoint is external even on loopback: a local server can implement this API and forward to a cloud
+  // (Ollama serves /v1/messages and proxies cloud models), which Moonzila cannot verify (more-models-phase2.md section 7).
+  return { endpoint: url.href.replace(/\/+$/, ''), locality: loopback && kind !== 'anthropic' ? 'local' : 'external' };
 }
 
 export async function readBoundedJson(response: Response, maxBytes = 4 * 1024 * 1024): Promise<unknown> {
@@ -43,36 +46,51 @@ const FunctionName = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);
 const OpenAICalls = z.array(z.object({ id: IdSchema, type: z.literal('function'), function: z.object({ name: FunctionName, arguments: z.string().max(131072) }).strict() }).strict()).min(1).max(128);
 const OllamaCalls = z.array(z.object({ id: IdSchema.optional(), function: z.object({ index: z.number().int().nonnegative().max(127).optional(), name: FunctionName, arguments: BoundedJsonObjectSchema, description: z.string().max(16384).optional() }).strict() }).strict()).min(1).max(128);
 
-/** Canonical history must contain complete, unambiguous tool interaction groups. */
-function encodeMessages(messages: InferenceMessage[], local: boolean): { messages: unknown[]; usedIds: Set<string> } {
+/**
+ * The kind-neutral half of a request: canonical history must contain complete, unambiguous tool interaction groups
+ * (strict parse, exactly one result per call, no reused id, nothing pending), and a message may carry provider state
+ * only in a format the target kind owns (more-models-phase2.md sections 1 and 4). Returns the parsed messages, with any
+ * owned state kept for the part that owns it, and the call ids already used.
+ */
+export function checkTranscript(messages: InferenceMessage[], owns: readonly string[]): CheckedTranscript {
   const parsed = InferenceMessagesSchema.safeParse(messages);
   if (!parsed.success) throw new Error('INVALID_INFERENCE_REQUEST');
   const pending = new Map<string, ToolCall>();
   const usedIds = new Set<string>();
-  const encoded: unknown[] = [];
   for (const message of parsed.data) {
+    if (message.providerState && !owns.includes(message.providerState.format)) throw new Error('INVALID_INFERENCE_REQUEST');
     if (message.role === 'tool') {
       const call = pending.get(message.toolCallId!);
       if (!call || (message.toolName !== undefined && message.toolName !== call.name)) throw new Error('INVALID_INFERENCE_REQUEST');
       pending.delete(call.id);
-      encoded.push({ role: 'tool', content: message.content, tool_call_id: call.id, ...(local ? { tool_name: call.name } : {}) });
       continue;
     }
     if (pending.size) throw new Error('INVALID_INFERENCE_REQUEST');
-    const toolCalls = message.toolCalls?.map((call, index) => {
+    for (const call of message.toolCalls ?? []) {
       if (usedIds.has(call.id)) throw new Error('INVALID_INFERENCE_REQUEST');
       usedIds.add(call.id); pending.set(call.id, call);
+    }
+  }
+  if (pending.size) throw new Error('INVALID_INFERENCE_REQUEST');
+  return { messages: parsed.data, usedIds };
+}
+
+/** The chat kinds' wire messages for a checked transcript: Ollama takes object arguments and names each result's tool. */
+function chatMessages(transcript: CheckedTranscript, local: boolean): unknown[] {
+  const names = new Map<string, string>();
+  return transcript.messages.map(message => {
+    if (message.role === 'tool') return { role: 'tool', content: message.content, tool_call_id: message.toolCallId, ...(local ? { tool_name: names.get(message.toolCallId!) } : {}) };
+    const toolCalls = message.toolCalls?.map((call, index) => {
+      names.set(call.id, call.name);
       return local
         ? { id: call.id, function: { index, name: call.name, arguments: call.input } }
         : { id: call.id, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.input) } };
     });
-    encoded.push({ role: message.role, content: message.content, ...(toolCalls ? { tool_calls: toolCalls } : {}) });
-  }
-  if (pending.size) throw new Error('INVALID_INFERENCE_REQUEST');
-  return { messages: encoded, usedIds };
+    return { role: message.role, content: message.content, ...(toolCalls ? { tool_calls: toolCalls } : {}) };
+  });
 }
 
-function parseCalls(raw: unknown, local: boolean, tools: ToolSpec[], usedIds: Set<string>): ToolCall[] {
+function parseCalls(raw: unknown, local: boolean, tools: readonly ToolSpec[], usedIds: ReadonlySet<string>): ToolCall[] {
   try {
     const calls = local
       ? OllamaCalls.parse(raw).map(call => ({ id: call.id ?? `ollama-${randomUUID()}`, name: call.function.name, input: call.function.arguments }))
@@ -104,10 +122,20 @@ export function inferenceErrorCode(error: unknown): 'CONTEXT_LIMIT' | 'LOCAL_MOD
 // bounded refusal phrases established by docs/research/2026-09-29-context-overflow.
 const OVERFLOW = /context (length|size|window)|maximum context|exceeds? .{0,40}context/i;
 
-/** Refusal bodies are bounded, inspected only for classification and never exposed. */
-async function refusalCode(response: Response): Promise<string> {
+/** The chat kinds' overflow rule: a known structured code, or a bounded refusal phrase. */
+function isChatOverflow(text: string): boolean {
+  let code: unknown;
+  try { code = (JSON.parse(text) as { error?: { code?: unknown } } | null)?.error?.code; } catch { /* Plain text is also accepted. */ }
+  return ['context_length_exceeded', 'context_window_exceeded', 'prompt_too_long'].includes(String(code)) || OVERFLOW.test(text);
+}
+
+/**
+ * Refusal bodies are bounded, inspected only for classification and never exposed: at most 64 KiB of a body whose
+ * status the part lists is read for its overflow rule; every other body is cancelled unread.
+ */
+async function refusalCode(response: Response, part: Pick<KindPart<unknown>, 'refusalStatuses' | 'isOverflow'>): Promise<string> {
   const fallback = `PROVIDER_HTTP_${response.status}`;
-  if (![400, 413, 422].includes(response.status)) { await response.body?.cancel(); return fallback; }
+  if (!part.refusalStatuses.includes(response.status)) { await response.body?.cancel(); return fallback; }
   const reader = response.body?.getReader();
   if (!reader) return fallback;
   const chunks: Uint8Array[] = []; let bytes = 0;
@@ -117,12 +145,36 @@ async function refusalCode(response: Response): Promise<string> {
       const bounded = chunk.value.subarray(0, 65536 - bytes);
       chunks.push(bounded); bytes += bounded.byteLength;
     }
-    const text = Buffer.concat(chunks).toString('utf8');
-    let code: unknown;
-    try { code = (JSON.parse(text) as { error?: { code?: unknown } } | null)?.error?.code; } catch { /* Plain text is also accepted. */ }
-    return ['context_length_exceeded', 'context_window_exceeded', 'prompt_too_long'].includes(String(code)) || OVERFLOW.test(text) ? 'CONTEXT_LIMIT' : fallback;
+    return part.isOverflow(Buffer.concat(chunks).toString('utf8')) ? 'CONTEXT_LIMIT' : fallback;
   } catch { return fallback; }
   finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
+}
+
+/** A retry wait that Stop ends as RUN_CANCELLED (and the call's own deadline, which no wait is allowed to reach, as itself). */
+function pause(ms: number, signal: AbortSignal, stop: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); reject(stop.aborted ? new Error('RUN_CANCELLED') : signal.reason); };
+    const timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, ms);
+    if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+  });
+}
+
+/**
+ * The one place a chat request's fetch init is built (more-models-phase2.md section 4). A refused answer is retried only
+ * when the call allows it (`retry`), the part names a delay for it, fewer than two retries were made and the wait ends
+ * before the call's deadline; the refused body is cancelled before the wait. Otherwise the refusal surfaces as
+ * CONTEXT_LIMIT or PROVIDER_HTTP_<n>. `signal` is the caller's Stop joined with the call's deadline; `stop` is the
+ * caller's alone, so a Stop during a wait is told apart from the deadline.
+ */
+export async function post(fetcher: Fetcher, url: string, request: { headers: Record<string, string>; body: string; signal: AbortSignal; stop: AbortSignal; deadline: number; retry: boolean }, part: Pick<KindPart<unknown>, 'refusalStatuses' | 'isOverflow' | 'retryDelayMs'>): Promise<Response> {
+  for (let retries = 0; ; retries += 1) {
+    const response = await fetcher(url, { method: 'POST', headers: request.headers, body: request.body, signal: request.signal, redirect: 'error' });
+    if (response.ok) return response;
+    const delay = request.retry && retries < 2 ? part.retryDelayMs?.(response, retries) : undefined;
+    if (delay === undefined || !(delay >= 0) || Date.now() + delay >= request.deadline) throw new Error(await refusalCode(response, part));
+    await response.body?.cancel().catch(() => undefined);
+    await pause(delay, request.signal, request.stop);
+  }
 }
 
 /**
@@ -143,43 +195,36 @@ async function readStreamed(response: Response, local: boolean): Promise<unknown
   return accumulator.result();
 }
 
-/** The caller supplies the correct main-owned network session and obtains credentials from the vault. */
-export async function complete(profile: InferenceProfile, messages: InferenceMessage[], options: { fetcher: Fetcher; secret?: string; signal: AbortSignal; tools?: ToolSpec[]; managedOllama?: { numGpu: 0; keepAlive: -1 }; /** Default true: the kind's retry rule applies. false: never retry; the first refusal surfaces (more-models-phase2.md section 4). */ retry?: boolean }): Promise<Completion> {
-  if (options.signal.aborted) throw new Error('RUN_CANCELLED');
-  const { endpoint } = validateEndpoint(profile.kind, profile.endpoint);
-  if (!profile.model || !Number.isInteger(profile.outputTokens) || profile.outputTokens < 1) throw new Error('INVALID_PROFILE');
-  if (profile.contextTokens !== undefined && (!Number.isInteger(profile.contextTokens) || profile.contextTokens < profile.outputTokens || profile.contextTokens > 2_000_000)) throw new Error('INVALID_PROFILE');
-  // Other adapters are admitted only after their response and terminal-state contracts are implemented.
-  if (profile.kind !== 'openai-compatible' && profile.kind !== 'ollama') throw new Error('NOT_IMPLEMENTED');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (options.secret) headers.Authorization = `Bearer ${options.secret}`;
-  const signal = AbortSignal.any([options.signal, AbortSignal.timeout(120_000)]);
-  const local = profile.kind === 'ollama';
-  if (options.managedOllama && (!local || options.secret || !profile.contextTokens || options.managedOllama.numGpu !== 0 || options.managedOllama.keepAlive !== -1)) throw new Error('INVALID_PROFILE');
-  const history = encodeMessages(messages, local);
-  const declaredTools = InferenceToolsSchema.safeParse(options.tools ?? []);
-  if (!declaredTools.success) throw new Error('INVALID_INFERENCE_REQUEST');
-  const tools = declaredTools.data;
-  const requestBody = JSON.stringify({ model: profile.model, messages: history.messages,
-    ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: tool })) } : {}),
-    ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(options.managedOllama ? { num_gpu: options.managedOllama.numGpu } : {}) }, truncate: false, shift: false, ...(options.managedOllama ? { keep_alive: options.managedOllama.keepAlive } : {}) } : { max_completion_tokens: profile.outputTokens, stream_options: { include_usage: true } }), stream: true });
-  if (Buffer.byteLength(requestBody) > 8 * 1024 * 1024) throw new Error('INVALID_INFERENCE_REQUEST');
-  const response = await options.fetcher(`${endpoint}${local ? '/api/chat' : '/chat/completions'}`, {
-    method: 'POST', headers, signal, redirect: 'error',
-    body: requestBody,
-  });
-  if (!response.ok) throw new Error(await refusalCode(response));
-  const data = await readStreamed(response, local);
+/**
+ * The existing kinds' part (more-models-phase2.md section 4): `openai-compatible` (OpenAI chat completions) and, with
+ * `local`, Ollama's native chat. Their requests are byte-identical to the transport before the seam (tests pin them).
+ */
+export function chatKind(local: boolean): KindPart<unknown> {
+  return {
+    url: endpoint => `${endpoint}${local ? '/api/chat' : '/chat/completions'}`,
+    headers: (_profile, secret) => ({ 'Content-Type': 'application/json', ...(secret ? { Authorization: `Bearer ${secret}` } : {}) }),
+    timeoutMs: 120_000,
+    owns: [],
+    refusalStatuses: [400, 413, 422],
+    body: (profile, transcript, tools, extra) => JSON.stringify({ model: profile.model, messages: chatMessages(transcript, local),
+      ...(tools.length ? { tools: tools.map(tool => ({ type: 'function', function: tool })) } : {}),
+      ...(local ? { options: { num_predict: profile.outputTokens, ...(profile.contextTokens ? { num_ctx: profile.contextTokens } : {}), ...(extra.managedOllama ? { num_gpu: extra.managedOllama.numGpu } : {}) }, truncate: false, shift: false, ...(extra.managedOllama ? { keep_alive: extra.managedOllama.keepAlive } : {}) } : { max_completion_tokens: profile.outputTokens, stream_options: { include_usage: true } }), stream: true }),
+    read: response => readStreamed(response, local),
+    outcome: (data, { tools, usedIds }) => chatOutcome(data, local, tools, usedIds),
+    isOverflow: isChatOverflow,
+  };
+}
+
+function chatOutcome(data: unknown, local: boolean, tools: readonly ToolSpec[], usedIds: ReadonlySet<string>): Completion {
   const observed = data as { usage?: { prompt_tokens?: unknown; completion_tokens?: unknown }; prompt_eval_count?: unknown; eval_count?: unknown } | null;
   const counts = TokenUsageSchema.safeParse({ inputTokens: local ? observed?.prompt_eval_count : observed?.usage?.prompt_tokens, outputTokens: local ? observed?.eval_count : observed?.usage?.completion_tokens });
   const usage = counts.success ? { usage: counts.data } : {};
-  if (options.signal.aborted) throw new Error('RUN_CANCELLED');
   if (local) {
     const parsed = OllamaSchema.safeParse(data);
     if (!parsed.success) throw new Error('PROVIDER_INVALID_RESPONSE');
     const content = parsed.data.message.content;
     if (!parsed.data.done || parsed.data.done_reason !== 'stop') return { ...usage, content, outcome: 'incomplete' };
-    if (hasCalls(parsed.data.message.tool_calls)) return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(parsed.data.message.tool_calls, true, tools, history.usedIds) });
+    if (hasCalls(parsed.data.message.tool_calls)) return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(parsed.data.message.tool_calls, true, tools, usedIds) });
     return { ...usage, content, outcome: 'complete' };
   }
   const parsed = ChatSchema.safeParse(data);
@@ -197,6 +242,48 @@ export async function complete(profile: InferenceProfile, messages: InferenceMes
   if (reason !== null && !['stop', 'tool_calls', 'length', 'model_length', 'content_filter'].includes(reason)) throw new Error('PROVIDER_FINISH_FAILED');
   const content = choice.message.content ?? choice.message.refusal ?? '';
   if (choice.message.refusal || reason === 'content_filter') return { ...usage, content, outcome: 'blocked' };
-  if (reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, history.usedIds) });
+  if (reason === 'tool_calls') return CompletionSchema.parse({ ...usage, content, outcome: 'tool_calls', toolCalls: parseCalls(choice.message.tool_calls, false, tools, usedIds) });
   return { ...usage, content, outcome: reason === 'stop' && !hasCalls(choice.message.tool_calls) ? 'complete' : 'incomplete' };
+}
+
+/** The kinds complete() can send; a kind with no part (openai-responses, and anthropic until it is wired) is refused. */
+const kinds = new Map<ProviderKind, KindPart<unknown>>([
+  ['openai-compatible', chatKind(false)],
+  ['ollama', chatKind(true)],
+]);
+
+/**
+ * The caller supplies the correct main-owned network session and obtains credentials from the vault. The kind-neutral
+ * checks run first, in this order, each before any fetch: cancellation, endpoint, profile, the kind's part,
+ * managed-Ollama options, the transcript (with state ownership), tools, the body and its 8 MiB cap. Only then is the
+ * call's deadline armed (`part.timeoutMs` for every attempt), and the part drives the request.
+ */
+export async function complete(profile: InferenceProfile, messages: InferenceMessage[], options: { fetcher: Fetcher; secret?: string; signal: AbortSignal; tools?: ToolSpec[]; managedOllama?: { numGpu: 0; keepAlive: -1 }; /** Default true: the kind's retry rule applies. false: never retry; the first refusal surfaces (more-models-phase2.md section 4). */ retry?: boolean }): Promise<Completion> {
+  if (options.signal.aborted) throw new Error('RUN_CANCELLED');
+  const { endpoint } = validateEndpoint(profile.kind, profile.endpoint);
+  if (!profile.model || !Number.isInteger(profile.outputTokens) || profile.outputTokens < 1) throw new Error('INVALID_PROFILE');
+  if (profile.contextTokens !== undefined && (!Number.isInteger(profile.contextTokens) || profile.contextTokens < profile.outputTokens || profile.contextTokens > 2_000_000)) throw new Error('INVALID_PROFILE');
+  // Other adapters are admitted only after their response and terminal-state contracts are implemented.
+  const part = kinds.get(profile.kind);
+  if (!part) throw new Error('NOT_IMPLEMENTED');
+  if (options.managedOllama && (profile.kind !== 'ollama' || options.secret || !profile.contextTokens || options.managedOllama.numGpu !== 0 || options.managedOllama.keepAlive !== -1)) throw new Error('INVALID_PROFILE');
+  const transcript = checkTranscript(messages, part.owns);
+  const declaredTools = InferenceToolsSchema.safeParse(options.tools ?? []);
+  if (!declaredTools.success) throw new Error('INVALID_INFERENCE_REQUEST');
+  const tools = declaredTools.data;
+  const body = part.body(profile, transcript, tools, options.managedOllama ? { managedOllama: options.managedOllama } : {});
+  if (Buffer.byteLength(body) > 8 * 1024 * 1024) throw new Error('INVALID_INFERENCE_REQUEST');
+  // The deadline is a setTimeout, not AbortSignal.timeout, so fake timers drive it; armed here, a refused input leaves none.
+  const deadline = new AbortController();
+  const timer = setTimeout(() => deadline.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')), part.timeoutMs);
+  const started = Date.now();
+  try {
+    const response = await post(options.fetcher, part.url(endpoint, profile), {
+      headers: part.headers(profile, options.secret), body, signal: AbortSignal.any([options.signal, deadline.signal]),
+      stop: options.signal, deadline: started + part.timeoutMs, retry: options.retry !== false,
+    }, part);
+    const folded = await part.read(response);
+    if (options.signal.aborted) throw new Error('RUN_CANCELLED');
+    return part.outcome(folded, { tools, usedIds: transcript.usedIds });
+  } finally { clearTimeout(timer); }
 }

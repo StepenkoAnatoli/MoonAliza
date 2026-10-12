@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest';
-import { validateEndpoint, readBoundedJson, complete, inferenceErrorCode, type InferenceMessage } from '../src/main/inference';
+import { validateEndpoint, readBoundedJson, complete, inferenceErrorCode, checkTranscript, post, type InferenceMessage } from '../src/main/inference';
 import { CompletionSchema, FromEngineSchema, PROVIDER_STATE_MAX, ProviderStateSchema, ToEngineSchema } from '../src/engine/control';
 import { PublicErrorSchema, type ToolSpec } from '../src/shared';
 import { safeError } from '../src/main/bridge';
@@ -498,4 +498,212 @@ test.each(['openai-compatible', 'ollama'] as const)('a %s request still aborts a
     expect(error).toBeInstanceOf(DOMException);
     expect((error as DOMException).name).toBe('TimeoutError');
   } finally { vi.useRealTimers(); }
+});
+
+// More models Phase 2, U2 commit 2: the per-kind seam (more-models-phase2.md section 4; REQUIREMENTS-P2 F-3, F-4, F-14,
+// F-18, F-22). Each new behaviour was first seen red against the unchanged transport.
+
+const foreignState = (format: string): InferenceMessage[] => [
+  { role: 'user', content: 'Read it' },
+  { role: 'assistant', content: '', toolCalls: [call], providerState: { format, appendOnly: true, data: '{"content":[]}' } },
+  { role: 'tool', content: 'text', toolCallId: call.id, toolName: call.name },
+];
+
+test.each(['openai-compatible', 'ollama'] as const)('a %s request carrying any provider state is refused before any fetch (F-3)', async kind => {
+  // openai-compatible and ollama own no state format. Guard: the ownership rule in checkTranscript (mutation: drop it;
+  // the request is then sent, as on the U0 base).
+  const target = kind === 'ollama' ? ollamaProfile : chatProfile;
+  for (const format of ['anthropic-messages@1', 'other-dialect@2']) {
+    const { error, fetched } = await refusal({ profile: target, messages: foreignState(format), tools });
+    expect((error as Error | undefined)?.message, format).toBe('INVALID_INFERENCE_REQUEST');
+    expect(fetched, format).toBe(0);
+  }
+});
+
+test('the ownership refusal comes after the managed-Ollama check: invalid managed options plus a foreign state give INVALID_PROFILE (F-4)', async () => {
+  // Mutation: run the ownership check before the managed-Ollama check; the call then fails INVALID_INFERENCE_REQUEST.
+  const { error, fetched } = await refusal({ profile: ollamaProfile, messages: foreignState('anthropic-messages@1'), tools, managedOllama: managed });
+  expect((error as Error | undefined)?.message).toBe('INVALID_PROFILE');
+  expect(fetched).toBe(0);
+});
+
+test('checkTranscript keeps a state its kind owns, refuses any other, and returns the calls it saw (F-3)', () => {
+  const messages = foreignState('anthropic-messages@1');
+  const checked = checkTranscript(messages, ['anthropic-messages@1']);
+  expect(checked.messages).toEqual(messages);
+  expect([...checked.usedIds]).toEqual([call.id]);
+  for (const owns of [[], ['other-dialect@1']]) expect(() => checkTranscript(messages, owns)).toThrow('INVALID_INFERENCE_REQUEST');
+  // The rest is today's validation, unchanged: a result with no call is still refused.
+  expect(() => checkTranscript(orphanResult, ['anthropic-messages@1'])).toThrow('INVALID_INFERENCE_REQUEST');
+});
+
+test('an anthropic endpoint is external even on loopback; the other kinds keep their labels (F-18)', () => {
+  // Guard: the kind condition in validateEndpoint (mutation: label loopback local for every kind).
+  expect(validateEndpoint('anthropic', 'http://127.0.0.1')).toEqual({ endpoint: 'http://127.0.0.1', locality: 'external' });
+  expect(validateEndpoint('anthropic', 'http://127.0.0.1:11434/v1')).toEqual({ endpoint: 'http://127.0.0.1:11434/v1', locality: 'external' });
+  expect(validateEndpoint('anthropic', 'http://localhost:8080/v1/').locality).toBe('external');
+  expect(validateEndpoint('anthropic', 'https://api.anthropic.com/v1')).toEqual({ endpoint: 'https://api.anthropic.com/v1', locality: 'external' });
+  expect(() => validateEndpoint('anthropic', 'http://api.anthropic.com/v1')).toThrow('INVALID_ENDPOINT');
+  expect(validateEndpoint('ollama', 'http://127.0.0.1:11434').locality).toBe('local');
+  // Phase 1's known limit, unchanged: a loopback openai-compatible profile is still labelled local.
+  expect(validateEndpoint('openai-compatible', 'http://127.0.0.1:1234/v1').locality).toBe('local');
+});
+
+test('complete() arms one deadline timer once every pre-check has passed, and clears it when the call ends (F-22)', async () => {
+  // Red on the unchanged code: AbortSignal.timeout runs on a Node-internal timer that vi.getTimerCount() cannot see.
+  // Guard for the clear: remove clearTimeout from the finally (a timer is then left behind by both calls).
+  vi.useFakeTimers();
+  try {
+    let release!: (response: Response) => void;
+    const pending = complete(chatProfile, [{ role: 'user', content: 'hello' }], { signal: signal(), fetcher: () => new Promise<Response>(resolve => { release = resolve; }) });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount(), 'one deadline while the fetch waits').toBe(1);
+    release(answer('openai-compatible'));
+    await pending;
+    expect(vi.getTimerCount(), 'cleared once the call completes').toBe(0);
+    await expect(complete(chatProfile, [{ role: 'user', content: 'hello' }], { signal: signal(), fetcher: async () => new Response('busy', { status: 503 }) })).rejects.toThrow('PROVIDER_HTTP_503');
+    expect(vi.getTimerCount(), 'cleared once the call fails').toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+const preCheckRefusals: Array<[string, Refused]> = [
+  ['cancellation', { profile: chatProfile, messages: [], aborted: true }],
+  ['endpoint', { profile: { ...chatProfile, endpoint: 'http://api.example.com/v1' }, messages: [] }],
+  ['profile', { profile: { ...chatProfile, model: '' }, messages: [] }],
+  ['kind', { profile: { ...chatProfile, kind: 'openai-responses' }, messages: [] }],
+  ['managed-Ollama', { profile: ollamaProfile, messages: [], managedOllama: managed }],
+  ['transcript', { profile: chatProfile, messages: orphanResult }],
+  ['ownership', { profile: chatProfile, messages: foreignState('anthropic-messages@1'), tools }],
+  ['tools', { profile: chatProfile, messages: [], tools: [tools[0]!, tools[0]!] }],
+  ['body-size', { profile: chatProfile, messages: Array.from({ length: 5 }, () => ({ role: 'user' as const, content: 'x'.repeat(2_000_000) })) }],
+];
+test.each(preCheckRefusals)('a call refused by the %s check leaves no timer behind (F-22)', async (_name, input) => {
+  // Mutation: arm the deadline timer at the top of complete(), before the cancellation check.
+  vi.useFakeTimers();
+  try {
+    const { error, fetched } = await refusal(input);
+    expect(error).toBeInstanceOf(Error);
+    expect(fetched).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+type PostPart = Parameters<typeof post>[3];
+/** A refused or accepted answer whose body records its own cancellation. */
+const answerWith = (status: number, log: string[], label: string, text = `body ${label}`) => new Response(new ReadableStream<Uint8Array>({
+  start(controller) { controller.enqueue(new TextEncoder().encode(text)); controller.close(); },
+  cancel() { log.push(`cancelled ${label}`); },
+}), { status });
+function posting(part: PostPart, statuses: number[], options: { retry?: boolean; timeoutMs?: number; stop?: AbortController; texts?: string[] } = {}) {
+  const log: string[] = []; let fetches = 0;
+  const stop = options.stop ?? new AbortController();
+  const fetcher = async () => {
+    const status = statuses[fetches] ?? 500; const text = options.texts?.[fetches]; fetches += 1;
+    log.push(`fetch ${fetches} ${status}`);
+    return answerWith(status, log, String(fetches), text);
+  };
+  let settled = false;
+  const outcome = post(fetcher, 'https://model.example/v1/x', { headers: { 'Content-Type': 'application/json' }, body: '{}', signal: stop.signal, stop: stop.signal, deadline: Date.now() + (options.timeoutMs ?? 600_000), retry: options.retry ?? true }, part)
+    .then(response => ({ status: response.status }), (error: unknown) => ({ error: (error as Error).message }))
+    .finally(() => { settled = true; });
+  return { log, outcome, stop, fetched: () => fetches, settled: () => settled };
+}
+const retrying = (delays: Array<number | undefined>, timeoutMs = 600_000) => ({ timeoutMs, refusalStatuses: [] as number[], isOverflow: () => false, retryDelayMs: vi.fn((_response: Response, attempt: number) => delays[attempt]) });
+
+test('post() retries on the part\'s delay, at most twice, cancelling each refused body first (F-14)', async () => {
+  // Guards: the retry count (mutation: allow three retries; the third refusal then waits again); the cancel (mutation:
+  // drop it; no body is cancelled before its wait).
+  vi.useFakeTimers();
+  try {
+    const part = retrying([1000, 2000]);
+    const success = posting(part, [503, 503, 200]);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(success.fetched()).toBe(1);
+    expect(success.log).toEqual(['fetch 1 503', 'cancelled 1']);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(success.fetched()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(success.fetched()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await success.outcome).toEqual({ status: 200 });
+    expect(success.log).toEqual(['fetch 1 503', 'cancelled 1', 'fetch 2 503', 'cancelled 2', 'fetch 3 200']);
+    expect(part.retryDelayMs.mock.calls.map(([, attempt]) => attempt)).toEqual([0, 1]);
+
+    const third = posting(retrying([1000, 1000, 1000]), [503, 503, 503]);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(third.settled(), 'no third wait').toBe(true);
+    expect(await third.outcome).toEqual({ error: 'PROVIDER_HTTP_503' });
+    expect(third.fetched()).toBe(3);
+    expect(third.log.at(-1)).toBe('cancelled 3');
+    expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test('post() takes a wait only if it ends before the call\'s deadline (F-14, F-22)', async () => {
+  // A fake part with a short timeout. Guard: the deadline comparison (mutation: drop it; the second wait is then taken).
+  vi.useFakeTimers();
+  try {
+    const short = posting(retrying([1000, 1000], 1500), [503, 503, 200], { timeoutMs: 1500 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(short.settled(), 'the second wait is not taken').toBe(true);
+    expect(await short.outcome).toEqual({ error: 'PROVIDER_HTTP_503' });
+    expect(short.fetched()).toBe(2);
+    // A wait that would end exactly at the deadline does not end before it.
+    const exact = posting(retrying([1000], 1000), [503, 200], { timeoutMs: 1000 });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(exact.settled(), 'a wait ending at the deadline is not taken').toBe(true);
+    expect(await exact.outcome).toEqual({ error: 'PROVIDER_HTTP_503' });
+    expect(exact.fetched()).toBe(1);
+    expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test('Stop during a retry wait ends the call as RUN_CANCELLED with no further fetch (F-14)', async () => {
+  // Guard: the wait listens for the abort (mutation: a plain setTimeout wait; the call then fetches again after Stop).
+  vi.useFakeTimers();
+  try {
+    const run = posting(retrying([1000]), [503, 200]);
+    await vi.advanceTimersByTimeAsync(500);
+    run.stop.abort();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run.settled()).toBe(true);
+    expect(await run.outcome).toEqual({ error: 'RUN_CANCELLED' });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(run.fetched()).toBe(1);
+    expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test('post() never retries without a retry rule, and with retry: false never asks the rule (F-14)', async () => {
+  // Guard for retry: false: post() honours the flag (mutation: ignore it; the refusal then waits and is fetched again).
+  vi.useFakeTimers();
+  try {
+    const plain = posting({ refusalStatuses: [], isOverflow: () => false }, [503, 200]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(plain.settled(), 'no wait without a rule').toBe(true);
+    expect(await plain.outcome).toEqual({ error: 'PROVIDER_HTTP_503' });
+    expect(plain.log).toEqual(['fetch 1 503', 'cancelled 1']);
+    const part = retrying([1000, 1000]);
+    const once = posting(part, [503, 200], { retry: false });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(once.settled(), 'the refusal surfaces at once').toBe(true);
+    expect(vi.getTimerCount(), 'no wait pending').toBe(0);
+    expect(await once.outcome).toEqual({ error: 'PROVIDER_HTTP_503' });
+    expect(once.fetched()).toBe(1);
+    expect(part.retryDelayMs).not.toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
+});
+
+test('post() reads a refusal body only for the part\'s own statuses and asks the part\'s own overflow rule', async () => {
+  // Guards: the part's refusalStatuses (mutation: today's fixed 400, 413 and 422 list), and its isOverflow (mutation:
+  // today's OVERFLOW rule for every part).
+  const isOverflow = vi.fn((text: string) => text === 'prompt is too long for this part');
+  const part = { refusalStatuses: [409], isOverflow };
+  expect(await posting(part, [409], { texts: ['prompt is too long for this part'] }).outcome).toEqual({ error: 'CONTEXT_LIMIT' });
+  expect(await posting(part, [409], { texts: ['another conflict'] }).outcome).toEqual({ error: 'PROVIDER_HTTP_409' });
+  expect(isOverflow.mock.calls).toEqual([['prompt is too long for this part'], ['another conflict']]);
+  const unread = posting(part, [400], { texts: ["This model's maximum context length is 8192 tokens"] });
+  expect(await unread.outcome).toEqual({ error: 'PROVIDER_HTTP_400' });
+  expect(unread.log).toEqual(['fetch 1 400', 'cancelled 1']);
+  expect(isOverflow).toHaveBeenCalledTimes(2);
 });
