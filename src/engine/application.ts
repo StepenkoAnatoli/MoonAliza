@@ -12,7 +12,8 @@ import { Operations, WRITE_TOOL_SPECS, type CommandHost } from './operations';
 import { COMMAND_TOOL_SPECS, CommandInputSchema } from '../shared/commands';
 import { GIT_TOOL_SPECS } from '../tools/git';
 import type { OwnedResult } from '../tools/commands';
-import { assembleContext, RESULT_READ_TOOL, ResultReadSchema, type ContextMessage } from './context';
+import { assembleContext, continueContext, PREFIX_BOUND_KINDS, RESULT_READ_TOOL, ResultReadSchema, type ContextMessage } from './context';
+import type { ContextState } from '../shared/context';
 import { beginReview, createRootResolver, endReviewRun, preflightOutput, REVIEW_SYSTEM_PROMPT, REVIEW_TOOL_SPECS, type ReviewBeginCommand, type ReviewRunEnd } from './research-review';
 import { ReviewToolInputSchema, ReviewToolResultSchema, type ReviewToolResult } from './review-contract';
 import type { StoreEvent } from './store';
@@ -36,6 +37,12 @@ const REVIEW_TOOL_MESSAGES: Record<string, string> = {
 };
 const sendEvents = (publish: (event: RunEvent) => void, events: StoreEvent[]) => { for (const event of events) publish(event as RunEvent); };
 const terminal = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
+/**
+ * CONTEXT_LIMIT's text for a frozen run, whichever side found the overflow (more-models-phase2.md section 3, rule 6):
+ * a frozen run never shortened its earlier steps, so the `failures` text ("after reducing saved tool excerpts") would
+ * not be true. Review runs keep REVIEW_CONTEXT_LIMIT and their own message.
+ */
+const FROZEN_CONTEXT_LIMIT = 'This task outgrew the selected model\u2019s context budget. This provider needs the earlier steps of a task sent back unchanged, so Moonzila could not shorten them while the task ran. Saved messages and any applied changes remain available; commands are not retried. Split the task into smaller requests, or open Model profiles to check the model\u2019s supported context and response reserve.';
 
 function fileToolFailure(reason: string): PublicError {
   const failures: Record<string, [PublicError['code'], string]> = {
@@ -331,6 +338,9 @@ export class Application {
     const settings = this.settings(); const deadline = new AbortController();
     const timer = setTimeout(() => deadline.abort(), settings.runDurationMinutes * 60_000);
     const signal = AbortSignal.any([stop, deadline.signal]);
+    // Set after the first tool step whose provider state is appendOnly (spec section 3, rule 3): every later request of
+    // the run is the previous one plus the messages added since, so earlier steps are never shortened again.
+    let frozen = false;
     try {
       const profile = this.store.getProfileRevision(run.profileRevisionId);
       if (!profile) throw new Error('PROFILE_NOT_FOUND');
@@ -354,12 +364,20 @@ export class Application {
       const current: ContextMessage[] = saved.filter(m => m.runId === run.id).map(m => ({ role: 'user', content: m.content }));
       if (review) system.content = REVIEW_SYSTEM_PROMPT;
       if (run.projectId !== null) system.content += ' Large tool outputs may be replaced by marked excerpts with a resultId. Use read_tool_result to retrieve additional pages of the saved original; do not rerun commands to recover output. These saved observations may be stale. Older conversation turns may be omitted to fit context; ask for missing requirements instead of guessing.';
+      // A prefix-bound kind's tool run keeps half its budget free of history until it freezes (spec section 3, rule 2); a
+      // run without tools is a single step and keeps full trimming.
+      const historyReserve = PREFIX_BOUND_KINDS.has(profile.kind) && tools.length > 0;
+      const budget = { tools, contextTokens: profile.contextTokens, outputTokens: profile.outputTokens };
+      // The request last sent, and how much of `current` it held: a frozen step's base.
+      let sent: { messages: InferenceMessage[]; state: ContextState; through: number } | undefined;
       for (let step = 0; step < settings.modelStepBudget; step++) {
         this.assertRunPolicy(run, profile.locality, signal);
         this.event(run.id, 'run.status', { status: 'running' }, { status: 'running' });
-        const context = assembleContext({ system, history, current, tools, contextTokens: profile.contextTokens, outputTokens: profile.outputTokens });
+        const context = frozen && sent ? continueContext({ previous: sent, added: current.slice(sent.through), ...budget })
+          : assembleContext({ system, history, current, ...budget, historyReserve });
         this.event(run.id, 'context.updated', context.state);
         if (!context.fits) throw new Error('CONTEXT_LIMIT');
+        sent = { messages: context.messages, state: context.state, through: current.length };
         const output = await this.host.infer(run, context.messages, signal, tools);
         this.assertRunPolicy(run, profile.locality, signal);
         if (output.usage) this.event(run.id, 'usage.updated', { ...output.usage, modelSteps: step + 1 });
@@ -372,6 +390,7 @@ export class Application {
         if (!output.toolCalls?.length || output.toolCalls.length > 8 || output.toolCalls.some(call => !offered.has(call.name) || call.inputError || seen.has(call.id)) || new Set(output.toolCalls.map(call => call.id)).size !== output.toolCalls.length) throw new Error('PROVIDER_PROTOCOL_ERROR');
         const assistant: InferenceMessage = { role: 'assistant', content: output.content, toolCalls: output.toolCalls, ...(output.providerState ? { providerState: output.providerState } : {}) };
         this.message(run, assistant); current.push(assistant);
+        if (output.providerState?.appendOnly === true) frozen = true;
         for (let call of output.toolCalls) {
           if (signal.aborted) throw new Error('RUN_CANCELLED'); seen.add(call.id);
           this.assertRunPolicy(run, profile.locality, signal);
@@ -395,7 +414,8 @@ export class Application {
       const failures: Record<string, string> = { SNAPSHOT_QUOTA: 'The snapshot budget is full of protected edits. Finish the run or review interrupted operations before proposing more edits.', SNAPSHOT_CORRUPT: 'Snapshot storage could not be verified. The proposed edit was not applied.', COMMAND_UNKNOWN: 'The command’s outcome could not be confirmed. Inspect the project before running it again.', COMMAND_UNAVAILABLE: 'The requested program is not installed in a supported location.', COMMAND_CHANGED: 'The command executable or working folder changed after review.', BUDGET_EXCEEDED: 'The run reached its step or time limit.', CONTEXT_LIMIT: 'This request exceeds the selected model’s context budget after reducing saved tool excerpts. Open Model profiles to check the model’s supported context and response reserve, shorten the request, or start a fresh conversation. Saved messages and any applied changes remain available; commands are not retried.', APPROVAL_DENIED: 'The proposed action was declined. No further actions were taken.', FILE_CONFLICT: 'The file changed after review. The proposed edit was not applied.', APPROVAL_STALE: 'Project permissions changed. Review the task again.', PROVIDER_PROTOCOL_ERROR: 'The provider returned a tool call or step Moonzila could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.', LOCAL_MODEL_UNVERIFIED: 'Moonzila could not confirm that this Ollama keeps prompts on this computer, and this conversation is local only. Ollama can send prompts to ollama.com cloud models unless its cloud features are off. Check that Ollama is running and up to date, turn off its cloud features (set OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama’s server.json), restart Ollama, then try again.' };
       const code = deadline.signal.aborted ? 'BUDGET_EXCEEDED' : reason in failures ? reason : 'PROVIDER_ERROR';
       if (run.mode === 'research') { this.endReview(run.id, this.reviewEnd(cancelled, deadline.signal.aborted, reason, failures[code])); return; }
-      this.event(run.id, cancelled ? 'run.cancelled' : 'run.failed', cancelled ? {} : { error: { code, message: failures[code] ?? 'The model or tool request failed. Check the selected profile and project access.', retry: 'never' } }, { status: cancelled ? 'cancelled' : 'failed', finishedAt: new Date().toISOString() });
+      const message = code === 'CONTEXT_LIMIT' && frozen ? FROZEN_CONTEXT_LIMIT : failures[code] ?? 'The model or tool request failed. Check the selected profile and project access.';
+      this.event(run.id, cancelled ? 'run.cancelled' : 'run.failed', cancelled ? {} : { error: { code, message, retry: 'never' } }, { status: cancelled ? 'cancelled' : 'failed', finishedAt: new Date().toISOString() });
     } finally { clearTimeout(timer); }
   }
   /** A review run's end and its job outcome, one transaction (research-review.ts `endReviewRun`). */
