@@ -24,7 +24,7 @@
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-The rename PR (Moonzila -> MoonAliza display name; app IDs and data folder kept), then break-test on `main` covering Phases 1-2 (stage 6), then the independent-operation track. More models Phases 3-5 resume after it.
+Break-test on `main` covering Phases 1-2 (stage 6); the rename merged as PR #41 (`b5ce566`, run `docs/orchestration/2026-10-12-moonaliza-rename`). Then the independent-operation track; More models Phases 3-5 resume after it.
 
 ## Task statement
 User, 2026-10-04: "Can we add more models to moonzila?" then "add it as its own task after Task 5. Yes". User, 2026-10-05: "continue"; chose "More models" as the next task and "I'll add a new key" for research collection.
