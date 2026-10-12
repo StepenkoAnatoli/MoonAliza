@@ -293,9 +293,10 @@ describe('captured and built streams, folded and mapped', () => {
     // field out, which F-9 and spec 5.4 allow ("the start's `signature` to be absent or a string"). The delta sets the
     // field, which then follows `thinking` in the state, and step 2 encodes that state.
     // Guards: an absent start signature is accepted (mutation: require the start's `signature` to be a string before its
-    // signature_delta; both turns then fail in the reader with PROVIDER_INVALID_RESPONSE); the delta replaces the start's
-    // value (mutation: append the delta to it, which every start that is "" hides and which gives "undefined" + the
-    // signature here).
+    // signature_delta; both turns then fail in the reader with PROVIDER_INVALID_RESPONSE); an absent start is never written
+    // into the signature as text (mutation: `${block.fields.signature}${delta.signature}`, which gives "undefined" + the
+    // signature here). It does not hold the replace rule in general: an append that reads absent as "" gives the same
+    // state as a replace on this start; the next test, whose start signature is non-empty, holds that rule.
     const unsigned: BuiltBlock = { start: { type: 'thinking', thinking: '' }, deltas: [{ type: 'thinking_delta', thinking: 'Hm.' }, { type: 'signature_delta', signature: REFUSAL_SIGNATURE }] };
     const completion = await map(builtStream([unsigned, toolUseBlock()]));
     expect(completion).toEqual({
@@ -305,6 +306,20 @@ describe('captured and built streams, folded and mapped', () => {
     const step: InferenceMessage = { role: 'assistant', content: completion.content, toolCalls: completion.toolCalls, providerState: completion.providerState };
     expect(JSON.parse(encode([{ role: 'user', content: 'Go' }, step, result(LIST_FILES_CALL)], [REFUSAL_TOOL])).messages[1]).toEqual({ role: 'assistant', content: JSON.parse(completion.providerState!.data).content });
     expect(await map(builtStream([unsigned, textOf('Done.')], 'end_turn'))).toEqual({ content: 'Done.', outcome: 'complete', usage: { inputTokens: 10, outputTokens: 5 } });
+  });
+
+  test('a thinking start with a non-empty `signature` has it replaced by its `signature_delta`, never appended to (spec 5.4)', async () => {
+    // Built from E-10 shapes, not a capture: E-10 l.392 and every live start carry `"signature":""`; this start carries a
+    // non-empty string, which spec 5.4 allows ("the start's `signature` to be absent or a string") and for which it says
+    // the delta "replaces the value, never appends". Every other start in this file is "" or absent, where an append that
+    // reads absent as "" and a replace give the same state.
+    // Guard: the delta replaces the start's value (mutation: `(block.fields.signature ?? '') + delta.signature`; the state
+    // then holds "start-sig" followed by the delta's signature, which the state schema accepts, so only this test sees it).
+    const presigned: BuiltBlock = { start: { type: 'thinking', thinking: '', signature: 'start-sig' }, deltas: [{ type: 'thinking_delta', thinking: 'Hm.' }, { type: 'signature_delta', signature: REFUSAL_SIGNATURE }] };
+    expect(await map(builtStream([presigned, toolUseBlock()]))).toEqual({
+      content: '', outcome: 'tool_calls', toolCalls: [LIST_FILES_CALL], usage: { inputTokens: 10, outputTokens: 5 },
+      providerState: { format: 'anthropic-messages@1', appendOnly: true, data: `{"content":[{"type":"thinking","thinking":"Hm.","signature":"${REFUSAL_SIGNATURE}"},{"type":"tool_use","id":"toolu_01","name":"list_files","input":{"path":"."}}]}` },
+    });
   });
 
   test('a built interleaved turn with two calls (thinking, text, tool_use, text, tool_use): both calls, the exact state, and step 2 encodes it', async () => {
