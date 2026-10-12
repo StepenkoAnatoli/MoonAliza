@@ -1,0 +1,38 @@
+{
+  "topic": "Is MoonAliza free to use as the product name of a Windows desktop AI coding assistant (the product's original name; its installed identifiers already use it): US marks for MOONALIZA, MOON ALIZA, MOONALISA and MONALIZA, and live MONA LISA marks in software classes; software and AI products named MoonAliza; GitHub repositories and the moonaliza account; moonaliza domains",
+  "notes": "Run 2 (5 pages, at most 5 credits), added after the 10-credit budget at the operator's order of 2026-10-12: collect the USPTO's own status records (TSDR) for the first five day-one serials in U-16, in U-16's order. Doctor balance 295 before this run (305 at the start, 10 spent in run 1). Run 1 left U-16 open because Justia shows no status and cuts off the goods lines of the three close-variant filings (MONALIZA 77643867, MOONALISA 78447317, MONA LIZA 79130116; E-03, E-04), and because the two MONA LISA software filings likeliest to be live by their filing dates (Chatbuddy 98683894, filed 2024-08-05; GLOBAL DDD's MONALI$A 50144297, filed 2026-10-05) have no status in E-06. URL provenance: the TSDR statusview shape is the one that rendered for this transport in the Selunara check (docs/research/2026-10-12-selunara-name-check/research/plan-2.json and plan-4.json; its E-16, E-18, E-21). Left as day-one steps, for budget: the other six U-16 serials (76246320, 86705549, 77780167, 74318112, 74318114, 74124361) and pages 2 onward of Justia's two MONA LISA lists. Nothing is retried after this run, whatever its outcome, and --fallback is not passed.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 5,
+  "perQuery": 1,
+  "maxScrapes": 5,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn77643867",
+      "type": "P",
+      "why": "U-03, U-16: the USPTO's own status record for MONALIZA, serial 77643867 (Monaliza, LLC, filed 2009-01-06), one letter from MOONALIZA and the closest mark this check found - Justia cuts its goods line off after \"providing entertainment...\" (E-04); full goods, classes, owner and status"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn78447317",
+      "type": "P",
+      "why": "U-03, U-16: the USPTO's own status record for MOONALISA, serial 78447317 (Farrell, Lisa J., filed 2004-07-07) - Justia cuts its personal-care goods line off after \"massage...\" (E-03); full goods, classes, owner and status"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn79130116",
+      "type": "P",
+      "why": "U-03, U-16: the USPTO's own status record for MONA LIZA, serial 79130116 (Lukyanov Sergey Nikolayevich, filed 2013-03-14) - Justia cuts its linen goods line off after \"buckram...\" (E-04); full goods, classes, owner and status"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn98683894",
+      "type": "P",
+      "why": "U-04, U-16: the USPTO's own status record for MONA LISA, serial 98683894 (Chatbuddy, Inc., filed 2024-08-05), which Justia lists in its Computer and scientific category for online chatbot software (E-06); status, classes, goods and owner"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn50144297",
+      "type": "P",
+      "why": "U-04, U-16: the USPTO's own status record for MONALI$A, serial 50144297 (GLOBAL DDD CORP., filed 2026-10-05), which Justia lists in its Computer and scientific category for software as a service (E-06); status, classes, goods and owner"
+    }
+  ]
+}
