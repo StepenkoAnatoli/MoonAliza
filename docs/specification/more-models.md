@@ -129,8 +129,8 @@ Recorded from the build, the unit reviews and the integration review
   reading `src/main/index.ts` as text, and the behavioural tests call a helper that copies that order;
   an `infer()` harness was set aside. Electron's credential and cache behaviour was shown with the
   integration review's Electron harness; the unit tests run on Node's fetch and pin the request instead.
-  The Windows e2e run is the one place the real app is seen doing it: every fake Ollama answers
-  `/api/status` with cloud disabled (`e2e/fixtures/ollama-status.ts`), and `e2e/workbench.spec.ts` asserts
+  The Windows e2e run is the one place the real app is seen doing it: every fake Ollama a local-only
+  run reaches answers `/api/status` with cloud disabled (`e2e/fixtures/ollama-status.ts`), and `e2e/workbench.spec.ts` asserts
   one status request before its one chat request.
 - Fixtures not copied from a capture, each marked in its test: the `id:`/`retry:` lines (no captured
   stream uses them), the message text in the Mistral `model_length` test, and the `404 page not found`

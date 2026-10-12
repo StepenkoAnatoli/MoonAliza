@@ -4,7 +4,7 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-05 |
-| Last checkpoint | 2026-10-11 - Phase 1 review fixes integrated; docs (D-1) committed |
+| Last checkpoint | 2026-10-12 - Phase 1 merged (PR #39, `05221ad`); Phase 2 design workflow running |
 | Engagement      | Full (provider adapters, downloads, signed catalogue, external services) |
 | Working branch  | `main-axuse`, restarted from `main` @ `b490e50` (PR #37 merge) |
 | Skills          | auto-build, lead-orchestrator, careful-coding, Research-Kit 0.9.5 |
@@ -17,14 +17,14 @@
 | 2 Requirements | DONE (Phase 1) | REQUIREMENTS-P1.md | 2026-10-11 |
 | 3 Design | DONE (phase plan; Phase 1 in full) | docs/specification/more-models.md | 2026-10-11 |
 | 4 Mandate | DONE: user, 2026-10-11, "you have full access. continue"; the lead took the recommended option for each held question (no one approved them individually) | MANDATE.md | 2026-10-11 |
-| 5 Build | ACTIVE: Phase 1 | units below | 2026-10-11 |
-| 6 Harden | PENDING | - | - |
-| 7 Audit | PENDING | - | - |
+| 5 Build | Phase 1 MERGED (PR #39, `05221ad`); Phase 2 design ACTIVE | units below | 2026-10-12 |
+| 6 Harden | PENDING: break-test on `main` once Phase 2 merges (covering Phases 1-2), again before the final report. Phase 1 had the integration breaker in real Electron and a blind-spot sweep | - | - |
+| 7 Audit | PENDING: gap-audit with Stage 6's timing | - | - |
 | 8 Deliver and merge | PENDING | - | - |
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Phase 1: integration review on `f1c4867` returned 2 S1 and 5 S2 (`reports/p1-integration-review.json`). Fixes integrated (`20fd0c7`, `ed5ccd0`, re-reviews PASS) and the lead's docs committed. Next: the pinned gate on the head, the PR, Windows CI, the merge. Gemini probes running in a child session; Anthropic probes wait on the key's variable name.
+Phase 2 design: workflow `mm-p2-design` (three mappers, three designs, three judges, synthesis, critic; drafts in the scratchpad, nothing written to the repo). Next: the lead reviews the drafts against the evidence, commits REQUIREMENTS-P2 and the spec's Phase 2 section, freezes U0 contracts, writes the briefs and launches the build. Anthropic probes still wait on the key's variable name.
 
 ## Task statement
 User, 2026-10-04: "Can we add more models to moonzila?" then "add it as its own task after Task 5. Yes". User, 2026-10-05: "continue"; chose "More models" as the next task and "I'll add a new key" for research collection.
@@ -54,10 +54,10 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 | Unit | Owns | Status | Commit | Model |
 |------|------|--------|--------|-------|
 | U0 contracts | `src/shared/errors.ts` (LOCAL_MODEL_UNVERIFIED), `src/engine/control.ts` (inference.error code), `inferenceErrorCode` in `src/main/inference.ts`, the engine's message in `src/engine/application.ts`, two red-first tests | DONE (lead): both tests red before, green after | this commit | lead |
-| U1 stream robustness | `src/main/provider-stream.ts`, the OpenAI-shaped branch of `complete()` in `src/main/inference.ts`, `tests/provider-stream.test.ts` (and new finish-reason tests in `tests/provider-transport.test.ts`) | INTEGRATED, REVIEWED (round 1 FIX: U1-R1 S2 fixed; re-review ACCEPT; U1-R6 S3 fixed by the lead in `be71033`) | `4347144`, `03b54de` | session model |
-| F1 review fix, stream | `src/main/inference.ts` (readStreamed), `tests/provider-stream.test.ts` | INTEGRATED, REVIEWED (re-review PASS, S4 notes only) | `20fd0c7` | session model |
-| F2 review fix, locality | `src/main/ollama-locality.ts`, `tests/ollama-locality.test.ts`, `tests/application.test.ts` | INTEGRATED, REVIEWED (re-review PASS, S4 notes only) | `ed5ccd0` | session model |
-| U2 Ollama locality | new `src/main/ollama-locality.ts`, its call in `infer()` in `src/main/index.ts`, `tests/ollama-locality.test.ts` | INTEGRATED, REVIEWED (round 1 FIX: U2-R1 S2 fixed; re-review ACCEPT; U2-R4, R5, R6/R7 by the lead in `be71033`) | `2cb7dc6`, `3ed4f59` | session model |
+| U1 stream robustness | `src/main/provider-stream.ts`, the OpenAI-shaped branch of `complete()` in `src/main/inference.ts`, `tests/provider-stream.test.ts` (and new finish-reason tests in `tests/provider-transport.test.ts`) | MERGED, REVIEWED (round 1 FIX: U1-R1 S2 fixed; re-review ACCEPT; U1-R6 S3 fixed by the lead in `be71033`) | `4347144`, `03b54de` | session model |
+| F1 review fix, stream | `src/main/inference.ts` (readStreamed), `tests/provider-stream.test.ts` | MERGED, REVIEWED (re-review PASS, S4 notes only) | `20fd0c7` | session model |
+| F2 review fix, locality | `src/main/ollama-locality.ts`, `tests/ollama-locality.test.ts`, `tests/application.test.ts` | MERGED, REVIEWED (re-review PASS, S4 notes only) | `ed5ccd0` | session model |
+| U2 Ollama locality | new `src/main/ollama-locality.ts`, its call in `infer()` in `src/main/index.ts`, `tests/ollama-locality.test.ts` | MERGED, REVIEWED (round 1 FIX: U2-R1 S2 fixed; re-review ACCEPT; U2-R4, R5, R6/R7 by the lead in `be71033`) | `2cb7dc6`, `3ed4f59` | session model |
 
 ## Discovery (reports/discovery-1.json, five mappers and a critic, 2026-10-05)
 - Only `openai-compatible` and `ollama` run; `anthropic` and `openai-responses` are declared but throw NOT_IMPLEMENTED (`src/main/inference.ts:142-143`), and the profile form offers only the two that run (`src/renderer/App.tsx:266`). The plan's "already reaches many models through profiles (ollama, openai-compatible, openai-responses, anthropic)" overstates what works.
@@ -118,3 +118,4 @@ Credits: this task's collection spent about 80 (76 pages and 2 searches by the t
 - 2026-10-11: integration review on `f1c4867` (spec, breaker in real Electron 44.4.5, invariants, mutation: `reports/p1-integration-review.json`). Pinned gate on `f1c4867`: typecheck, lint, build 0; 1180 tests, 74 failed, all baseline, 0 new, 0 empty. Findings dispositioned above; fix round launched in worktrees `mm-p1-fix1` and `mm-p1-fix2` off `f1c4867`.
 - 2026-10-11: fix round returned (`reports/p1-fix-round.json`): fix1 and fix2 PASS on the first re-review, S4 notes only. The fix1 reviewer left the main checkout detached at `f1c4867` (same commit as `main-axuse`; the uncommitted docs untouched); the lead re-attached `main-axuse`. Cherry-picked as `20fd0c7` and `ed5ccd0`. S4 notes taken in the docs commit: test comments (Responses `"error": null`, E-31 citation, the spec citation for the no-reason rule, the application test's name, the source-count comment). Left as notes: `"error": false` unpinned (any non-null value fails, in both places); the late-headers fix shown on Node's fetch only.
 - 2026-10-12: Windows CI red on `3251b8d` (P1-CI-1), fixed in the e2e fakes. The pinned Linux gate on `3251b8d` equalled the baseline (1195 tests, 74 failed, the same names, 0 empty), but it does not run `e2e/`.
+- 2026-10-12: Windows CI green on `3bba21c` (runs 38188451523 and 38188447973; the PR run: 1194 unit tests passed, 13 e2e passed, workbench asserting one status request per step in the real app). Pinned Linux gate on `3bba21c`: `/home/user/task5-handoff/results/p1-final-3bba21c`, 1195 tests, 74 failed, the baseline names, 0 new, 0 empty. Blind-spot sweep (`reports/p1-blindspot-sweep.json`; error-code consumers, Windows-only tests and e2e, every prompt path): no finding. One wording note from it, taken here: `e2e/context-recovery.spec.ts`'s fake does not answer `/api/status` and need not, because that run is cloud-allowed; the spec's as-built note now says "every fake Ollama a local-only run reaches". PR #39 marked ready and merged with method merge at the checked head: merge commit `05221ad` on `main` (same tree as `3bba21c`); `main-axuse` fast-forwarded. Phase 1 worktrees and build branches removed. Gemini probe session finished at the free-tier cap (`claude/gemini-probes-2026-10-11` at `0621dbc`; evidence file scanned for key material, none): on the compatible endpoint Gemini's tool-call deltas carry no `index` and a tool turn ends with `finish_reason: "stop"`, so Moonzila cannot finish a Gemini tool turn there today - Phase 4 input; U-05 needs a paid-tier key.
