@@ -1,0 +1,47 @@
+---
+url: https://api.github.com/users/selunara-id
+retrieved: 2026-10-12
+command: firecrawl scrape https://api.github.com/users/selunara-id --only-main-content --max-age 0 --format markdown,rawHtml --json
+statusCode: 200
+transport: firecrawl-cli
+completeness: partial
+omitted: only 1360 characters of main content were returned (below the 1500-character bar)
+---
+```json
+{
+  "login": "selunara-id",
+  "id": 255700830,
+  "node_id": "U_kgDODz2vXg",
+  "avatar_url": "https://avatars.githubusercontent.com/u/255700830?v=4",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/selunara-id",
+  "html_url": "https://github.com/selunara-id",
+  "followers_url": "https://api.github.com/users/selunara-id/followers",
+  "following_url": "https://api.github.com/users/selunara-id/following{/other_user}",
+  "gists_url": "https://api.github.com/users/selunara-id/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/selunara-id/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/selunara-id/subscriptions",
+  "organizations_url": "https://api.github.com/users/selunara-id/orgs",
+  "repos_url": "https://api.github.com/users/selunara-id/repos",
+  "events_url": "https://api.github.com/users/selunara-id/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/selunara-id/received_events",
+  "type": "User",
+  "user_view_type": "public",
+  "site_admin": false,
+  "name": null,
+  "company": null,
+  "blog": "",
+  "location": null,
+  "email": null,
+  "hireable": null,
+  "bio": null,
+  "twitter_username": null,
+  "public_repos": 0,
+  "public_gists": 0,
+  "followers": 0,
+  "following": 0,
+  "created_at": "2026-01-18T14:49:40Z",
+  "updated_at": "2026-01-18T14:49:40Z"
+}
+
+```

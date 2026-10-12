@@ -1,0 +1,93 @@
+{
+  "topic": "Is Selunara free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila; Selenic was refused for a Parasoft trademark): US, EU and WIPO marks for Selunara and close variants; software and AI products and companies named Selunara; GitHub, npm and PyPI names; selunara domains; Microsoft Store listings; the word's meaning",
+  "notes": "Run 1: 16 owning pages and search endpoints named directly, no queries (maxScrapes 16, about 16 credits). Budget 20 credits for the whole project; phase 0 ran as a dry run and spent nothing (doctor balance 326 before any fetch), so run 1 leaves about 4 for one follow-up run: TSDR records for any Justia hit in software classes, the site of any product the web search shows, and the .dev, .app and .io lookups. URL provenance: the endpoint shapes come from the sibling projects' plans (docs/research/2026-10-12-selenic-name-check/research/plan*.json and docs/research/2026-10-12-product-name-screen/research/plan*.json), which record which ones rendered; the RDAP servers from the IANA RDAP bootstrap file (data.iana.org/rdap/dns.json), read during planning. Planning curls and DNS lookups on 2026-10-12 (status codes and address records only, not evidence) chose 200-answering endpoints for every absence: the npm package document and the PyPI JSON for selunara answer 404, and so do the RDAP records for selunara.dev, selunara.app and selunara.io; selunara.ai's RDAP answers 200 and its www name points at a Namecheap parking host; selunara.com has no address record. Not attempted: tmsearch.uspto.gov, TMview and the WIPO Global Brand Database (U-03, U-04; the sibling project showed this transport cannot read them).",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 16,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://trademarks.justia.com/search?q=selunara",
+      "type": "S",
+      "why": "U-01: Justia's index of USPTO filings for the exact string selunara (re-collected here; the sibling screen's E-04 found none) - any SELUNARA mark, its owner, class and status"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=seluna",
+      "type": "S",
+      "why": "U-02: Justia's index of USPTO filings for the variant seluna - any SELUNA mark, its owner, class and status (a hit in software classes gets its TSDR record in run 2)"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=selunar",
+      "type": "S",
+      "why": "U-02: Justia's index of USPTO filings for the variant selunar"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=selenara",
+      "type": "S",
+      "why": "U-02: Justia's index of USPTO filings for the variant selenara"
+    },
+    {
+      "url": "https://trademarks.justia.com/search?q=salunara",
+      "type": "S",
+      "why": "U-02: Justia's index of USPTO filings for the variant salunara"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Selunara%22+software+OR+app+OR+AI&hl=en&gl=us",
+      "type": "S",
+      "why": "U-05: page 1 of a Google search for \"Selunara\" software OR app OR AI (US, English) - any software or AI product or company named Selunara"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Selunara%22+software+OR+app+OR+AI&hl=en&gl=us&start=10",
+      "type": "S",
+      "why": "U-05: page 2 of the same Google search"
+    },
+    {
+      "url": "https://api.github.com/search/repositories?q=selunara+in:name,description,topics,readme&sort=stars&order=desc&per_page=100",
+      "type": "P",
+      "why": "U-06: GitHub's repository search for selunara in names, descriptions, topics and READMEs, most-starred first"
+    },
+    {
+      "url": "https://api.github.com/search/users?q=selunara&per_page=100",
+      "type": "P",
+      "why": "U-06: GitHub's user and organisation search for selunara - whether the login selunara exists"
+    },
+    {
+      "url": "https://registry.npmjs.org/-/v1/search?text=selunara&size=20",
+      "type": "P",
+      "why": "U-07: the npm registry's own search - any package named selunara or in the @selunara scope (a planning curl found the package document registry.npmjs.org/selunara answers 404, which the kit cannot keep)"
+    },
+    {
+      "url": "https://pypi.org/search/?q=selunara",
+      "type": "P",
+      "why": "U-08: PyPI's own search - whether a project named selunara exists (a planning curl found pypi.org/pypi/selunara/json answers 404, which the kit cannot keep)"
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/selunara.com",
+      "type": "P",
+      "why": "U-09: the .com registry's RDAP record for selunara.com (re-collected here; the sibling screen's E-15 found it registered)"
+    },
+    {
+      "url": "https://rdap.identitydigital.services/rdap/domain/selunara.ai",
+      "type": "P",
+      "why": "U-10: the .ai registry's RDAP record for selunara.ai (IANA bootstrap server for .ai)"
+    },
+    {
+      "url": "https://selunara.ai/",
+      "type": "P",
+      "why": "U-10: what selunara.ai serves"
+    },
+    {
+      "url": "https://apps.microsoft.com/api/products/search?gl=US&hl=en-us&query=selunara&mediaType=all&age=all&price=all&category=all&subscription=all",
+      "type": "P",
+      "why": "U-12: the Microsoft Store's own search endpoint (the JSON behind apps.microsoft.com/search), US English, for selunara"
+    },
+    {
+      "url": "https://en.wiktionary.org/w/index.php?search=selunara&title=Special%3ASearch&profile=advanced&fulltext=1&ns0=1",
+      "type": "S",
+      "why": "U-13: Wiktionary's full-text search of its entries for selunara - whether the word has an entry or appears in any etymology"
+    }
+  ]
+}

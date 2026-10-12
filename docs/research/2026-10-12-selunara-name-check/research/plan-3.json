@@ -1,0 +1,23 @@
+{
+  "topic": "Is Selunara free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila; Selenic was refused for a Parasoft trademark): US, EU and WIPO marks for Selunara and close variants; software and AI products and companies named Selunara; GitHub, npm and PyPI names; selunara domains; Microsoft Store listings; the word's meaning",
+  "notes": "Run 3 (2 pages, about 2 credits; doctor balance 308 after run 2, from 326 at the start: 18 spent, so these are the last 2 of the 20-credit budget). Run 2 collected the two TSDR records and the selunara-id account; its Google page 2 retry failed on every engine and selunara.ai failed again on a Firecrawl proxy error, and neither failure was billed (311 -> 308 for 3 captures). Nothing is retried after this run, whatever its outcome.",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 2,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://www.bing.com/search?q=%22Selunara%22+software+OR+app+OR+AI&setlang=en-US&cc=US",
+      "type": "S",
+      "why": "U-05: page 1 of the same query on a second engine (Bing, US English), in place of Google's page 2, which could not be read: run 1 got Google's request-verification page (E-07) and run 2's retry failed on every Firecrawl engine (ledger fail entry)"
+    },
+    {
+      "url": "https://www.selunara.ai/",
+      "type": "P",
+      "why": "U-10: what selunara.ai serves, through its www name - the apex https://selunara.ai/ failed twice on a Firecrawl proxy error (ledger fail entries); a planning DNS lookup (not evidence) shows www.selunara.ai is a CNAME to parkingpage.namecheap.com"
+    }
+  ]
+}

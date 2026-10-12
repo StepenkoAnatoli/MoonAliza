@@ -1,0 +1,38 @@
+{
+  "topic": "Is Selunara free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila; Selenic was refused for a Parasoft trademark): US, EU and WIPO marks for Selunara and close variants; software and AI products and companies named Selunara; GitHub, npm and PyPI names; selunara domains; Microsoft Store listings; the word's meaning",
+  "notes": "Run 2 (5 pages, about 5 credits; doctor balance 311 after run 1, from 326 at the start, so this is the last of the 20-credit budget). Run 1 left four things open: Justia lists SELUNA marks of Seluna Ltd for computer software relating to the medical field (serials 99332277, a word mark, and 99337404, a design mark), whose status and classes only the USPTO record shows; Google's page 2 answered with its request-verification page; the GitHub user search lists an account selunara-id that nothing else explains; and selunara.ai failed on a Firecrawl proxy error. The other Justia hits are not followed to TSDR, for budget: Seluna Therapeutics' pharmaceutical SELUNA (98563112), Seluna LLC's supplement SELUNA (50040549), SELUNARIA for textiles (99346043) and the 2009 SALUNA-style sportswear mark (77799904) are all for goods far from software, so their status cannot move the verdict under the scale in research/DISCOVERY.md. Not collected, for budget and because the kit keeps no capture of an error page: the RDAP records of selunara.dev, .app and .io, which a planning curl found answering 404 (U-11 stays KNOWN-UNKNOWN with the day-one step).",
+  "depth": "deep",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 5,
+  "prefer": [],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn99332277",
+      "type": "P",
+      "why": "U-02: the USPTO's own status record for SELUNA, serial 99332277 (Seluna Ltd), which Justia lists for computer software relating to the medical field (E-02) - owner, classes, goods, status"
+    },
+    {
+      "url": "https://www.google.com/search?q=%22Selunara%22+software+OR+app+OR+AI&hl=en&gl=us&start=10&pws=0",
+      "type": "S",
+      "why": "U-05: page 2 of the Google search of E-06, again - run 1's page 2 (E-07) returned Google's request-verification page with no results; pws=0 (no personalisation) only makes the URL distinct, it does not change the query"
+    },
+    {
+      "url": "https://api.github.com/users/selunara-id",
+      "type": "P",
+      "why": "U-05, U-06: the GitHub account selunara-id that the user search lists (E-09) - its name, company, site and creation date, which say whether it fronts a product named Selunara"
+    },
+    {
+      "url": "https://selunara.ai/",
+      "type": "P",
+      "why": "U-10: what selunara.ai serves - run 1's fetch failed on a Firecrawl proxy error (ledger fail entry), not on the site"
+    },
+    {
+      "url": "https://tsdr.uspto.gov/statusview/sn99337404",
+      "type": "P",
+      "why": "U-02: the USPTO's own status record for serial 99337404, a design mark of Seluna Ltd that Justia lists for the same software goods (E-02) - what the mark shows, classes, status"
+    }
+  ]
+}
