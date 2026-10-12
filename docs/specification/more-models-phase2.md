@@ -785,9 +785,10 @@ nothing is deleted, and the form never offered the kind.
   (`application.ts:187`, `:224`), so a mid-run switch is caught there as RUN_CANCELLED, and the run ends
   cancelled (`:392`).
 - Credentials: the key only in `Authorization`, inside `vault.withSecret`, whose grant is checked on
-  entry (`src/main/vault.ts:156-162`), so a retry wait needs no new grant. `credentials: 'omit'` on every
-  chat request is written into this line (and the "As built" notes) only if the D10 verdict keeps
-  commit 3 (section 4); otherwise INV-5 stays in "Recorded for later".
+  entry (`src/main/vault.ts:156-162`), so a retry wait needs no new grant. Every chat request, for every
+  kind, is sent with `credentials: 'omit'`, so it carries none of the session's cookies or HTTP
+  authentication (INV-5; D10 kept commit 3, `792b508`). Known limit: a gateway that needs
+  Windows-integrated sign-in or a client certificate may refuse chat requests (section 4).
 - AGENTS.md: one invariant row added (section 1, D-2), which narrows what any later code may do; the
   token row gains evidence.
 - Stop-list: no migration, no user data deleted, nothing collected, no vendor request. The one
@@ -1078,6 +1079,68 @@ capture".
   its guard removed (`credentials`, if present; the state carry; the strip, for the scan) or, for the
   `system` and `tools` equality, under the step-dependent suffix above.
 
+### As built (Phase 2)
+
+Recorded from the build, the unit reviews, the live probes and the integration review
+(`docs/orchestration/2026-10-05-more-models/reports/`: `p2-wave1-workflow.json`, `p2-u3-live.json`,
+`p2-wave2-workflow.json`, `p2-integration-review.json`).
+
+- Units on `main-axuse`: U0 `28395c5` (lead); U1 to `47db017`; U2 `0337f69..ed70e78`; U3
+  `90c7727..cc77893` and `3e88117`; U4 `b1e8550..bbc14aa`; U5 `0e96f1f`, `2d3fa59`. Each unit was
+  reviewed refute-first; U1, U2 and U3 took three rounds, U4 and U5 one.
+- **D10 kept commit 3** (`792b508`, wording `c091c3d`): every chat request, for every kind, is sent with
+  `credentials: 'omit'`. In real Electron 44.4.5 under xvfb, with the expected outcomes written first:
+  with commit 3 a cookie planted for the fake's origin is not sent and `Authorization` is; no as-shipped
+  proxy or 401 path worked at the parent; a proxy rule carrying credentials in its URL is not used by
+  Chromium at all (`ERR_NO_SUPPORTED_PROXIES`); with a harness `login` handler, a proxy authorization
+  Chromium had already cached is still sent under `credentials: 'omit'`. The verdict rests on case 1, as
+  item 5 above says; it is not evidence that proxy authentication is unaffected. Known limit: a gateway
+  that needs Windows-integrated sign-in (NTLM or Negotiate) or a client certificate may refuse chat
+  requests (README). U5's e2e asserts no `cookie` header with one planted in the provider session (with a
+  positive control from that session without `omit`) and in the local session.
+- **Live probes, 2026-10-12** (`docs/evidence/2026-10-12-anthropic-probes.md`, US$0.47 booked of the
+  US$3 cap, the native shape of section 5 sent by a probe script, not by Moonzila): Bearer is accepted
+  (an unauthenticated request's 401 still names `x-api-key`); the over-window refusal is 400
+  `invalid_request_error` "prompt is too long: 340027 tokens > 200000 maximum", which the overflow rule
+  matches unchanged; streams are LF-only, each `event:` equals its data `type`, and the one `ping` sits
+  inside the first open block, right after its `content_block_start`; a thinking block starts as
+  `{"type":"thinking","thinking":"","signature":""}` and gets exactly one `signature_delta`; Sonnet 5.5,
+  like Opus 5.5 and Fable 5.1, omits thinking text, so the state holds signatures and empty text; usage
+  carries fields the captures lacked (`cache_creation`, `service_tier`, `inference_geo`,
+  `output_tokens_details`), and the latest value wins (summing would be wrong); the JSON on a data line
+  is padded with spaces before its last brace; every live `tool_use` start carries
+  `"caller":{"type":"direct"}`, and replaying it verbatim is accepted on all four models; Haiku 4.5 does
+  not think when `thinking` is omitted; no `redacted_thinking`, `fallback`, 429 or 5xx occurred; a
+  32,000-token `max_tokens` did not slow Test connection (about 1 s on every model); the input estimate
+  stayed above the reported count on every request measured. Anthropic's compatible route
+  (`/v1/chat/completions`) works through the unmodified `openai-compatible` path, tool calls included
+  (10 of 10 on a reduced U-06 set, Sonnet 5.5 only).
+- Pinned from the live recordings: U3's follow-up feeds seven recorded streams through the adapter byte
+  for byte (`tests/fixtures/anthropic-live/`, sha256-pinned, kept byte-exact by `.gitattributes`), and
+  U4's transport test shows `complete()` building the request bodies the live API accepted (D1, D5 steps 1
+  and 2) by sha256. No source change was needed after the probes.
+- Corrections the probes made to the run's own documents: section 5.5's set-aside alternative (keep only
+  the documented fields) is now untested rather than known-safe, because live starts carry `caller`; the
+  chosen rule (keep every field verbatim) is the one that works. DAY-ONE-P2's D7 costed Haiku 4.5's "64K"
+  as 65,536; the live limit is 64,000 ("max_tokens: 70000 > 64000").
+- **D6's side effect.** A second run whose history drops the first run's tool turns is accepted, as
+  designed, but the model then concluded its earlier answer had been invented ("I never called any
+  weather tool. The 'Paris, 18 °C, cloudy' result was made up, so ignore it"). This is the cost of the
+  existing rule that history keeps a run's final answer and drops its tool turns; it is not new in
+  Phase 2 and is recorded for later.
+- Deviations from the breakdown, each reviewed: U0 updated `inferenceErrorCode`'s doc comment itself
+  rather than leaving it to U2, so no commit leaves it stale; U4's S-3 main-side pin (`bbc14aa`) landed
+  after the registration that makes it reachable, and it passes on the code before U4 too, so it pins
+  existing behaviour (U4-R2); `AnthropicHint` spaced its lines with an inline style (U4-R4, see below);
+  U5's local-session positive control reads the stored cookie (`cookies.get`) rather than sending a
+  probe (U5-R3), and its assertion was shown red with `credentials: 'omit'` removed; the `tools` half of
+  U5's `system`/`tools` equality was proven by the reviewer's own mutation (tools reversed on step 2),
+  not the builder's (U5-R1).
+- What the tests do not reach: the Anthropic e2e journey stops at "Trust and open" on Linux (the
+  Windows-only helper), so the whole journey, the workbench journey and the provider-session check on
+  the run's two requests are seen only on Windows CI. The app itself has not sent a request to the live
+  API; its requests are compared with ones the live API accepted.
+
 ### Recorded for later (Phase 2 additions)
 
 - Persisting state: the first phase with a cross-run reader adds the write inside `message()`'s
@@ -1093,26 +1156,44 @@ capture".
   vacuum on deletion; and `diagnostics.export` (declared, not built, `src/shared/params.ts:153`) must
   exclude provider state when it is built.
 - The workspace setting (schema v5), with Anthropic's compatible layer in Phase 4.
-- The whole-request timeouts (120 s for the existing kinds, 600 s for `anthropic`): an idle timeout,
-  decided after D12; and a per-kind `profile.test` timeout if D7 shows 25 s too short.
+- The whole-request timeouts (120 s for the existing kinds, 600 s for `anthropic`): an idle timeout.
+  D12's one thinking-heavy step took 6.4 s and D7's Test connection about 1 s at every `max_tokens`
+  tried, so neither is needed on that evidence; a step that thinks for tens of thousands of tokens was
+  not provoked, and its wall time is unmeasured.
 - The reserve's size, and whether it should also bound `current` (section 3, known limit 5), revisited
   after D16 and any CONTEXT_LIMIT reports from frozen runs.
 - Continuing a turn cut short after a tool call (H-E03 l.485), if users meet it.
-- A `login` handler for proxy or server authentication (out of scope): D10's harness-handler outcomes,
-  at the parent commit and with commit 3, for the Basic proxy and the server 401, are recorded here, so
-  the phase that adds a handler knows whether `credentials: 'omit'` stops it answering a challenge. If
-  those runs failed like the as-shipped ones, that is recorded too: `app.on('login')` is documented for
-  `webContents` and utility-process requests (`node_modules/electron/electron.d.ts:510`), so such a
-  phase first establishes whether a `session.fetch` challenge in main reaches any handler.
-- If commit 3 stays: gateways that need Windows-integrated sign-in (NTLM or Negotiate, at a proxy or
-  the server) or a client certificate (section 4 known limit); a per-profile way to send session
+- A `login` handler for proxy or server authentication (out of scope). D10's harness-handler runs (an
+  `app.on('login')` answering every challenge, at the parent commit and with commit 3, two runs each):
+  every `login` event recorded was for Chromium's own spell-check dictionary download through the
+  proxy, none for a `session.fetch`; a proxied chat request got through only when Chromium had already
+  cached the proxy's authorization from that download, and then at the parent and with commit 3 alike
+  (so `credentials: 'omit'` does not withhold a cached proxy authorization); with the dictionary host
+  bypassed, every proxied request failed 407 at both; the server 401 failed at both. So a phase that
+  adds a handler first establishes how a `session.fetch` challenge in main can reach one
+  (`app.on('login')` is documented for `webContents` and utility-process requests,
+  `node_modules/electron/electron.d.ts:510`).
+- Commit 3 stayed (D10): gateways that need Windows-integrated sign-in (NTLM or Negotiate, at a proxy
+  or the server) or a client certificate (section 4 known limit); a per-profile way to send session
   credentials, decided only if a user reports one.
-- If commit 3 is dropped or not merged: INV-5 (chat requests carry the session's cookies and HTTP
-  authentication), with D10's as-shipped outcome that caused the drop, or the reason the check could
-  not run.
 - Naming provider refusals in Test connection (D7's over-maximum `max_tokens`, D9's multi-workspace
   error): today every failure there shows the generic INTERNAL_ERROR text (section 6); a named refusal
   needs a public mapping in `publicMessages` (`src/main/bridge.ts`), a new public code under F-21, so it
   goes through the stop-list review with the recordings as its evidence.
-- Pre-existing: the tool-call secret check reads JSON text (`index.ts:106`), so escaping can hide a
-  secret in a tool input; the state screen reads leaves.
+- Pre-existing: the tool-call secret check reads JSON text, so escaping can hide a secret in a tool
+  input (a saved credential containing `"` or `\`). U4 moved the rule unchanged into `screenCompletion`
+  (`src/main/provider-screen.ts`), as section 6 required; the state screen reads leaves, so the
+  `anthropic` kind is covered, the kinds that carry no state are not. Screening `toolCalls` by leaves
+  too (U4-R3) changes the existing kinds' behaviour, so it is its own change.
+- History keeps a run's final answer and drops its tool turns, so a later run can conclude that its
+  earlier answer was invented (D6, quoted in "As built"). Keeping a compact record of the tools a run
+  used, or replaying its tool turns, is a quality change across every kind, decided with the
+  persisting-state phase.
+- Anthropic's compatible route was checked on Sonnet 5.5 only, with a reduced U-06 set (10 prompts);
+  the full set (20 or more per model, Opus and Fable too) is Phase 4 input. Replaying re-serialized tool
+  input was accepted with string arguments only; integer-like key order and number normalisation are
+  not exercised.
+- U5's e2e fakes: give the remaining checks (per-request `model` and `stream: true`; request 1's Ask-mode
+  system prompt, `list_files` present, `write_file` absent) the one-line guard name every other check
+  carries (U5-R2), and, if the workbench fake gains a 204 branch, replace the local-session positive
+  control (`cookies.get`) with a probe sent without `omit` (U5-R3).
