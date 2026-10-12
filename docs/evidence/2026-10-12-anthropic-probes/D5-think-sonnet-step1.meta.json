@@ -1,0 +1,174 @@
+{
+  "id": "D5-think-sonnet-step1",
+  "model": "claude-sonnet-5-5",
+  "auth": "bearer",
+  "status": 200,
+  "headers": {
+    "anthropic-organization-id": "<redacted-id>",
+    "anthropic-ratelimit-input-tokens-limit": "10000000",
+    "anthropic-ratelimit-input-tokens-remaining": "10000000",
+    "anthropic-ratelimit-input-tokens-reset": "2026-10-12T07:18:51Z",
+    "anthropic-ratelimit-output-tokens-limit": "2000000",
+    "anthropic-ratelimit-output-tokens-remaining": "2000000",
+    "anthropic-ratelimit-output-tokens-reset": "2026-10-12T07:18:51Z",
+    "anthropic-ratelimit-requests-limit": "10000",
+    "anthropic-ratelimit-requests-remaining": "9999",
+    "anthropic-ratelimit-requests-reset": "2026-10-12T07:18:51Z",
+    "anthropic-ratelimit-tokens-limit": "12000000",
+    "anthropic-ratelimit-tokens-remaining": "12000000",
+    "anthropic-ratelimit-tokens-reset": "2026-10-12T07:18:51Z",
+    "anthropic-workspace-id": "<redacted-id>",
+    "cache-control": "no-cache",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a494553a0f4e5dac-ATL",
+    "content-encoding": "gzip",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "text/event-stream; charset=utf-8",
+    "date": "Mon, 12 Oct 2026 07:18:51 GMT",
+    "request-id": "req_011CfwwFBv6LyRd2uVxtKKbY",
+    "server": "cloudflare",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-f971f4d369339ae255353efed21de624-09398cd39e739e5f-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-robots-tag": "none"
+  },
+  "latencyMs": {
+    "headers": 721,
+    "total": 1805
+  },
+  "responseBytes": 5184,
+  "isSse": true,
+  "usage": {
+    "input_tokens": 528,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 183
+  },
+  "cost": 0.002886,
+  "costBasis": "usage",
+  "worstCase": 0.04496,
+  "retries": [],
+  "facts": {
+    "crlf": false,
+    "lfOnly": true,
+    "eventOrder": [
+      "message_start",
+      "content_block_start",
+      "ping",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_stop",
+      "content_block_start",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_stop",
+      "content_block_start",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_delta",
+      "content_block_stop",
+      "content_block_start",
+      "content_block_delta",
+      "content_block_stop",
+      "message_delta",
+      "message_stop"
+    ],
+    "pings": [
+      2
+    ],
+    "eventsWithoutName": 0,
+    "nameMismatch": 0,
+    "unknownEventTypes": [],
+    "deltaTypes": {
+      "thinking_delta": 1,
+      "signature_delta": 1,
+      "text_delta": 10,
+      "input_json_delta": 5
+    },
+    "blockTypes": [
+      "thinking",
+      "text",
+      "tool_use",
+      "tool_use"
+    ],
+    "signatureDeltasPerBlock": {
+      "0": 1
+    },
+    "bytesAfterMessageStop": 0,
+    "fallbackBlock": false,
+    "stopReason": "tool_use",
+    "stopDetails": null,
+    "usageEvents": [
+      {
+        "event": "message_start",
+        "usage": {
+          "input_tokens": 528,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 3,
+          "service_tier": "standard",
+          "inference_geo": "global"
+        }
+      },
+      {
+        "event": "message_delta",
+        "usage": {
+          "input_tokens": 528,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 183,
+          "output_tokens_details": {
+            "thinking_tokens": 48
+          }
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAQSsQUKEAgSGAI4AUIIdGhpbmtpbmcSDF7yV5YKpr65aO5RgBoM6Cm3i36TfMdIyR2NIjCgIed/o8DbLjw3wfdiX2TGBb6NVycm+2HVKUZqTYxjSaW2IdiI4e9qeeERUlSyvv4qzgT0TbZN0JCEsbyKH2gCIyLnZWbZbEIoMKnz3gY0GFi5N37iJxr3TR/XxP38HGImKpQsph8b3DvI7Zgeq2yrzJeZaVRcTyi3IfULEaPMz/F40UaZwvQDJJmns3L/rrDVaC9E2LVqMjIjHltgjNBSBYoEfb1A+dELD1R8LuZjn7+D+JR7h3XBty8gpMKItOSx8cAiuez3ryQKfnC4uKC6hEm+MDnBwbThsHB64t5wmKdYfvK98NTMRb53lSbMXsBlOQ9QaSBwqgGh2RAb9Y66JNoiVao6La1ux7CtTK4ZJnsvkqeFbMNJR69IOLbFOqwRN5t0XpUdv3QrhWtfyjVjnzv4QJEvsp+7VZEU3hnYxXO08rlHW5oFNnmbh2rvg/99/FKWqXamoBCZ+WU2D0DUHF5K7qotK5g0vHpfLr6QzRDjtpnNHJC0mbDSnUK/9aK7bzbm90EJ8vwsEj6mP3zWEnwasLmaoW0ZV3kV/A7NUaI4LTXwejRNSf1kRs7v2L5xPE0pfFlA9eOKMLhSGL7odWbWvw6rts7xuEp5V/lOswxzMkxLlYC5E9594oUbLD1XHTdnpqgCQCHzRoz6l+ntJYgW0fUPX7nRP5adYgWqdqWWMcCWaqPYy6N5Jc1niVg3f6G1mGUh84MY2XuqRMQ56l5zodBvFeqASu5cQ+8ijcsDt+y0OYSzYtgTXdDoIp5ydNeIZ4xP124BwPBTT0ZVnNJIQBKlrDlSo2hh6ICDEITEuGdDTDTN7ZtP5bFVjiwjp6CsMjnLE7PoCyiuSenvbhgB"
+      },
+      {
+        "type": "text",
+        "text": "Step by step:\n- 17 × 23 = 391\n- 19 × 21 = 399\n\n19 × 21 is larger, so I'll check the weather for Rome. I'll also get the time."
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01YXMxbAF33AFs67CC9oMczx",
+        "name": "get_weather",
+        "input": {
+          "city": "Rome"
+        },
+        "caller": {
+          "type": "direct"
+        },
+        "_rawPartialJson": "{\"city\": \"Rome\"}"
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_01AzrUvtgma5L6ypA3e7w3Gq",
+        "name": "get_time",
+        "input": {},
+        "caller": {
+          "type": "direct"
+        },
+        "_rawPartialJson": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 606,
+  "bodySha256": "813d83c9487551e0bf5877c70d6732f711dee43f0eccb382925935eb38abbadc",
+  "body": {
+    "model": "claude-sonnet-5-5",
+    "max_tokens": 4096,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Call get_weather for Paris and call get_time, then tell me both results in one sentence."
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

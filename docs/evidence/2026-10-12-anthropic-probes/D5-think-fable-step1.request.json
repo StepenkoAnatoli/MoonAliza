@@ -1,0 +1,49 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 716,
+  "bodySha256": "78444cf5316a52bfa1a25e506e7de11d16debdc66545611db1ec5baad9d69a63",
+  "body": {
+    "model": "claude-fable-5-1",
+    "max_tokens": 4096,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Think step by step before using any tool: which is larger, 17 x 23 or 19 x 21? If the first is larger, call get_weather for Paris, otherwise for Rome. Also call get_time. Then answer in one sentence."
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

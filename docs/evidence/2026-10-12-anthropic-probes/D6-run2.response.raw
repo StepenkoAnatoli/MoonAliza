@@ -1,0 +1,108 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-sonnet-5-5","id":"msg_011CfwwHH5wPgrFUYJhcA3iB","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":666,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":5,"service_tier":"standard","inference_geo":"global"},"diagnostics":null}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}            }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":""}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"CAQSvwsKEAgSGAI4AUIIdGhpbmtpbmcSDNSXzTLLvCP0Ac6DaRoMP1NtHxdTbnjq2ab+IjCGiS1SOSSTQXJf3hVtq8EZYm+Hu5tfFvti8KyB5Ue0QidOEXiR9i16LBUWmJpUqgIq3AqWmJzIMhkcFHp0pfh2gkbu6Se7rhtWj3haAXgA9WWXKhoVqe/dKAyUfzFs00VFe/1L0Wdojb4hNvcaCZADIgcSe1z4q6fLmJFECwxbG3aU/JtfS6gcZFFFcerBTUMu2gyY3m/1wUqviqP7S9eCHUuJE4wD2vVsCzSvSevVoTvKZldR+lP/5G+Bdw9N0bo6KBWr4yaqzFqIticSoTU4WEY9XESzrE/0XPl58pedHpdSPn3PplpzcjjkWq5BD7/cvDHTa7DN3QpSH8Xhta+oqzSJRQ3BFqMUMlOpD0p6w7InpsgcohTNKrNmI52OZbRgnvXjl1V+e/jCweeomtaeOAh2dMxwScJsLD8NrXa793mMYxNcOOEQwBV0UMoTAvdEZEOXoyOODyFp4a36W6i/zSXu9zTUUnwIjtgYtvpyknL7bI5Upwd4oERXqlGn+hv6Fn0+1fEBFzXnwzDVpSPl99leaoY7xzZZNVIzFuhUECFczSqTDl4Tf7K9nbS1vnCjJphTU9ZNj3BpV5Pay9LPMV6C5WIcyXvjbW+N07ws1iLsHaNX90Bl7g49Kj7QkbvvOI/2uTP0BeSPF32RmV2Empn7AUV3Q2xGrsksKjtFWfmLqBvN+Nrd/WVQpVOY4D3pQPaJEEGht4SICbD1Ok4FFWoYxXzM0a/155l44u0l+SE0F1z7ADsrjLhF1icMfHB84h3DD7xbg2z04+u9Mc3CfNUND6VdwvJN2Il+ioQ3hd0nf8R2dywUSdmam6FHeY/RDGIlk9NtLnZrmtUMfLGnJhLn8DOEzxZ8FiIBrUiKj70pNOPKfuD0kg4d1uv+KNiw+OjdVuRw8lp2p1ZEJY8EZA3OjuxvOE7972a63dWFABODuCijPlWF/qYGkq4/X3iUq2XG/lGXWoL/rA79ErT8Tn/3pa5B5HPs4pBPkQ7dbUhfz/DeF0FoMbc+8ApntpPY8C+DIKmG8QRN/FegiJbVSdK5JKZ3Ep3vz7mu4wsIhKHuqo0Flzq4c5V1/2vBW3iW6ZCwJGAb++KkWYP+USJLGK9TZWu/sUgDJmXYIBoSC3+qHPqHW0ZBGnpnlrFFvSYwOK5n23QTBnWS8D3VAZFjyu8ynnOtR2DqWQFrTp1awd8NoFRNPUefs7ltQpIN2JLkjc4NimM8EAOY/56ZYilaFgh6NpF3j5L0fpuVxR047RHOsJsi6DccMRNqf0AfrO3UJZy3inJ+khEk8jac4NYZSOnLXBDsOgT2XS6UWxterhQnyGnWW/jPFrzogKm4kk3XUXNmKCN85xafVaX8l/hPI8Kc8MgTkkQKJtW07Z7EW++jKrLt9M5ZzOiuLHIfrtPUhiROv85mlodQumbdpctn/MkN5wZVgbGv9sDe1czfWdEihZo1ha93qkHl9oPv9IRrMK9KilAiFeILaS7LPaBbzHCLjnLxrzb4jsiTeocGOoCTzgiU3jvjeel0gVei1U+Gd0eQvOxkWpZEDQ6PoPRK808hWMK52Px/PGKjz0JbPpFaJH5Hwg1cZkjKwUOjotF4RHYHFcRhdYDARPrvbprapuY55kdaeh3pofmkGrnikE521f1nBVHb3zrtTbKvaIgaZb3Jx2eD4+0DCG139XOEPydjxOtKQfyR1sJgUNrIek8F6ZxvIakVfpkj0jfa0OGbWMLYhGLTKT86NViEDKko9mEeJ+D3Pa/J9kCHoHOkVrVBiqpwsnc/XW+/+aORIURLK8mnLUhDareYk2UBS0A5Qmjzb75XKxiMkl4wLLuShldaHkgTll2pPL/78+ER83U2gZ44pbtKhur/Mos0byM4yJaWgdkrnL2C4Yr2msCAGAE="}      }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0     }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Before I get"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" the time, I need to correct"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" my last"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" message. I never"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" called any we"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ather tool. The \""}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Paris,"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" 18 °C, clo"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"udy\" result was made"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" up,"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" so "} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ignore it and"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" the umbrella advice."}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" The"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" math is right: 391 ="}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" 17 × 23, so"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" it isn't prime, and"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" the we"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ather check should have been for"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Rome. I ha"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ven't run it"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" yet.\n\nI'll get"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" the time now."}         }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1               }
+
+event: content_block_start
+data: {"type":"content_block_start","index":2,"content_block":{"type":"tool_use","id":"toolu_015svDNT6TpTtyD6v7QTMANj","name":"get_time","input":{},"caller":{"type":"direct"}}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":""}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":2        }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":666,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":410,"output_tokens_details":{"thinking_tokens":267}}           }
+
+event: message_stop
+data: {"type":"message_stop"             }
+

@@ -1,0 +1,79 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 1114,
+  "bodySha256": "f898595b3a37797e41ef8bac114dc187e4724c3b186d17afbc86c3116fd444d4",
+  "body": {
+    "model": "claude-sonnet-5-5",
+    "max_tokens": 4096,
+    "system": "You are a test assistant. Use the tools when the user asks for them.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Think step by step: is 391 a prime number? If it is, call get_weather for Paris, otherwise for Rome. Then, after thinking about the result, tell me in one sentence whether I need an umbrella."
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "391 = 17 × 23 (17 × 23 = 391), so it is not prime. I'll check the weather for Rome."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01TogT5musLQ6Pji13PPydKs",
+            "name": "get_weather",
+            "input": {
+              "city": "Rome"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01TogT5musLQ6Pji13PPydKs",
+            "content": "Paris: 18 C, cloudy."
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city.",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        }
+      },
+      {
+        "name": "get_time",
+        "description": "Get the current UTC time. Takes no arguments.",
+        "input_schema": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    ],
+    "stream": true
+  }
+}

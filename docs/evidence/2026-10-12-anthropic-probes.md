@@ -8,3 +8,6 @@ Raw transcripts, the probe script and the spend ledger are in `docs/evidence/202
 - D11: Haiku 4.5 round trip, no thinking blocks; step 2 accepted.
 - D1: `Authorization: Bearer` accepted (200) on Sonnet 5.5 and Haiku 4.5.
 - D4: streamed final usage equals the non-streamed usage (input 15, output 5).
+- D5: two-step round trips with verbatim replay accepted on Sonnet 5.5, Opus 5.5 and Fable 5.1 (no retention 400 for Fable); live `tool_use` blocks carry an undocumented `caller: {"type":"direct"}` field, replayed and accepted. With a reasoning-inviting prompt each model emits thinking (empty text, one `signature_delta`), interleaved thinking, text, tool_use; replay accepted on all three.
+- D5(f): a one-character system change on the Sonnet step 2 was accepted, with and without thinking in the replayed turn.
+- D6: accepted (200); see the full report for a behavioural side effect.

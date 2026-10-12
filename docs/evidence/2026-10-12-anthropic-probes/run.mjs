@@ -72,9 +72,24 @@ const steps = {
     const system = SYSTEM.replace(/\.$/, '!');
     await send({ id: 'D5f-sonnet-changed-system', model: SONNET, body: nativeBody({ model: SONNET, maxTokens: 4096, system, messages: m2, tools: TOOLS }), worstInput: 10000 });
   },
+  async '3b'(models = process.argv[3] ?? 'sonnet') {
+    // D5 with a prompt that invites thinking, so thinking blocks, signatures and their replay can be seen.
+    const prompt = 'Think step by step before using any tool: which is larger, 17 x 23 or 19 x 21? If the first is larger, '
+      + 'call get_weather for Paris, otherwise for Rome. Also call get_time. Then answer in one sentence.';
+    const byName = { sonnet: SONNET, opus: OPUS, fable: FABLE };
+    for (const n of models.split(',')) {
+      const r = await roundTrip(`D5-think-${n}`, byName[n], { prompt });
+      if (!r.messages2) continue;
+      writeFileSync(join(DIR, `D5-think-${n}-step2.messages.json`), JSON.stringify(r.messages2, null, 2) + '\n');
+      if (n === 'sonnet') {
+        // D5(f) with thinking in the replayed turn: the step-2 request under a system prompt changed by one character.
+        await send({ id: 'D5f-think-sonnet-changed-system', model: SONNET, body: nativeBody({ model: SONNET, maxTokens: 4096, system: SYSTEM.replace(/\.$/, '!'), messages: r.messages2, tools: TOOLS }), worstInput: 10000 });
+      }
+    }
+  },
   async 4() {
     // D6: run 1 is a tool round trip ending in an answer; run 2 replays only its prompt and answer text.
-    const prompt = 'Call get_weather for Paris, then tell me in one sentence whether I need an umbrella.';
+    const prompt = 'Think step by step: is 391 a prime number? If it is, call get_weather for Paris, otherwise for Rome. Then, after thinking about the result, tell me in one sentence whether I need an umbrella.';
     const r1 = await roundTrip('D6-run1', SONNET, { prompt });
     if (!r1.s2 || r1.s2.status !== 200) return;
     const answer = r1.s2.facts.blocks.filter((b) => b.type === 'text').map((b) => b.text).join('');
