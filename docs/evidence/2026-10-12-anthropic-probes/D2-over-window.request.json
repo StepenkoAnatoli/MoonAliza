@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "https://api.anthropic.com/v1/messages",
+  "headers": {
+    "Content-Type": "application/json",
+    "anthropic-version": "2023-06-01",
+    "Authorization": "Bearer <redacted>"
+  },
+  "bodyUtf8Bytes": 1160125,
+  "bodySha256": "66a0d8d37c36c9b4dbd4961a7d71d2ebadc50d6001aab9e23e2cf72d97a71f07",
+  "body": {
+    "model": "claude-haiku-4-5-20251001",
+    "max_tokens": 64,
+    "messages": [
+      {
+        "role": "user",
+        "content": "<filler: 20000 lines \"Line NNNNN: the quick brown fox jumps over the lazy dog.\", 1139999 UTF-8 bytes, sha256 c5fd3227c69ec099a8156a9e22c23cb75a8840762591620f4468e3b7c2695eca of the whole content, then \"\\n\\nReply with OK.\">"
+      }
+    ],
+    "stream": true
+  }
+}

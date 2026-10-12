@@ -1,0 +1,36 @@
+{
+  "id": "D2-over-window",
+  "model": "claude-haiku-4-5-20251001",
+  "auth": "bearer",
+  "status": 400,
+  "headers": {
+    "anthropic-organization-id": "<redacted-id>",
+    "anthropic-workspace-id": "<redacted-id>",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "a49453044b8ef43a-ATL",
+    "content-encoding": "br",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+    "content-type": "application/json",
+    "date": "Mon, 12 Oct 2026 07:17:21 GMT",
+    "request-id": "req_011Cfww8XJDMkdomNnZtuQaJ",
+    "server": "cloudflare",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "traceresponse": "00-a967e7d3ad5cdd86f4c905c00c1f06da-4230557c745e4a24-01",
+    "transfer-encoding": "chunked",
+    "vary": "Accept-Encoding",
+    "x-robots-tag": "none",
+    "x-should-retry": "false"
+  },
+  "latencyMs": {
+    "headers": 670,
+    "total": 673
+  },
+  "responseBytes": 164,
+  "isSse": false,
+  "usage": {},
+  "cost": 0,
+  "costBasis": "refused, no usage reported",
+  "worstCase": 0.40032,
+  "retries": [],
+  "facts": null
+}
