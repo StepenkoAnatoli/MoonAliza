@@ -22,7 +22,8 @@ export function providerStateLeaves(data: string): string {
 
 /**
  * The screen every completion passes in main before it crosses to the engine (more-models-phase2.md section 6; S-1), in
- * this order: (1) a tool step's calls, as their JSON text, must come back from `redact` unchanged; (2) a tool step's
+ * this order: (1) a tool step's calls, as their JSON text and as their keys and string leaves, must come back from
+ * `redact` unchanged; (2) a tool step's
  * provider state - every key and string leaf of its data, and the unredacted content, since a secret split across two
  * text blocks appears whole only there - must come back unchanged too, and the state is never redacted in place,
  * because an edited block is a 400 on the next step (E-09 l.161; E-12 l.167); (3) the content is redacted, as before.
@@ -32,7 +33,9 @@ export function providerStateLeaves(data: string): string {
 export async function screenCompletion(output: Completion, redact: (text: string) => Promise<string>): Promise<Completion> {
   if (output.toolCalls) {
     const encoded = JSON.stringify(output.toolCalls);
-    if (await redact(encoded) !== encoded) throw new Error('PROVIDER_PROTOCOL_ERROR');
+    // The JSON text, as infer() checked it before, and every key and string leaf, so a `"` or `\` in a secret cannot
+    // hide behind JSON escaping in a kind that carries no state (integration review P2-IR-1).
+    for (const text of [encoded, providerStateLeaves(encoded)]) if (await redact(text) !== text) throw new Error('PROVIDER_PROTOCOL_ERROR');
   }
   if (output.providerState) {
     let leaves: string;

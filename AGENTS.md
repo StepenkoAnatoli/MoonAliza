@@ -77,7 +77,7 @@ _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`); environ
 | Invariant | Evidence |
 |-----------|----------|
 | A research job never dispatches twice | `tests/research-jobs-state.test.ts` (SQL triggers, single dispatch), `tests/research-collector-supervisor.test.ts` (ambiguous, lost reply, restart, spool) |
-| Tokens never reach the engine, DB, events, logs, renderer, argv or files in clear | supervisor test byte scans, `tests/research-collector-settings.test.ts`, `e2e/research-collector.spec.ts` (userData scan); `tests/provider-screen.test.ts` (a vault secret in a tool step's provider state, in a leaf, a key, escaped or split across text blocks, fails the step in main before it crosses; More models Phase 2, S-1) |
+| Tokens never reach the engine, DB, events, logs, renderer, argv or files in clear | supervisor test byte scans, `tests/research-collector-settings.test.ts`, `e2e/research-collector.spec.ts` (userData scan); `tests/provider-screen.test.ts` (a vault secret in a tool step's provider state, in a leaf, a key, escaped or split across text blocks, fails the step in main before it crosses, and so does one escaped in the tool calls of any kind; More models Phase 2, S-1, P2-IR-1) |
 | `approved` only through the kit's gate and fresh validation of exact bytes | `research_readiness_reserved` trigger tests in `tests/research-jobs-state.test.ts` |
 | Journal before effect; owned-process Stop | `tests/commands.test.ts`, `tests/guarded-process.test.ts`, `e2e/recovery.spec.ts` |
 | Imported research is untrusted data | offline validator tests in `tests/research-kit.test.ts` |

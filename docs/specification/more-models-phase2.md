@@ -1183,11 +1183,6 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   error): today every failure there shows the generic INTERNAL_ERROR text (section 6); a named refusal
   needs a public mapping in `publicMessages` (`src/main/bridge.ts`), a new public code under F-21, so it
   goes through the stop-list review with the recordings as its evidence.
-- Pre-existing: the tool-call secret check reads JSON text, so escaping can hide a secret in a tool
-  input (a saved credential containing `"` or `\`). U4 moved the rule unchanged into `screenCompletion`
-  (`src/main/provider-screen.ts`), as section 6 required; the state screen reads leaves, so the
-  `anthropic` kind is covered, the kinds that carry no state are not. Screening `toolCalls` by leaves
-  too (U4-R3) changes the existing kinds' behaviour, so it is its own change.
 - History keeps a run's final answer and drops its tool turns, so a later run can conclude that its
   earlier answer was invented (D6, quoted in "As built"). Keeping a compact record of the tools a run
   used, or replaying its tool turns, is a quality change across every kind, decided with the

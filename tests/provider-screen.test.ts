@@ -115,6 +115,19 @@ test('a credential in the tool calls of a step with no state fails with PROVIDER
   expect((await failure(screenCompletion(step, redact)))?.message).toBe('PROVIDER_PROTOCOL_ERROR');
 });
 
+test('a credential holding `"` or `\\` in a tool input of a step with no state fails too: the calls are screened by their leaves', async () => {
+  // A chat kind (openai-compatible, ollama) carries no state, so the calls are the only place such a secret is seen.
+  // JSON text writes ESCAPED as `Quote\"And\\Backslash`, so a check of that text alone passes it in clear (integration
+  // review P2-IR-1). Guard: screen the calls by their JSON text only (mutation: drop the leaves check from step 1); the
+  // call then passes with ESCAPED in its input, in a value and in a key.
+  const redact = await vaultWith(SECRETS);
+  const inputs: Array<ToolCall['input']> = [{ command: `curl -H "Authorization: ${ESCAPED}"` }, { [ESCAPED]: 'x' }];
+  for (const input of inputs) {
+    const step: Completion = { content: 'Running.', outcome: 'tool_calls', toolCalls: [{ id: 'c1', name: 'run_command', input }] };
+    expect((await failure(screenCompletion(step, redact)))?.message, JSON.stringify(input)).toBe('PROVIDER_PROTOCOL_ERROR');
+  }
+});
+
 describe('everything else is as infer() did it before (no state)', () => {
   test('a final answer, and a tool step with no state, have their content redacted and nothing else changed', async () => {
     // Guard: the content redaction (mutation: return the output unchanged; the credential then reaches the engine).
