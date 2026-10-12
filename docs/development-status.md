@@ -10,7 +10,7 @@ OpenAI-shaped streams now end in failure, not a saved partial answer, on a vendo
 
 ## Product name and Operate mode
 
-The product name is MoonAliza ([decision 14](specification/decisions.md), 2026-10-12); from October 3 to October 12 it was shown as Moonzila ([decision 12](specification/decisions.md)), and the installed-app identifiers never changed, see HANDOFF.md. [Operate mode](specification/operate-mode.md) and its [stage plan](superpowers/plans/2026-10-03-operate-mode.md) are specified, not implemented; they follow the research-jobs phase. Verification for the October 3 change: typecheck, lint, build and the full Linux test run compared with the 74-failure Linux baseline, plus the Windows verification workflow on the PR head.
+The product name is MoonAliza ([decision 14](specification/decisions.md), 2026-10-12); from October 4 (requested October 3) to October 12 it was shown as Moonzila ([decision 12](specification/decisions.md)), and the installed-app identifiers never changed, see HANDOFF.md. [Operate mode](specification/operate-mode.md) and its [stage plan](superpowers/plans/2026-10-03-operate-mode.md) are specified, not implemented; they follow the research-jobs phase. Verification for the October 3 change: typecheck, lint, build and the full Linux test run compared with the 74-failure Linux baseline, plus the Windows verification workflow on the PR head.
 
 ## Public GitHub reading (October 2 checkpoint)
 
