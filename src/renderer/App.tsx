@@ -264,7 +264,7 @@ function AnthropicHint() {
     <p>Thinking counts toward the maximum response. Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens.</p>
     <p>A step can take several minutes.</p>
     <p>{ANTHROPIC_DATA_USE}</p>
-    <p>Moonzila's Anthropic connection is built from Anthropic's documentation and is not yet checked against the live API.</p>
+    <p>Moonzila's Anthropic connection is tested against requests and responses recorded from the live API; the app itself has not yet been run against it.</p>
   </div>;
 }
 

@@ -228,13 +228,14 @@ test('the profile form offers Anthropic API after the existing options, with its
   fireEvent.change(provider, { target: { value: 'anthropic' } });
   expect(endpoint()).toBe('https://api.anthropic.com/v1');
   const hint = screen.getByRole('note', { name: 'Anthropic API notes' }).textContent ?? '';
-  // In the spec's order: workspace key, thinking and the model figures, duration, data use, not checked live.
-  const order = ['created for a single workspace', 'Thinking counts toward the maximum response', 'Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens', 'several minutes', ANTHROPIC_DATA_USE, 'not yet checked against the live API'];
+  // In the spec's order: workspace key, thinking and the model figures, duration, data use, how it was checked.
+  const order = ['created for a single workspace', 'Thinking counts toward the maximum response', 'Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens', 'several minutes', ANTHROPIC_DATA_USE, 'tested against requests and responses recorded from the live API; the app itself has not yet been run against it'];
   const positions = order.map(fragment => hint.indexOf(fragment));
   expect(positions.every(position => position >= 0), `missing: ${order.filter((_fragment, index) => positions[index]! < 0).join(' | ')}`).toBe(true);
   expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   expect(hint).not.toContain('Haiku');
   expect(hint).not.toContain('not retained');
+  expect(hint).not.toContain('not yet checked against the live API');
   fireEvent.change(provider, { target: { value: 'ollama' } });
   expect(endpoint()).toBe('http://127.0.0.1:11434');
   expect(screen.queryByRole('note', { name: 'Anthropic API notes' })).toBeNull();

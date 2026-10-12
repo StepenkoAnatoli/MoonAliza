@@ -721,13 +721,16 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
     commitments it makes where a feature necessarily requires storage (l.20), with Covered Models
     excepted, and the hint neither repeats it nor says the page is silent on retention. The hint never
     says "not retained";
-  - this adapter is built from Anthropic's documentation and is not yet checked against the live API.
+  - this adapter is built from Anthropic's documentation and is not yet checked against the live API
+    (as built: "Moonzila's Anthropic connection is tested against requests and responses recorded from
+    the live API; the app itself has not yet been run against it", after the 2026-10-12 probes, U4-R5).
   No token values are prefilled: presets are Phase 4.
 - README: the kind, its endpoint, single-workspace keys, always cloud (refused in local-only
   conversations; an Ollama reached through this kind is treated as cloud, so local-only users use the
   Ollama kind), thinking kept for the run but never shown or stored, a step can take several minutes, a
   long task can end with the context-limit message, the same data-use sentence as the hint, and the
-  adapter built from Anthropic's documentation and not yet checked against the live API. If the D10
+  adapter built from Anthropic's documentation and not yet checked against the live API (as built: the
+  hint's sentence after the probes, above). If the D10
   verdict keeps commit 3, the README also gets section 4's credentials sentence, which concerns every
   kind.
 - **Locality.** `validateEndpoint` labels every `anthropic` endpoint `external`, loopback included. A
