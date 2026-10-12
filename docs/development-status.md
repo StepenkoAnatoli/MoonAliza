@@ -1,4 +1,8 @@
-# Development status - 2026-10-11 - More models, Phase 1: stream robustness and Ollama locality
+# Development status - 2026-10-12 - More models, Phase 2: the Anthropic Messages adapter
+
+## More models, Phase 2 (2026-10-12)
+
+A new profile kind, **Anthropic API**, talks to Anthropic's Messages API directly ([design](specification/more-models-phase2.md)): Bearer key, the 2023-06-01 version header, streamed answers with tool calls, and thinking blocks sent back unchanged within a run (append-only runs, so a tool run keeps half the input budget for its own steps and never edits what it already sent). An Anthropic profile is always cloud, a loopback address included, so local-only conversations refuse it. Only keys created for a single workspace work for now. Its requests match ones the live API accepted in probes on 2026-10-12 (`docs/evidence/2026-10-12-anthropic-probes.md`). **Behaviour changes for every provider:** chat requests no longer carry the app session's cookies or saved sign-ins (`credentials: 'omit'`; a gateway that needs Windows-integrated sign-in or a client certificate may refuse them), and the message for a refused tool step now also covers a saved credential found in a model's output. Existing profiles and requests are otherwise unchanged; no database migration.
 
 ## More models, Phase 1 (2026-10-11)
 
