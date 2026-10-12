@@ -22,7 +22,7 @@ One draft pull request per phase, each merged under the AGENTS.md merge checks.
 | Phase | Content | Rests on |
 |-------|---------|----------|
 | 1 | Stream robustness for every OpenAI-shaped vendor; fail-closed locality for a user-run Ollama | wire brief, design points 3 and 8; Decision step 1 (first build step) |
-| 2 | The per-message provider-state slot, a per-kind request builder, and the Anthropic Messages adapter with its profile option | wire brief, design points 1, 2, 4-7; Decision step 2 |
+| 2 | The per-message provider-state slot, a per-kind request builder, and the Anthropic Messages adapter with its profile option ([design](more-models-phase2.md)) | wire brief, design points 1, 2, 4-7; Decision step 2 |
 | 3 | The OpenAI Responses adapter (and with it gpt-6.1-sol with tools) | wire brief, Decision step 3; shortlist design point 2 |
 | 4 | Fixes to the existing kind (DeepSeek, Mistral, OpenRouter, Gemini 3 `extra_content`) and the dated cloud presets with their data-use classes | wire brief, Decision step 4; shortlist Decision, first build step. Needs the user's vendor keys for the day-one probes (wire U-18, shortlist U-06) |
 | 5 | The Gemini native adapter (generateContent) | wire brief, Decision step 5 |
