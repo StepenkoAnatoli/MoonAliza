@@ -242,6 +242,31 @@ describe('captured and built streams, folded and mapped', () => {
     expect(completion.providerState).toEqual({ format: 'anthropic-messages@1', appendOnly: true, data: `{"content":[{"type":"thinking","thinking":"","signature":"${REFUSAL_SIGNATURE}"},{"type":"text","text":"Listing."},{"type":"tool_use","id":"toolu_01","name":"list_files","input":{"path":"."}}]}` });
   });
 
+  test('a built interleaved turn with two calls (thinking, text, tool_use, text, tool_use): both calls, the exact state, and step 2 encodes it', async () => {
+    // Built from E-10 shapes, not a capture: each call's partial JSON is different and split differently across deltas.
+    // Guards: every tool_use block is a call (mutation: keep only the first call, `.slice(0, 1)`; step 2's encoder would
+    // then refuse the state on the call count); the text blocks join with no separator (mutation: join them with "\n";
+    // the encoder would then refuse the text); each block's partial JSON starts empty (mutation: a block starts with the
+    // previous block's partial JSON; the second call's input then fails to parse).
+    const second: ToolCall = { id: 'toolu_02', name: 'list_files', input: { path: 'src' } };
+    const firstUse: BuiltBlock = { start: { type: 'tool_use', id: 'toolu_01', name: 'list_files', input: {} }, deltas: [{ type: 'input_json_delta', partial_json: '' }, { type: 'input_json_delta', partial_json: '{"pa' }, { type: 'input_json_delta', partial_json: 'th":"."}' }] };
+    const secondUse: BuiltBlock = { start: { type: 'tool_use', id: 'toolu_02', name: 'list_files', input: {} }, deltas: [{ type: 'input_json_delta', partial_json: '{"path"' }, { type: 'input_json_delta', partial_json: ':"src"}' }] };
+    const completion = await map(builtStream([signedThinking('Two folders.'), textOf('Listing', ' the root.'), firstUse, textOf(' Then', ' src.'), secondUse]));
+    expect(completion).toEqual({
+      content: 'Listing the root. Then src.', outcome: 'tool_calls', toolCalls: [LIST_FILES_CALL, second], usage: { inputTokens: 10, outputTokens: 5 },
+      providerState: { format: 'anthropic-messages@1', appendOnly: true, data: `{"content":[{"type":"thinking","thinking":"Two folders.","signature":"${REFUSAL_SIGNATURE}"},{"type":"text","text":"Listing the root."},{"type":"tool_use","id":"toolu_01","name":"list_files","input":{"path":"."}},{"type":"text","text":" Then src."},{"type":"tool_use","id":"toolu_02","name":"list_files","input":{"path":"src"}}]}` },
+    });
+    // Step 2: the completion as the engine carries it, both results after it. The encoder accepts the state the outcome
+    // built. Guard: each tool_use block is compared with its own call (mutation: compare each with the first call).
+    const step: InferenceMessage = { role: 'assistant', content: completion.content, toolCalls: completion.toolCalls, providerState: completion.providerState };
+    const messages = JSON.parse(encode([{ role: 'system', content: 'S' }, { role: 'user', content: 'Go' }, step, result(LIST_FILES_CALL, 'a.txt'), result(second, 'b.txt')], [REFUSAL_TOOL])).messages as unknown[];
+    expect(messages).toEqual([
+      { role: 'user', content: 'Go' },
+      { role: 'assistant', content: JSON.parse(completion.providerState!.data).content },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_01', content: 'a.txt' }, { type: 'tool_result', tool_use_id: 'toolu_02', content: 'b.txt' }] },
+    ]);
+  });
+
   test('a tool_use stream without thinking gives appendOnly false', async () => {
     // Guard: appendOnly follows the blocks (mutation: appendOnly always true).
     const completion = await map(builtStream([textOf('Listing.'), toolUseBlock()]));
