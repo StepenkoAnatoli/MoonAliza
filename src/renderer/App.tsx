@@ -259,7 +259,7 @@ function defaultEndpoint(kind: string): string {
 const ANTHROPIC_DATA_USE = "Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs; Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page refers to its commercial data retention policy, which Moonzila has not reviewed.";
 /** Shown while the Anthropic API kind is selected. Names only models that are not retiring (SL-E01 l.22-23, l.27). */
 function AnthropicHint() {
-  return <div className="muted" role="note" aria-label="Anthropic API notes" style={{ display: 'grid', gap: 6 }}>
+  return <div className="muted provider-hint" role="note" aria-label="Anthropic API notes">
     <p>Use an API key created for a single workspace.</p>
     <p>Thinking counts toward the maximum response. Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens.</p>
     <p>A step can take several minutes.</p>

@@ -227,6 +227,8 @@ test('the profile form offers Anthropic API after the existing options, with its
   expect(screen.queryByRole('note', { name: 'Anthropic API notes' })).toBeNull();
   fireEvent.change(provider, { target: { value: 'anthropic' } });
   expect(endpoint()).toBe('https://api.anthropic.com/v1');
+  // The page's CSP is style-src 'self': the note is laid out by the stylesheet, never by an inline style (U4-R4).
+  expect(screen.getByRole('note', { name: 'Anthropic API notes' }).getAttribute('style')).toBeNull();
   const hint = screen.getByRole('note', { name: 'Anthropic API notes' }).textContent ?? '';
   // In the spec's order: workspace key, thinking and the model figures, duration, data use, how it was checked.
   const order = ['created for a single workspace', 'Thinking counts toward the maximum response', 'Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens', 'several minutes', ANTHROPIC_DATA_USE, 'tested against requests and responses recorded from the live API; the app itself has not yet been run against it'];
