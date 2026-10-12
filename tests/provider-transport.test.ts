@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { validateEndpoint, readBoundedJson, complete, inferenceErrorCode, type InferenceMessage } from '../src/main/inference';
 import { CompletionSchema, FromEngineSchema, PROVIDER_STATE_MAX, ProviderStateSchema, ToEngineSchema } from '../src/engine/control';
 import { PublicErrorSchema, type ToolSpec } from '../src/shared';
@@ -345,4 +345,157 @@ test('a failure finish_reason wins over a refusal, and stop, length, content_fil
     expect((await complete(profile, [], { fetcher: async () => Response.json(mistral(reason)), signal: signal() })).outcome).toBe(outcome);
   }
   expect((await complete(profile, [], { tools, fetcher: async () => Response.json({ choices: [{ message: { tool_calls: [openaiCall] }, finish_reason: 'tool_calls' }] }), signal: signal() })).outcome).toBe('tool_calls');
+});
+
+// More models Phase 2, U2 commit 1: pins written on the unchanged transport, before the per-kind seam
+// (docs/specification/more-models-phase2.md section 4; REQUIREMENTS-P2 F-4, F-22, T-2). Each passes on the code it was
+// written against and is shown red under a named mutation of that code; the seam (commit 2) must pass them unchanged.
+
+const snapshotTools: ToolSpec[] = [tools[0]!, { name: 'list_files', description: 'List "files" in a folder', parameters: { type: 'object', properties: { path: { type: 'string' } }, additionalProperties: false } }];
+const multiStep: InferenceMessage[] = [
+  { role: 'system', content: 'You are a coding agent.' },
+  { role: 'user', content: 'Read it' },
+  { role: 'assistant', content: 'Reading.', toolCalls: [call, { id: 'call-provider-2', name: 'list_files', input: { path: '.' } }] },
+  { role: 'tool', content: 'export const answer = 42;', toolCallId: call.id, toolName: call.name },
+  { role: 'tool', content: 'src\nREADME.md', toolCallId: 'call-provider-2' }, // no toolName: Ollama's tool_name comes from the call
+  { role: 'assistant', content: '', toolCalls: [{ id: 'call-provider-3', name: 'read_file', input: { path: 'README.md' } }] },
+  { role: 'tool', content: '# Moonzila', toolCallId: 'call-provider-3', toolName: 'read_file' },
+  { role: 'assistant', content: 'Done.' },
+  { role: 'user', content: 'Thanks "quoted" \\ ünïcode' },
+];
+const chatProfile = { kind: 'openai-compatible' as const, endpoint: 'https://model.example/v1/', model: 'test-model', outputTokens: 512 };
+const ollamaProfile = { kind: 'ollama' as const, endpoint: 'http://127.0.0.1:11434', model: 'qwen3:8b', outputTokens: 1024 };
+const answer = (kind: string) => kind === 'ollama' ? Response.json({ message: { content: 'ok' }, done: true, done_reason: 'stop' }) : Response.json({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }] });
+const openaiMessages = String.raw`"messages":[{"role":"system","content":"You are a coding agent."},{"role":"user","content":"Read it"},{"role":"assistant","content":"Reading.","tool_calls":[{"id":"call-provider-1","type":"function","function":{"name":"read_file","arguments":"{\"path\":\"src/main.ts\"}"}},{"id":"call-provider-2","type":"function","function":{"name":"list_files","arguments":"{\"path\":\".\"}"}}]},{"role":"tool","content":"export const answer = 42;","tool_call_id":"call-provider-1"},{"role":"tool","content":"src\nREADME.md","tool_call_id":"call-provider-2"},{"role":"assistant","content":"","tool_calls":[{"id":"call-provider-3","type":"function","function":{"name":"read_file","arguments":"{\"path\":\"README.md\"}"}}]},{"role":"tool","content":"# Moonzila","tool_call_id":"call-provider-3"},{"role":"assistant","content":"Done."},{"role":"user","content":"Thanks \"quoted\" \\ ünïcode"}]`;
+const ollamaMessages = String.raw`"messages":[{"role":"system","content":"You are a coding agent."},{"role":"user","content":"Read it"},{"role":"assistant","content":"Reading.","tool_calls":[{"id":"call-provider-1","function":{"index":0,"name":"read_file","arguments":{"path":"src/main.ts"}}},{"id":"call-provider-2","function":{"index":1,"name":"list_files","arguments":{"path":"."}}}]},{"role":"tool","content":"export const answer = 42;","tool_call_id":"call-provider-1","tool_name":"read_file"},{"role":"tool","content":"src\nREADME.md","tool_call_id":"call-provider-2","tool_name":"list_files"},{"role":"assistant","content":"","tool_calls":[{"id":"call-provider-3","function":{"index":0,"name":"read_file","arguments":{"path":"README.md"}}}]},{"role":"tool","content":"# Moonzila","tool_call_id":"call-provider-3","tool_name":"read_file"},{"role":"assistant","content":"Done."},{"role":"user","content":"Thanks \"quoted\" \\ ünïcode"}]`;
+const toolsJson = String.raw`"tools":[{"type":"function","function":{"name":"read_file","description":"Read a file","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"],"additionalProperties":false}}},{"type":"function","function":{"name":"list_files","description":"List \"files\" in a folder","parameters":{"type":"object","properties":{"path":{"type":"string"}},"additionalProperties":false}}}]`;
+const json = ['Content-Type', 'application/json'];
+const snapshots: Array<[string, InferenceProfileInput, InferenceMessage[], { tools?: ToolSpec[]; secret?: string; managedOllama?: { numGpu: 0; keepAlive: -1 } }, { url: string; headers: string[][]; body: string }]> = [
+  ['openai-compatible, plain', chatProfile, [{ role: 'user', content: 'hello' }], {}, {
+    url: 'https://model.example/v1/chat/completions', headers: [json],
+    body: String.raw`{"model":"test-model","messages":[{"role":"user","content":"hello"}],"max_completion_tokens":512,"stream_options":{"include_usage":true},"stream":true}`,
+  }],
+  ['openai-compatible, with tools, multi-step, keyed', { ...chatProfile, contextTokens: 32768 }, multiStep, { tools: snapshotTools, secret: 'sk-test-key' }, {
+    url: 'https://model.example/v1/chat/completions', headers: [json, ['Authorization', 'Bearer sk-test-key']],
+    body: `{"model":"test-model",${openaiMessages},${toolsJson},"max_completion_tokens":512,"stream_options":{"include_usage":true},"stream":true}`,
+  }],
+  ['ollama, plain', ollamaProfile, [{ role: 'user', content: 'hello' }], {}, {
+    url: 'http://127.0.0.1:11434/api/chat', headers: [json],
+    body: String.raw`{"model":"qwen3:8b","messages":[{"role":"user","content":"hello"}],"options":{"num_predict":1024},"truncate":false,"shift":false,"stream":true}`,
+  }],
+  ['ollama, with tools, multi-step, keyed', { ...ollamaProfile, contextTokens: 8192 }, multiStep, { tools: snapshotTools, secret: 'ollama-key' }, {
+    url: 'http://127.0.0.1:11434/api/chat', headers: [json, ['Authorization', 'Bearer ollama-key']],
+    body: `{"model":"qwen3:8b",${ollamaMessages},${toolsJson},"options":{"num_predict":1024,"num_ctx":8192},"truncate":false,"shift":false,"stream":true}`,
+  }],
+  ['ollama, managed, with tools, multi-step', { ...ollamaProfile, contextTokens: 4096 }, multiStep, { tools: snapshotTools, managedOllama: { numGpu: 0, keepAlive: -1 } }, {
+    url: 'http://127.0.0.1:11434/api/chat', headers: [json],
+    body: `{"model":"qwen3:8b",${ollamaMessages},${toolsJson},"options":{"num_predict":1024,"num_ctx":4096,"num_gpu":0},"truncate":false,"shift":false,"keep_alive":-1,"stream":true}`,
+  }],
+];
+type InferenceProfileInput = Parameters<typeof complete>[0];
+
+test.each(snapshots)('byte-exact request snapshot: %s (T-2)', async (_name, target, messages, extra, expected) => {
+  // Taken on the unchanged transport (U0 base) and kept byte for byte by the seam: URL, method, headers in order, redirect
+  // and the body string. Guard: any byte of the encoder (mutation: drop `shift: false` from the Ollama options).
+  const sent: Array<{ url: string; init: RequestInit }> = [];
+  await complete(target, messages, { ...extra, signal: signal(), fetcher: async (url, init) => { sent.push({ url, init }); return answer(target.kind); } });
+  expect(sent).toHaveLength(1);
+  const { url, init } = sent[0]!;
+  expect({ url, method: init.method, headers: Object.entries(init.headers as Record<string, string>), redirect: init.redirect, body: init.body })
+    .toEqual({ url: expected.url, method: 'POST', headers: expected.headers, redirect: 'error', body: expected.body });
+});
+
+type Refused = { profile: InferenceProfileInput; messages: InferenceMessage[]; aborted?: boolean; tools?: ToolSpec[]; secret?: string; managedOllama?: { numGpu: 0; keepAlive: -1 } };
+async function refusal(input: Refused): Promise<{ error: unknown; fetched: number }> {
+  let fetched = 0; const controller = new AbortController();
+  if (input.aborted) controller.abort();
+  try {
+    await complete(input.profile, input.messages, { signal: controller.signal, ...(input.tools ? { tools: input.tools } : {}), ...(input.secret ? { secret: input.secret } : {}), ...(input.managedOllama ? { managedOllama: input.managedOllama } : {}), fetcher: async () => { fetched += 1; return answer(input.profile.kind); } });
+  } catch (error) { return { error, fetched }; }
+  return { error: undefined, fetched };
+}
+const orphanResult: InferenceMessage[] = [{ role: 'tool', content: 'text', toolCallId: call.id, toolName: call.name }];
+const managed = { numGpu: 0, keepAlive: -1 } as const;
+// F-4: for each adjacent pair of today's pre-checks whose errors differ, an input failing both gets the earlier check's
+// error and makes no fetch. Each pin is red under the swap of its own two checks (named in the row).
+const orderPins: Array<[string, Refused, string]> = [
+  // Mutation: swap the cancellation check and validateEndpoint.
+  ['cancellation before the endpoint', { profile: { ...chatProfile, endpoint: 'http://api.example.com/v1' }, messages: [], aborted: true }, 'RUN_CANCELLED'],
+  // Mutation: swap validateEndpoint and the profile checks.
+  ['the endpoint before the profile', { profile: { ...chatProfile, endpoint: 'http://api.example.com/v1', model: '' }, messages: [] }, 'INVALID_ENDPOINT'],
+  // Mutation: swap the profile checks and the kind check.
+  ['the profile before the kind', { profile: { ...chatProfile, kind: 'openai-responses', outputTokens: 0 }, messages: [] }, 'INVALID_PROFILE'],
+  // Mutation: swap the kind check and the managed-Ollama check (managed options on a non-Ollama kind are INVALID_PROFILE).
+  ['the kind before the managed-Ollama options', { profile: { ...chatProfile, kind: 'openai-responses' }, messages: [], managedOllama: managed }, 'NOT_IMPLEMENTED'],
+  // Mutation: swap the managed-Ollama check and the transcript check (managed needs contextTokens).
+  ['the managed-Ollama options before the transcript', { profile: ollamaProfile, messages: orphanResult, managedOllama: managed }, 'INVALID_PROFILE'],
+];
+test.each(orderPins)('pre-check order (F-4): %s', async (_name, input, code) => {
+  const { error, fetched } = await refusal(input);
+  expect((error as Error | undefined)?.message).toBe(code);
+  expect(fetched).toBe(0);
+});
+
+test.each(['openai-compatible', 'ollama'] as const)('the transcript, tools and body-size checks each refuse a %s request with no fetch (F-4)', async kind => {
+  // The three share INVALID_INFERENCE_REQUEST, so their relative order is not observable and is not pinned; each is
+  // pinned as refusing before the fetch. Mutation, one per check: throw that check's error only after the fetch.
+  const target = kind === 'ollama' ? ollamaProfile : chatProfile;
+  const hello: InferenceMessage[] = [{ role: 'user', content: 'hello' }];
+  const cases: Refused[] = [
+    { profile: target, messages: orphanResult }, // transcript: a result with no call
+    { profile: target, messages: hello, tools: [tools[0]!, tools[0]!] }, // tools: a duplicate declaration
+    { profile: target, messages: Array.from({ length: 5 }, () => ({ role: 'user' as const, content: 'x'.repeat(2_000_000) })) }, // body over 8 MiB
+  ];
+  for (const [index, input] of cases.entries()) {
+    const { error, fetched } = await refusal(input);
+    expect((error as Error | undefined)?.message, `case ${index}`).toBe('INVALID_INFERENCE_REQUEST');
+    expect(fetched, `case ${index}`).toBe(0);
+  }
+});
+
+test('openai-responses has no adapter: NOT_IMPLEMENTED with no fetch (F-4)', async () => {
+  // Guard: the kind check (mutation: admit openai-responses; it is then posted as a chat request).
+  const { error, fetched } = await refusal({ profile: { ...chatProfile, kind: 'openai-responses' }, messages: [{ role: 'user', content: 'hello' }] });
+  expect((error as Error | undefined)?.message).toBe('NOT_IMPLEMENTED');
+  expect(fetched).toBe(0);
+});
+
+test.each(['openai-compatible', 'ollama'] as const)('a Stop that lands while a %s answer is read wins over an answer the outcome refuses', async kind => {
+  // The cancellation re-check sits after the read and before the outcome (more-models-phase2.md section 4: `part.read`,
+  // the re-check, `part.outcome`). The answer reads cleanly and only its outcome refuses it (a call to a tool that was not
+  // offered). Mutation: move the re-check after the outcome; the call then fails as PROVIDER_INVALID_RESPONSE.
+  const controller = new AbortController();
+  const target = kind === 'ollama' ? ollamaProfile : chatProfile;
+  const unoffered = kind === 'ollama'
+    ? { message: { content: '', tool_calls: [{ function: { name: call.name, arguments: call.input } }] }, done: true, done_reason: 'stop' }
+    : { choices: [{ message: { content: null, tool_calls: [openaiCall] }, finish_reason: 'tool_calls' }] };
+  const fetcher = async () => { controller.abort(); return Response.json(unoffered); };
+  await expect(complete(target, [{ role: 'user', content: 'hello' }], { fetcher: async () => Response.json(unoffered), signal: signal() })).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
+  await expect(complete(target, [{ role: 'user', content: 'hello' }], { fetcher, signal: controller.signal })).rejects.toThrow('RUN_CANCELLED');
+});
+
+test.each(['openai-compatible', 'ollama'] as const)('a %s request still aborts at 120 s and not before (F-22 pin)', async kind => {
+  // Fake timers cannot reach AbortSignal.timeout (a Node-internal timer), so on the unchanged code it is replaced for this
+  // test by a setTimeout-backed signal (more-models-phase2.md section 4); after the seam the spy is no longer called and
+  // complete()'s own setTimeout is the faked timer. Mutations: AbortSignal.timeout(600_000) on the unchanged code;
+  // timeoutMs: 600_000 on the chat kinds after the seam.
+  vi.useFakeTimers();
+  vi.spyOn(AbortSignal, 'timeout').mockImplementation(ms => { const c = new AbortController(); setTimeout(() => c.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')), ms); return c.signal; });
+  try {
+    let seen: AbortSignal | undefined;
+    const fetcher = (_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      seen = init.signal!;
+      init.signal!.addEventListener('abort', () => reject(init.signal!.reason), { once: true });
+    });
+    const target = kind === 'ollama' ? ollamaProfile : chatProfile;
+    const outcome = complete(target, [{ role: 'user', content: 'hello' }], { fetcher, signal: signal() }).then(() => 'resolved', (error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(seen, 'the request was sent').toBeDefined();
+    expect(seen!.aborted, 'not aborted before 120 s').toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(seen!.aborted, 'aborted at 120 s').toBe(true);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(DOMException);
+    expect((error as DOMException).name).toBe('TimeoutError');
+  } finally { vi.useRealTimers(); }
 });
