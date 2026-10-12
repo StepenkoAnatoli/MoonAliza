@@ -381,8 +381,11 @@ async function runOnce(app: Application, sessionId: string, prompt: string, id =
 async function failureOf(app: Application, sessionId: string) {
   return (await app.handle(request('session.read', { sessionId }, `read-${Math.random()}`)) as { failure: { code: string; message: string; retry: string } | null }).failure;
 }
-/** Three appendOnly-or-not tool steps reading files larger than the 3,072-byte excerpt, then an answer. */
-async function threeReads(appendOnly: boolean) {
+/**
+ * Three tool steps reading files larger than the 3,072-byte excerpt, then an answer. `states[k]` is step k+1's
+ * `appendOnly`, or undefined for a step whose completion carries no provider state.
+ */
+async function threeReads(states: ReadonlyArray<boolean | undefined>) {
   // Input budget 5,275 estimated tokens: a request holds two results at the excerpt but not three, so later steps cut.
   const { store, root } = fixture(); cloud(store, 'anthropic', { contextTokens: 5_787, outputTokens: 512 });
   for (const name of ['a', 'b', 'c']) writeFileSync(join(root, `${name}.txt`), name.toUpperCase().repeat(12_000));
@@ -391,18 +394,16 @@ async function threeReads(appendOnly: boolean) {
     requests.push(JSON.parse(JSON.stringify(messages)) as InferenceMessage[]);
     const step = requests.length;
     if (step > 3) return { content: 'Read all three.', outcome: 'complete' };
-    const output = readStep(step, `${'abc'[step - 1]}.txt`, { appendOnly, signature: `U2lnbmF0dXJl${step}` }); sent.push(output); return output;
+    const appendOnly = states[step - 1];
+    const output = readStep(step, `${'abc'[step - 1]}.txt`, appendOnly === undefined ? undefined : { appendOnly, signature: `U2lnbmF0dXJl${step}` });
+    sent.push(output); return output;
   } });
   const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
   const run = await runOnce(app, session.id, 'Read the three files.');
   return { store, run, requests, sent, sessionId: session.id };
 }
-
-test('once frozen, each request is the previous request plus the previous assistant message and its results', async () => {
-  // T-3. Guard (mutation): assemble frozen steps with assembleContext, so its result-cutting loop runs under the freeze
-  // (the already-sent first result is then cut at step 3 and the prefix changes).
-  const { store, run, requests, sent, sessionId } = await threeReads(true);
-  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
+/** Requests 2 to 4 are each the previous request unchanged, compared as JSON message by message, then that step's call and result. */
+function expectEachRequestAppends(requests: InferenceMessage[][], sent: Completion[]) {
   for (let k = 0; k < 3; k++) {
     const [before, after] = [requests[k]!, requests[k + 1]!];
     expect(after).toHaveLength(before.length + 2);
@@ -410,15 +411,37 @@ test('once frozen, each request is the previous request plus the previous assist
     expect(after[before.length]).toEqual({ role: 'assistant', content: sent[k]!.content, toolCalls: sent[k]!.toolCalls, providerState: sent[k]!.providerState });
     expect(after[before.length + 1]).toMatchObject({ role: 'tool', toolCallId: `read-${k + 1}`, toolName: 'read_file' });
   }
+}
+
+test('once frozen, each request is the previous request plus the previous assistant message and its results', async () => {
+  // T-3. Guard (mutation): assemble frozen steps with assembleContext, so its result-cutting loop runs under the freeze
+  // (the already-sent first result is then cut at step 3 and the prefix changes).
+  const { store, run, requests, sent, sessionId } = await threeReads([true, true, true]);
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
+  expectEachRequestAppends(requests, sent);
   // The budget forced cuts: the first result kept its excerpt once sent; the later ones were cut before they were sent.
   expect(requests[3]!.filter(message => message.role === 'tool').map(message => resultPreview(message).length)).toEqual([3072, 0, 0]);
   // The saved results are whole: only the requests carry excerpts.
   expect(store.listMessages(sessionId).filter(message => message.role === 'tool').map(message => message.content.length > 12_000)).toEqual([true, true, true]);
 });
 
+test.each([
+  ['appendOnly false states', false],
+  ['no provider state', undefined],
+] as const)('the freeze holds for the rest of the run when later steps carry %s', async (_label, later) => {
+  // T-3, spec section 3 rule 3 ("frozen for its remaining steps"; spec 5.4: a later tool_use step without thinking is
+  // appendOnly false). Guard (mutation): `frozen = output.providerState?.appendOnly === true`, which unfreezes the run at
+  // step 2; a later request then goes back through assembleContext, which cuts the already-sent first result.
+  const { store, run, requests, sent } = await threeReads([true, later, later]);
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
+  expectEachRequestAppends(requests, sent);
+  // The budget binds from step 3 on: the already-sent first result kept its excerpt, the later ones were cut unsent.
+  expect(requests[3]!.filter(message => message.role === 'tool').map(message => resultPreview(message).length)).toEqual([3072, 0, 0]);
+});
+
 test('appendOnly false states keep today\'s trimming: an already-sent result is cut at a later step', async () => {
   // Guard (mutation): freeze on any provider state; the first result then stays at its excerpt and the second is cut.
-  const { store, run, requests } = await threeReads(false);
+  const { store, run, requests } = await threeReads([false, false, false]);
   expect(store.getRun(run.id)?.status).toBe('completed'); expect(requests).toHaveLength(4);
   expect(resultPreview(requests[1]![3]!)).toHaveLength(3072);
   expect(requests[2]!.filter(message => message.role === 'tool').map(message => resultPreview(message).length)).toEqual([0, 3072]);
