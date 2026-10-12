@@ -62,7 +62,7 @@ Probe session for `docs/orchestration/2026-10-05-more-models/DAY-ONE-P2.md`, run
 - `Content-Type: text/event-stream; charset=utf-8` on every stream, with `content-encoding: gzip` and `transfer-encoding: chunked`.
 - Line endings are LF only; no CRLF appeared.
 - Every event has an `event:` line equal to its data `type`.
-- **New: padded `data:` lines.** Each JSON payload is followed by a variable run of spaces before the line end, for example
+- **New: padded `data:` lines.** (Corrected 2026-10-12 by the lead, from the U3 review's recount: of 565 data lines across the 41 recorded responses, none ends in a space; the run of spaces sits inside the JSON, before its last closing brace.) As first written here: each JSON payload is followed by a variable run of spaces before the line end, for example
   `data: {"type":"message_stop"        }`. `JSON.parse` accepts trailing whitespace, so the reader rules are unaffected, but fixtures
   must keep the padding.
 - **`ping` placement:** exactly one `ping` in every stream, always the third event, right after the first `content_block_start`. So it

@@ -11,7 +11,9 @@ import { REFUSAL_SIGNATURE, REFUSAL_TOOL, STATE_REFUSALS, VALID_STATE_DATA, bloc
 
 // The Anthropic Messages adapter's pure parts (docs/specification/more-models-phase2.md section 5; unit U3).
 // Fixtures marked "E-10, capture lines a-b" are copied verbatim from the wire corpus and checked against it by the
-// first test; every other stream is built from E-10 shapes, not a capture.
+// first test; fixtures under tests/fixtures/anthropic-live/ are the 2026-10-12 live recordings
+// (docs/evidence/2026-10-12-anthropic-probes/), copied byte for byte and pinned by their sha256; every other
+// stream is built from E-10 shapes, not a capture.
 
 const WIRE = '../docs/research/2026-10-05-provider-wire-formats/research/raw/';
 const STREAMING = '2026-10-05-streaming-messages-claude-platform-docs-claude-0712ffc4.md';
