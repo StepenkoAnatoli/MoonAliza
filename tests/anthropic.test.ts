@@ -302,6 +302,20 @@ describe('the reader refuses', () => {
     expect(await message(read(sseText([messageStart(), blockStart(1, { type: 'text', text: '' }), blockDelta(0, { type: 'text_delta', text: 'Hi' }), blockStop(0), ...messageEnd('end_turn')])))).toBe('PROVIDER_INVALID_RESPONSE');
   });
 
+  const textStart = (index: number) => blockStart(index, { type: 'text', text: '' });
+  const hi = (index: number, text = 'Hi') => blockDelta(index, { type: 'text_delta', text });
+  test.each([
+    // Each stream's starts and its other events name the right index, so only the one event's index is wrong.
+    // Guard: a delta names the open block's index (mutation: accept a delta whenever a block is open).
+    ['a delta naming a later index', [textStart(0), hi(1), blockStop(0)]],
+    ['a delta naming an earlier, closed block', [textStart(0), hi(0), blockStop(0), textStart(1), hi(0, '!'), blockStop(1)]],
+    // Guard: a stop names the open block's index (mutation: close the open block whatever the index).
+    ['a stop naming a later index', [textStart(0), hi(0), blockStop(1)]],
+    ['a stop naming an earlier, closed block', [textStart(0), hi(0), blockStop(0), textStart(1), blockStop(0)]],
+  ])('an index that is not the open block\'s: %s', async (_name, events) => {
+    expect(await message(read(sseText([messageStart(), ...events, ...messageEnd('end_turn')])))).toBe('PROVIDER_INVALID_RESPONSE');
+  });
+
   test('a start while a block is open', async () => {
     // Guard: one block open at a time (mutation: skip the open-block check at a start).
     expect(await message(read(sseText([messageStart(), blockStart(0, { type: 'text', text: '' }), blockStart(1, { type: 'text', text: '' }), blockStop(1), ...messageEnd('end_turn')])))).toBe('PROVIDER_INVALID_RESPONSE');
