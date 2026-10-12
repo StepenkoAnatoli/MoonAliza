@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { InferenceMessage } from '../main/inference';
 import type { ToolSpec } from '../shared';
 import type { ContextState } from '../shared/context';
+import { PROVIDER_STATE_FORMATS } from './control';
 
 export interface ContextMessage extends InferenceMessage { resultId?: string }
 export const ResultReadSchema = z.object({ resultId: z.string().min(1).max(128), offset: z.number().int().min(0).max(2_000_000).default(0), length: z.number().int().min(1).max(2048).default(1024) }).strict();
@@ -25,10 +26,22 @@ function excerpt(message: ContextMessage, bytes: number): InferenceMessage {
   return { ...wire, content: JSON.stringify({ compacted: true, resultId, tool: message.toolName, totalCharacters: message.content.length, facts, preview: preview(message.content, bytes), retrieve: 'read_tool_result' }) };
 }
 
+/**
+ * Provider-state formats whose adapter sends the state in place of the message's own fields: the
+ * `anthropic-messages@1` encoder sends the state's content array unchanged as the assistant turn
+ * (docs/specification/more-models-phase2.md section 5.3). The estimate counts such a message as its state, so its
+ * text and tool inputs are not counted twice (REQUIREMENTS-P2 F-17); any other state is counted with its message.
+ */
+export const WHOLE_REPLAY_FORMATS: ReadonlySet<string> = new Set([PROVIDER_STATE_FORMATS.anthropic]);
+function estimated(message: InferenceMessage): unknown {
+  const state = message.providerState;
+  return state && WHOLE_REPLAY_FORMATS.has(state.format) ? { role: message.role, providerState: state.data } : message;
+}
+
 /** Heuristic for arbitrary model/tokenizer families; includes declarations and framing reserve.
  * Never presented as exact accounting or used to increase a provider's actual context window. */
 export function estimateInput(messages: InferenceMessage[], tools: ToolSpec[]): number {
-  return Math.ceil(Buffer.byteLength(JSON.stringify({ messages, tools: tools.map(tool => ({ type: 'function', function: tool })) }), 'utf8') / 2) + 256 + messages.length * 8;
+  return Math.ceil(Buffer.byteLength(JSON.stringify({ messages: messages.map(estimated), tools: tools.map(tool => ({ type: 'function', function: tool })) }), 'utf8') / 2) + 256 + messages.length * 8;
 }
 
 export function assembleContext(input: { system: InferenceMessage; history: InferenceMessage[][]; current: ContextMessage[]; tools: ToolSpec[]; contextTokens: number; outputTokens: number }) {
