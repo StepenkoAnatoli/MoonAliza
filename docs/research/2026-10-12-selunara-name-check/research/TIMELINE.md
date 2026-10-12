@@ -25,6 +25,7 @@ of a gate decision. Regenerate with `node "$HOME/.agents/research-kit/bin/timeli
 | 2026-10-12 | evidence | E-18 https://tsdr.uspto.gov/statusview/sn99337404 |
 | 2026-10-12 | evidence | E-19 https://www.bing.com/search?q=%22Selunara%22+software+OR+app+OR+AI&setlang=en-US&cc=US |
 | 2026-10-12 | evidence | E-20 https://www.selunara.ai/ |
+| 2026-10-12 | evidence | E-21 https://tsdr.uspto.gov/statusview/sn99190611 |
 | 2026-10-12 | scrape | https://trademarks.justia.com/search?q=selunara -> research/raw/2026-10-12-selunara-trademarks-justia-trademarks-justia-0a66e1ee.md (firecrawl-cli) |
 | 2026-10-12 | scrape | https://trademarks.justia.com/search?q=seluna -> research/raw/2026-10-12-seluna-trademarks-justia-trademarks-justia-1279d2b2.md (firecrawl-cli) |
 | 2026-10-12 | scrape | https://trademarks.justia.com/search?q=selunar -> research/raw/2026-10-12-selunar-trademarks-justia-trademarks-justia-961816ad.md (firecrawl-cli) |
@@ -45,6 +46,7 @@ of a gate decision. Regenerate with `node "$HOME/.agents/research-kit/bin/timeli
 | 2026-10-12 | scrape | https://tsdr.uspto.gov/statusview/sn99337404 -> research/raw/2026-10-12-sn99337404-uspto-96d41e2a.md (firecrawl-cli) |
 | 2026-10-12 | scrape | https://www.bing.com/search?q=%22Selunara%22+software+OR+app+OR+AI&setlang=en-US&cc=US -> research/raw/2026-10-12-selunara-software-or-app-or-ai-search-bing-8191e5a6.md (firecrawl-cli) |
 | 2026-10-12 | scrape | https://www.selunara.ai/ -> research/raw/2026-10-12-selunara-ai-is-registered-at-namecheap-selunara-66abcc94.md (firecrawl-cli) |
+| 2026-10-12 | scrape | https://tsdr.uspto.gov/statusview/sn99190611 -> research/raw/2026-10-12-sn99190611-uspto-2cad5186.md (firecrawl-cli) |
 | 2026-10-12 09:15 UTC | fetch failed | https://selunara.ai/ - Error: The URL failed to load in the browser with error code "ERR_TUNNEL_CONNECTION_FAILED". Firecrawl encountered an internal proxy error while establishing the tunnel. This is an internal Firecrawl proxy error. Please retry or contact support.
  |
 | 2026-10-12 09:17 UTC | fetch failed | https://www.google.com/search?q=%22Selunara%22+software+OR+app+OR+AI&hl=en&gl=us&start=10&pws=0 - Error: All scraping engines failed to retrieve content from this URL. Engines tried: [fire-engine;chrome-cdp;stealth, fire-engine(retry);chrome-cdp;stealth, pdf, document, image]. This usually happens when: (1) The URL is invalid or the page doesn't exist (404), (2) The website is blocking automated access, (3) The website is down or unreachable, (4) The page requires authentication. Double check the URL is correct and accessible in a browser. If the issue persists, contact us at help@firecrawl.com with your request ID for investigation.

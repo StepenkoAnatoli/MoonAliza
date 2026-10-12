@@ -1,0 +1,18 @@
+{
+ "topic": "Is Selunara free to use as the product name of a Windows desktop AI coding assistant (formerly MoonAliza/Moonzila; Selenic was refused for a Parasoft trademark): US, EU and WIPO marks for Selunara and close variants; software and AI products and companies named Selunara; GitHub, npm and PyPI names; selunara domains; Microsoft Store listings; the word's meaning",
+ "notes": "Run 4 (1 page, about 1 credit), added after the 20-credit budget, at the operator's prompt: on 2026-10-12 the operator searched the USPTO's own trademark search for Selunara and found S\u00c9LUNARA, serial 99190611, LIVE/REGISTERED, Class 041, owner Irene McGill (a screenshot, not evidence). Justia's index returned nothing for 'selunara' (E-01), probably because the mark is spelled with \u00c9. This run captures the owner record of that mark from TSDR.",
+ "depth": "deep",
+ "refreshDays": 30,
+ "limit": 1,
+ "perQuery": 1,
+ "maxScrapes": 1,
+ "prefer": [],
+ "queries": [],
+ "urls": [
+  {
+   "url": "https://tsdr.uspto.gov/statusview/sn99190611",
+   "type": "P",
+   "why": "U-01/U-03: the USPTO's own status record of S\u00c9LUNARA, serial 99190611, which the operator found in the USPTO search and Justia's index missed"
+  }
+ ]
+}
