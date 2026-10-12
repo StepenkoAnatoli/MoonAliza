@@ -30,7 +30,7 @@ lower quality"); the user may overrule any of them.
 | R-11 | Records the October 4 rename falsified are restored from `e7cdd4a^`: the October 2 decision "keep MoonAliza" (plan section and HANDOFF), the `/home/user/moonaliza` cwd lines, `decisions.md` line 3, `development-status.md`, `github-url-reading.md`, `2026-09-24-moonaliza.md`, and `docs/evidence/model-store-runtime.json`'s changed lines; the four broken references (managed-provider.md, managed-scheduler.md file names; windows-ci.md branch name; HANDOFF.md `cd`) are fixed. The commit report says it undoes a rewrite. | Restoring the text as it was written serves the rule against rewriting records; the rename that changed them is what broke it. | Leaving falsified text in place. |
 | R-12 | `docs/specification/decisions.md` gains decision 14 ("the product name is MoonAliza again, 2026-10-12"), listing exactly what goes back and what was never renamed; decision 12 gets a one-line "Superseded by decision 14" note (not rewritten); decision 13 stays as written. | Decisions are superseded, never edited. | - |
 | R-13 | Saved user data (run.failed texts, branched handoff messages that say Moonzila) is not migrated. | It is user history; mixed naming there is harmless. | A data migration. |
-| R-14 | The GitHub repository name (Selenic today) and its URLs are unchanged here; renaming the repository back is the user's action. | Outside the repository. | - |
+| R-14 | The GitHub repository name (Selenic today) and its URLs are unchanged here; renaming the repository back is the user's action (done by the user on 2026-10-12: the API reports `StepenkoAnatoli/MoonAliza`). | Outside the repository. | - |
 
 ## Commits (revert test)
 
