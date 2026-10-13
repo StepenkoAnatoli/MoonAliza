@@ -272,13 +272,14 @@ test('a tool step\'s provider state goes back on the next step of its run and ne
   const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
   const { run } = await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: 'List the files.' }, 'start')) as { run: { id: string } };
   await app.whenIdle();
-  expect(store.getRun(run.id)?.status).toBe('completed'); expect(steps).toBe(2);
+  // The byte scan is the first assertion after the run (REQUIREMENTS-P2 T-6, BREAKDOWN-P2): no earlier failure can hide it.
   for (const name of ['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm']) {
     const file = join(root, name); if (!existsSync(file)) continue;
     const bytes = readFileSync(file);
     expect(bytes.includes(Buffer.from(THINKING_MARKER)), name).toBe(false);
     expect(bytes.includes(Buffer.from(SIGNATURE_MARKER)), name).toBe(false);
   }
+  expect(store.getRun(run.id)?.status).toBe('completed'); expect(steps).toBe(2);
   const read = JSON.stringify(await app.handle(request('session.read', { sessionId: session.id }, 'read')));
   for (const text of [read, JSON.stringify(published)]) {
     expect(text).not.toContain(THINKING_MARKER); expect(text).not.toContain(SIGNATURE_MARKER); expect(text).not.toContain('providerState');
