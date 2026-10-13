@@ -10,7 +10,7 @@ import { reviewWorkspacePath } from '../src/engine/research-review';
 import { complete, type Completion, type InferenceMessage, type InferenceProfile } from '../src/main/inference';
 import type { ProviderState } from '../src/engine/control';
 import type { Run } from '../src/shared';
-import { REFUSAL_SIGNATURE, blockEvents, builtStream, messageStart, sseText, toolUseBlock, type BuiltBlock } from './fixtures/anthropic-state-refusals';
+import { REFUSAL_SIGNATURE, REFUSAL_TOOL, blockEvents, builtStream, messageStart, sseText, toolUseBlock, type BuiltBlock } from './fixtures/anthropic-state-refusals';
 
 const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(store => store.close()); roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })); });
@@ -637,7 +637,7 @@ const chatStop = (finish_reason: string) => ({ choices: [{ index: 0, delta: {}, 
 const chatCut = (...chunks: unknown[]) => chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`).join('');
 const chatCall = (content: string) => ({ choices: [{ index: 0, delta: { role: 'assistant', content, tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'list_files', arguments: '{"path":"."}' } }] } }] });
 /** What an adapter makes of a streamed body: the real complete() over a fake fetcher. */
-const adapted = (profile: InferenceProfile, body: string) => complete(profile, [{ role: 'user', content: 'Go on.' }], { signal: new AbortController().signal, fetcher: async () => new Response(body, { headers: { 'Content-Type': 'text/event-stream' } }) });
+const adapted = (profile: InferenceProfile, body: string, tools?: typeof REFUSAL_TOOL[]) => complete(profile, [{ role: 'user', content: 'Go on.' }], { signal: new AbortController().signal, ...(tools ? { tools } : {}), fetcher: async () => new Response(body, { headers: { 'Content-Type': 'text/event-stream' } }) });
 const listStep = (count = 1): Completion => ({ content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: count }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: { path: '.' } })) });
 /** One ask-mode task whose model steps are `steps`, in order; the stored run, its messages, failure and events. */
 async function taskEnding(steps: Completion[]) {
@@ -717,4 +717,22 @@ test('more than eight valid tool calls in one step fail PROVIDER_PROTOCOL_ERROR 
   expect(eight.status).toBe('completed'); expect(eight.messages.filter(message => message.role === 'tool')).toHaveLength(8);
   const invalid = listStep(9); invalid.toolCalls![8] = { id: 'unoffered', name: 'not_a_tool', input: {} };
   expect((await taskEnding([invalid])).failure).toEqual({ code: 'PROVIDER_PROTOCOL_ERROR', message: WIDENED_TEXT, retry: 'never' });
+});
+
+test.each([
+  ['an incomplete step with no text', () => adapted(ANTHROPIC, builtStream([thinkingOnly], 'max_tokens')), 'PROVIDER_ERROR', INCOMPLETE_TEXT],
+  ['an incomplete step with text', () => adapted(ANTHROPIC, builtStream([thinkingOnly, textBlock('Here is the first half of the')], 'max_tokens')), 'PROVIDER_ERROR', INCOMPLETE_TEXT],
+  ['a declined step', () => adapted(ANTHROPIC, builtStream([textBlock('I will not help with that.')], 'refusal')), 'PROVIDER_ERROR', BLOCKED_TEXT],
+  ['an empty answer', () => adapted(ANTHROPIC, builtStream([thinkingOnly], 'end_turn')), 'PROVIDER_ERROR', EMPTY_TEXT],
+  ['nine tool calls', async () => listStep(9), 'PROVIDER_PROTOCOL_ERROR', TOO_MANY_CALLS_TEXT],
+] as const)('a frozen Anthropic run that ends with %s keeps that step\'s own text, never the frozen context text', async (_name, last, code, text) => {
+  // Guard (fix round R1-1; the reviewer's mutations M18 and M19): FROZEN_CONTEXT_LIMIT is chosen for CONTEXT_LIMIT alone
+  // (mutation: choose it for every failure of a frozen run, or for a step ending of a frozen run; these rows then read
+  // "This task outgrew ..."). The first step is a real thinking tool step, whose appendOnly state freezes the run (spec
+  // section 3, rule 3): the GA-C1 scenario, where an incomplete, declined or empty end matters most for Anthropic.
+  const first = await adapted(ANTHROPIC, builtStream([thinkingOnly, textBlock(''), toolUseBlock()], 'tool_use'), [REFUSAL_TOOL]);
+  expect(first.outcome).toBe('tool_calls'); expect(first.providerState?.appendOnly).toBe(true);
+  const end = await taskEnding([first, await last()]);
+  expect(end.calls).toBe(2); expect(end.status).toBe('failed'); expect(end.types).toContain('tool.completed');
+  expect(end.failure).toEqual({ code, message: text, retry: 'never' });
 });
