@@ -48,7 +48,7 @@ _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`); environ
 ### Quality gate (run in order)
 | Step           | Command |
 |----------------|---------|
-| Install        | `npm ci`, `node node_modules/electron/install.js` (as README, HANDOFF and CI do), then `node scripts/prepare-research-kit.mjs` (pinned external kit into `.build/`). Without the Electron binary, importing `src/main/engine.ts` (`tests/research-review-e2e.test.ts`, `tests/research-review-main-engine.test.ts`) downloads it during the test run, or, offline with no `~/.cache/electron`, both files fail to load |
+| Install        | `npm ci`, `node node_modules/electron/install.js` (as README, HANDOFF and CI do), then `node scripts/prepare-research-kit.mjs` (pinned external kit into `.build/`). Without the Electron binary, importing `src/main/engine.ts` (`tests/research-review-e2e.test.ts`, `tests/research-review-main-engine.test.ts`) downloads it during the test run, or, offline with no `~/.cache/electron`, both files fail to load. With Node's opt-in environment proxy (`NODE_USE_ENV_PROXY=1`), `NO_PROXY` must list `127.0.0.1` and `localhost`, or the tests that reach loopback fakes through Node's `fetch` fail (break test 2026-10-12, F3) |
 | Typecheck      | `npm run typecheck` |
 | Lint           | `npm run lint` |
 | Build          | `npm run build` |

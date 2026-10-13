@@ -2,15 +2,15 @@
 
 | Field           | Value |
 |-----------------|-------|
-| Status          | ACTIVE |
+| Status          | COMPLETE |
 | Started         | 2026-10-12 |
-| Last checkpoint | 2026-10-12 - built, reviewed (ACCEPT after one fix round), integrated onto `main-axuse`; gate and PR next |
+| Last checkpoint | 2026-10-12 - MERGED (PR #41, `b5ce566`) |
 | Engagement      | Light (one builder, then independent reviewers; installer naming is user-facing) |
 | Working branch  | `main-axuse` (from `main` @ `2fb13ac` plus docs `64864bd`, `6ed7e22`); builder on `build/rename` |
 | Base / baseline | pinned Linux gate: 74 known failures (`/home/user/task5-handoff/baseline-failing.json`) |
 
 ## Next action
-Integrate `build/rename` onto `main-axuse` (fast-forward), pinned Linux gate on the head, PR to `main` with the R-5 upgrade note, Windows CI, merge.
+None: the run is complete. Follow-ups recorded in DECISIONS.md and the PR: a guard for the bridge messages' test copies; tests for the window title, folder-free prompt, User-Agents, serviceName and productName agreement; the installer upgrade on Windows.
 
 ## Task statement
 User, 2026-10-12: "MoonAliza appears to be the best choise ... MoonAliza it is". The plan records the rename as its own
@@ -36,3 +36,4 @@ pull request after More models Phase 2 merges, changing what users see and keepi
   the ARCHITECTURE rename paragraph is written in commit 1 and describes the whole series (the commit gate requires the
   map in that commit), and the plan's October 4 request bullets stay as dated records (R-10). Remaining occurrences of the
   old name outside dated folders: 20 lines, each a dated record or a deliberate history sentence.
+- 2026-10-12: the user renamed the GitHub repository back to MoonAliza (`555d067` records it). Pinned Linux gate on `8c96e17` and on `555d067`: typecheck, lint, build 0; 1542 tests, 74 failed, exactly the baseline. Windows CI green on `6632d98`, `8c96e17` and `555d067` (push and pull_request runs). The user marked PR #41 ready; merged with method merge at the pinned head: merge commit `b5ce566` (parents `2fb13ac`, `555d067`; same tree as `555d067`). `main-axuse` fast-forwarded; `build/rename` and its worktrees removed (every commit in `main`).
