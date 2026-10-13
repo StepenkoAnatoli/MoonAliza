@@ -43,6 +43,15 @@ describe('credential lifecycle', () => {
     expect(await vault.withSecret(capability, binding, value => value)).toBe('collector-token');
   });
 
+  test('a github grant lives at most 30 seconds (GitHub sign-in, spec 3.8, DC-14)', async () => {
+    const { vault } = await fixture();
+    const ref = await vault.saveStaged('github-access-value'); await vault.commit(ref);
+    const binding = { epoch: 'epoch-1', purpose: 'github' as const, contextId: 'github:read:1', secretRef: ref };
+    expect(() => vault.grant({ ...binding, expiresAt: Date.now() + 60_000 })).toThrow('CREDENTIAL_CAPABILITY_DENIED');
+    const capability = vault.grant({ ...binding, expiresAt: Date.now() + 30_000 });
+    expect(await vault.withSecret(capability, binding, value => value)).toBe('github-access-value');
+  });
+
   test('stores encrypted bytes and grants access only to its live bound purpose', async () => {
     const { vault, directory } = await fixture();
     const ref = await vault.saveStaged('fixture-secret-123');

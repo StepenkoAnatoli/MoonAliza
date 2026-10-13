@@ -10,7 +10,7 @@ export interface SecretCryptor {
 
 export interface CredentialBinding {
   epoch: string;
-  purpose: 'inference' | 'provider-test' | 'research' | 'provision';
+  purpose: 'inference' | 'provider-test' | 'research' | 'provision' | 'github';
   contextId: string;
   secretRef: string;
   profileRevisionId?: string;
@@ -132,7 +132,7 @@ export class Vault {
       this.index.entries[binding.secretRef]?.state !== 'committed') {
       throw new Error('CREDENTIAL_CAPABILITY_DENIED');
     }
-    if ((binding.purpose === 'provider-test' || binding.purpose === 'research') && binding.expiresAt > Date.now() + 30_000) {
+    if ((binding.purpose === 'provider-test' || binding.purpose === 'research' || binding.purpose === 'github') && binding.expiresAt > Date.now() + 30_000) {
       throw new Error('CREDENTIAL_CAPABILITY_DENIED');
     }
     const id = randomUUID();
