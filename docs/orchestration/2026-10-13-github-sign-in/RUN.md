@@ -4,9 +4,9 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-13 |
-| Last checkpoint | 2026-10-13 - Stage 4 DONE: GO MERGE (UD-2 read-only, UD-3 like local files; UD-1 open) |
+| Last checkpoint | 2026-10-13 - Stage 5: U0 committed (`8f86232`), briefs written, wave 1 launching |
 | Engagement      | Full (authentication, credential storage, new IPC, external service) |
-| Working branch  | `research/github-sign-in` (worktree `/home/user/task5-handoff/wt/gh-signin`) from `main` @ `0815f42`, for Stages 1-4 (docs only); the build branch is chosen at Stage 5 |
+| Working branch  | Stages 1-4: `research/github-sign-in` (PR #46). Stage 5: `build/github-sign-in` (worktree `/home/user/task5-handoff/wt/gsi-build`), from `6ac1007` (PR #46's head); builders in `/home/user/task5-handoff/wt/gsi-u<N>` on `build/gsi-u<N>` |
 | Skills          | auto-build, lead-orchestrator, careful-coding, Research-Kit 0.9.5 |
 
 ## Auto-build stages
@@ -17,14 +17,14 @@
 | 2 Requirements | DONE: 54 rows (F-1..F-27, S-1..S-8, T-1..T-10, A-1..A-4, D-1..D-5), each traced to a unit and a test | REQUIREMENTS.md | 2026-10-13 |
 | 3 Design | DONE: lifecycle-first design (three designs, three judges); critic rounds 1 (2 S2) and 2 (1 S3) resolved; final checks ACCEPT (brief) and three S4 wording items (design), applied by the lead | docs/specification/github-sign-in.md; DECISIONS.md; BREAKDOWN.md; USER-DECISIONS.md | 2026-10-13 |
 | 4 Mandate | DONE: user, 2026-10-13, "GO MERGE, read-only, private text like local files"; UD-1 (registration) open, so the build ships with empty constants (UD-1 option 3) | MANDATE.md | 2026-10-13 |
-| 5 Build | PENDING | - | - |
+| 5 Build | ACTIVE: U0 DONE (lead, `8f86232`); wave 1 (U1-U4) launching | units below | 2026-10-13 |
 | 6 Harden | PENDING | - | - |
 | 7 Audit | PENDING | - | - |
 | 8 Deliver and merge | PENDING | - | - |
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Merge PR #46 (research and design, docs only) under the merge checks. Stage 5 from BREAKDOWN.md: U0 contracts by the lead on the build branch, then the builders U1-U8 in waves with unit reviews, then the integration review. U9 when the user sends the client ID and install URL.
+Wave 1: builders U1-U4 (workflow, two agents at a time), each followed by a refute-first unit review and up to two fix rounds; the lead cherry-picks accepted units onto `build/github-sign-in`, then wave 2 (U5). Merge PR #46 when its gate and Windows CI are green.
 
 ## Task statement
 User, 2026-10-12: "Can we make the app be able to login to GitHub/codex/Claude?" The Research-Kit check (`docs/research/2026-10-12-app-sign-in`, 8 credits) answered it. GitHub sign-in is allowed and is planned as its own task after the MoonAliza rename. Claude.ai sign-in is not allowed. Sign in with ChatGPT is not stated, so API keys are used until OpenAI confirms. The plan records this (`docs/superpowers/plans/2026-10-02-research-jobs.md`, "App sign-in", `64864bd`). User's order, 2026-10-12: Phase 2 and the rename, then this task, then the independent-operation track, then More models Phases 3-5. Standing words: "continue without asking or stopping", "merge as you decide just be careful", "dont lower quality", "you have full access. continue", "write less text. report in summary at the end of phase."
@@ -33,6 +33,20 @@ Scope of this run: GitHub sign-in only. The Claude and OpenAI outcomes are recor
 
 ## Baseline
 `main` @ `0815f42` has the same tree as `194acc8` (`git diff` empty). Its pinned Linux gate, `/home/user/task5-handoff/results/s9ci1-194acc8`: typecheck, lint, build 0; 1572 tests, 74 failed, exactly `/home/user/task5-handoff/baseline-failing.json`, 0 files without results. Windows CI green on `194acc8` (38351459554 pull_request, 38351426367 push).
+
+## Units
+| Unit | Status | Commits | Review |
+|------|--------|---------|--------|
+| U0 contracts (lead) | DONE: red first (5 tests and one missing module), 8 of 8 guard proofs red, typecheck, lint, eslint e2e, check-handoff 0 | `8f86232` | lead; integration review later |
+| U1 wire client | LAUNCHING | - | - |
+| U2 account store | LAUNCHING | - | - |
+| U3 reader and reasons | LAUNCHING | - | - |
+| U4 renderer | LAUNCHING | - | - |
+| U5 lifecycle service | PENDING (wave 2) | - | - |
+| U6 main wiring | PENDING (wave 3) | - | - |
+| U7 token invariant | PENDING (wave 3) | - | - |
+| U8 Windows e2e | PENDING (wave 4) | - | - |
+| U9 constants | WAITING on UD-1 | - | - |
 
 ## Research-Kit
 Kit 0.9.5, role collector, `firecrawl-cli` authenticated, 277 credits. `doctor`: 3 blockers, all BT12-F1 (key-shaped test values; the user's decision, recorded in the More models run). Collection budget for this run: at most 15 credits, dry run first.
@@ -52,3 +66,4 @@ Kit 0.9.5, role collector, `firecrawl-cli` authenticated, 277 credits. `doctor`:
 - 2026-10-13: workflow `github-sign-in-revise` returned (`reports/revise-workflow.json`, 4 agents). Round 4: S-1..S-7 fixed; E-21 (GitHub's own device-flow tutorial, 1 credit, 257 -> 256) settles that step 1 and the poll send form-encoded bodies with `Accept: application/json`; the refresh placement stays an inference for the day-one double refresh; preflight PASS (21 ledger entries, 15 CLOSED, 1 KNOWN-UNKNOWN). Design revised for DC-1..DC-16 (two departures from the critic, stated in the docs). Re-checks: brief FIX (RC-1..RC-4, S4); critic 2 FIX (GS-1 S3: the fresh-token guard can refresh on every read without a hold or a clear; GS-2..GS-11 S4). Final pass launched; it ends Stage 3, since severity fell from S2 to S3/S4 and further rounds would only polish text the build reviews will read again.
 - 2026-10-13: final pass (workflow `github-sign-in-final-pass`, run `wf_dc08841d-4fe`, 4 agents, `reports/final-pass-workflow.json`): brief RC-1..RC-4 fixed, check ACCEPT (two optional S4 residues); design GS-1..GS-11 fixed (stated departures in the docs), check FIX with three S4 wording items (RF-1..RF-3). The lead applied RF-1..RF-3, the optional 403-text residue (N-2) and the reviser's note that step 7 of `replace` could orphan a committed vault entry by writing `retiredRefs: []` after a failed removal. Both research projects: preflight PASS, handoff 0; `scripts/check-handoff.mjs` exit 0. Mandate presented (MANDATE.md).
 - 2026-10-13: Mandate reply, verbatim: "GO MERGE, read-only, private text like local files". Recorded in MANDATE.md and USER-DECISIONS.md; the spec status is now approved; the plan got the read-only correction notes (the GitHub bullet and step 1 of "GitHub, approved as four steps").
+- 2026-10-13: Stage 5 started on `build/github-sign-in` from `6ac1007`. U0 by the lead (`8f86232`): red first, 39 of 39 then green, 8 guard proofs. Briefs written before any launch (`briefs/common.md`, `u1`..`u8-builder.md`, `unit-reviewer.md`).
