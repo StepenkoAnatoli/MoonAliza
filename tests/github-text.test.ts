@@ -67,6 +67,9 @@ test('the signed-in 404 text lists every possibility and the steps the spec requ
   ]) expect(text, part).toContain(part);
 });
 
+// U3-R5: a URL with a scheme, a www. host, or a bare host with a path (github.com/apps/...). "an HTTPS github.com repository"
+// (GITHUB_INVALID_URL) names the site without a path and stays legal.
+const URL_LIKE = /https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|org|io|net|dev)\/[^\s]/i;
 test('no reason text states "not installed" as fact, promises a fix, names the public reader, says revoked, or holds a URL', () => {
   const texts = everyText(); expect(texts.length).toBe(GitHubErrorCodeSchema.options.length + 1);
   for (const text of texts) {
@@ -74,8 +77,13 @@ test('no reason text states "not installed" as fact, promises a fix, names the p
       if (/\bis not installed\b/i.test(sentence)) expect(sentence, 'a labelled possibility').toMatch(/^Possibilit|\bmay\b/);
       expect(sentence).not.toMatch(/because .* not installed|will (fix|work)|installing (fixes|will)/i);
     }
-    expect(text).not.toMatch(/public reader/i); expect(text).not.toMatch(/revoked/i); expect(text).not.toMatch(/https?:\/\/|www\./i);
+    expect(text).not.toMatch(/public reader/i); expect(text).not.toMatch(/revoked/i); expect(text).not.toMatch(URL_LIKE);
   }
+});
+test('U3-R5: the URL check catches a bare host with a path and allows the invalid-URL text\'s "github.com repository"', () => {
+  expect('Install it at github.com/apps/moonaliza.').toMatch(URL_LIKE);
+  expect('See https://github.com and www.github.com.').toMatch(URL_LIKE);
+  expect(githubFailure('GITHUB_INVALID_URL').message).toContain('HTTPS github.com repository');
 });
 
 test('the rate-limit text gives no sign-in advice and no reset time; the signed-out 403 text claims no permission cause', () => {
