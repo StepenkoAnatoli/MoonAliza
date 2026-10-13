@@ -24,7 +24,7 @@
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-The pinned gate on `97b0b9e` (wave 1 integrated; background run `gsi-wave1-97b0b9e`). If it equals the baseline: create `wt/gsi-u5` from the integrated head and launch wave 2 (U5, the lifecycle service) with its unit review and fix rounds.
+Wave 2: U5 (workflow `github-sign-in-wave2`, run `wf_38993613-45d`: build, review, up to three fix rounds). Then integrate U5, gate, and launch wave 3 (U6 wiring, U7 invariant) from the integrated head.
 
 ## Task statement
 User, 2026-10-12: "Can we make the app be able to login to GitHub/codex/Claude?" The Research-Kit check (`docs/research/2026-10-12-app-sign-in`, 8 credits) answered it. GitHub sign-in is allowed and is planned as its own task after the MoonAliza rename. Claude.ai sign-in is not allowed. Sign in with ChatGPT is not stated, so API keys are used until OpenAI confirms. The plan records this (`docs/superpowers/plans/2026-10-02-research-jobs.md`, "App sign-in", `64864bd`). User's order, 2026-10-12: Phase 2 and the rename, then this task, then the independent-operation track, then More models Phases 3-5. Standing words: "continue without asking or stopping", "merge as you decide just be careful", "dont lower quality", "you have full access. continue", "write less text. report in summary at the end of phase."
@@ -42,7 +42,7 @@ Scope of this run: GitHub sign-in only. The Claude and OpenAI outcomes are recor
 | U2 account store | INTEGRATED: reviews FIX x4 (S2 each round, then one S2 U2-R15), each fixed; U2-R15's pins ported by the lead (`d37652e`), to be re-reviewed in the integration review | 19 cherry-picks ending `97b0b9e` | wave-1 workflow and round 3 |
 | U3 reader and reasons | INTEGRATED, ACCEPT (round 1 S3 x2 fixed; re-review S4 only, lead-owned spec items applied in `f4354ac`) | `4cce004`..`476c402` (10, fast-forward) | wave-1 workflow |
 | U4 renderer | INTEGRATED, ACCEPT (round 2 FIX on one S3, fixed; final ACCEPT with no findings) | 10 cherry-picks ending `49faf12` | wave-1 workflow |
-| U5 lifecycle service | PENDING (wave 2) | - | - |
+| U5 lifecycle service | BUILDING (wave 2, `wt/gsi-u5` from `dae1c65`) | - | - |
 | U6 main wiring | PENDING (wave 3) | - | - |
 | U7 token invariant | PENDING (wave 3) | - | - |
 | U8 Windows e2e | PENDING (wave 4) | - | - |
@@ -71,3 +71,4 @@ Kit 0.9.5, role collector, `firecrawl-cli` authenticated, 277 credits. `doctor`:
 - 2026-10-13: wave 1 launched (workflow `github-sign-in-wave1`, run `wf_00db7666-c91`): U1-U4 builders in `wt/gsi-u1`..`gsi-u4` from `cabca2f`, each followed by a refute-first unit review and up to two fix rounds with fresh re-reviews (blocking: any S1-S3).
 - 2026-10-13: wave 1 returned (`wf_00db7666-c91`, 22 agents). U3 ACCEPT and U4 ACCEPT: integrated onto `build/github-sign-in` (U3 fast-forward; U4 cherry-picked, each `docs/ARCHITECTURE.md` conflict resolved by keeping both units' sentences, one physical line per unit from now on). Integrated checks: typecheck and lint 0; github-read 70, github-text 24, github-account-panel 67, workbench 14, contracts 25, token-literals 2, app-constants 4, all passing. Lead docs commit `f4354ac`: spec 7.4 text aligned with the code (U3-R2), the phrase rule stated per sentence (U3-R3), and "As built" for the wave-1 judgment calls. U1 and U2: third round launched (`wf_f2b3e279-cb5`).
 - 2026-10-13: round 3 for U1 and U2 returned (`wf_f2b3e279-cb5`, 4 agents): U1-R8..R10 and U2-R11..R14 fixed, each with red proofs; fresh reviews FIX with one finding each: U1-R11 (S3: a body stream yielding non-bytes slipped the 64 KiB bound and rejected with the body's text, the token marker included, in its message) and U2-R15 (S2: the rollback's new cap had no test). The lead fixed both rather than spending a fourth agent round (U1-R11 `d4c4bdb`: red first, guard proof; U2-R15 `d37652e`: the reviewer's probes P13/P14 ported, red under RBNOCAP and RBCAP0); the integration review re-reviews both. U1 and U2 integrated by cherry-pick (map conflicts resolved one line per unit); every unit file on `build/github-sign-in` matches its unit tip. Pinned gate on `97b0b9e` started.
+- 2026-10-13: pinned gate on `97b0b9e` (wave 1 integrated, `results/gsi-wave1-97b0b9e`): typecheck, lint, build 0; 1990 tests, 74 failed, exactly the baseline names, 0 new, 0 missing, 0 files without results. Wave 2 launched: U5 in `wt/gsi-u5` from `dae1c65` (`wf_38993613-45d`; up to three fix rounds, the lesson from wave 1).
