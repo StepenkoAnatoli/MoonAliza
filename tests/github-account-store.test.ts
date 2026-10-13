@@ -332,6 +332,21 @@ describe('the retired list stays within 8 refs (DC-10)', () => {
     expect(await h.read()).toMatchObject({ account: null, retiredRefs: [] });
     expect(await h.bins()).toEqual([]);
   });
+
+  test('the refs the cap drops are tombstoned and removed, not only left out of the file (4.2)', async () => {
+    const h = await harness(); let { account } = await h.signIn(); const first = refsOf(account);
+    let inStep7 = false;
+    h.spy.after('commit', (_ref, count) => { if (count % 2 === 0) inStep7 = true; });   // a refresh's second commit: step 7 follows
+    h.spy.on('saveStaged', () => { inStep7 = false; });                                    // the next refresh begins
+    h.spy.on('remove', () => (inStep7 ? 'fail' : undefined));                              // every step-7 removal fails (a Windows lock)
+    for (let round = 1; round <= 5; round++) { const { account: next } = await h.refresh(account); expect(next).not.toBeNull(); account = next!; }
+    const file = await h.read();
+    expect(file?.retiredRefs).toHaveLength(8);                                             // rounds 1-4 retired 8 refs; round 5 dropped the first pair
+    for (const ref of first) expect(file?.retiredRefs).not.toContain(ref);
+    const index = JSON.parse(await readFile(join(h.data, 'vault', 'index.json'), 'utf8')) as { entries: Record<string, unknown> };
+    for (const ref of first) { expect(await h.bins()).not.toContain(`${ref}.bin`); expect(index.entries[ref]).toBeUndefined(); }
+    await expectConsistent(h.copy(), refsOf(account));
+  });
 });
 
 describe('clear durability (DC-6, GS-11)', () => {
