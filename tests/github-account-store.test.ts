@@ -194,6 +194,18 @@ describe('write order (4.3)', () => {
     expect(await h.read()).toBeNull();
   });
 
+  // 3.6: replace answers null when not admitted and clear never throws, so an admit that throws refuses like one that returns false (U2-R12).
+  test('an admit that throws refuses: replace returns null and stages nothing, and clear answers not-admitted without throwing', async () => {
+    const h = await harness();
+    const boom = () => { throw new Error('boom'); };
+    expect(await h.store.replace(issued(), T0, 'sign-in', boom)).toBeNull();
+    expect(h.spy.calls).toEqual([]); expect(await h.read()).toBeNull();
+    const { account: a } = await h.signIn(); const before = await h.read();
+    expect(await h.store.clear(boom)).toBe('not-admitted');
+    expect(h.store.current()).toBe(a); expect(await h.read()).toEqual(before);
+    expect(h.spy.ops('tombstone')).toEqual([]);
+  });
+
   test('reads during replace keep working: live names committed refs until the new pair is committed (pre-mortem 1)', async () => {
     const h = await harness(); const { account: a, tokens } = await h.signIn();
     const seen: (string | boolean)[] = [];
@@ -348,6 +360,27 @@ describe('the retired list stays within 8 refs (DC-10)', () => {
     for (const ref of first) { expect(await h.bins()).not.toContain(`${ref}.bin`); expect(index.entries[ref]).toBeUndefined(); }
     await expectConsistent(h.copy(), refsOf(account));
   });
+
+  // The clear's own cap: a sign-out over the live pair and 8 retired refs drops the oldest pair from its file write, and removes it now,
+  // so a 'durable' sign-out leaves no encrypted entry (4.2, 8.2's "deleted now") (U2-R12).
+  test('a sign-out over the live pair and 8 retired refs whose files remain removes every file now, the dropped pair too', async () => {
+    const h = await harness(); let { account } = await h.signIn(); const first = refsOf(account);
+    let inStep7 = false;
+    h.spy.after('commit', (_ref, count) => { if (count % 2 === 0) inStep7 = true; });   // a refresh's second commit: step 7 follows
+    h.spy.on('saveStaged', () => { inStep7 = false; });                                    // the next refresh begins
+    h.spy.on('remove', () => (inStep7 ? 'fail' : undefined));                              // every step-7 removal fails (a Windows lock)
+    for (let round = 1; round <= 4; round++) { const { account: next } = await h.refresh(account); expect(next).not.toBeNull(); account = next!; }
+    h.spy.on('remove'); h.spy.after('commit'); h.spy.on('saveStaged');
+    const file = await h.read();
+    expect(file?.retiredRefs).toHaveLength(8); expect(file?.retiredRefs.slice(0, 2)).toEqual(first);   // the clear's cap drops this pair
+    for (const ref of first) expect(await h.bins()).toContain(`${ref}.bin`);
+    expect(await h.signOut()).toBe('durable');
+    expect(await h.bins()).toEqual([]);
+    const index = JSON.parse(await readFile(join(h.data, 'vault', 'index.json'), 'utf8')) as { entries: Record<string, unknown> };
+    expect(Object.keys(index.entries)).toEqual([]);
+    expect(await h.read()).toMatchObject({ account: null, retiredRefs: [] });
+    await expectConsistent(h.copy(), null);
+  });
 });
 
 describe('clear durability (DC-6, GS-11)', () => {
@@ -495,6 +528,28 @@ describe('clear durability (DC-6, GS-11)', () => {
       if (expected.signedInNextStart) expect(refsOf(next.store.current())).toEqual(named);   // the limit 'not-durable' discloses (4.5)
     });
   }
+
+  // The same race, where the clear's step-1 persists of the new pair land before the disk fails: those persists record every account
+  // ref, so they carry the clear in its first round, with no retry (DC-6, U2-R2's rule) (U2-R12).
+  test('a sign-out racing a refresh past its file write: its step-1 persists land, then every write fails: durable, no retry, no account at the next start', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    const reached = gate(); const held = gate(); let clear: Promise<unknown> | undefined;
+    h.spy.on('commit', (_ref, n) => { if (n === 3) { clear = h.signOut(); reached.open(); return held.promise; } });   // the refresh's first commit
+    let restore: (() => void) | undefined;
+    h.spy.on('tombstone', (_ref, n) => { if (n === 3) h.breakWrites(); });                 // the clear's step 1: its file write will fail
+    h.spy.after('tombstone', (_ref, n) => { if (n === 4) { restore = failVaultDisk(h.vault); h.spy.on('remove', () => 'fail'); } });   // step 1's persists landed
+    const replace = h.store.replace(issued(), T0, 'refresh', h.refreshAdmit(a));
+    await reached.promise; await Promise.all(h.spy.persists);                   // the prologue's tombstones reached disk
+    held.open();
+    expect(await replace).toBeNull();                                           // step 6 refused: the file names the new pair
+    const result = await clear;
+    restore!(); h.restoreWrites(); h.spy.on('remove');
+    const named = refsOf((await h.read())?.account);
+    expect(named).toHaveLength(2); expect(named.some(ref => refsOf(a).includes(ref))).toBe(false);
+    expect(result).toBe('durable');
+    expect(h.spy.ops('tombstone')).toEqual([...refsOf(a), ...named].map(ref => `tombstone:${ref}`));   // the prologue and step 1: no retry
+    await expectConsistent(h.copy(), null);
+  });
 
   // A clear that reached disk nowhere leaves the account file naming a pair the on-disk index may still hold staged. Its files must
   // stay: the next start's reconcile commits a referenced staged entry only if its file is there (vault.ts:109-110) (U2-R7).
