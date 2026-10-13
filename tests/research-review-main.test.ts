@@ -212,7 +212,16 @@ beforeAll(async () => {
   nodeSha256 = digest(await readFile(process.execPath)); fixtureBytes = await readFile(fixture); fixtureSha = digest(fixtureBytes);
   process.env.MOONALIZA_TEST_SENTINEL = SENTINEL;
 });
-afterEach(async () => { for (const h of harnesses.splice(0)) { await h.review.close(); await h.kit.close(); h.store.close(); } });
+afterEach(async () => {
+  // S9-CI-1 diagnostic (never merged): time each close and record what it could be waiting on.
+  const t0 = Date.now(); const list = harnesses.splice(0); const state = (o: unknown, k: string) => { const v = (o as Record<string, unknown>)[k]; return v instanceof Map || v instanceof Set ? v.size : v === undefined ? 'undef' : typeof v; };
+  for (const [i, h] of list.entries()) {
+    const before = { jobs: state(h.review, 'jobs'), drivers: state(h.review, 'drivers'), starting: state(h.review, 'starting'), launches: state(h.kit, 'launches'), runtime: state(h.kit, 'runtime') };
+    const a = Date.now(); await h.review.close(); const b = Date.now(); await h.kit.close(); const c = Date.now(); h.store.close(); const d = Date.now();
+    console.error(`S9DIAG ${expect.getState().currentTestName?.slice(0, 40)} #${i}/${list.length} t+${a - t0} review=${b - a} kit=${c - b} store=${d - c} ${JSON.stringify(before)}`);
+  }
+  console.error(`S9DIAG total=${Date.now() - t0}`);
+}, 300_000);
 afterAll(async () => {
   delete process.env.MOONALIZA_TEST_SENTINEL;
   if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); }
@@ -698,7 +707,7 @@ test('a validation fault of this machine is never blamed on the package: REVIEW_
     await packagingNow(h);
     expect(await until(h, settled), error).toMatchObject({ status: 'not_ready', failure });
     expect(h.store.researchEvents(h.id).events.at(-1), error).toMatchObject({ from: 'packaging', to: 'not_ready', cause: error });
-    await h.review.close(); await h.kit.close();
+    { const a = Date.now(); await h.review.close(); const b = Date.now(); await h.kit.close(); console.error(`S9DIAG in-loop ${error} review=${b - a} kit=${Date.now() - b}`); }
   }
 }, 300000);
 
