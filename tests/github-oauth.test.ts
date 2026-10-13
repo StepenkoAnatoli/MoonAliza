@@ -208,6 +208,55 @@ test('a fetcher that throws synchronously, a reset socket, a hang past the timeo
   expect(await requestToken(fetcher, pollParams(m), aborted.signal, limits, now)).toEqual({ kind: 'transient' });
 });
 
+/** A 200 application/json answer whose body sends its first half, then fails: the read rejects after the headers, with no timer
+ *  involved. A fresh stream per call; `pulls` reaches 2 only once the half was taken and the failure was raised. */
+function failingBody(text: string) {
+  const state = { pulls: 0 };
+  const fetcher: Fetcher = async () => {
+    const bytes = new TextEncoder().encode(text);
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        state.pulls++;
+        if (state.pulls === 1) controller.enqueue(bytes.subarray(0, bytes.length >> 1)); else controller.error(new TypeError('terminated'));
+      },
+    });
+    return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  return { state, fetcher };
+}
+
+test('a body whose read fails part-way, after the headers, is transient, failed at step 1, and null for fetchLogin, never a rejection', async () => {
+  // The 5 s limit: no timer can end these requests first, so only readBounded's catch turns the failed read into a result.
+  const m = markers();
+  const tokenBody = failingBody(JSON.stringify(tokenAnswer(m).json));
+  const stepOneBody = failingBody(JSON.stringify(codeAnswer(m).json));
+  const loginBody = failingBody(JSON.stringify({ login: 'someone' }));
+  const outcomes = [await settle(token(pollParams(m), limits, tokenBody.fetcher)), await settle(deviceCode(true, limits, stepOneBody.fetcher)),
+    await settle(fetchLogin(loginBody.fetcher, `Bearer ${m.access}`, live(), limits))];
+  expect(outcomes).toEqual([{ value: { kind: 'transient' } }, { value: { kind: 'failed' } }, { value: null }]);
+  expect([tokenBody, stepOneBody, loginBody].map(({ state }) => state.pulls)).toEqual([2, 2, 2]);
+});
+
+test('an owner abort once the loopback headers are in, with the body stalled, is transient, failed at step 1, and null for fetchLogin', async () => {
+  // The real fetch path under the 5 s limit. The wrapper records that the headers arrived before it aborts, so a slow round trip
+  // that timed out first (row 1) fails this test instead of passing it.
+  const m = markers();
+  fake.answer(ROUTES.token, { ...tokenAnswer(m), hang: 'body' });
+  fake.answer(ROUTES.device, { ...codeAnswer(m), hang: 'body' });
+  fake.answer(ROUTES.user, { json: { login: 'someone' }, hang: 'body' });
+  const abortAfterHeaders = () => {
+    const owner = new AbortController(); const state = { headers: false };
+    const wrapped: Fetcher = async (url, init) => { const response = await fetcher(url, init); state.headers = true; owner.abort(); return response; };
+    return { owner, state, fetcher: wrapped };
+  };
+  const [poll, stepOne, login] = [abortAfterHeaders(), abortAfterHeaders(), abortAfterHeaders()];
+  const outcomes = [await settle(requestToken(poll.fetcher, pollParams(m), poll.owner.signal, limits, now)),
+    await settle(requestDeviceCode(stepOne.fetcher, CLIENT, true, stepOne.owner.signal, limits, now)),
+    await settle(fetchLogin(login.fetcher, `Bearer ${m.access}`, login.owner.signal, limits))];
+  expect([poll, stepOne, login].map(({ state }) => state.headers)).toEqual([true, true, true]);
+  expect(outcomes).toEqual([{ value: { kind: 'transient' } }, { value: { kind: 'failed' } }, { value: null }]);
+});
+
 test('a short delay inside the timeout still answers', async () => {
   const m = markers(); fake.answer(ROUTES.token, { ...tokenAnswer(m), delayMs: 20 });
   expect(await token(pollParams(m), { ...limits, requestTimeoutMs: 2_000 })).toMatchObject({ kind: 'tokens' });
