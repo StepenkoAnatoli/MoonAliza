@@ -1004,3 +1004,44 @@ describe('two vault entries and no token on disk (S-1, S-2)', () => {
     for (const needle of markers) expect(await scan(h.data, needle)).toEqual([]);
   });
 });
+
+// ---- U2-R15: the rollback's own cap (DC-10, 4.2). Ported by the lead from the third review's probes P13 and P14. ----
+/** Four refreshes whose step-7 removals fail leave 8 retired refs (pre-mortem 5); returns the live account and every pair so far. */
+async function eightRetired(h: Awaited<ReturnType<typeof harness>>) {
+  let { account } = await h.signIn(); const pairs: string[][] = [refsOf(account)];
+  let inStep7 = false;
+  h.spy.after('commit', (_ref, count) => { if (count % 2 === 0) inStep7 = true; });
+  h.spy.on('saveStaged', () => { inStep7 = false; });
+  h.spy.on('remove', () => (inStep7 ? 'fail' : undefined));
+  for (let round = 1; round <= 4; round++) { const { account: next } = await h.refresh(account); account = next!; pairs.push(refsOf(account)); }
+  h.spy.on('remove'); h.spy.after('commit'); h.spy.on('saveStaged');
+  return { account, pairs };
+}
+describe('a sign-in\'s rollback keeps retiredRefs within 8 (U2-R15)', () => {
+  // Guard: the cap on the rollback's first write. Without it the write breaks the 8-ref schema, the store follows the file to the
+  // new, still-staged pair (every grant refused) and step 7 removes the previous, working pair.
+  test.each([1, 2])('commit %i of a sign-in fails over a file with 8 retired refs: ReplaceFailure(false), the previous account stands', async failing => {
+    const h = await harness(); const { account } = await eightRetired(h);
+    expect((await h.read())?.retiredRefs).toHaveLength(8);
+    h.spy.on('commit', (_ref, count) => count === 10 + failing ? 'fail' : undefined);
+    const result = await h.store.replace(issued(), T0, 'sign-in', h.signInAdmit()).catch((error: unknown) => error);
+    expect(result).toBeInstanceOf(ReplaceFailure);
+    expect(h.store.current()).toBe(account);
+    expect(refsOf((await h.read())?.account)).toEqual(refsOf(account));
+    await expectConsistent(h.copy(), refsOf(account));
+  });
+  // Guard: the cap retires what it drops. After a sign-out whose removals failed (account null, 8 retired), only the rollback's cap
+  // drops the oldest pair; 4.2 says that writer removes it now.
+  test('a failed sign-in over account null and 8 retired refs removes the pair its rollback drops', async () => {
+    const h = await harness(); const { pairs } = await eightRetired(h);
+    h.spy.on('remove', () => 'fail'); expect(await h.signOut()).toBe('durable'); h.spy.on('remove');
+    const afterClear = await h.read(); expect(afterClear?.account).toBeNull(); expect(afterClear?.retiredRefs).toHaveLength(8);
+    const dropped = afterClear!.retiredRefs.slice(0, 2);
+    expect(dropped).toEqual(pairs[1]);
+    h.spy.on('commit', (_ref, count) => count === 12 ? 'fail' : undefined);
+    const result = await h.store.replace(issued(), T0, 'sign-in', h.signInAdmit()).catch((error: unknown) => error);
+    expect(result).toBeInstanceOf(ReplaceFailure);
+    for (const ref of dropped) expect(await h.bins()).not.toContain(`${ref}.bin`);
+    await expectConsistent(h.copy(), null);
+  });
+});
