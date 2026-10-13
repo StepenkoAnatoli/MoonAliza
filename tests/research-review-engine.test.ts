@@ -330,17 +330,20 @@ describe('run end', () => {
   });
 
   test.each([
-    ['an answer cut off', { content: 'The map is half', outcome: 'incomplete' } as Completion, 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; otherwise send the request again or split it.'],
-    ['a declined answer', { content: 'I will not do that.', outcome: 'blocked' } as Completion, 'The provider declined to answer this request. Rephrase it or try another model.'],
-    ['nine tool calls in one step', { content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: 9 }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: {} })) } as Completion, 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Ask for fewer actions at a time.'],
-  ] as const)('%s ends the review REVIEW_RUN_FAILED and its message says why (Stage 7 FX-1)', async (_name, output, why) => {
-    // Guard: reviewEnd receives the step's own text (mutation: pass it only the `failures` table's entry; the run then
-    // reads only "The research review run failed. The research job is not ready.", which names no cause).
+    ['an answer cut off', { content: 'The map is half', outcome: 'incomplete' } as Completion, 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; then start the review again.'],
+    ['a declined answer', { content: 'I will not do that.', outcome: 'blocked' } as Completion, 'The provider declined to answer this request. Start the review again or choose another review model.'],
+    ['nine tool calls in one step', { content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: 9 }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: {} })) } as Completion, 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Start the review again or choose another review model.'],
+  ] as const)('%s ends the review REVIEW_RUN_FAILED and its message says why, with a remedy a review can take (Stage 7 FX-1, fix round)', async (_name, output, why) => {
+    // Guards: reviewEnd receives the step's own cause (mutation: pass it only the `failures` table's entry; the run then
+    // reads only "The research review run failed. The research job is not ready.", which names no cause); and a review's
+    // remedy, not an ordinary run's (mutation: give reviewEnd the ordinary text; it then asks the user to rephrase or
+    // resend a request a review does not have - the review is started from the Research panel with a model choice only).
     const h = harness(); h.script.push(() => output);
     const { run } = await h.begin(); await finished(h, run.id);
     const failed = h.runEvents(run.id).find(event => event.type === 'run.failed')!;
     expect(failed.payload).toEqual({ error: { code: 'REVIEW_NOT_READY', message: `The research review run failed. The research job is not ready. ${why}`, retry: 'never' } });
     expect(h.store.getResearch('j1')).toMatchObject({ status: 'not_ready', failure: 'REVIEW_RUN_FAILED' });
+    for (const ordinary of ['Rephrase it', 'request again', 'split', 'fewer actions']) expect(why).not.toContain(ordinary);
   });
 
   test.each([
