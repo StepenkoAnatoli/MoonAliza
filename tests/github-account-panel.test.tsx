@@ -422,6 +422,27 @@ test('Cancel ends a pending sign-in, announces the outcome and stops the poll', 
   expect(fake.count('github.account.read')).toBe(reads);
 });
 
+test('the status region stays in the accessibility tree while it is empty, so an outcome is announced into it (spec 8.1)', async () => {
+  // A live region that is revealed together with its content is often not announced. Mutation that turns this red: hide
+  // the empty region again (.github-notices:empty{display:none} in src/renderer/styles.css).
+  useAppStyles();
+  const GitHubAccountPanel = await loadPanel();
+  const fake = github(pending());
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  const region = within(panelOf()).getByRole('status');
+  expect(region.textContent).toBe('');
+  expect(getComputedStyle(region).display).not.toBe('none');
+  fireEvent.click(within(panelOf()).getByRole('button', { name: 'Cancel' }));
+  await settle();
+  expect(within(panelOf()).getByRole('status')).toBe(region);
+  expect(region.textContent).toBe(OUTCOMES.cancelled);
+  cleanup();
+  render(<GitHubAccountPanel api={github(signedIn()).api} />);
+  await settle();
+  expect(within(panelOf()).getByRole('status').textContent).toBe('');
+});
+
 test('a status reply older than one already shown is not applied', async () => {
   // Guard: the reply ordering (mutation: apply every reply as it arrives; a poll sent before Cancel then brings the
   // cancelled sign-in back on screen).
