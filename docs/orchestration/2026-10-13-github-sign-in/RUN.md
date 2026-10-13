@@ -24,7 +24,7 @@
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Wave 1: builders U1-U4 (workflow, two agents at a time), each followed by a refute-first unit review and up to two fix rounds; the lead cherry-picks accepted units onto `build/github-sign-in`, then wave 2 (U5). Merge PR #46 when its gate and Windows CI are green.
+Wave 1: U1 and U2's third fix round (workflow `github-sign-in-wave1-round3`); then integrate both, restructure nothing further in the map (one line per unit since U4's integration), run the pinned gate on the integrated head, and launch wave 2 (U5) from it.
 
 ## Task statement
 User, 2026-10-12: "Can we make the app be able to login to GitHub/codex/Claude?" The Research-Kit check (`docs/research/2026-10-12-app-sign-in`, 8 credits) answered it. GitHub sign-in is allowed and is planned as its own task after the MoonAliza rename. Claude.ai sign-in is not allowed. Sign in with ChatGPT is not stated, so API keys are used until OpenAI confirms. The plan records this (`docs/superpowers/plans/2026-10-02-research-jobs.md`, "App sign-in", `64864bd`). User's order, 2026-10-12: Phase 2 and the rename, then this task, then the independent-operation track, then More models Phases 3-5. Standing words: "continue without asking or stopping", "merge as you decide just be careful", "dont lower quality", "you have full access. continue", "write less text. report in summary at the end of phase."
@@ -38,10 +38,10 @@ Scope of this run: GitHub sign-in only. The Claude and OpenAI outcomes are recor
 | Unit | Status | Commits | Review |
 |------|--------|---------|--------|
 | U0 contracts (lead) | DONE: red first (5 tests and one missing module), 8 of 8 guard proofs red, typecheck, lint, eslint e2e, check-handoff 0 | `8f86232` | lead; integration review later |
-| U1 wire client | LAUNCHING | - | - |
-| U2 account store | LAUNCHING | - | - |
-| U3 reader and reasons | LAUNCHING | - | - |
-| U4 renderer | LAUNCHING | - | - |
+| U1 wire client | BUILT; reviews FIX x3 (S2, S2, then S3/S4); round 3 running | `build/gsi-u1`: `289fe3d`..`6b8ca13` (7) | wave-1 workflow |
+| U2 account store | BUILT; reviews FIX x3 (S2 each); round 3 running | `build/gsi-u2`: `5fbbdab`..`7bcdc67` (13) | wave-1 workflow |
+| U3 reader and reasons | INTEGRATED, ACCEPT (round 1 S3 x2 fixed; re-review S4 only, lead-owned spec items applied in `f4354ac`) | `4cce004`..`476c402` (10, fast-forward) | wave-1 workflow |
+| U4 renderer | INTEGRATED, ACCEPT (round 2 FIX on one S3, fixed; final ACCEPT with no findings) | 10 cherry-picks ending `49faf12` | wave-1 workflow |
 | U5 lifecycle service | PENDING (wave 2) | - | - |
 | U6 main wiring | PENDING (wave 3) | - | - |
 | U7 token invariant | PENDING (wave 3) | - | - |
@@ -54,6 +54,7 @@ Kit 0.9.5, role collector, `firecrawl-cli` authenticated, 277 credits. `doctor`:
 ## Decisions and assumptions
 - 2026-10-13: collection budget raised from 15 to 20 credits by the lead, for the owner pages the round-1 verifier and critic named (about 8 pages); 265 credits remained after round 1. Reversible only in the sense that nothing more is spent if the user objects.
 - 2026-10-13: one more credit (21 in all) for GitHub's device-flow tutorial, to settle where the device-flow and refresh parameters go (OF-1 in the synthesis); the lead approved it as negligible against 257 remaining.
+- 2026-10-13: U1 and U2 each ended the wave-1 workflow's two fix rounds with FIX (U1: one S3 and two S4; U2: one S2, two S3, one S4: guards without tests and two crash-window paths). Their severity fell each round and the remaining fixes are small and local, so the lead gave each a third, targeted round with a fresh review instead of stopping the run (auto-build's two-retry stop). A fourth would go to the user.
 - 2026-10-13: classified architectural (sign-in flow, a new credential kind in the vault, new IPC, a GitHub App registration only the user can make); the Mandate waits for the user.
 
 ## Log
@@ -67,3 +68,5 @@ Kit 0.9.5, role collector, `firecrawl-cli` authenticated, 277 credits. `doctor`:
 - 2026-10-13: final pass (workflow `github-sign-in-final-pass`, run `wf_dc08841d-4fe`, 4 agents, `reports/final-pass-workflow.json`): brief RC-1..RC-4 fixed, check ACCEPT (two optional S4 residues); design GS-1..GS-11 fixed (stated departures in the docs), check FIX with three S4 wording items (RF-1..RF-3). The lead applied RF-1..RF-3, the optional 403-text residue (N-2) and the reviser's note that step 7 of `replace` could orphan a committed vault entry by writing `retiredRefs: []` after a failed removal. Both research projects: preflight PASS, handoff 0; `scripts/check-handoff.mjs` exit 0. Mandate presented (MANDATE.md).
 - 2026-10-13: Mandate reply, verbatim: "GO MERGE, read-only, private text like local files". Recorded in MANDATE.md and USER-DECISIONS.md; the spec status is now approved; the plan got the read-only correction notes (the GitHub bullet and step 1 of "GitHub, approved as four steps").
 - 2026-10-13: Stage 5 started on `build/github-sign-in` from `6ac1007`. U0 by the lead (`8f86232`): red first, 39 of 39 then green, 8 guard proofs. Briefs written before any launch (`briefs/common.md`, `u1`..`u8-builder.md`, `unit-reviewer.md`).
+- 2026-10-13: wave 1 launched (workflow `github-sign-in-wave1`, run `wf_00db7666-c91`): U1-U4 builders in `wt/gsi-u1`..`gsi-u4` from `cabca2f`, each followed by a refute-first unit review and up to two fix rounds with fresh re-reviews (blocking: any S1-S3).
+- 2026-10-13: wave 1 returned (`wf_00db7666-c91`, 22 agents). U3 ACCEPT and U4 ACCEPT: integrated onto `build/github-sign-in` (U3 fast-forward; U4 cherry-picked, each `docs/ARCHITECTURE.md` conflict resolved by keeping both units' sentences, one physical line per unit from now on). Integrated checks: typecheck and lint 0; github-read 70, github-text 24, github-account-panel 67, workbench 14, contracts 25, token-literals 2, app-constants 4, all passing. Lead docs commit `f4354ac`: spec 7.4 text aligned with the code (U3-R2), the phrase rule stated per sentence (U3-R3), and "As built" for the wave-1 judgment calls. U1 and U2: third round launched (`wf_f2b3e279-cb5`).
