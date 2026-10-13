@@ -2,7 +2,9 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { randomBytes } from 'node:crypto';
-import { afterEach, expect, test, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
 import { GitHubAttemptOutcomeSchema, GitHubEndedSchema, type GitHubAccountStatus } from '../src/shared';
 import { App } from '../src/renderer/App';
 
@@ -158,6 +160,13 @@ function github(initial: Status, routes: Record<string, (params: Record<string, 
 const panelOf = () => screen.getByTestId('github-account-panel');
 const useFakeClock = () => { vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] }); vi.setSystemTime(T0); };
 const tick = async (ms: number) => { await act(async () => { vi.advanceTimersByTime(ms); }); await settle(); };
+/** Loads the app's stylesheet into this test's document; jsdom applies its rules to getComputedStyle and to role queries. */
+const useAppStyles = () => {
+  const style = document.createElement('style');
+  style.textContent = readFileSync(join(import.meta.dirname, '../src/renderer/styles.css'), 'utf8');
+  document.head.append(style);
+  onTestFinished(() => style.remove());
+};
 afterEach(() => { vi.useRealTimers(); });
 
 test('not configured says so, and nothing else: no button', async () => {
@@ -206,7 +215,7 @@ test('pending before GitHub confirms: the code, the time left, Open GitHub, Canc
   const panel = panelOf();
   const text = panel.textContent ?? '';
   for (const sentence of [TEXT.enterCode, TEXT.phishing, TEXT.keepOpen]) expect(text).toContain(sentence);
-  // The code is its own selectable element (styles.css gives it user-select: all); no clipboard API is used.
+  // The code is its own selectable element (the next test checks the stylesheet's user-select: all); no clipboard API is used.
   expect(within(panel).getByText(CODE).className).toBe('github-user-code');
   expect(within(panel).getByText('The code expires in 15:00.')).toBeTruthy();
   expect(within(panel).getAllByRole('button').map(button => button.textContent)).toEqual(['Open GitHub', 'Cancel']);
@@ -217,6 +226,16 @@ test('pending before GitHub confirms: the code, the time left, Open GitHub, Canc
   await tick(839_000);
   expect(within(panel).getByText(TEXT.waiting)).toBeTruthy();
   expect(panel.textContent).not.toContain('The code expires in');
+});
+
+test('the code is selected whole with one click: the app stylesheet gives it user-select: all (spec 8.1)', async () => {
+  // Mutation that turns this red: delete user-select:all from the .github-user-code rule in src/renderer/styles.css.
+  useAppStyles();
+  const GitHubAccountPanel = await loadPanel();
+  const { api } = github(pending());
+  render(<GitHubAccountPanel api={api} />);
+  await settle();
+  expect(getComputedStyle(within(panelOf()).getByText(CODE)).getPropertyValue('user-select')).toBe('all');
 });
 
 test('pending during Sign in again says the current sign-in stays, with or without its login', async () => {
