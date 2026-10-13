@@ -538,6 +538,54 @@ test.each([
   expect(within(panelOf()).getByText(CODE)).toBeTruthy();
 });
 
+test('a failed status read is shown until a later reply is shown, so the confirmed view holds only its sentence', async () => {
+  // Spec 8.1 shows invoke failures; spec 8.2 has the confirmed view show only "GitHub confirmed the code. Finishing
+  // sign-in...". Guard: an applied reply clears a failed read (mutation: keep it; one transient poll failure, an engine
+  // restart, would then stay on screen for the rest of the sign-in, signed-in view included).
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  let reads = 0;
+  const fake = github(pending(), { 'github.account.read': () => {
+    if (++reads === 2) throw new Error('The engine is restarting. Try again when it is ready.');
+    return { account: fake.state.account };
+  } });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  await tick(1000);
+  expect(within(panelOf()).getByRole('alert').textContent).toBe('The engine is restarting. Try again when it is ready.');
+  expect(within(panelOf()).getByText(CODE)).toBeTruthy();
+  fake.state.account = pending({ committed: true, account: null });
+  await tick(1000);
+  expect(reads).toBe(3);
+  expect(panelOf().textContent).toBe(TEXT.confirmed);
+  fake.state.account = signedIn();
+  await tick(1000);
+  expect(panelOf().textContent).toContain('Signed in as octo-cat.');
+  expect(within(panelOf()).queryByRole('alert')).toBeNull();
+});
+
+test('a status read that fails after a later reply was shown is not reported', async () => {
+  // Guard: a failed read is shown only while no reply sent after it has been applied, as replies are (mutation: show every
+  // failed read; a poll in flight when the user cancelled, failing afterwards, would put an alert under "Sign-in
+  // cancelled" that nothing clears, since a signed-out panel does not poll).
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  const late = deferred<unknown>();
+  let reads = 0;
+  const fake = github(pending(), { 'github.account.read': () => (++reads === 2 ? late.promise : { account: fake.state.account }) });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  await tick(1000);
+  expect(reads).toBe(2);
+  fireEvent.click(within(panelOf()).getByRole('button', { name: 'Cancel' }));
+  await settle();
+  expect(within(panelOf()).getByRole('status').textContent).toBe(OUTCOMES.cancelled);
+  await act(async () => late.reject(new Error('The engine is restarting. Try again when it is ready.')));
+  await settle();
+  expect(within(panelOf()).queryByRole('alert')).toBeNull();
+  expect(within(panelOf()).getByRole('status').textContent).toBe(OUTCOMES.cancelled);
+});
+
 test('every outcome and every ended reason has its spec text, and no text says anything was revoked or erased', async () => {
   const texts = await loadTexts();
   expect(Object.keys(texts.GITHUB_OUTCOMES).sort()).toEqual([...GitHubAttemptOutcomeSchema.options].sort());

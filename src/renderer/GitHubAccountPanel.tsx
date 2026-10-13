@@ -22,16 +22,24 @@ export function GitHubAccountPanel({ api, onUnconfirmedChange }: { api: AppApi; 
   const [status, setStatus] = useState<GitHubAccountStatus>();
   const [busy, setBusy] = useState<Change | 'github.open' | null>(null);
   const [signedOutHere, setSignedOutHere] = useState(false);
+  // An action's failure stays until the user acts again; a failed status read only until a later reply is applied.
   const [error, setError] = useState('');
+  const [readError, setReadError] = useState('');
   const [now, setNow] = useState(() => Date.now());
-  // Replies are applied in the order their requests were sent, so a slow poll cannot bring back a state a later call ended.
+  // Replies are applied in the order their requests were sent, so a slow poll cannot bring back a state a later call ended,
+  // and a failed read is shown only while no reply sent after it has been applied.
   const sent = useRef(0); const shown = useRef(0);
-  const track = useCallback(async (reply: Promise<unknown>) => {
+  const track = useCallback(async (reply: Promise<unknown>, isRead = false) => {
     const order = ++sent.current;
-    const { account } = await reply as { account: GitHubAccountStatus };
-    if (order > shown.current) { shown.current = order; setStatus(account); }
+    try {
+      const { account } = await reply as { account: GitHubAccountStatus };
+      if (order > shown.current) { shown.current = order; setStatus(account); setReadError(''); }
+    } catch (reason) {
+      if (!isRead) throw reason;
+      if (order > shown.current) setReadError(failure(reason));
+    }
   }, []);
-  const read = useCallback(() => track(api.invoke('github.account.read', {})).catch(reason => setError(failure(reason))), [api, track]);
+  const read = useCallback(() => track(api.invoke('github.account.read', {}), true), [api, track]);
   useEffect(() => { void read(); }, [read]);
 
   const pending = status?.state === 'pending';
@@ -103,7 +111,7 @@ export function GitHubAccountPanel({ api, onUnconfirmedChange }: { api: AppApi; 
     </>;
   }
   return <div className="github-account-panel" data-testid="github-account-panel">
-    {error && <p className="form-error" role="alert">{error}</p>}
+    {(error || readError) && <p className="form-error" role="alert">{error || readError}</p>}
     <div className="github-notices" role="status">{notices}</div>
     {body}
   </div>;
