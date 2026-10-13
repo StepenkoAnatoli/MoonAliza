@@ -257,6 +257,26 @@ test('an owner abort once the loopback headers are in, with the body stalled, is
   expect(outcomes).toEqual([{ value: { kind: 'transient' } }, { value: { kind: 'failed' } }, { value: null }]);
 });
 
+test.each([
+  ['locked by another reader', (response: Response) => { response.body!.getReader(); }],
+  ['already read', async (response: Response) => { await response.text(); }],
+] as const)('a Response whose body is %s is transient, failed at step 1, and null for fetchLogin, never a rejection', async (_name, spend) => {
+  // Node's fetch never answers so (spec 10's lateFetch); an injected fetcher, or a replaced global fetch in e2e, can hand back a
+  // Response someone already read. The body's state is recorded here and asserted below: a failed expect inside a fetcher would
+  // be row 1 (transient) and pass this test for the wrong reason.
+  const m = markers(); const seen: boolean[] = [];
+  const spent = (text: string): Fetcher => async () => {
+    const response = new Response(text, { status: 200, headers: { 'content-type': 'application/json' } });
+    await spend(response); seen.push(response.body!.locked);
+    return response;
+  };
+  const outcomes = [await settle(token(pollParams(m), limits, spent(JSON.stringify(tokenAnswer(m).json)))),
+    await settle(deviceCode(true, limits, spent(JSON.stringify(codeAnswer(m).json)))),
+    await settle(fetchLogin(spent(JSON.stringify({ login: 'someone' })), `Bearer ${m.access}`, live(), limits))];
+  expect(seen).toEqual([true, true, true]);
+  expect(outcomes).toEqual([{ value: { kind: 'transient' } }, { value: { kind: 'failed' } }, { value: null }]);
+});
+
 test('a short delay inside the timeout still answers', async () => {
   const m = markers(); fake.answer(ROUTES.token, { ...tokenAnswer(m), delayMs: 20 });
   expect(await token(pollParams(m), { ...limits, requestTimeoutMs: 2_000 })).toMatchObject({ kind: 'tokens' });

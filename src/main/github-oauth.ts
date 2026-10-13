@@ -103,12 +103,14 @@ function dispatch(fetcher: Fetcher, url: string, init: RequestInit): Promise<Res
   try { return fetcher(url, init); } catch (error) { return Promise.reject(error); }
 }
 
-/** At most maxBytes, checked against the declared content-length and while streaming; null when over, or when the read fails.
- *  The body is always cancelled and released. */
+/** At most maxBytes, checked against the declared content-length and while streaming; null when over, when the read fails, or
+ *  when another reader already holds the body (an injected fetcher can hand back a Response already read), which getReader would
+ *  throw on. A body this function reads is always cancelled and released. */
 async function readBounded(response: Response, maxBytes: number): Promise<Uint8Array | null> {
   const declared = response.headers.get('content-length');
   if (declared !== null && !(/^\d{1,16}$/.test(declared) && Number(declared) <= maxBytes)) { await response.body?.cancel().catch(() => {}); return null; }
   if (!response.body) return new Uint8Array(0);
+  if (response.body.locked) return null;
   const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let length = 0;
   try {
     for (;;) {
