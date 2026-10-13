@@ -1,4 +1,8 @@
-# Development status - 2026-10-12 - More models, Phase 2: the Anthropic Messages adapter
+# Development status - 2026-10-13 - More models, Phases 1-2 complete: gap-audit fixes
+
+## More models, gap-audit fixes (2026-10-13)
+
+A step that ends without a usable answer now says why ([audit](evidence/2026-10-13-gap-audit.md)): an answer that was cut off, one the provider declined, an empty answer, or more than 8 tool calls in one step. Until now each read "The model or tool request failed", or, for an empty answer, the run reported success with nothing shown. The error codes are unchanged. **Behaviour change for every provider:** an empty final answer now fails the run, except in a research review, where it is the review's final answer. A stored partial answer is labelled "Incomplete answer". On OpenAI-compatible and Ollama profiles, a tool call with empty arguments reads as `{}` instead of failing the step. The Anthropic hint now says to raise Context window and Maximum response: at the form's defaults, a task that thinks can stop after a few steps. Prefilling larger values is left to the user, because each request is billed for the input it sends. Merged in PR #43 (`afcbd7a`); the full Linux suite matched the 74-failure baseline (1572 tests), and Windows CI was green. The phase's traceability and final report are in `docs/orchestration/2026-10-05-more-models/` (TRACEABILITY.md, REPORT.md).
 
 ## More models, Phase 2 (2026-10-12)
 
