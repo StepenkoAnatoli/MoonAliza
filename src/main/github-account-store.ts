@@ -209,8 +209,9 @@ export class GitHubAccountStore {
     const failed: string[] = [];
     for (const ref of kept) if (!(await this.removeTombstoned(ref))) failed.push(ref);                        // 3
     // 4. Refs whose removal failed stay named, so the next start's open() tombstones them again and the reconcile deletes them (GS-11).
-    if ((this.disk?.account !== null || !sameList(failed, this.disk?.retiredRefs)) && await this.tryWrite(null, failed)) reached = true;
-    return reached ? 'durable' : 'not-durable';
+    // The clear has already reached disk, so this write decides nothing about durability.
+    if (this.disk?.account !== null || !sameList(failed, this.disk?.retiredRefs)) await this.tryWrite(null, failed);
+    return 'durable';
   }
 
   /** Keeps a retired list within the schema's bound: the oldest refs beyond the newest 8 are dropped first (4.2, DC-10). */
