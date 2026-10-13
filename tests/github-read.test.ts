@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { GitHubReader } from '../src/main/github';
+import { SIGNED_OUT, type GitHubCredential } from '../src/main/github-credential';
 import { githubRepositories, parseGitHubInput } from '../src/shared/github';
 
 const sha = 'a'.repeat(40);
@@ -162,4 +163,162 @@ test.each([
   expect(targets).toHaveLength(1); expect(new URL(targets[0]!).hostname).toBe('api.github.com');
   for (const text of errorTexts(error)) expect(text).not.toContain(marker);
   expect(state.pulls).toBe(0);
+});
+
+// GitHub sign-in, U3 signed-in reads (docs/specification/github-sign-in.md 7.1, 7.2, 3.4; REQUIREMENTS F-13, F-14, F-16, S-4,
+// T-5). The credential is a fake of U5's send(): it signs with a marker built at run time and reports authenticated. Fixtures are
+// built from E-01/E-02/E-15 shapes, not a capture.
+const INTEGRATION = 'Resource not accessible by integration';
+const tokenMarker = () => ['ghu', Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString('hex')].join('_');
+/** U5's send() as the reader sees it: one signed request, authenticated, and a count of calls. */
+function signedIn(marker: string) {
+  const calls = { send: 0 };
+  const credential: GitHubCredential = { async send(request) { calls.send++; return { response: await request(`Bearer ${marker}`), authenticated: true }; } };
+  return { credential, calls };
+}
+const readme = (target: string) => target.includes('/commits/') ? json({ sha })
+  : target.includes('/contents/README.md') ? json({ type: 'file', path: 'README.md', size: 13, encoding: 'base64', content: Buffer.from('one\ntwo\nthree').toString('base64') })
+  : json([{ type: 'file', name: 'README.md', path: 'README.md', size: 13 }]);
+function expectSignedInit(init: RequestInit, marker: string) {
+  const { signal, headers, ...rest } = init; const named = headers as Record<string, string>;
+  const { Authorization, ...others } = named;
+  expect({ ...rest, headers: others }).toStrictEqual(TODAY_INIT);
+  expect(Object.keys(init)).toEqual(TODAY_KEYS);
+  expect(Object.keys(named)).toEqual([...Object.keys(TODAY_HEADERS), 'Authorization']);
+  expect(Authorization).toBe(`Bearer ${marker}`);
+  expect(signal).toBeInstanceOf(AbortSignal);
+}
+
+test('signed in, every request is today\'s init plus Authorization only, to api.github.com only, with a signal Stop aborts', async () => {
+  const marker = tokenMarker(); const { credential, calls } = signedIn(marker); const inits: RequestInit[] = []; const targets: string[] = [];
+  const reader = new GitHubReader(async (target, init) => { targets.push(target); inits.push(init); return readme(target); }, credential);
+  const stop = new AbortController();
+  expect(JSON.parse(await reader.read({ url }, allowed, stop.signal))).toMatchObject({ kind: 'directory', commit: sha });
+  expect(JSON.parse(await reader.read({ url, path: 'README.md' }, allowed, stop.signal))).toMatchObject({ kind: 'file', text: 'one\ntwo\nthree' });
+  expect(calls.send).toBe(3); expect(targets.map(target => new URL(target).origin)).toEqual(Array(3).fill('https://api.github.com'));
+  for (const init of inits) { expectSignedInit(init, marker); expect(init.signal!.aborted).toBe(false); }
+  stop.abort();
+  for (const init of inits) expect(init.signal!.aborted).toBe(true);
+});
+
+test('signed in, the request is dispatched synchronously inside send() and Stop aborts it in flight', async () => {
+  const marker = tokenMarker(); const stop = new AbortController(); let dispatched = 0; const seen: boolean[] = [];
+  const credential: GitHubCredential = { async send(request) {
+    const pending = request(`Bearer ${marker}`); seen.push(dispatched === 1);
+    return { response: await pending, authenticated: true };
+  } };
+  const reader = new GitHubReader(async (_target, init) => {
+    dispatched++; expectSignedInit(init, marker); seen.push(init.signal!.aborted); stop.abort(); seen.push(init.signal!.aborted);
+    return json({ sha });
+  }, credential);
+  await expect(reader.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
+  expect(seen).toEqual([false, true, true]);
+});
+
+test('the default and SIGNED_OUT credentials send today\'s init, with no Authorization', async () => {
+  const inits: RequestInit[] = [];
+  for (const reader of [new GitHubReader(async (target, init) => { inits.push(init); return readme(target); }), new GitHubReader(async (target, init) => { inits.push(init); return readme(target); }, SIGNED_OUT)])
+    await reader.read({ url }, allowed, new AbortController().signal);
+  expect(inits).toHaveLength(4); for (const init of inits) expectTodayInit(init);
+});
+
+test('signed in, a 302 is GITHUB_REDIRECT after one request, and the Location host receives nothing', async () => {
+  const marker = tokenMarker(); const { credential } = signedIn(marker); const targets: string[] = [];
+  const reader = new GitHubReader(async target => { targets.push(target); return new Response(null, { status: 302, headers: { location: 'https://elsewhere.example/moved' } }); }, credential);
+  await expect(reader.read({ url }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_REDIRECT');
+  expect(targets).toHaveLength(1); expect(new URL(targets[0]!).hostname).toBe('api.github.com');
+  expect(targets.some(target => new URL(target).hostname === 'elsewhere.example')).toBe(false);
+});
+
+const padded = (before: number, phrase: string, after = 0) => 'x'.repeat(before) + phrase + 'x'.repeat(after);
+test.each<{ name: string; status: number; headers: Record<string, string>; body: string; code: string }>([
+  { name: 'a 403 with x-ratelimit-remaining 0 and the integration body', status: 403, headers: { 'x-ratelimit-remaining': '0' }, body: INTEGRATION, code: 'GITHUB_RATE_LIMIT' },
+  { name: 'a 403 with retry-after and the integration body', status: 403, headers: { 'retry-after': '60' }, body: INTEGRATION, code: 'GITHUB_RATE_LIMIT' },
+  { name: 'a rate-limit 403 that also names permissions', status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-accepted-github-permissions': 'contents=read' }, body: INTEGRATION, code: 'GITHUB_RATE_LIMIT' },
+  { name: 'a 429 with retry-after', status: 429, headers: { 'retry-after': '60' }, body: '', code: 'GITHUB_RATE_LIMIT' },
+  { name: 'a 429', status: 429, headers: {}, body: INTEGRATION, code: 'GITHUB_RATE_LIMIT' },
+  { name: 'a 403 with only the integration body', status: 403, headers: {}, body: INTEGRATION, code: 'GITHUB_PERMISSION_MISSING' },
+  { name: 'a 403 with the integration phrase ending at 64 KiB', status: 403, headers: {}, body: padded(65_536 - INTEGRATION.length, INTEGRATION, 6_000), code: 'GITHUB_PERMISSION_MISSING' },
+  { name: 'a 403 with neither', status: 403, headers: {}, body: '{"message":"Forbidden"}', code: 'GITHUB_FORBIDDEN_SIGNED_IN' },
+  { name: 'a 403 naming permissions only', status: 403, headers: { 'x-accepted-github-permissions': 'contents=read' }, body: '{"message":"Forbidden"}', code: 'GITHUB_FORBIDDEN_SIGNED_IN' },
+  { name: 'a 70 KiB 403 with the phrase after 64 KiB', status: 403, headers: {}, body: padded(65_536, INTEGRATION, 4_096), code: 'GITHUB_FORBIDDEN_SIGNED_IN' },
+  { name: 'a 404', status: 404, headers: {}, body: INTEGRATION, code: 'GITHUB_NOT_FOUND_SIGNED_IN' },
+  { name: 'an authenticated 401, which send() never returns (spec 7.2 step 6)', status: 401, headers: {}, body: INTEGRATION, code: 'GITHUB_UNAVAILABLE' },
+  { name: 'a 500', status: 500, headers: {}, body: INTEGRATION, code: 'GITHUB_UNAVAILABLE' },
+])('signed in, $name gives $code, with no body text in the error', async ({ status, headers, body, code }) => {
+  const marker = sentinel(); const { credential } = signedIn(tokenMarker()); const targets: string[] = [];
+  const { response, state } = trackedResponse(`${body} ${marker}`, status, headers);
+  const reader = new GitHubReader(async target => { targets.push(target); return response; }, credential);
+  const error = await rejection(reader.read({ url }, allowed, new AbortController().signal));
+  expect(error.message).toBe(code); expect(targets).toHaveLength(1);
+  for (const text of errorTexts(error)) expect(text).not.toContain(marker);
+  // Only an authenticated 403 that is not a rate limit reads its body, at most 64 KiB, and releases it.
+  expect(state.pulls).toBe(code === 'GITHUB_PERMISSION_MISSING' || code === 'GITHUB_FORBIDDEN_SIGNED_IN' ? Math.min(4, Math.ceil(new TextEncoder().encode(`${body} ${marker}`).length / 16_384)) : 0);
+  expect(response.body!.locked).toBe(false);
+});
+
+test('signed in, Stop during the bounded 403 body read gives RUN_CANCELLED', async () => {
+  const stop = new AbortController(); const { credential } = signedIn(tokenMarker());
+  const body = new ReadableStream<Uint8Array>({ pull(controller) { stop.abort(); controller.enqueue(new TextEncoder().encode(INTEGRATION)); } }, { highWaterMark: 0 });
+  const reader = new GitHubReader(async () => new Response(body, { status: 403 }), credential);
+  await expect(reader.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
+  expect(body.locked).toBe(false);
+});
+
+test.each(['GITHUB_RENEWAL_UNAVAILABLE', 'GITHUB_RATE_LIMIT', 'GITHUB_SIGN_IN_REQUIRED'])('no fallback: the credential\'s %s passes through and nothing is fetched', async code => {
+  let fetched = 0;
+  const reader = new GitHubReader(async () => { fetched++; return json({ sha }); }, { async send() { throw new Error(code); } });
+  const error = await rejection(reader.read({ url }, allowed, new AbortController().signal));
+  expect(error.message).toBe(code); expect(error.cause).toBeUndefined(); expect(fetched).toBe(0);
+});
+
+test('no fallback: after a signed request the credential refuses, and the read is never repeated without the token', async () => {
+  const marker = tokenMarker(); const inits: RequestInit[] = [];
+  const credential: GitHubCredential = { async send(request) {
+    const response = await request(`Bearer ${marker}`); await response.body?.cancel(); throw new Error('GITHUB_SIGN_IN_REQUIRED');
+  } };
+  const reader = new GitHubReader(async (_target, init) => { inits.push(init); return new Response('{}', { status: 401 }); }, credential);
+  await expect(reader.read({ url }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_SIGN_IN_REQUIRED');
+  expect(inits).toHaveLength(1); expectSignedInit(inits[0]!, marker);
+});
+
+test('a credential failure that is not a reason becomes GITHUB_UNAVAILABLE, and Stop or the deadline map as today', async () => {
+  const unavailable = new GitHubReader(async () => json({ sha }), { async send() { throw new Error('ENCRYPTION_UNAVAILABLE'); } });
+  await expect(unavailable.read({ url }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_UNAVAILABLE');
+  const stop = new AbortController();
+  const stopped = new GitHubReader(async () => json({ sha }), { async send(_request, signal) {
+    stop.abort(); expect(signal.aborted).toBe(true); throw new Error('GITHUB_RENEWAL_UNAVAILABLE');
+  } });
+  await expect(stopped.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
+});
+
+test('reruns with a credential: scope and sensitive paths refuse before send(), while an allowed read is signed', async () => {
+  const marker = tokenMarker(); const { credential, calls } = signedIn(marker); const inits: RequestInit[] = [];
+  const reader = new GitHubReader(async (target, init) => { inits.push(init); return readme(target); }, credential);
+  await expect(reader.read({ url: 'https://github.com/other/repo' }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_SCOPE_REQUIRED');
+  await expect(reader.read({ url, path: '.env' }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_PATH_EXCLUDED');
+  for (const unsafe of ['http://github.com/example/project', 'https://token@github.com/example/project', 'https://github.com/example/project/blob/main/%2e%2e/private'])
+    await expect(reader.read({ url: unsafe }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_INVALID_URL');
+  expect(calls.send).toBe(0); expect(inits).toHaveLength(0);
+  await reader.read({ url }, allowed, new AbortController().signal);
+  expect(calls.send).toBe(2); expect(inits).toHaveLength(2); for (const init of inits) expectSignedInit(init, marker);
+});
+
+test.each([
+  ['a declared length over the bound', () => new Response('x', { headers: { 'content-length': '3000000' } }), 'GITHUB_TOO_LARGE'],
+  ['a stream over the bound', () => new Response(new Uint8Array(2_097_153)), 'GITHUB_TOO_LARGE'],
+  ['a response for another path', () => json({ type: 'file', path: 'wrong.txt', size: 1, encoding: 'base64', content: 'YQ==' }), 'GITHUB_UNSUPPORTED_FILE'],
+  ['an oversized file', () => json({ type: 'file', path: 'file.txt', size: 9999999 }), 'GITHUB_UNSUPPORTED_FILE'],
+] as const)('reruns with a credential: %s is refused after a signed request', async (_name, answer, code) => {
+  const marker = tokenMarker(); const { credential } = signedIn(marker); const inits: RequestInit[] = [];
+  const reader = new GitHubReader(async (target, init) => { inits.push(init); return target.includes('/commits/') ? json({ sha }) : answer(); }, credential);
+  await expect(reader.read({ url, path: 'file.txt' }, allowed, new AbortController().signal)).rejects.toThrow(code);
+  expect(inits).toHaveLength(2); for (const init of inits) expectSignedInit(init, marker);
+});
+
+test('rerun with a credential: Stop discards a late signed response even when the transport ignores abort', async () => {
+  const marker = tokenMarker(); const { credential } = signedIn(marker); const stop = new AbortController(); const inits: RequestInit[] = [];
+  const reader = new GitHubReader(async (_target, init) => { inits.push(init); stop.abort(); return json({ sha }); }, credential);
+  await expect(reader.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
+  expect(inits).toHaveLength(1); expectSignedInit(inits[0]!, marker);
 });
