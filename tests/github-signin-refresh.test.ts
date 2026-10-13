@@ -329,6 +329,20 @@ test('4. two unknown codes alternating never clear the account, while its hold d
   expect(h.store.current()).toBe(account); expect(h.service.status()).toEqual(SIGNED_IN);
 });
 
+test('4. only consecutive identical answers count: one unknown code, a 500, then the same code twice keeps the account (DC-1, 6.5)', async () => {
+  const h = await harness(); const account = await h.seed(markers(), { accessLeftMs: -60_000 });
+  fake.always(RESOURCES, OK);
+  fake.answer(ROUTES.token, errorAnswer('some_new_code', 200), { status: 500, json: { message: 'down' } }, errorAnswer('some_new_code', 400), errorAnswer('some_new_code', 200));
+  const t0 = h.clock.t;
+  for (const [n, at] of [[1, 0], [2, 30_000], [3, 90_000], [4, 210_000]] as const) {   // each read just after the hold before it (30 s, 60 s, 120 s)
+    h.clock.t = t0 + at;
+    await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the fourth answer is only the second identical one in a row
+    expect(h.refreshes()).toHaveLength(n);
+  }
+  expect(fake.to(RESOURCE)).toHaveLength(0);
+  expect(h.store.current()).toBe(account); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+});
+
 const NO_CODE: Array<[string, boolean, FakeReply]> = [
   ['a 401 with a JSON message', true, UNAUTHORIZED],
   ['a 2xx without access_token', true, { json: { token_type: 'bearer', scope: '' } }],
@@ -609,6 +623,24 @@ test('10. a slow new token (GS-1): the first read refreshes inside the margin, G
   expect(outcomes.slice(1)).toEqual(Array.from({ length: 9 }, () => '200:signed-in'));
   expect(h.refreshes()).toHaveLength(1);
   expect(h.store.current()?.accessRef).not.toBe(account.accessRef); expect(h.service.status()).toMatchObject({ state: 'signed-in' });
+});
+
+test('10. a slow new token in each of three refresh windows, each followed by an accepted read, never clears the account: an accepted token resets the refused count (GS-1, L-12 "in a row")', async () => {
+  const h = await harness(); await h.seed(markers(), { accessLeftMs: 100_000 });
+  const issue = issuer(h); fake.always(ROUTES.token, () => issue.reply());
+  fake.always(RESOURCES, request => { const at = issue.issuedAt(request.authorizationMarker); return at !== undefined && h.clock.t - at < 8_000 ? UNAUTHORIZED : OK; });
+  const outcomes: string[] = [];
+  for (let window = 0; window < 3; window++) {
+    outcomes.push(outcomeOf(await settle(h.read())));                           // a refresh, then its new token refused for 8 s: one refused token
+    h.clock.t += 6_000;
+    outcomes.push(outcomeOf(await settle(h.read())));                           // the same token, 9 s old, accepted
+    h.clock.t += 28_800_000 - 200_000;                                           // into the next window: under the 300 s margin, past the hold
+  }
+  expect(outcomes).toEqual(Array.from({ length: 3 }, () => ['GITHUB_RENEWAL_UNAVAILABLE', '200:signed-in']).flat());
+  expect(h.refreshes()).toHaveLength(3);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['gen1Access', 'gen1Access', 'gen1Access', 'gen1Access',
+    'gen2Access', 'gen2Access', 'gen2Access', 'gen2Access', 'gen3Access', 'gen3Access', 'gen3Access', 'gen3Access']);   // three sends refused, one accepted, per window
+  expect(h.service.status()).toMatchObject({ state: 'signed-in' });
 });
 
 // ---- 11, 12, 13. Stop, a deadline, sign-out and a new sign-in while a refresh is in flight (L-3, 2.5) ----
