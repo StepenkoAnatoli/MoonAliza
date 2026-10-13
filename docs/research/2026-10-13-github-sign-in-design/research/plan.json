@@ -1,0 +1,120 @@
+{
+  "topic": "What does a GitHub App device-flow sign-in in the MoonAliza Electron app need on GitHub's side to read a user's private repositories read-only, refresh and end its tokens, and stay within GitHub's limits?",
+  "notes": "Budget: at most 15 Firecrawl credits and at most 12 pages for this project (run instruction, 2026-10-13). Owner pages on docs.github.com named directly, no searches (a search costs credits and the owner pages are known). Run 1 collects the 10 pages below at depth normal (10 scrapes). Up to 2 more pages are held for a run 2, chosen only for an unknown run 1 leaves open, and only if run 1 cost 1 credit per page (balance read from doctor's firecrawl-auth line between runs). Starting balance 277 credits. Rate limits are not collected again: the prior project docs/research/2026-10-12-app-sign-in closed them (its U-4, E-01, E-08). Run 1 (2026-10-13) collected 10 pages for exactly 10 credits (277 -> 267), so run 2 collects the 2 held pages, for the two facts run 1 left open: the credential revocation endpoint that token-expiration-and-revocation names as unauthenticated (U-5), and the installation URL a user follows (U-2), which no run-1 capture gives. maxScrapes lowered to 2 for run 2 so the 10 cached pages cannot be re-fetched. Round 2 (2026-10-13, verifier findings F-1..F-9 and the completeness critic): at most 8 more pages for at most 8 more credits (the run allows 20; round 1 spent 12), owner URLs named directly, no search, never --fallback. maxScrapes raised to 8 so exactly the 8 new pages can be fetched; the 12 cached pages are inside refreshDays and are not re-fetched. Balance read from doctor before the run: 265 credits. Round 4 (2026-10-13, brief residues S-1..S-7 and one open wire-format question): exactly 1 more page for at most 1 credit, GitHub's own tutorial \"Building a CLI with a GitHub App\" (the URL E-01 line 112 links), owner URL named directly, no search, never --fallback. maxScrapes lowered to 1 so the 20 cached pages (inside refreshDays) cannot be re-fetched. Balance read from doctor before the run: 257 credits.",
+  "depth": "normal",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 1,
+  "maxScrapes": 1,
+  "prefer": [
+    "docs.github.com"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app",
+      "type": "P",
+      "why": "U-3, U-2, U-4: device flow for GitHub Apps (endpoints, parameters, interval, error table, enabling it), which repositories a user access token reaches, bad_refresh_token; re-captured so the design cites this ledger"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens",
+      "type": "P",
+      "why": "U-4: refreshing a GitHub App user access token - endpoint, parameters, client_secret, whether the refresh token is replaced, errors"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app",
+      "type": "P",
+      "why": "U-8: registration settings - callback URL, Expire user authorization tokens, Enable Device Flow, webhook Active, where the app can be installed"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app",
+      "type": "P",
+      "why": "U-1: permission levels (read, write) and whether Metadata is granted or mandatory"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps",
+      "type": "P",
+      "why": "U-1, U-7: which repository permission (Contents, Metadata) and level each read endpoint needs - commits, contents, trees, blobs, archives"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/authentication/endpoints-available-for-github-app-user-access-tokens",
+      "type": "P",
+      "why": "U-7: GitHub's list of REST endpoints that accept a GitHub App user access token"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/apps/installations",
+      "type": "P",
+      "why": "U-2: list the installations and the repositories a user access token can reach (GET /user/installations, GET /user/installations/{installation_id}/repositories)"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/apps/oauth-applications",
+      "type": "P",
+      "why": "U-5: delete an app token / delete an app authorization - the authentication these endpoints require"
+    },
+    {
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation",
+      "type": "P",
+      "why": "U-5: when GitHub expires or revokes tokens on its own, and user-initiated revocation (the prior brief's U-10 page)"
+    },
+    {
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github",
+      "type": "P",
+      "why": "U-6: GitHub's token formats and prefixes (ghu_, ghr_, gho_, ghp_, ghs_, github_pat_)"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/credentials/revoke",
+      "type": "P",
+      "why": "U-5: the credential revocation API (run 2) - endpoint, method, request body, authentication, limits, and whether it accepts ghu_ and ghr_ tokens; token-expiration-and-revocation says it needs no authentication"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/sharing-github-apps/sharing-your-github-app",
+      "type": "P",
+      "why": "U-2, U-8: the installation URL a user follows to install the app on more repositories (run 2), and who can install a public or private app"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/using-github-apps/installing-a-github-app-from-a-third-party",
+      "type": "P",
+      "why": "U-11: who may install a GitHub App on an organization or another account, and what a member who is not an owner can do (request); linked from E-12 line 55"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private",
+      "type": "P",
+      "why": "U-11, U-8: what Only on this account and Any account mean, and who can install a public or a private app; linked from E-03 line 93 and E-12 line 36"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api",
+      "type": "P",
+      "why": "U-10: what the REST API returns for a resource the token cannot reach - Resource not accessible, 404 for private resources; linked from E-04 line 77 and E-05 line 30"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps",
+      "type": "P",
+      "why": "U-12: rate limits for GitHub App user access tokens (and the device flow if stated); E-01 line 40 points here for user access token limits"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/using-github-apps/reviewing-and-revoking-authorization-of-github-apps",
+      "type": "P",
+      "why": "U-13: where a user reviews and revokes a GitHub App authorization, and what revoking does; linked from E-09 line 50"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/about-the-rest-api/api-versions",
+      "type": "P",
+      "why": "U-9: which REST API versions are supported and for how long (the captures link the older path /rest/overview/api-versions)"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/using-github-apps/approving-updated-permissions-for-a-github-app",
+      "type": "P",
+      "why": "U-14: how a later permission increase reaches the accounts that installed or authorized the app"
+    },
+    {
+      "url": "https://docs.github.com/en/rest/users/users",
+      "type": "P",
+      "why": "U-15: GET /user - what it returns to a GitHub App user access token and the permission it needs; on the user-token list (E-06)"
+    },
+    {
+      "url": "https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-cli-with-a-github-app",
+      "type": "P",
+      "why": "U-3, U-4: where the device-flow and refresh parameters go (URL query or form body) and which Accept header GitHub's own device-flow tutorial sends to github.com/login/device/code and github.com/login/oauth/access_token (round 4); linked from E-01 line 112"
+    }
+  ]
+}
