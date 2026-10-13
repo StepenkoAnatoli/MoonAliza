@@ -22,8 +22,9 @@ export function GitHubAccountPanel({ api, onUnconfirmedChange }: { api: AppApi; 
   const [status, setStatus] = useState<GitHubAccountStatus>();
   const [busy, setBusy] = useState<Change | 'github.open' | null>(null);
   const [signedOutHere, setSignedOutHere] = useState(false);
-  // An action's failure stays until the user acts again; a failed status read only until a later reply is applied.
-  const [error, setError] = useState('');
+  // An action's failure belongs to the view it was raised in (see `view`): it is shown while that view is, polls included,
+  // and until the user acts again. A failed status read is shown only until a later reply is applied.
+  const [error, setError] = useState<{ message: string; view: string | undefined } | null>(null);
   const [readError, setReadError] = useState('');
   const [now, setNow] = useState(() => Date.now());
   // Replies are applied in the order their requests were sent, so a slow poll cannot bring back a state a later call ended,
@@ -43,6 +44,8 @@ export function GitHubAccountPanel({ api, onUnconfirmedChange }: { api: AppApi; 
   useEffect(() => { void read(); }, [read]);
 
   const pending = status?.state === 'pending';
+  // The view on screen: the state, and for a pending sign-in whether GitHub has confirmed the code (spec 8.2).
+  const view = status?.state === 'pending' ? `pending:${status.committed}` : status?.state;
   const poll = useEffectEvent(() => { setNow(Date.now()); void read(); });
   useEffect(() => {
     if (!pending) return;
@@ -54,15 +57,17 @@ export function GitHubAccountPanel({ api, onUnconfirmedChange }: { api: AppApi; 
   const unconfirmed = busy === 'github.signIn.start' || (status?.state === 'pending' && !status.committed);
   useLayoutEffect(() => { onUnconfirmedChange?.(unconfirmed); }, [unconfirmed, onUnconfirmedChange]);
 
+  // An action's failure is tagged with the view of the click (this render's `view`), so a refusal that arrives after the
+  // view changed is not shown in the new one.
   async function change(method: Change) {
-    setBusy(method); setError('');
+    setBusy(method); setError(null);
     if (method === 'github.signIn.start') setSignedOutHere(false);
     try { await track(api.invoke(method, {})); if (method === 'github.signOut') setSignedOutHere(true); }
-    catch (reason) { setError(failure(reason)); } finally { setBusy(null); }
+    catch (reason) { setError({ message: failure(reason), view }); } finally { setBusy(null); }
   }
   async function open(target: GitHubOpenTarget) {
-    setBusy('github.open'); setError('');
-    try { await api.invoke('github.open', { target }); } catch (reason) { setError(failure(reason)); } finally { setBusy(null); }
+    setBusy('github.open'); setError(null);
+    try { await api.invoke('github.open', { target }); } catch (reason) { setError({ message: failure(reason), view }); } finally { setBusy(null); }
   }
   const button = (label: string, onClick: () => void, primary = false) =>
     <button className={primary ? 'primary' : undefined} disabled={busy !== null} onClick={onClick}>{label}</button>;
@@ -110,8 +115,10 @@ export function GitHubAccountPanel({ api, onUnconfirmedChange }: { api: AppApi; 
       <p>{GITHUB_TEXT.signedIn.publicReads}</p><p>{GITHUB_TEXT.signedIn.privateText}</p>
     </>;
   }
+  // The one alert answers the user's click first, then a failed read.
+  const alertText = (error && error.view === view ? error.message : '') || readError;
   return <div className="github-account-panel" data-testid="github-account-panel">
-    {(error || readError) && <p className="form-error" role="alert">{error || readError}</p>}
+    {alertText && <p className="form-error" role="alert">{alertText}</p>}
     <div className="github-notices" role="status">{notices}</div>
     {body}
   </div>;

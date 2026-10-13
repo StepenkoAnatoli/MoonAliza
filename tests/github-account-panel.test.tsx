@@ -588,6 +588,56 @@ test.each([
   else expect(within(panelOf()).getByRole('status').textContent).toBe(OUTCOMES['start-failed']);
 });
 
+test.each([
+  ['Open GitHub', 'github.open', 'The operation could not be completed. No private error details were shared.'],
+  ['Cancel', 'github.signIn.cancel', 'The engine is restarting. Try again when it is ready.'],
+] as const)('a refused %s leaves with the view it was raised in, so the confirmed view holds only its sentence', async (name, method, message) => {
+  // Spec 8.2: once GitHub confirms, the dialog shows only "GitHub confirmed the code. Finishing sign-in...", and it has no
+  // button a user could click to clear an alert. Paths: Open GitHub fails (INTERNAL_ERROR) and the user types the address
+  // by hand; Cancel is refused during an engine restart (ENGINE_UNAVAILABLE, spec 3.3) while main's flow keeps polling
+  // GitHub. Guard: an action's failure is shown only while the view it was raised in is shown (mutation: drop that check;
+  // the refusal then stays in the confirmed view and in the signed-in view after it).
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  const fake = github(pending(), { [method]: () => { throw new Error(message); } });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  fireEvent.click(within(panelOf()).getByRole('button', { name }));
+  await settle();
+  expect(within(panelOf()).getByRole('alert').textContent).toBe(message);
+  fake.state.account = pending({ committed: true, account: null });
+  await tick(1000);
+  expect(panelOf().textContent).toBe(TEXT.confirmed);
+  fake.state.account = signedIn();
+  await tick(1000);
+  expect(panelOf().textContent).toContain('Signed in as octo-cat.');
+  expect(within(panelOf()).queryByRole('alert')).toBeNull();
+});
+
+test.each([
+  ['Open GitHub', 'github.open'],
+  ['Cancel', 'github.signIn.cancel'],
+] as const)('%s, refused only after GitHub confirmed the code, is not shown in the confirmed view', async (name, method) => {
+  // The failure belongs to the view the user clicked in, even when its reply comes after the view changed. Guard: it is
+  // tagged with the view shown at the click (mutation: tag it with the view shown when the refusal arrives; a refusal
+  // answered after a poll brought the confirmed view would then stand in it). Clearing the alert whenever a reply changes
+  // the view would not cover this either, since the refusal arrives after that reply.
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  const reply = deferred<unknown>();
+  const fake = github(pending(), { [method]: () => reply.promise });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  fireEvent.click(within(panelOf()).getByRole('button', { name }));
+  await settle();
+  fake.state.account = pending({ committed: true, account: null });
+  await tick(1000);
+  expect(panelOf().textContent).toBe(TEXT.confirmed);
+  await act(async () => reply.reject(new Error('The engine is restarting. Try again when it is ready.')));
+  await settle();
+  expect(panelOf().textContent).toBe(TEXT.confirmed);
+});
+
 test('a failed status read is shown until a later reply is shown, so the confirmed view holds only its sentence', async () => {
   // Spec 8.1 shows invoke failures; spec 8.2 has the confirmed view show only "GitHub confirmed the code. Finishing
   // sign-in...". Guard: an applied reply clears a failed read (mutation: keep it; one transient poll failure, an engine
