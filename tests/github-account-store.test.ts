@@ -466,6 +466,34 @@ describe('clear durability (DC-6, GS-11)', () => {
     });
   }
 
+  // A clear that reached disk nowhere leaves the account file naming a pair the on-disk index may still hold staged. Its files must
+  // stay: the next start's reconcile commits a referenced staged entry only if its file is there (vault.ts:109-110) (U2-R7).
+  test('a not-durable clear after a refresh whose commit failed on a full disk keeps the files: the next start signs in with the pair the file names', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    let restore: (() => void) | undefined;
+    // The refresh's first commit: from here the vault index and the account file fail to write, while unlinks still land.
+    h.spy.on('commit', (_ref, count) => { if (count === 3) { restore = failVaultDisk(h.vault); h.breakWrites(); } });
+    const failure = await h.refresh(a).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ written: true });
+    expect(await h.store.clear(live => live?.accessRef === a.accessRef)).toBe('not-durable');   // the service's clearIf (6.5, X-9)
+    restore!(); h.restoreWrites();
+    const named = refsOf((await h.read())?.account);
+    expect(named).toHaveLength(2); expect(named.some(ref => refsOf(a).includes(ref))).toBe(false);
+    await expectConsistent(h.copy(), named);                                    // the limit 'not-durable' discloses (4.5)
+  });
+
+  test('a not-durable sign-out of a sign-in whose rollback write failed on a full disk keeps the files: the next start signs in again', async () => {
+    const h = await harness(); await h.signIn();
+    let restore: (() => void) | undefined;
+    h.spy.on('commit', (_ref, count) => { if (count === 3) { restore = failVaultDisk(h.vault); h.breakWrites(); } });   // the sign-in's first commit
+    const next = await h.store.replace(issued(), T0, 'sign-in', h.signInAdmit());
+    expect(next).not.toBeNull();                                                 // the store follows the file (4.3 step 5)
+    expect(await h.signOut()).toBe('not-durable');
+    restore!(); h.restoreWrites();
+    expect(refsOf((await h.read())?.account)).toEqual(refsOf(next));
+    await expectConsistent(h.copy(), refsOf(next));
+  });
+
   test('a clear with nothing to clear is durable and writes nothing; an unadmitted clear changes nothing', async () => {
     const h = await harness();
     expect(await h.signOut()).toBe('durable'); expect(await h.read()).toBeNull();

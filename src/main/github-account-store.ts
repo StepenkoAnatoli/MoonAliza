@@ -196,6 +196,10 @@ export class GitHubAccountStore {
       reached = await this.tryWrite(null, kept);
       if ((await Promise.all(again)).some(Boolean)) reached = true;
     }
+    // Nothing reached disk, so the next start may read the account again, and the on-disk index may still hold its pair staged
+    // (a failed commit): the reconcile then needs their files (vault.ts:109-110). Keep them; the in-memory tombstones still revoke
+    // every grant, and a later vault persist in this session records them, so that start deletes the entries (4.5).
+    if (!reached) return 'not-durable';
     const failed: string[] = [];
     for (const ref of kept) if (!(await this.removeTombstoned(ref))) failed.push(ref);                        // 3
     // 4. Refs whose removal failed stay named, so the next start's open() tombstones them again and the reconcile deletes them (GS-11).
