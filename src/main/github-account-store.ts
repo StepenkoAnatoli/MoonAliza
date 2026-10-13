@@ -179,12 +179,15 @@ export class GitHubAccountStore {
     const accountRefs = unique([...taken, ...refsOf(disk?.account)]);
     const all = unique([...(disk?.retiredRefs ?? []), ...accountRefs]);
     if (all.length === 0) return 'durable';                                                                  // nothing names an account
-    const tombstoned = [...persisted];
+    // A prologue persist records only the refs the prologue took. When the file names an account ref it did not take (a replace
+    // that committed after the prologue, then was refused at step 6), only step 1's persists count: they are queued after all of
+    // step 1's synchronous marks, and a vault persist writes the whole index, so any one that lands records every account ref.
+    const tombstoned = accountRefs.some(ref => !taken.includes(ref)) ? [] : [...persisted];
     for (const ref of all) if (!taken.includes(ref)) {                                                        // 1
       const persist = this.tombstoneNow(ref); if (accountRefs.includes(ref)) tombstoned.push(persist);
     }
     const kept = await this.cap(all, ref => this.removeTombstoned(ref));
-    // Durability (DC-6): the next start reads no account once the account's tombstones or the null file reached disk.
+    // Durability (DC-6): the next start reads no account once every account ref's tombstone or the null file reached disk.
     let reached = await this.tryWrite(null, kept);                                                            // 2
     if (accountRefs.length === 0 || (await Promise.all(tombstoned)).some(Boolean)) reached = true;
     if (!reached) {                                                                                           // retry both once

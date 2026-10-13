@@ -414,6 +414,33 @@ describe('clear durability (DC-6, GS-11)', () => {
     await expectConsistent(h.copy(), null);
   });
 
+  // A sign-out while a replace is past its step-4 write: the replace commits, its step-6 admit refuses, and the file names the
+  // new pair, which the prologue never took. A prologue persist then records only the old pair, so it must not count (DC-6).
+  for (const kind of ['sign-in', 'refresh'] as const) {
+    test.each([
+      ['every write fails', 'all', { result: 'not-durable', signedInNextStart: true }],
+      ['only the account file and the removals fail', 'file', { result: 'durable', signedInNextStart: false }],
+    ] as const)(`a sign-out racing a ${kind} past its file write, then a failing disk (%s): 'durable' only when the next start reads no account`, async (_name, failing, expected) => {
+      const h = await harness(); const { account: a } = await h.signIn();
+      const reached = gate(); const held = gate(); let clear: Promise<unknown> | undefined;
+      h.spy.on('commit', (_ref, n) => { if (n === 3) { clear = h.signOut(); reached.open(); return held.promise; } });   // the replace's first commit
+      let restore: (() => void) | undefined;
+      // From the clear's step 1 (its first tombstone of a ref the prologue did not take), the disk fails.
+      h.spy.on('tombstone', (_ref, n) => { if (n === 3) { if (failing === 'all') restore = failVaultDisk(h.vault); h.breakWrites(); h.spy.on('remove', () => 'fail'); } });
+      const replace = h.store.replace(issued(), T0, kind, kind === 'sign-in' ? h.signInAdmit() : h.refreshAdmit(a));
+      await reached.promise; await Promise.all(h.spy.persists);                 // the prologue's tombstones reached disk
+      held.open();
+      expect(await replace).toBeNull();                                         // step 6 refused: the file names the new pair
+      const result = await clear;
+      restore?.(); h.restoreWrites();
+      const named = refsOf((await h.read())?.account);
+      expect(named).toHaveLength(2); expect(named.some(ref => refsOf(a).includes(ref))).toBe(false);
+      const next = await restart(h.copy());
+      expect({ result, signedInNextStart: next.store.current() !== null }).toEqual(expected);
+      if (expected.signedInNextStart) expect(refsOf(next.store.current())).toEqual(named);   // the limit 'not-durable' discloses (4.5)
+    });
+  }
+
   test('a clear with nothing to clear is durable and writes nothing; an unadmitted clear changes nothing', async () => {
     const h = await harness();
     expect(await h.signOut()).toBe('durable'); expect(await h.read()).toBeNull();
