@@ -499,6 +499,24 @@ describe('startup checks (4.4)', () => {
     await expectConsistent(dir, null);
   });
 
+  test('a half-present pair dropped while the vault disk fails stays named whole, so no committed entry outlives its file', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    const dir = h.copy(); rmSync(join(dir, 'vault', `${a.refreshRef}.bin`));
+    // The first start as restart() runs it, except that every vault index write fails during finishStartup.
+    const vault = new Vault(join(dir, 'vault'), cryptor); await vault.initialize('epoch-2');
+    const file = join(dir, 'github', 'account.json'); const spy = new SpyVault(vault, file);
+    const store = new GitHubAccountStore(file, spy, CLIENT, () => T0 + 3_600_000); spy.store = store;
+    await store.open(); await vault.reconcile(new Set(store.references()));
+    const restore = failVaultDisk(vault); await store.finishStartup(); restore();
+    expect(store.current()).toBeNull();
+    const written = JSON.parse(await readFile(file, 'utf8')) as unknown;
+    // The next start: redaction works, because no committed index entry is left without its file (vault.ts:187-188).
+    const next = await restart(dir);
+    await expect(next.vault.redact('plain text')).resolves.toBe('plain text');
+    expect(written).toMatchObject({ account: null, retiredRefs: refsOf(a) });
+    await expectConsistent(dir, null);
+  });
+
   test('another non-empty client ID tombstones the refs, reads as no account and sets openedAppChanged (DC-15)', async () => {
     const h = await harness(); const { account: a } = await h.signIn();
     const next = await restart(h.copy(), 'Iv1.another-app');

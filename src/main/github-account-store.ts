@@ -97,8 +97,9 @@ export class GitHubAccountStore {
           this.live = null; this.startupWrite = true;
           // Tombstoned now, so neither half of a half-present pair outlives the account: the reconcile never deletes a committed
           // entry, and a committed entry whose file is gone would make every redaction fail (vault.ts:187-188). A ref still
-          // committed stays named, so the next start's open() tombstones it again if this persist does not land.
-          for (const [index, ref] of refs.entries()) { await this.tombstoneNow(ref); if (committed[index]) orphans.push(ref); }
+          // committed, or one whose tombstone did not reach disk (the index may still hold it committed without its file), stays
+          // named, so the next start's open() tombstones it again.
+          for (const [index, ref] of refs.entries()) { const recorded = await this.tombstoneNow(ref); if (committed[index] || !recorded) orphans.push(ref); }
         }
       }
       if (this.startupWrite && await this.tryWrite(this.live ? this.disk?.account ?? null : null, orphans)) this.startupWrite = false;
