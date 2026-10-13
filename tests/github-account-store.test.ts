@@ -396,6 +396,31 @@ describe('clear durability (DC-6, GS-11)', () => {
     await expectConsistent(h.copy(), null);
   });
 
+  // DC-6's "either is enough": a prologue persist that landed carries the clear on its own (U2-R6).
+  test('durable when the prologue\'s tombstone persist landed and every later write fails: no retry, and a restart reads no account', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    const held = gate(); const lock = serialized(h.file, () => held.promise);   // the clear's locked part waits behind this
+    const clear = h.signOut();
+    await Promise.all(h.spy.persists);                                          // the prologue's tombstones reached disk
+    const restore = failVaultDisk(h.vault); h.breakWrites(); h.spy.on('remove', () => 'fail');
+    held.open(); await lock;
+    expect(await clear).toBe('durable');
+    restore(); h.restoreWrites(); h.spy.on('remove');
+    expect(h.spy.ops('tombstone')).toEqual(refsOf(a).map(ref => `tombstone:${ref}`));   // the prologue's two only: no retry
+    await expectConsistent(h.copy(), null);
+  });
+
+  test('a clear with no account and only retired refs is durable when its file write fails (U2-R6)', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    h.spy.on('remove', () => 'fail');
+    expect(await h.signOut()).toBe('durable');
+    expect(await h.read()).toMatchObject({ account: null, retiredRefs: refsOf(a) });
+    h.breakWrites();
+    expect(await h.store.clear(() => true)).toBe('durable');                   // nothing names an account, so nothing can come back
+    h.restoreWrites(); h.spy.on('remove');
+    await expectConsistent(h.copy(), null);
+  });
+
   test('GS-11: the tombstone persist succeeds and remove fails: durable, the file names the refs, and a restart deletes their files', async () => {
     const h = await harness(); const { account: a } = await h.signIn();
     h.spy.on('remove', () => 'fail');
