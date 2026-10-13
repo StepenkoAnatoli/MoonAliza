@@ -1,0 +1,455 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="light" data-color-scheme="light" class="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+@view-transition { navigation: auto; }
+
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.05s; }</style>
+        <!-- Book generated using mdBook -->
+        
+        
+        <!-- Theme initialization - must run before any CSS loads to prevent flicker -->
+        <script>
+            (function() {
+                var theme;
+                try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+                if (theme === null || theme === undefined) {
+                    theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                }
+                var html = document.documentElement;
+                html.setAttribute('data-theme', theme);
+                html.setAttribute('data-color-scheme', theme);
+                html.className = theme;
+            })();
+        </script>
+        <title>LLM Providers | LLM Providers - Zed</title>
+        <link rel="llms.txt" href="https://zed.dev/docs/llms.txt">
+        
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Choose how Zed gets language models: Zed-hosted models, API access, subscriptions, gateways, or local models.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="rgba(0, 0, 0, 0)">
+
+        <link rel="shortcut icon" href="https://zed.dev/docs/favicon.png">
+        <link rel="stylesheet" href="https://zed.dev/docs/css/variables.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/css/general.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="https://zed.dev/docs/FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="https://zed.dev/docs/highlight.css">
+        
+        
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/page-toc.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/plugins.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/highlight.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/consent-banner.css">
+
+        <meta name="amplitude-key" content="dff590dc008f326963fa3e9c19ab9ff5">
+        <meta name="consent-io-instance" content="https://zed-us-east-1-zed-production.c15t.dev">
+            <link rel="alternate" type="text/markdown" href="https://zed.dev/docs/ai/llm-providers.md">
+    </head>
+    <body class="js">
+    <div id="body-container">
+        <div class="noise-pattern" style="background-image: url('https://cdn.zed.dev/images/noise.png');"></div>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            // Mark as JS-enabled
+            document.body.classList.remove('no-js');
+            document.body.classList.add('js');
+        </script>
+        <div style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">
+            Agent documentation index: <a href="https://zed.dev/docs/llms.txt">llms.txt</a>. Markdown versions are available for docs pages.
+        </div>
+
+        <header class="header-bar">
+            <div class="left-container">
+                <a href="https://zed.dev/" class="logo-nav">
+                    <img src="https://zed.dev/logo_icon.webp" class="icon-logo-img" alt="Zed Industries" style="height: 26px;">
+                </a>
+                <button id="sidebar-toggle" class="icon-button ib-hidden-desktop" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar" aria-expanded="false">
+                    <i class="fa fa-bars"></i>
+                </button>
+            </div>
+            <button id="search-toggle" class="search-button" type="button" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                <i class="icon fa fa-search"></i>
+                <span class="search-content-desktop">
+                    <span class="placeholder">Search docs…</span>
+                    <kbd class="keybinding"></kbd>
+                </span>
+                <span class="search-content-mobile">
+                    <span class="placeholder">Search…</span>
+                </span>
+            </button>
+            <div class="right-container">
+                <button id="color-scheme-toggle" class="icon-button" type="button" title="Switch to dark theme" aria-label="Switch to dark theme">
+                    <i class="fa fa-moon-o"></i>
+                </button>
+
+                <!-- mdBook 0.4.40's bundled book.js requires these elements even though plugins.js handles theme switching. -->
+                <div aria-hidden="true">
+                    <button id="theme-toggle" type="button" aria-expanded="false"></button>
+                    <ul id="theme-list">
+                        <li><button type="button" class="theme theme-selected" id="light">Light</button></li>
+                        <li><button type="button" class="theme" id="dark">Dark</button></li>
+                    </ul>
+                </div>
+
+                
+
+                <a class="download-button" href="https://zed.dev/download" title="Download Zed" aria-label="Download Zed">
+                    Download
+                </a>
+            </div>
+        </header>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="search-container">
+                <div id="search-wrapper" class="search-modal hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search…" aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page">
+                <div id="content" class="content">
+                    <main>
+                      
+<div class="page-header"><h1 id="llm-providers"><a class="header" href="https://zed.dev/docs/ai/llm-providers#llm-providers">LLM Providers</a></h1><div class="page-actions"><button id="copy-markdown-toggle" class="page-action page-action-icon" type="button" title="Copy Page as Markdown" aria-label="Copy page as markdown">
+                    <i class="fa fa-copy"></i>
+                </button></div></div>
+<p>Use this page to choose which models power <a href="https://zed.dev/docs/ai/zed-agent.html">the Zed Agent</a> and
+other Zed-owned AI features, including <a href="https://zed.dev/docs/ai/inline-assistant.html">Inline Assistant</a>,
+Git commit generation, thread summaries, and similar model-backed features.</p>
+<p>Model access paths do not configure <a href="https://zed.dev/docs/ai/external-agents.html">External Agents</a> or
+<a href="https://zed.dev/docs/ai/terminal-threads.html">Terminal Threads</a>. External Agents and Terminal Threads
+usually own their own model access, auth, and configuration.</p>
+<h2 id="choose-a-model-access-path"><a class="header" href="https://zed.dev/docs/ai/llm-providers#choose-a-model-access-path">Choose a Model Access Path</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Model access path</th><th>Best when</th><th>Source of truth</th></tr></thead><tbody>
+<tr><td><a href="https://zed.dev/docs/account/zed-hosted-models.html">Use Zed-Hosted Models</a></td><td>You want models billed through Zed</td><td>Account &amp; Billing &gt; Zed-Hosted Models</td></tr>
+<tr><td><a href="https://zed.dev/docs/ai/use-api-access.html">Use API Access</a></td><td>You have provider API access, credits, or usage billing</td><td>Use API Access</td></tr>
+<tr><td><a href="https://zed.dev/docs/ai/use-an-existing-subscription.html">Use an Existing Subscription</a></td><td>You already pay for ChatGPT, Claude, Copilot, or another subscription</td><td>Use an Existing Subscription</td></tr>
+<tr><td><a href="https://zed.dev/docs/ai/use-a-gateway.html">Use a Gateway</a></td><td>You route through OpenRouter, Bedrock, Vercel, or a similar platform</td><td>Use a Gateway</td></tr>
+<tr><td><a href="https://zed.dev/docs/ai/use-a-local-model.html">Use a Local Model</a></td><td>You run models locally or self-hosted</td><td>Use a Local Model</td></tr>
+</tbody></table>
+</div>
+<p>Use the setup pages for provider-specific details. See <a href="https://zed.dev/docs/ai/agents.html">Agents</a> for
+the difference between the Zed Agent, External Agents, and Terminal Threads.</p>
+<h2 id="edit-prediction"><a class="header" href="https://zed.dev/docs/ai/llm-providers#edit-prediction">Edit Prediction</a></h2>
+<p><a href="https://zed.dev/docs/ai/edit-prediction.html">Edit Prediction</a> has its own provider setup under <code class="hljs">edit_predictions</code>. LLM providers on this page apply to model-backed Zed AI features such as Zed Agent, Inline Assistant, Git commit generation, and thread summaries.</p>
+<h2 id="anthropic-api-compatible"><a class="header" href="https://zed.dev/docs/ai/llm-providers#anthropic-api-compatible">Anthropic-Compatible Providers</a></h2>
+<p>Anthropic-compatible provider setup has moved to <a href="https://zed.dev/docs/ai/use-api-access.html#anthropic-compatible">Use API Access</a>.</p>
+<h2 id="openai-api-compatible"><a class="header" href="https://zed.dev/docs/ai/llm-providers#openai-api-compatible">OpenAI-Compatible Providers</a></h2>
+<p>OpenAI-compatible provider setup has moved to <a href="https://zed.dev/docs/ai/use-api-access.html#openai-compatible">Use API Access</a>.</p>
+
+                        <div class="footer-buttons">
+                            <a rel="prev" href="https://zed.dev/docs/ai/inline-assistant.html" class="footer-button" title="Inline Assistant">
+                                <i class="fa fa-angle-left"></i>
+                                Inline Assistant
+                            </a>
+                            <a rel="next" href="https://zed.dev/docs/ai/use-api-access.html" class="footer-button" title="Use API Access">
+                                Use API Access
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        </div>
+                        <footer class="footer">
+                            <a href="https://zed.dev/" class="logo-nav">
+                                <img src="https://zed.dev/logo_icon.webp" class="footer-logo" alt="Zed Industries">
+                            </a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/">Back to Site</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/releases">Releases</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/roadmap">Roadmap</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://github.com/zed-industries/zed">GitHub</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/blog">Blog</a>
+                            <span class="footer-separator">•</span>
+                            <button id="c15t-manage-consent-btn" class="footer-link">
+                                Manage Site Cookies
+                            </button>
+                        </footer>
+                    </main>
+                    <div class="toc-container has-toc">
+                        <nav class="pagetoc"><p class="toc-title">On This Page</p><a href="https://zed.dev/docs/ai/llm-providers#llm-providers" class="pagetoc-H1">LLM Providers</a><a href="https://zed.dev/docs/ai/llm-providers#choose-a-model-access-path" class="pagetoc-H2">Choose a Model Access Path</a><a href="https://zed.dev/docs/ai/llm-providers#edit-prediction" class="pagetoc-H2">Edit Prediction</a><a href="https://zed.dev/docs/ai/llm-providers#anthropic-api-compatible" class="pagetoc-H2">Anthropic-Compatible Providers</a><a href="https://zed.dev/docs/ai/llm-providers#openai-api-compatible" class="pagetoc-H2 active">OpenAI-Compatible Providers</a></nav>
+                    </div>
+                    <!-- Immediately detect if page has headins that are not h1 to prevent flicker -->
+                    <script>
+                        (function() {
+                            var tocContainer = document.querySelector('.toc-container');
+                            var headers = document.querySelectorAll('.header');
+                            var hasNonH1Headers = false;
+                            for (var i = 0; i < headers.length; i++) {
+                                var parent = headers[i].parentElement;
+                                if (parent && !parent.tagName.toLowerCase().startsWith('h1')) {
+                                    hasNonH1Headers = true;
+                                    break;
+                                }
+                            }
+                            if (hasNonH1Headers) {
+                                tocContainer.classList.add('has-toc');
+                            } else {
+                                tocContainer.classList.add('no-toc');
+                            }
+                        })();
+                    </script>
+                </div>
+            </div>
+
+            <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+                <div class="sidebar-scrollbox">
+                    <ol class="chapter"><li class="chapter-item expanded affix "></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Welcome</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/getting-started.html">Getting Started</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/installation.html">Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/update.html">Update</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/uninstall.html">Uninstall</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/troubleshooting.html">Troubleshooting</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Working with Code</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/windows-and-projects.html">Windows &amp; Projects</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/editing-code.html">Editing Code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/completions.html">Code Completions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/snippets.html">Snippets</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/diagnostics.html">Diagnostics &amp; Quick Fixes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/multibuffers.html">Multibuffers</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/finding-navigating.html">Finding &amp; Navigating</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/command-palette.html">Command Palette</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/outline-panel.html">Outline Panel</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/project-panel.html">Project Panel</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/tab-switcher.html">Tab Switcher</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/running-testing.html">Running &amp; Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/terminal.html">Terminal</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/tasks.html">Tasks</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/debugger.html">Debugger</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/repl.html">REPL</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/git.html">Git</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/modelines.html">Modelines</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Collaboration</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/collaboration/overview.html">Overview</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/collaboration/channels.html">Channels</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/collaboration/contacts-and-private-calls.html">Contacts and Private Calls</a></li></ol></li><li class="chapter-item expanded "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Remote Development</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/remote-development.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/environment.html">Environment Variables</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/dev-containers.html">Dev Containers</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">AI</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/overview.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/quick-start.html">AI Quick Start</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/by-company.html">AI by Company</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agents.html">Agents</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/zed-agent.html">Zed Agent</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/external-agents.html">External Agents</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/terminal-threads.html">Terminal Threads</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agent-panel.html">Agent Panel</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agent-settings.html">Agent Settings</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agent-profiles.html">Agent Profiles</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/tools.html">Tools</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/tool-permissions.html">Tool Permissions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/sandboxing.html">Agent Sandboxing</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/mcp.html">Model Context Protocol</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/skills.html">Skills</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/instructions.html">Instructions</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/parallel-agents.html">Parallel Agents</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/inline-assistant.html">Inline Assistant</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/llm-providers.html" class="active">LLM Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-api-access.html">Use API Access</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-an-existing-subscription.html">Use an Existing Subscription</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-a-gateway.html">Use a Gateway</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-a-local-model.html">Use a Local Model</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/edit-prediction.html">Edit Prediction</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/privacy-and-security.html">AI Privacy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/ai-improvement.html">Feedback and Training Data</a></li></ol></li><li class="chapter-item expanded "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Account &amp; Billing</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/authentication.html">Authenticate</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/account/plans-and-pricing.html">Plans &amp; Pricing</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/account/zed-hosted-models.html">Zed-Hosted Models</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/account/billing.html">Billing</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Zed Business</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/overview.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/organizations.html">Organizations</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/roles.html">Roles &amp; Permissions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/admin-controls.html">Admin Controls</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/business-support.html">Business Support</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Privacy &amp; Security</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/worktree-trust.html">Worktree Trust</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/privacy.html">Privacy for Business</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/telemetry.html">Telemetry</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/soc2.html">SOC2</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Platform Support</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/macos.html">macOS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/windows.html">Windows</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/linux.html">Linux</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Customization</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/appearance.html">Appearance</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/themes.html">Themes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/icon-themes.html">Icon Themes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/visual-customization.html">Fonts &amp; Visual Tweaks</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/key-bindings.html">Keybindings</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/vim.html">Vim Mode</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/helix.html">Helix Mode</a></li></ol></li><li class="chapter-item expanded "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Language Support</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages.html">All Languages</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/configuring-languages.html">Configuring Languages</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/toolchains.html">Toolchains</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/semantic-tokens.html">Semantic Tokens</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/ansible.html">Ansible</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/asciidoc.html">AsciiDoc</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/astro.html">Astro</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/bash.html">Bash</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/biome.html">Biome</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/c.html">C</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/cpp.html">C++</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/csharp.html">C#</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/clojure.html">Clojure</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/css.html">CSS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/dart.html">Dart</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/deno.html">Deno</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/diff.html">Diff</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/docker.html">Docker</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/elixir.html">Elixir</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/elm.html">Elm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/emmet.html">Emmet</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/erlang.html">Erlang</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/fish.html">Fish</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/gdscript.html">GDScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/gleam.html">Gleam</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/glsl.html">GLSL</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/go.html">Go</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/groovy.html">Groovy</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/haskell.html">Haskell</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/helm.html">Helm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/html.html">HTML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/java.html">Java</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/javascript.html">JavaScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/julia.html">Julia</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/json.html">JSON</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/jsonnet.html">Jsonnet</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/kotlin.html">Kotlin</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/lua.html">Lua</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/luau.html">Luau</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/makefile.html">Makefile</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/markdown.html">Markdown</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/nim.html">Nim</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/ocaml.html">OCaml</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/opentofu.html">OpenTofu</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/php.html">PHP</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/powershell.html">PowerShell</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/prisma.html">Prisma</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/proto.html">Proto</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/purescript.html">PureScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/python.html">Python</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/r.html">R</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/rego.html">Rego</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/rst.html">ReStructuredText</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/racket.html">Racket</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/roc.html">Roc</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/ruby.html">Ruby</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/rust.html">Rust</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/scala.html">Scala</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/scheme.html">Scheme</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/sh.html">Shell Script</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/sql.html">SQL</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/sml.html">Standard ML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/svelte.html">Svelte</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/swift.html">Swift</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/tailwindcss.html">Tailwind CSS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/terraform.html">Terraform</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/toml.html">TOML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/typescript.html">TypeScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/uiua.html">Uiua</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/vue.html">Vue</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/xml.html">XML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/yaml.html">YAML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/yara.html">YARA</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/yarn.html">Yarn</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/zig.html">Zig</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Extensions</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/installing-extensions.html">Installing Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/developing-extensions.html">Developing Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/overview.html">Publishing Your Extension</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/license-requirements.html">License Requirements</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/prerequisites.html">Publishing Prerequisites</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/publishing-guide.html">Publishing Guide</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/updating-and-maintenance.html">Updating an Extension</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/faq.html">Frequently Asked Questions</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/capabilities.html">Extension Capabilities</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/languages.html">Language Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/debugger-extensions.html">Debugger Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/themes.html">Theme Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/icon-themes.html">Icon Theme Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/snippets.html">Snippets Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/mcp-extensions.html">MCP Server Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/agent-servers.html">Agent Server Extensions</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Coming From…</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/vs-code.html">VS Code</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/intellij.html">IntelliJ IDEA</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/pycharm.html">PyCharm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/webstorm.html">WebStorm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/rustrover.html">RustRover</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Reference</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/reference/all-settings.html">All Settings</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/all-actions.html">All Actions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/reference/cli.html">CLI Reference</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Developing Zed</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development.html">Developing Zed</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/macos.html">macOS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/linux.html">Linux</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/windows.html">Windows</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/freebsd.html">FreeBSD</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/debuggers.html">Using Debuggers</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/performance.html">Performance</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/ui-checklist.html">UI/UX Checklist</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/glossary.html">Glossary</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/release-notes.html">Release Notes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/debugging-crashes.html">Debugging Crashes</a></li></ol>
+                </div>
+                <div style="display: none;" id="sidebar-resize-handle" class="sidebar-resize-handle">
+                    <div class="sidebar-resize-indicator"></div>
+                </div>
+            </nav>
+
+            <!-- Mobile sidebar toggle -->
+            <script>
+                (function() {
+                    var sidebarToggle = document.getElementById('sidebar-toggle');
+                    var sidebar = document.getElementById('sidebar');
+
+                    sidebarToggle.addEventListener('click', function() {
+                        var isOpen = document.body.classList.toggle('sidebar-open');
+                        sidebarToggle.setAttribute('aria-expanded', isOpen);
+                        sidebar.setAttribute('aria-hidden', !isOpen);
+                    });
+
+                    // Close sidebar when clicking a link inside it (on mobile)
+                    sidebar.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'A' && window.innerWidth < 620) {
+                            document.body.classList.remove('sidebar-open');
+                            sidebarToggle.setAttribute('aria-expanded', 'false');
+                            sidebar.setAttribute('aria-hidden', 'true');
+                        }
+                    });
+                })();
+            </script>
+
+            <!-- Search backdrop handlers -->
+            <script>
+                (function() {
+                    var searchWrapper = document.getElementById('search-wrapper');
+                    var searchContainer = document.querySelector('.search-container');
+                    var searchResults = document.getElementById('searchresults');
+
+                    if (!searchWrapper || !searchContainer) return;
+
+                    searchContainer.addEventListener('click', function(e) {
+                        if (e.target === searchContainer) {
+                            searchWrapper.classList.add('hidden');
+                        }
+                    });
+
+                    if (searchResults) {
+                        searchResults.addEventListener('click', function(e) {
+                            if (e.target.tagName === 'A' || e.target.closest('a')) {
+                                searchWrapper.classList.add('hidden');
+                            }
+                        });
+                    }
+                })();
+            </script>
+
+            <!-- Insert section spacers and apply collapsed state before scroll restoration to prevent layout shift/flicker -->
+            <script>
+                (function() {
+                    var chapterList = document.querySelector('#sidebar ol.chapter');
+                    if (!chapterList) return;
+
+                    var collapsedSections = [];
+                    try {
+                        var stored = sessionStorage.getItem('sidebar-collapsed-sections');
+                        if (stored) {
+                            collapsedSections = JSON.parse(stored);
+                        }
+                    } catch (e) {}
+
+                    var partTitles = chapterList.querySelectorAll('li.part-title');
+                    var previousPartTitle = null;
+
+                    partTitles.forEach(function(partTitle, index) {
+                        partTitle._sectionName = partTitle.textContent.trim();
+
+                        // Insert a spacer before this part-title (except for the first one)
+                        if (index > 0) {
+                            var spacer = document.createElement('li');
+                            spacer.className = 'section-spacer';
+                            partTitle.parentNode.insertBefore(spacer, partTitle);
+
+                            if (previousPartTitle) {
+                                previousPartTitle._spacerAfter = spacer;
+                            }
+                        }
+
+                        var isCollapsed = collapsedSections.includes(partTitle._sectionName);
+                        if (isCollapsed) {
+                            // Hide all siblings until next part-title
+                            var sibling = partTitle.nextElementSibling;
+                            while (sibling && !sibling.classList.contains('part-title')) {
+                                sibling.classList.add('section-hidden');
+                                sibling = sibling.nextElementSibling;
+                            }
+                            // Hide the spacer after this section (will be set on next iteration)
+                            partTitle._isCollapsed = true;
+                        }
+
+                        // If previous section was collapsed, hide its spacer
+                        if (previousPartTitle && previousPartTitle._isCollapsed && previousPartTitle._spacerAfter) {
+                            previousPartTitle._spacerAfter.classList.add('section-hidden');
+                        }
+
+                        previousPartTitle = partTitle;
+                    });
+
+                    // Handle the last section's spacer if it was collapsed
+                    if (previousPartTitle && previousPartTitle._isCollapsed && previousPartTitle._spacerAfter) {
+                        previousPartTitle._spacerAfter.classList.add('section-hidden');
+                    }
+                })();
+            </script>
+
+            <!-- Track and set sidebar scroll position -->
+            <script>
+                var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+                sidebarScrollbox.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'A') {
+                        sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                    }
+                }, { passive: true });
+                var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+                sessionStorage.removeItem('sidebar-scroll');
+                if (sidebarScrollTop) {
+                    // preserve sidebar scroll position when navigating via links within sidebar
+                    sidebarScrollbox.scrollTop = sidebarScrollTop;
+                } else {
+                    // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                    var activeSection = document.querySelector('#sidebar .active');
+                    if (activeSection) {
+                        activeSection.scrollIntoView({ block: 'center' });
+                    }
+                }
+            </script>
+        </div>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="https://zed.dev/docs/elasticlunr.min.js"></script>
+        <script src="https://zed.dev/docs/mark.min.js"></script>
+        <script src="https://zed.dev/docs/searcher.js"></script>
+
+        <script>
+           (function () {
+                // Check for focused search result and bring into the view
+                const ensureVisible = () => {
+                    const focused = document.querySelector("#searchresults li.focus");
+
+                    if (focused) {
+                        focused.scrollIntoView({
+                            block: "nearest",
+                            inline: "nearest"
+                        });
+                    }
+                };
+
+                // 1. Listen for arrow key events
+                // 2. Wait for DOM to update
+                // 3. Call envsureVisible
+                document.addEventListener("keydown", function (e) {
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        requestAnimationFrame(ensureVisible);
+                    }
+                });
+            })();
+        </script>
+
+        <script src="https://zed.dev/docs/clipboard.min.js"></script>
+        <script src="https://zed.dev/docs/highlight.js"></script>
+        <script src="https://zed.dev/docs/book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="https://zed.dev/docs/redirects/legacy-fragment-redirects.js"></script>
+        <script src="https://zed.dev/docs/theme/page-toc.js"></script>
+        <script src="https://zed.dev/docs/theme/plugins.js"></script>
+        <script src="https://zed.dev/docs/theme/c15t@2.0.0-rc.3.js"></script>
+        <script src="https://zed.dev/docs/theme/analytics.js"></script>
+
+
+        <!-- c15t Consent Banner -->
+        <div id="c15t-banner" style="display: none;">
+            <div>
+                <p id="c15t-description">
+                    Zed uses cookies to improve your experience and for marketing. Read <a href="https://zed.dev/cookie-policy">our cookie policy</a> for more details.
+                </p>
+            </div>
+            <div id="c15t-configure-section" style="display: none">
+                <div>
+                    <label for="c15t-toggle-necessary">Strictly Necessary</label>
+                    <label class="c15t-switch">
+                        <input type="checkbox" id="c15t-toggle-necessary" checked="" disabled="">
+                        <span class="c15t-slider"></span>
+                    </label>
+                </div>
+                <div>
+                    <label for="c15t-toggle-measurement">Analytics</label>
+                    <label class="c15t-switch">
+                        <input type="checkbox" id="c15t-toggle-measurement">
+                        <span class="c15t-slider"></span>
+                    </label>
+                </div>
+                <div>
+                    <label for="c15t-toggle-marketing">Marketing</label>
+                    <label class="c15t-switch">
+                        <input type="checkbox" id="c15t-toggle-marketing">
+                        <span class="c15t-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="c15t-footer">
+                <button id="c15t-configure-btn" class="c15t-button icon" title="Configure">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 7h-9"></path>
+                        <path d="M14 17H5"></path>
+                        <circle cx="17" cy="17" r="3"></circle>
+                        <circle cx="7" cy="7" r="3"></circle>
+                    </svg>
+                </button>
+                <div>
+                    <button id="c15t-decline" class="c15t-button">
+                        Reject all
+                    </button>
+                    <button id="c15t-accept" class="c15t-button primary">
+                        Accept all
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+</body></html>

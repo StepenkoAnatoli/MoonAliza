@@ -1,0 +1,920 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="light" data-color-scheme="light" class="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+@view-transition { navigation: auto; }
+
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.05s; }</style>
+        <!-- Book generated using mdBook -->
+        
+        
+        <!-- Theme initialization - must run before any CSS loads to prevent flicker -->
+        <script>
+            (function() {
+                var theme;
+                try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+                if (theme === null || theme === undefined) {
+                    theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                }
+                var html = document.documentElement;
+                html.setAttribute('data-theme', theme);
+                html.setAttribute('data-color-scheme', theme);
+                html.className = theme;
+            })();
+        </script>
+        <title>Use API Access | Use API Access - Zed</title>
+        <link rel="llms.txt" href="https://zed.dev/docs/llms.txt">
+        
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Configure provider API access, API keys, API credits, usage billing, and OpenAI-compatible endpoints for Zed AI features.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="rgba(0, 0, 0, 0)">
+
+        <link rel="shortcut icon" href="https://zed.dev/docs/favicon.png">
+        <link rel="stylesheet" href="https://zed.dev/docs/css/variables.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/css/general.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="https://zed.dev/docs/FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="https://zed.dev/docs/highlight.css">
+        
+        
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/page-toc.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/plugins.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/highlight.css">
+        <link rel="stylesheet" href="https://zed.dev/docs/theme/consent-banner.css">
+
+        <meta name="amplitude-key" content="dff590dc008f326963fa3e9c19ab9ff5">
+        <meta name="consent-io-instance" content="https://zed-us-east-1-zed-production.c15t.dev">
+            <link rel="alternate" type="text/markdown" href="https://zed.dev/docs/ai/use-api-access.md">
+    </head>
+    <body class="js">
+    <div id="body-container">
+        <div class="noise-pattern" style="background-image: url('https://cdn.zed.dev/images/noise.png');"></div>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            // Mark as JS-enabled
+            document.body.classList.remove('no-js');
+            document.body.classList.add('js');
+        </script>
+        <div style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">
+            Agent documentation index: <a href="https://zed.dev/docs/llms.txt">llms.txt</a>. Markdown versions are available for docs pages.
+        </div>
+
+        <header class="header-bar">
+            <div class="left-container">
+                <a href="https://zed.dev/" class="logo-nav">
+                    <img src="https://zed.dev/logo_icon.webp" class="icon-logo-img" alt="Zed Industries" style="height: 26px;">
+                </a>
+                <button id="sidebar-toggle" class="icon-button ib-hidden-desktop" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar" aria-expanded="false">
+                    <i class="fa fa-bars"></i>
+                </button>
+            </div>
+            <button id="search-toggle" class="search-button" type="button" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                <i class="icon fa fa-search"></i>
+                <span class="search-content-desktop">
+                    <span class="placeholder">Search docs…</span>
+                    <kbd class="keybinding"></kbd>
+                </span>
+                <span class="search-content-mobile">
+                    <span class="placeholder">Search…</span>
+                </span>
+            </button>
+            <div class="right-container">
+                <button id="color-scheme-toggle" class="icon-button" type="button" title="Switch to dark theme" aria-label="Switch to dark theme">
+                    <i class="fa fa-moon-o"></i>
+                </button>
+
+                <!-- mdBook 0.4.40's bundled book.js requires these elements even though plugins.js handles theme switching. -->
+                <div aria-hidden="true">
+                    <button id="theme-toggle" type="button" aria-expanded="false"></button>
+                    <ul id="theme-list">
+                        <li><button type="button" class="theme theme-selected" id="light">Light</button></li>
+                        <li><button type="button" class="theme" id="dark">Dark</button></li>
+                    </ul>
+                </div>
+
+                
+
+                <a class="download-button" href="https://zed.dev/download" title="Download Zed" aria-label="Download Zed">
+                    Download
+                </a>
+            </div>
+        </header>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="search-container">
+                <div id="search-wrapper" class="search-modal hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search…" aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page">
+                <div id="content" class="content">
+                    <main>
+                      
+<div class="page-header"><h1 id="use-api-access"><a class="header" href="https://zed.dev/docs/ai/use-api-access#use-api-access">Use API Access</a></h1><div class="page-actions"><button id="copy-markdown-toggle" class="page-action page-action-icon" type="button" title="Copy Page as Markdown" aria-label="Copy page as markdown">
+                    <i class="fa fa-copy"></i>
+                </button></div></div>
+<p>Use API access when a provider gives you an API key, API credits, top-ups, or usage billing.</p>
+<p>Paid API credits, usage billing, and top-ups are API access, even when you pay the provider directly. Use this path when the provider gives you an API key.</p>
+<h2 id="providers"><a class="header" href="https://zed.dev/docs/ai/use-api-access#providers">Supported API Providers</a></h2>
+<p>Zed supports these first-class API providers for model-backed Zed AI features:</p>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#anthropic">Anthropic</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#anthropic-custom-models">Custom Anthropic Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#openai">OpenAI API</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#openai-custom-models">Custom OpenAI Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#google-ai">Google AI</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#google-ai-custom-models">Custom Google AI Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#mistral">Mistral</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#mistral-custom-models">Custom Mistral Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#deepseek">DeepSeek</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#deepseek-custom-models">Custom DeepSeek Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#xai">xAI</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#xai-custom-models">Custom xAI Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#opencode">OpenCode API</a>
+<ul>
+<li><a href="https://zed.dev/docs/ai/use-api-access#opencode-custom-models">Custom OpenCode Models</a></li>
+</ul>
+</li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#anthropic-compatible">Anthropic-compatible endpoints</a></li>
+<li><a href="https://zed.dev/docs/ai/use-api-access#openai-compatible">OpenAI-compatible endpoints</a></li>
+</ul>
+<h2 id="support"><a class="header" href="https://zed.dev/docs/ai/use-api-access#support">What API Access Applies To</a></h2>
+<p>Use API access for the Zed Agent, Inline Assistant, Git commit generation,
+thread summaries, and similar Zed-owned AI features.</p>
+<p>External Agents and Terminal Threads usually configure model access in the
+agent or CLI itself. See <a href="https://zed.dev/docs/ai/agents.html">Agents</a> for the difference between
+agent paths and model access paths.</p>
+<h2 id="api-keys"><a class="header" href="https://zed.dev/docs/ai/use-api-access#api-keys">API Keys and Environment Variables</a></h2>
+<p>Most API-access providers can be configured on the <strong>Settings → AI → LLM Providers</strong> page with <code class="hljs">agent: open settings</code>. Keys saved through Zed are stored in the system keychain, not in <code class="hljs">settings.json</code>.</p>
+<p>Zed also reads provider-specific environment variables. Non-empty <a href="https://zed.dev/docs/environment.html">environment variables</a> take precedence over keychain values. If a key comes from an environment variable, unset the variable and restart Zed to stop using it.</p>
+<div class="table-wrapper"><table><thead><tr><th>Provider</th><th>Environment variable</th></tr></thead><tbody>
+<tr><td>Anthropic</td><td><code class="hljs">ANTHROPIC_API_KEY</code></td></tr>
+<tr><td>OpenAI</td><td><code class="hljs">OPENAI_API_KEY</code></td></tr>
+<tr><td>Google AI</td><td><code class="hljs">GEMINI_API_KEY</code>, falling back to <code class="hljs">GOOGLE_AI_API_KEY</code></td></tr>
+<tr><td>Mistral</td><td><code class="hljs">MISTRAL_API_KEY</code></td></tr>
+<tr><td>DeepSeek</td><td><code class="hljs">DEEPSEEK_API_KEY</code></td></tr>
+<tr><td>xAI</td><td><code class="hljs">XAI_API_KEY</code></td></tr>
+<tr><td>OpenCode</td><td><code class="hljs">OPENCODE_API_KEY</code></td></tr>
+<tr><td>OpenRouter</td><td><code class="hljs">OPENROUTER_API_KEY</code></td></tr>
+<tr><td>Vercel AI Gateway</td><td><code class="hljs">VERCEL_AI_GATEWAY_API_KEY</code></td></tr>
+<tr><td>Ollama</td><td><code class="hljs">OLLAMA_API_KEY</code></td></tr>
+<tr><td>LM Studio</td><td><code class="hljs">LMSTUDIO_API_KEY</code></td></tr>
+</tbody></table>
+</div>
+<p>OpenAI-compatible provider environment variables are generated from the configured provider ID as upper snake case plus <code class="hljs">_API_KEY</code>. For example, provider ID <code class="hljs">my-gateway</code> uses <code class="hljs">MY_GATEWAY_API_KEY</code>.</p>
+<h2 id="custom-headers"><a class="header" href="https://zed.dev/docs/ai/use-api-access#custom-headers">Custom Headers</a></h2>
+<p>You can attach extra HTTP headers to every request Zed makes to supported HTTP-based providers. This is useful in corporate environments or for observability tooling.</p>
+<p>Configure them with <code class="hljs">language_models.&lt;provider&gt;.custom_headers</code>:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"openai"</span>: {
+      <span class="hljs-attr">"custom_headers"</span>: {
+        <span class="hljs-attr">"Fancy-Auth"</span>: <span class="hljs-string">"Bearer &lt;your-fancy-key&gt;"</span>,
+        <span class="hljs-attr">"X-My-Tag"</span>: <span class="hljs-string">"zed"</span>
+      }
+    }
+  }
+}
+</code></pre>
+<p><code class="hljs">custom_headers</code> is supported by Amazon Bedrock, Anthropic, DeepSeek, Google AI, LM Studio, Mistral, Ollama, OpenAI, OpenAI-compatible providers, OpenCode, OpenRouter, <a href="https://zed.dev/docs/ai/use-a-gateway.html">Vercel AI Gateway</a>, and xAI.</p>
+<p>Headers managed by Zed for each provider, such as <code class="hljs">Authorization</code>, <code class="hljs">Content-Type</code>, <code class="hljs">Accept</code>, and provider-specific authentication headers, are ignored with a warning if you try to override them.</p>
+<h2 id="remote-projects"><a class="header" href="https://zed.dev/docs/ai/use-api-access#remote-projects">Remote Projects</a></h2>
+<p>Zed LLM providers for Zed AI features are initialized in the local Zed app. In SSH, dev container, and other remote projects, API keys saved in Zed are read from the local system keychain, and provider environment variables are read from the local Zed process environment.</p>
+<p>External Agents and Terminal Threads may run their own processes and use their own remote or local environment. See <a href="https://zed.dev/docs/ai/external-agents.html">External Agents</a> and <a href="https://zed.dev/docs/ai/terminal-threads.html">Terminal Threads</a>.</p>
+<h2 id="provider-notes"><a class="header" href="https://zed.dev/docs/ai/use-api-access#provider-notes">Provider Notes</a></h2>
+<h3 id="anthropic"><a class="header" href="https://zed.dev/docs/ai/use-api-access#anthropic">Anthropic</a></h3>
+<p>Use Anthropic API access when you have an Anthropic API key or API credits. Claude Pro and Max subscriptions are separate; see <a href="https://zed.dev/docs/ai/use-an-existing-subscription.html#claude">Use an Existing Subscription</a>.</p>
+<ol>
+<li>Sign up for Anthropic and <a href="https://console.anthropic.com/settings/keys">create an API key</a>.</li>
+<li>Make sure your Anthropic account has API credits.</li>
+<li>Open Agent Settings with <code class="hljs">agent: open settings</code> and go to the Anthropic section.</li>
+<li>Enter your Anthropic API key.</li>
+</ol>
+<p>Zed also reads <code class="hljs">ANTHROPIC_API_KEY</code> from the local Zed process environment.</p>
+<h4 id="anthropic-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#anthropic-custom-models">Custom Anthropic Models</a></h4>
+<p>Add custom Anthropic models in settings when you need an alternate model ID,
+display name, context window, output limit, tool override, or thinking mode.</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"anthropic"</span>: {
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"claude-3-5-sonnet-20240620"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Sonnet 2024-June"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">128000</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">2560</span>,
+          <span class="hljs-attr">"tool_override"</span>: <span class="hljs-string">"some-model-that-supports-toolcalling"</span>
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<p>For Anthropic models that support extended thinking, add a <code class="hljs">mode</code> configuration:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"anthropic"</span>: {
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"claude-sonnet-4-latest"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"claude-sonnet-4-thinking"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">200000</span>,
+          <span class="hljs-attr">"mode"</span>: {
+            <span class="hljs-attr">"type"</span>: <span class="hljs-string">"thinking"</span>,
+            <span class="hljs-attr">"budget_tokens"</span>: <span class="hljs-number">4096</span>
+          }
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="openai"><a class="header" href="https://zed.dev/docs/ai/use-api-access#openai">OpenAI API</a></h3>
+<p>Use OpenAI API access when you have an OpenAI API key or API billing. ChatGPT Plus and Pro subscriptions use a different setup path; see <a href="https://zed.dev/docs/ai/use-an-existing-subscription.html#chatgpt">Use an Existing Subscription</a>.</p>
+<ol>
+<li>Visit the OpenAI platform and <a href="https://platform.openai.com/account/api-keys">create an API key</a>.</li>
+<li>Make sure your OpenAI account has credits or billing enabled.</li>
+<li>Open Agent Settings with <code class="hljs">agent: open settings</code> and go to the OpenAI section.</li>
+<li>Enter your OpenAI API key.</li>
+</ol>
+<p>Zed also reads <code class="hljs">OPENAI_API_KEY</code> from the local Zed process environment.</p>
+<h4 id="openai-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#openai-custom-models">Custom OpenAI Models</a></h4>
+<p>Add custom OpenAI models in your settings file when you need alternate model IDs, preview releases, or custom request parameters.</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"openai"</span>: {
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"gpt-5.2"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"gpt-5.2 high"</span>,
+          <span class="hljs-attr">"reasoning_effort"</span>: <span class="hljs-string">"high"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">272000</span>,
+          <span class="hljs-attr">"max_completion_tokens"</span>: <span class="hljs-number">20000</span>
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<p>You must provide the model’s context window in <code class="hljs">max_tokens</code>. For reasoning-focused models, set <code class="hljs">max_completion_tokens</code> to avoid high reasoning-token costs.</p>
+<h3 id="google-ai"><a class="header" href="https://zed.dev/docs/ai/use-api-access#google-ai">Google AI</a></h3>
+<p>Use Google AI API access when you have a Gemini API key.</p>
+<ol>
+<li>Go to Google AI Studio and <a href="https://aistudio.google.com/app/apikey">create an API key</a>.</li>
+<li>Open <a href="https://zed.dev/docs/ai/agent-settings.html">Agent Settings</a> with <code class="hljs">agent: open settings</code> and go to the Google AI section.</li>
+<li>Enter your Google AI API key.</li>
+</ol>
+<p>Zed reads <code class="hljs">GEMINI_API_KEY</code>, falling back to <code class="hljs">GOOGLE_AI_API_KEY</code>, from the local Zed process environment.</p>
+<h4 id="google-ai-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#google-ai-custom-models">Custom Google AI Models</a></h4>
+<p>Add custom Google AI models when you need a specific Gemini model version,
+including experimental models, or a thinking-mode configuration.</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"google"</span>: {
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"gemini-3.1-pro-preview"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Gemini 3.1 Pro"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">1000000</span>,
+          <span class="hljs-attr">"mode"</span>: {
+            <span class="hljs-attr">"type"</span>: <span class="hljs-string">"thinking"</span>,
+            <span class="hljs-attr">"budget_tokens"</span>: <span class="hljs-number">24000</span>
+          }
+        },
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"gemini-3-flash-preview"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Gemini 3 Flash (Thinking)"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">1000000</span>,
+          <span class="hljs-attr">"mode"</span>: {
+            <span class="hljs-attr">"type"</span>: <span class="hljs-string">"thinking"</span>,
+            <span class="hljs-attr">"budget_tokens"</span>: <span class="hljs-number">24000</span>
+          }
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="mistral"><a class="header" href="https://zed.dev/docs/ai/use-api-access#mistral">Mistral</a></h3>
+<p>Use Mistral API access when you have a Mistral API key.</p>
+<ol>
+<li>Visit the Mistral platform and <a href="https://console.mistral.ai/api-keys/">create an API key</a>.</li>
+<li>Open Agent Settings with <code class="hljs">agent: open settings</code> and go to the Mistral section.</li>
+<li>Enter your Mistral API key.</li>
+</ol>
+<p>Zed also reads <code class="hljs">MISTRAL_API_KEY</code> from the local Zed process environment.</p>
+<h4 id="mistral-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#mistral-custom-models">Custom Mistral Models</a></h4>
+<p>Add custom Mistral models when you need alternate model IDs, custom limits, tool
+support, image support, or a custom endpoint.</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"mistral"</span>: {
+      <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://api.mistral.ai/v1"</span>,
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"mistral-tiny-latest"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Mistral Tiny"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">32000</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">4096</span>,
+          <span class="hljs-attr">"max_completion_tokens"</span>: <span class="hljs-number">1024</span>,
+          <span class="hljs-attr">"supports_tools"</span>: <span class="hljs-literal">true</span>,
+          <span class="hljs-attr">"supports_images"</span>: <span class="hljs-literal">false</span>
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="deepseek"><a class="header" href="https://zed.dev/docs/ai/use-api-access#deepseek">DeepSeek</a></h3>
+<p>Use DeepSeek API access when you have paid API usage, top-ups, or an API key. In Zed, DeepSeek is API access, not subscription sign-in.</p>
+<ol>
+<li>Visit the DeepSeek platform and <a href="https://platform.deepseek.com/api_keys">create an API key</a>.</li>
+<li>Open Agent Settings with <code class="hljs">agent: open settings</code> and go to the DeepSeek section.</li>
+<li>Enter your DeepSeek API key.</li>
+</ol>
+<p>Zed also reads <code class="hljs">DEEPSEEK_API_KEY</code> from the local Zed process environment.</p>
+<h4 id="deepseek-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#deepseek-custom-models">Custom DeepSeek Models</a></h4>
+<p>Add custom DeepSeek models when you need alternate model IDs, custom token
+limits, or a custom endpoint.</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"deepseek"</span>: {
+      <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://api.deepseek.com/v1"</span>,
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"deepseek-flash"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"DeepSeek V4.1 Flash"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">1000000</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">384000</span>
+        },
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"deepseek-v4-pro"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"DeepSeek V4 Pro"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">1000000</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">384000</span>
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="xai"><a class="header" href="https://zed.dev/docs/ai/use-api-access#xai">xAI</a></h3>
+<p>Use xAI API access when you have an xAI API key.</p>
+<ol>
+<li><a href="https://console.x.ai/team/default/api-keys">Create an API key in the xAI Console</a>.</li>
+<li>Open Agent Settings with <code class="hljs">agent: open settings</code> and go to the xAI section.</li>
+<li>Enter your xAI API key.</li>
+</ol>
+<p>Zed also reads <code class="hljs">XAI_API_KEY</code> from the local Zed process environment.</p>
+<h4 id="xai-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#xai-custom-models">Custom xAI Models</a></h4>
+<p>Add custom xAI models when you need alternate Grok model IDs, custom limits,
+image support, or a custom endpoint.</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"x_ai"</span>: {
+      <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://api.x.ai/v1"</span>,
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"grok-1.5"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Grok 1.5"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">131072</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">8192</span>
+        },
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"grok-1.5v"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Grok 1.5V (Vision)"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">131072</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">8192</span>,
+          <span class="hljs-attr">"supports_images"</span>: <span class="hljs-literal">true</span>
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="opencode"><a class="header" href="https://zed.dev/docs/ai/use-api-access#opencode">OpenCode API</a></h3>
+<p>Use OpenCode API access when you have an OpenCode API key. OpenCode Zen and Go affect which OpenCode models are available.</p>
+<p>Zed does not sign in to OpenCode with OAuth or detect your OpenCode subscription; it uses an OpenCode API key saved in the system keychain or <code class="hljs">OPENCODE_API_KEY</code>.</p>
+<ol>
+<li>Visit <a href="https://opencode.ai/auth">OpenCode Console</a> and create an account.</li>
+<li>To use Zen or Go models, make sure you have enough credits or an active
+subscription. OpenCode Free models are not available when using OpenCode as a
+provider in Zed’s Agent. You can use them in Zed by running OpenCode as an
+<a href="https://zed.dev/acp/agent/opencode">external agent through ACP</a>.</li>
+<li>Generate an API key from the API Keys section in the OpenCode Console.</li>
+<li>Open Agent Settings with <code class="hljs">agent: open settings</code> and go to the OpenCode section.</li>
+<li>Enter your OpenCode API key.</li>
+</ol>
+<p>Zed also reads <code class="hljs">OPENCODE_API_KEY</code> from the local Zed process environment.</p>
+<p>Zed fetches the available Zen and Go models and their capabilities from OpenCode. OpenCode Free models are excluded since they are only allowed to be used from within OpenCode.</p>
+<p>By default, both Zen and Go models are shown. You can hide Zen or Go models by adding this to your settings file:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"opencode"</span>: {
+      <span class="hljs-attr">"show_zen_models"</span>: <span class="hljs-literal">true</span>,
+      <span class="hljs-attr">"show_go_models"</span>: <span class="hljs-literal">true</span>
+    }
+  }
+}
+</code></pre>
+<h4 id="opencode-custom-models"><a class="header" href="https://zed.dev/docs/ai/use-api-access#opencode-custom-models">Custom OpenCode Models</a></h4>
+<p>Add a custom OpenCode model to use a custom endpoint or configure a model that discovery does not include. A custom entry overrides a fetched model with the same <code class="hljs">name</code> and <code class="hljs">subscription</code>.</p>
+<p>Add custom models in your settings file:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"opencode"</span>: {
+      <span class="hljs-attr">"available_models"</span>: [
+        {
+          <span class="hljs-attr">"name"</span>: <span class="hljs-string">"my-custom-model"</span>,
+          <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"My Custom Model"</span>,
+          <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">123456</span>,
+          <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">98765</span>,
+          <span class="hljs-attr">"protocol"</span>: <span class="hljs-string">"openai_chat"</span>,
+          <span class="hljs-attr">"reasoning_effort_levels"</span>: [<span class="hljs-string">"low"</span>, <span class="hljs-string">"medium"</span>, <span class="hljs-string">"high"</span>, <span class="hljs-string">"max"</span>],
+          <span class="hljs-attr">"interleaved_reasoning"</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-attr">"subscription"</span>: <span class="hljs-string">"go"</span>,
+          <span class="hljs-attr">"custom_model_api_url"</span>: <span class="hljs-string">"https://example.com/zen"</span>
+        }
+      ]
+    }
+  }
+}
+</code></pre>
+<p>The available configuration options for custom OpenCode models are:</p>
+<ul>
+<li><code class="hljs">name</code> (required): model ID used by OpenCode, such as <code class="hljs">glm-9000</code></li>
+<li><code class="hljs">display_name</code> (optional): human-readable model name shown in the UI, such as <code class="hljs">Custom GLM 9000</code></li>
+<li><code class="hljs">max_tokens</code> (required): maximum model context window size, such as <code class="hljs">1000000</code></li>
+<li><code class="hljs">max_output_tokens</code> (optional): maximum tokens the model can generate, such as <code class="hljs">64000</code></li>
+<li><code class="hljs">protocol</code> (optional, default <code class="hljs">"openai_chat"</code>): model API protocol, one of <code class="hljs">"anthropic"</code>, <code class="hljs">"openai_responses"</code>, <code class="hljs">"openai_chat"</code>, or <code class="hljs">"google"</code></li>
+<li><code class="hljs">reasoning_effort_levels</code> (optional): list of supported reasoning effort levels, such as <code class="hljs">["none", "low", "medium", "high", "xhigh", "max"]</code>. The last value in the list is used as the default</li>
+<li><code class="hljs">interleaved_reasoning</code> (optional, default <code class="hljs">false</code>): whether thinking tokens are sent as a dedicated <code class="hljs">reasoning_content</code> field. Applies only when using the <code class="hljs">openai_chat</code> protocol</li>
+<li><code class="hljs">subscription</code> (optional): <code class="hljs">"zen"</code> or <code class="hljs">"go"</code>; defaults to <code class="hljs">"zen"</code></li>
+<li><code class="hljs">custom_model_api_url</code> (optional): custom API base URL to use instead of the default OpenCode API</li>
+</ul>
+<p>Custom OpenCode models are listed in the model dropdown in the Agent Panel.</p>
+<h3 id="anthropic-compatible"><a class="header" href="https://zed.dev/docs/ai/use-api-access#anthropic-compatible">Anthropic-Compatible Endpoints</a></h3>
+<p>Use an Anthropic-compatible endpoint when a service implements Anthropic’s <a href="https://docs.anthropic.com/en/api/messages">Messages API</a> (<code class="hljs">/v1/messages</code>) and gives you a custom base URL, model ID, and API key.</p>
+<p>You can add a custom Anthropic-compatible provider from Agent Settings with <code class="hljs">agent: open settings</code>. Look for <code class="hljs">Add Provider</code> in the <a href="https://zed.dev/docs/ai/llm-providers.html">LLM Providers</a> section, choose <code class="hljs">Anthropic</code>, and fill in the provider name, API URL, model ID, and context window.</p>
+<p>You can also configure the provider in your settings file:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"anthropic_compatible"</span>: {
+      <span class="hljs-attr">"Some Provider"</span>: {
+        <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://api.someprovider.com"</span>,
+        <span class="hljs-attr">"custom_headers"</span>: {
+          <span class="hljs-attr">"X-Some-Header"</span>: <span class="hljs-string">"some-value"</span>
+        },
+        <span class="hljs-attr">"available_models"</span>: [
+          {
+            <span class="hljs-attr">"name"</span>: <span class="hljs-string">"some-model"</span>,
+            <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"Some Model"</span>,
+            <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">200000</span>,
+            <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">32000</span>,
+            <span class="hljs-attr">"capabilities"</span>: {
+              <span class="hljs-attr">"tools"</span>: <span class="hljs-literal">true</span>,
+              <span class="hljs-attr">"images"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"prompt_caching"</span>: <span class="hljs-literal">false</span>
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+</code></pre>
+<p>By default, Anthropic-compatible models inherit these capabilities:</p>
+<ul>
+<li><code class="hljs">tools</code>: <code class="hljs">true</code></li>
+<li><code class="hljs">images</code>: <code class="hljs">false</code></li>
+<li><code class="hljs">prompt_caching</code>: <code class="hljs">false</code></li>
+</ul>
+<p>Enable <code class="hljs">prompt_caching</code> to send explicit <code class="hljs">cache_control</code> breakpoints for <a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching">prompt caching</a>; leave it disabled if the provider rejects requests containing them.</p>
+<p>The optional <code class="hljs">custom_headers</code> map adds extra headers to every request, which some providers require. Headers managed by Zed (such as <code class="hljs">X-Api-Key</code> and <code class="hljs">Anthropic-Version</code>) cannot be overridden.</p>
+<p>Models also support the optional <code class="hljs">default_temperature</code>, <code class="hljs">extra_beta_headers</code> (sent as <code class="hljs">anthropic-beta</code> headers), <code class="hljs">mode</code>, and <code class="hljs">tool_override</code> fields, which behave the same as in <a href="https://zed.dev/docs/ai/use-api-access#anthropic-custom-models">Custom Anthropic Models</a>.</p>
+<p>Enter the API key in the provider settings UI or set the generated environment variable (<code class="hljs">&lt;PROVIDER_NAME&gt;_API_KEY</code>; in the example above, <code class="hljs">SOME_PROVIDER_API_KEY</code>). Do not put API keys in <code class="hljs">settings.json</code>.</p>
+<h3 id="openai-compatible"><a class="header" href="https://zed.dev/docs/ai/use-api-access#openai-compatible">OpenAI-Compatible Endpoints</a></h3>
+<p>Use an OpenAI-compatible endpoint when you have a custom base URL, model ID, and API key.</p>
+<p>You can add a custom OpenAI-compatible provider from Agent Settings with <code class="hljs">agent: open settings</code>. Look for <code class="hljs">Add Provider</code> in the LLM Providers section and fill in the provider name, API URL, model ID, and context window.</p>
+<p>You can also configure the provider in your settings file:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"openai_compatible"</span>: {
+      <span class="hljs-attr">"my-provider"</span>: {
+        <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://example.com/v1"</span>,
+        <span class="hljs-attr">"available_models"</span>: [
+          {
+            <span class="hljs-attr">"name"</span>: <span class="hljs-string">"my-model"</span>,
+            <span class="hljs-attr">"display_name"</span>: <span class="hljs-string">"My Model"</span>,
+            <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">128000</span>
+          }
+        ]
+      }
+    }
+  }
+}
+</code></pre>
+<p>By default, OpenAI-compatible models inherit these capabilities:</p>
+<ul>
+<li><code class="hljs">tools</code>: <code class="hljs">true</code></li>
+<li><code class="hljs">images</code>: <code class="hljs">false</code></li>
+<li><code class="hljs">parallel_tool_calls</code>: <code class="hljs">false</code></li>
+<li><code class="hljs">prompt_cache_key</code>: <code class="hljs">false</code></li>
+<li><code class="hljs">chat_completions</code>: <code class="hljs">true</code></li>
+<li><code class="hljs">interleaved_reasoning</code>: <code class="hljs">false</code></li>
+<li><code class="hljs">max_tokens_parameter</code>: <code class="hljs">false</code></li>
+</ul>
+<p>If a model only works with the Responses API, set <code class="hljs">capabilities.chat_completions</code> to <code class="hljs">false</code>. Zed will use the Responses endpoint for that model.</p>
+<p>For reasoning models (e.g. GPT-5), set <code class="hljs">reasoning_effort</code> to the non-<code class="hljs">none</code> effort level your endpoint supports. This enables thinking in the agent panel and tells Zed which effort to send when thinking is enabled. The provider settings UI can configure this when adding an OpenAI-compatible provider. Zed sends OpenAI-style <code class="hljs">reasoning_effort</code> on chat-completions requests.</p>
+<p>If the model requires the Responses API for reasoning state, set <code class="hljs">capabilities.chat_completions</code> to <code class="hljs">false</code>:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"openai_compatible"</span>: {
+      <span class="hljs-attr">"my-provider"</span>: {
+        <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://example.com/v1"</span>,
+        <span class="hljs-attr">"available_models"</span>: [
+          {
+            <span class="hljs-attr">"name"</span>: <span class="hljs-string">"gpt-5"</span>,
+            <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">272000</span>,
+            <span class="hljs-attr">"reasoning_effort"</span>: <span class="hljs-string">"high"</span>,
+            <span class="hljs-attr">"capabilities"</span>: {
+              <span class="hljs-attr">"tools"</span>: <span class="hljs-literal">true</span>,
+              <span class="hljs-attr">"images"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"parallel_tool_calls"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"prompt_cache_key"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"chat_completions"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"interleaved_reasoning"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"max_tokens_parameter"</span>: <span class="hljs-literal">false</span>
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+</code></pre>
+<p>Valid settings values are <code class="hljs">"none"</code>, <code class="hljs">"minimal"</code>, <code class="hljs">"low"</code>, <code class="hljs">"medium"</code>, <code class="hljs">"high"</code>, <code class="hljs">"xhigh"</code>, and <code class="hljs">"max"</code>. Use <code class="hljs">"none"</code> in <code class="hljs">settings.json</code> when you need to force reasoning off for an endpoint; the provider setup UI exposes the non-<code class="hljs">none</code> values for thinking-capable models. For chat-completions endpoints that should receive prior thinking back in a dedicated <code class="hljs">reasoning_content</code> field, also set <code class="hljs">capabilities.interleaved_reasoning</code> to <code class="hljs">true</code>. If the endpoint expects the output-token limit as <code class="hljs">max_tokens</code> instead of <code class="hljs">max_completion_tokens</code>, set <code class="hljs">capabilities.max_tokens_parameter</code> to <code class="hljs">true</code>.</p>
+<p>For example, a chat-completions endpoint with the maximum OpenAI-style reasoning effort, streamed thinking, and <code class="hljs">max_tokens</code> output limits can be configured as:</p>
+<pre><div class="buttons"><button class="fa fa-copy clip-button" title="Copy to clipboard" aria-label="Copy to clipboard"><i class="tooltiptext"></i></button></div><code class="language-json hljs">{
+  <span class="hljs-attr">"language_models"</span>: {
+    <span class="hljs-attr">"openai_compatible"</span>: {
+      <span class="hljs-attr">"my-reasoning-provider"</span>: {
+        <span class="hljs-attr">"api_url"</span>: <span class="hljs-string">"https://example.com/v1"</span>,
+        <span class="hljs-attr">"available_models"</span>: [
+          {
+            <span class="hljs-attr">"name"</span>: <span class="hljs-string">"reasoning-model"</span>,
+            <span class="hljs-attr">"max_tokens"</span>: <span class="hljs-number">1000000</span>,
+            <span class="hljs-attr">"max_output_tokens"</span>: <span class="hljs-number">128000</span>,
+            <span class="hljs-attr">"reasoning_effort"</span>: <span class="hljs-string">"max"</span>,
+            <span class="hljs-attr">"capabilities"</span>: {
+              <span class="hljs-attr">"tools"</span>: <span class="hljs-literal">true</span>,
+              <span class="hljs-attr">"images"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"parallel_tool_calls"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"prompt_cache_key"</span>: <span class="hljs-literal">false</span>,
+              <span class="hljs-attr">"chat_completions"</span>: <span class="hljs-literal">true</span>,
+              <span class="hljs-attr">"interleaved_reasoning"</span>: <span class="hljs-literal">true</span>,
+              <span class="hljs-attr">"max_tokens_parameter"</span>: <span class="hljs-literal">true</span>
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+</code></pre>
+<p>Enter the API key in the provider settings UI or set the generated environment variable. Do not put API keys in <code class="hljs">settings.json</code>.</p>
+
+                        <div class="footer-buttons">
+                            <a rel="prev" href="https://zed.dev/docs/ai/llm-providers.html" class="footer-button" title="LLM Providers">
+                                <i class="fa fa-angle-left"></i>
+                                LLM Providers
+                            </a>
+                            <a rel="next" href="https://zed.dev/docs/ai/use-an-existing-subscription.html" class="footer-button" title="Use an Existing Subscription">
+                                Use an Existing Subscription
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        </div>
+                        <footer class="footer">
+                            <a href="https://zed.dev/" class="logo-nav">
+                                <img src="https://zed.dev/logo_icon.webp" class="footer-logo" alt="Zed Industries">
+                            </a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/">Back to Site</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/releases">Releases</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/roadmap">Roadmap</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://github.com/zed-industries/zed">GitHub</a>
+                            <span class="footer-separator">•</span>
+                            <a class="footer-link" href="https://zed.dev/blog">Blog</a>
+                            <span class="footer-separator">•</span>
+                            <button id="c15t-manage-consent-btn" class="footer-link">
+                                Manage Site Cookies
+                            </button>
+                        </footer>
+                    </main>
+                    <div class="toc-container has-toc">
+                        <nav class="pagetoc"><p class="toc-title">On This Page</p><a href="https://zed.dev/docs/ai/use-api-access#use-api-access" class="pagetoc-H1">Use API Access</a><a href="https://zed.dev/docs/ai/use-api-access#providers" class="pagetoc-H2">Supported API Providers</a><a href="https://zed.dev/docs/ai/use-api-access#support" class="pagetoc-H2">What API Access Applies To</a><a href="https://zed.dev/docs/ai/use-api-access#api-keys" class="pagetoc-H2">API Keys and Environment Variables</a><a href="https://zed.dev/docs/ai/use-api-access#custom-headers" class="pagetoc-H2">Custom Headers</a><a href="https://zed.dev/docs/ai/use-api-access#remote-projects" class="pagetoc-H2">Remote Projects</a><a href="https://zed.dev/docs/ai/use-api-access#provider-notes" class="pagetoc-H2">Provider Notes</a><a href="https://zed.dev/docs/ai/use-api-access#anthropic" class="pagetoc-H3">Anthropic</a><a href="https://zed.dev/docs/ai/use-api-access#anthropic-custom-models" class="pagetoc-H4">Custom Anthropic Models</a><a href="https://zed.dev/docs/ai/use-api-access#openai" class="pagetoc-H3">OpenAI API</a><a href="https://zed.dev/docs/ai/use-api-access#openai-custom-models" class="pagetoc-H4">Custom OpenAI Models</a><a href="https://zed.dev/docs/ai/use-api-access#google-ai" class="pagetoc-H3">Google AI</a><a href="https://zed.dev/docs/ai/use-api-access#google-ai-custom-models" class="pagetoc-H4">Custom Google AI Models</a><a href="https://zed.dev/docs/ai/use-api-access#mistral" class="pagetoc-H3">Mistral</a><a href="https://zed.dev/docs/ai/use-api-access#mistral-custom-models" class="pagetoc-H4">Custom Mistral Models</a><a href="https://zed.dev/docs/ai/use-api-access#deepseek" class="pagetoc-H3">DeepSeek</a><a href="https://zed.dev/docs/ai/use-api-access#deepseek-custom-models" class="pagetoc-H4">Custom DeepSeek Models</a><a href="https://zed.dev/docs/ai/use-api-access#xai" class="pagetoc-H3">xAI</a><a href="https://zed.dev/docs/ai/use-api-access#xai-custom-models" class="pagetoc-H4">Custom xAI Models</a><a href="https://zed.dev/docs/ai/use-api-access#opencode" class="pagetoc-H3">OpenCode API</a><a href="https://zed.dev/docs/ai/use-api-access#opencode-custom-models" class="pagetoc-H4">Custom OpenCode Models</a><a href="https://zed.dev/docs/ai/use-api-access#anthropic-compatible" class="pagetoc-H3">Anthropic-Compatible Endpoints</a><a href="https://zed.dev/docs/ai/use-api-access#openai-compatible" class="pagetoc-H3 active">OpenAI-Compatible Endpoints</a></nav>
+                    </div>
+                    <!-- Immediately detect if page has headins that are not h1 to prevent flicker -->
+                    <script>
+                        (function() {
+                            var tocContainer = document.querySelector('.toc-container');
+                            var headers = document.querySelectorAll('.header');
+                            var hasNonH1Headers = false;
+                            for (var i = 0; i < headers.length; i++) {
+                                var parent = headers[i].parentElement;
+                                if (parent && !parent.tagName.toLowerCase().startsWith('h1')) {
+                                    hasNonH1Headers = true;
+                                    break;
+                                }
+                            }
+                            if (hasNonH1Headers) {
+                                tocContainer.classList.add('has-toc');
+                            } else {
+                                tocContainer.classList.add('no-toc');
+                            }
+                        })();
+                    </script>
+                </div>
+            </div>
+
+            <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+                <div class="sidebar-scrollbox">
+                    <ol class="chapter"><li class="chapter-item expanded affix "></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Welcome</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/getting-started.html">Getting Started</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/installation.html">Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/update.html">Update</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/uninstall.html">Uninstall</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/troubleshooting.html">Troubleshooting</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Working with Code</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/windows-and-projects.html">Windows &amp; Projects</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/editing-code.html">Editing Code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/completions.html">Code Completions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/snippets.html">Snippets</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/diagnostics.html">Diagnostics &amp; Quick Fixes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/multibuffers.html">Multibuffers</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/finding-navigating.html">Finding &amp; Navigating</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/command-palette.html">Command Palette</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/outline-panel.html">Outline Panel</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/project-panel.html">Project Panel</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/tab-switcher.html">Tab Switcher</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/running-testing.html">Running &amp; Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/terminal.html">Terminal</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/tasks.html">Tasks</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/debugger.html">Debugger</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/repl.html">REPL</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/git.html">Git</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/modelines.html">Modelines</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Collaboration</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/collaboration/overview.html">Overview</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/collaboration/channels.html">Channels</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/collaboration/contacts-and-private-calls.html">Contacts and Private Calls</a></li></ol></li><li class="chapter-item expanded "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Remote Development</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/remote-development.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/environment.html">Environment Variables</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/dev-containers.html">Dev Containers</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">AI</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/overview.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/quick-start.html">AI Quick Start</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/by-company.html">AI by Company</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agents.html">Agents</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/zed-agent.html">Zed Agent</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/external-agents.html">External Agents</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/terminal-threads.html">Terminal Threads</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agent-panel.html">Agent Panel</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agent-settings.html">Agent Settings</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/agent-profiles.html">Agent Profiles</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/tools.html">Tools</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/tool-permissions.html">Tool Permissions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/sandboxing.html">Agent Sandboxing</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/mcp.html">Model Context Protocol</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/skills.html">Skills</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/instructions.html">Instructions</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/parallel-agents.html">Parallel Agents</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/inline-assistant.html">Inline Assistant</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/llm-providers.html">LLM Providers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-api-access.html" class="active">Use API Access</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-an-existing-subscription.html">Use an Existing Subscription</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-a-gateway.html">Use a Gateway</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/use-a-local-model.html">Use a Local Model</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/edit-prediction.html">Edit Prediction</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/privacy-and-security.html">AI Privacy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/ai/ai-improvement.html">Feedback and Training Data</a></li></ol></li><li class="chapter-item expanded "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Account &amp; Billing</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/authentication.html">Authenticate</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/account/plans-and-pricing.html">Plans &amp; Pricing</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/account/zed-hosted-models.html">Zed-Hosted Models</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/account/billing.html">Billing</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Zed Business</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/overview.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/organizations.html">Organizations</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/roles.html">Roles &amp; Permissions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/admin-controls.html">Admin Controls</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/business-support.html">Business Support</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Privacy &amp; Security</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/worktree-trust.html">Worktree Trust</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/business/privacy.html">Privacy for Business</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/telemetry.html">Telemetry</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/soc2.html">SOC2</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Platform Support</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/macos.html">macOS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/windows.html">Windows</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/linux.html">Linux</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Customization</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/appearance.html">Appearance</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/themes.html">Themes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/icon-themes.html">Icon Themes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/visual-customization.html">Fonts &amp; Visual Tweaks</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/key-bindings.html">Keybindings</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/vim.html">Vim Mode</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/helix.html">Helix Mode</a></li></ol></li><li class="chapter-item expanded "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Language Support</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages.html">All Languages</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/configuring-languages.html">Configuring Languages</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/toolchains.html">Toolchains</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/semantic-tokens.html">Semantic Tokens</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/ansible.html">Ansible</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/asciidoc.html">AsciiDoc</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/astro.html">Astro</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/bash.html">Bash</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/biome.html">Biome</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/c.html">C</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/cpp.html">C++</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/csharp.html">C#</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/clojure.html">Clojure</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/css.html">CSS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/dart.html">Dart</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/deno.html">Deno</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/diff.html">Diff</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/docker.html">Docker</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/elixir.html">Elixir</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/elm.html">Elm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/emmet.html">Emmet</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/erlang.html">Erlang</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/fish.html">Fish</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/gdscript.html">GDScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/gleam.html">Gleam</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/glsl.html">GLSL</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/go.html">Go</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/groovy.html">Groovy</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/haskell.html">Haskell</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/helm.html">Helm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/html.html">HTML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/java.html">Java</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/javascript.html">JavaScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/julia.html">Julia</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/json.html">JSON</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/jsonnet.html">Jsonnet</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/kotlin.html">Kotlin</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/lua.html">Lua</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/luau.html">Luau</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/makefile.html">Makefile</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/markdown.html">Markdown</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/nim.html">Nim</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/ocaml.html">OCaml</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/opentofu.html">OpenTofu</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/php.html">PHP</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/powershell.html">PowerShell</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/prisma.html">Prisma</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/proto.html">Proto</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/purescript.html">PureScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/python.html">Python</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/r.html">R</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/rego.html">Rego</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/rst.html">ReStructuredText</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/racket.html">Racket</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/roc.html">Roc</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/ruby.html">Ruby</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/rust.html">Rust</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/scala.html">Scala</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/scheme.html">Scheme</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/sh.html">Shell Script</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/sql.html">SQL</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/sml.html">Standard ML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/svelte.html">Svelte</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/swift.html">Swift</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/tailwindcss.html">Tailwind CSS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/terraform.html">Terraform</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/toml.html">TOML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/typescript.html">TypeScript</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/uiua.html">Uiua</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/vue.html">Vue</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/xml.html">XML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/yaml.html">YAML</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/yara.html">YARA</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/yarn.html">Yarn</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/languages/zig.html">Zig</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Extensions</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions.html">Overview</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/installing-extensions.html">Installing Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/developing-extensions.html">Developing Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/overview.html">Publishing Your Extension</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/license-requirements.html">License Requirements</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/prerequisites.html">Publishing Prerequisites</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/publishing-guide.html">Publishing Guide</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/updating-and-maintenance.html">Updating an Extension</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/publishing/faq.html">Frequently Asked Questions</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/capabilities.html">Extension Capabilities</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/languages.html">Language Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/debugger-extensions.html">Debugger Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/themes.html">Theme Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/icon-themes.html">Icon Theme Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/snippets.html">Snippets Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/mcp-extensions.html">MCP Server Extensions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/extensions/agent-servers.html">Agent Server Extensions</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Coming From…</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/vs-code.html">VS Code</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/intellij.html">IntelliJ IDEA</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/pycharm.html">PyCharm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/webstorm.html">WebStorm</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/migrate/rustrover.html">RustRover</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Reference</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/reference/all-settings.html">All Settings</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/all-actions.html">All Actions</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/reference/cli.html">CLI Reference</a></li><li class="chapter-item expanded affix "></li><li class="section-spacer"></li><li class="part-title collapsible expanded" role="button" tabindex="0" aria-expanded="true">Developing Zed</li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development.html">Developing Zed</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/macos.html">macOS</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/linux.html">Linux</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/windows.html">Windows</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/freebsd.html">FreeBSD</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/debuggers.html">Using Debuggers</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/performance.html">Performance</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/ui-checklist.html">UI/UX Checklist</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/glossary.html">Glossary</a></li></ol></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/release-notes.html">Release Notes</a></li><li class="chapter-item expanded "><a href="https://zed.dev/docs/development/debugging-crashes.html">Debugging Crashes</a></li></ol>
+                </div>
+                <div style="display: none;" id="sidebar-resize-handle" class="sidebar-resize-handle">
+                    <div class="sidebar-resize-indicator"></div>
+                </div>
+            </nav>
+
+            <!-- Mobile sidebar toggle -->
+            <script>
+                (function() {
+                    var sidebarToggle = document.getElementById('sidebar-toggle');
+                    var sidebar = document.getElementById('sidebar');
+
+                    sidebarToggle.addEventListener('click', function() {
+                        var isOpen = document.body.classList.toggle('sidebar-open');
+                        sidebarToggle.setAttribute('aria-expanded', isOpen);
+                        sidebar.setAttribute('aria-hidden', !isOpen);
+                    });
+
+                    // Close sidebar when clicking a link inside it (on mobile)
+                    sidebar.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'A' && window.innerWidth < 620) {
+                            document.body.classList.remove('sidebar-open');
+                            sidebarToggle.setAttribute('aria-expanded', 'false');
+                            sidebar.setAttribute('aria-hidden', 'true');
+                        }
+                    });
+                })();
+            </script>
+
+            <!-- Search backdrop handlers -->
+            <script>
+                (function() {
+                    var searchWrapper = document.getElementById('search-wrapper');
+                    var searchContainer = document.querySelector('.search-container');
+                    var searchResults = document.getElementById('searchresults');
+
+                    if (!searchWrapper || !searchContainer) return;
+
+                    searchContainer.addEventListener('click', function(e) {
+                        if (e.target === searchContainer) {
+                            searchWrapper.classList.add('hidden');
+                        }
+                    });
+
+                    if (searchResults) {
+                        searchResults.addEventListener('click', function(e) {
+                            if (e.target.tagName === 'A' || e.target.closest('a')) {
+                                searchWrapper.classList.add('hidden');
+                            }
+                        });
+                    }
+                })();
+            </script>
+
+            <!-- Insert section spacers and apply collapsed state before scroll restoration to prevent layout shift/flicker -->
+            <script>
+                (function() {
+                    var chapterList = document.querySelector('#sidebar ol.chapter');
+                    if (!chapterList) return;
+
+                    var collapsedSections = [];
+                    try {
+                        var stored = sessionStorage.getItem('sidebar-collapsed-sections');
+                        if (stored) {
+                            collapsedSections = JSON.parse(stored);
+                        }
+                    } catch (e) {}
+
+                    var partTitles = chapterList.querySelectorAll('li.part-title');
+                    var previousPartTitle = null;
+
+                    partTitles.forEach(function(partTitle, index) {
+                        partTitle._sectionName = partTitle.textContent.trim();
+
+                        // Insert a spacer before this part-title (except for the first one)
+                        if (index > 0) {
+                            var spacer = document.createElement('li');
+                            spacer.className = 'section-spacer';
+                            partTitle.parentNode.insertBefore(spacer, partTitle);
+
+                            if (previousPartTitle) {
+                                previousPartTitle._spacerAfter = spacer;
+                            }
+                        }
+
+                        var isCollapsed = collapsedSections.includes(partTitle._sectionName);
+                        if (isCollapsed) {
+                            // Hide all siblings until next part-title
+                            var sibling = partTitle.nextElementSibling;
+                            while (sibling && !sibling.classList.contains('part-title')) {
+                                sibling.classList.add('section-hidden');
+                                sibling = sibling.nextElementSibling;
+                            }
+                            // Hide the spacer after this section (will be set on next iteration)
+                            partTitle._isCollapsed = true;
+                        }
+
+                        // If previous section was collapsed, hide its spacer
+                        if (previousPartTitle && previousPartTitle._isCollapsed && previousPartTitle._spacerAfter) {
+                            previousPartTitle._spacerAfter.classList.add('section-hidden');
+                        }
+
+                        previousPartTitle = partTitle;
+                    });
+
+                    // Handle the last section's spacer if it was collapsed
+                    if (previousPartTitle && previousPartTitle._isCollapsed && previousPartTitle._spacerAfter) {
+                        previousPartTitle._spacerAfter.classList.add('section-hidden');
+                    }
+                })();
+            </script>
+
+            <!-- Track and set sidebar scroll position -->
+            <script>
+                var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+                sidebarScrollbox.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'A') {
+                        sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                    }
+                }, { passive: true });
+                var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+                sessionStorage.removeItem('sidebar-scroll');
+                if (sidebarScrollTop) {
+                    // preserve sidebar scroll position when navigating via links within sidebar
+                    sidebarScrollbox.scrollTop = sidebarScrollTop;
+                } else {
+                    // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                    var activeSection = document.querySelector('#sidebar .active');
+                    if (activeSection) {
+                        activeSection.scrollIntoView({ block: 'center' });
+                    }
+                }
+            </script>
+        </div>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="https://zed.dev/docs/elasticlunr.min.js"></script>
+        <script src="https://zed.dev/docs/mark.min.js"></script>
+        <script src="https://zed.dev/docs/searcher.js"></script>
+
+        <script>
+           (function () {
+                // Check for focused search result and bring into the view
+                const ensureVisible = () => {
+                    const focused = document.querySelector("#searchresults li.focus");
+
+                    if (focused) {
+                        focused.scrollIntoView({
+                            block: "nearest",
+                            inline: "nearest"
+                        });
+                    }
+                };
+
+                // 1. Listen for arrow key events
+                // 2. Wait for DOM to update
+                // 3. Call envsureVisible
+                document.addEventListener("keydown", function (e) {
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        requestAnimationFrame(ensureVisible);
+                    }
+                });
+            })();
+        </script>
+
+        <script src="https://zed.dev/docs/clipboard.min.js"></script>
+        <script src="https://zed.dev/docs/highlight.js"></script>
+        <script src="https://zed.dev/docs/book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="https://zed.dev/docs/redirects/legacy-fragment-redirects.js"></script>
+        <script src="https://zed.dev/docs/theme/page-toc.js"></script>
+        <script src="https://zed.dev/docs/theme/plugins.js"></script>
+        <script src="https://zed.dev/docs/theme/c15t@2.0.0-rc.3.js"></script>
+        <script src="https://zed.dev/docs/theme/analytics.js"></script>
+
+
+        <!-- c15t Consent Banner -->
+        <div id="c15t-banner" style="display: none;">
+            <div>
+                <p id="c15t-description">
+                    Zed uses cookies to improve your experience and for marketing. Read <a href="https://zed.dev/cookie-policy">our cookie policy</a> for more details.
+                </p>
+            </div>
+            <div id="c15t-configure-section" style="display: none">
+                <div>
+                    <label for="c15t-toggle-necessary">Strictly Necessary</label>
+                    <label class="c15t-switch">
+                        <input type="checkbox" id="c15t-toggle-necessary" checked="" disabled="">
+                        <span class="c15t-slider"></span>
+                    </label>
+                </div>
+                <div>
+                    <label for="c15t-toggle-measurement">Analytics</label>
+                    <label class="c15t-switch">
+                        <input type="checkbox" id="c15t-toggle-measurement">
+                        <span class="c15t-slider"></span>
+                    </label>
+                </div>
+                <div>
+                    <label for="c15t-toggle-marketing">Marketing</label>
+                    <label class="c15t-switch">
+                        <input type="checkbox" id="c15t-toggle-marketing">
+                        <span class="c15t-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="c15t-footer">
+                <button id="c15t-configure-btn" class="c15t-button icon" title="Configure">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 7h-9"></path>
+                        <path d="M14 17H5"></path>
+                        <circle cx="17" cy="17" r="3"></circle>
+                        <circle cx="7" cy="7" r="3"></circle>
+                    </svg>
+                </button>
+                <div>
+                    <button id="c15t-decline" class="c15t-button">
+                        Reject all
+                    </button>
+                    <button id="c15t-accept" class="c15t-button primary">
+                        Accept all
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+</body></html>
