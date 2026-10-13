@@ -61,6 +61,10 @@ export class GitHubAccountStore {
   private live: GitHubAccount | null = null;
   private appChanged = false;
   private startupWrite = false;                // finishStartup owes a write (4.4)
+  // Refs whose remove() failed: the vault may have dropped the entry from memory while its index on disk still holds it, because
+  // remove deletes before it persists (vault.ts:178-179). A tombstone persist that lands writes the whole index, so it clears the set
+  // (this store tombstones before every removal).
+  private readonly unrecorded = new Set<string>();
 
   constructor(private readonly file: string, private readonly vault: Pick<Vault, 'saveStaged' | 'commit' | 'tombstone' | 'remove' | 'has'>,
     private readonly clientId: string, private readonly clock: () => number = Date.now) {}
@@ -223,11 +227,16 @@ export class GitHubAccountStore {
   }
   /** Calls vault.tombstone synchronously, so its synchronous part (the entry marked, its grants revoked) runs before this returns. */
   private tombstoneNow(ref: string): Promise<boolean> {
-    try { return this.vault.tombstone(ref).then(() => true, () => false); } catch { return Promise.resolve(false); }
+    try { return this.vault.tombstone(ref).then(() => { this.unrecorded.clear(); return true; }, () => false); } catch { return Promise.resolve(false); }
   }
-  // CREDENTIAL_NOT_TOMBSTONED after this store's own tombstone means the entry is already gone (collector-settings.ts:83-87).
+  // CREDENTIAL_NOT_TOMBSTONED after this store's own tombstone means the entry is gone from the vault's memory (collector-settings.ts:83-87).
+  // It counts as removed only when no removal of the ref failed since a tombstone persist last landed, so the disk has forgotten it too.
   private async removeTombstoned(ref: string): Promise<boolean> {
-    try { await this.vault.remove(ref); return true; } catch (error) { return (error as Error)?.message === 'CREDENTIAL_NOT_TOMBSTONED'; }
+    try { await this.vault.remove(ref); return true; }
+    catch (error) {
+      if ((error as Error)?.message === 'CREDENTIAL_NOT_TOMBSTONED') return !this.unrecorded.has(ref);
+      this.unrecorded.add(ref); return false;
+    }
   }
   private async retire(ref: string): Promise<boolean> { await this.tombstoneNow(ref); return this.removeTombstoned(ref); }
   private async discard(refs: readonly string[]): Promise<void> { for (const ref of refs) await this.retire(ref); }

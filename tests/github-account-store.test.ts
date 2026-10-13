@@ -439,6 +439,23 @@ describe('clear durability (DC-6, GS-11)', () => {
     await expectConsistent(h.copy(), null);
   });
 
+  // vault.remove drops the entry from memory before its persist (vault.ts:178-179). After a removal whose persist failed, a later
+  // remove answers CREDENTIAL_NOT_TOMBSTONED while the on-disk index may still hold the entry committed, without its file (U2-R8).
+  test('a ref whose earlier removal never reached the vault index stays named through a sign-out, so the next start can redact', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    let restore: (() => void) | undefined;
+    h.spy.after('commit', (_ref, count) => { if (count === 4) restore = failVaultDisk(h.vault); });   // from the refresh's step 7 on
+    await h.refresh(a);
+    expect((await h.read())?.retiredRefs).toEqual(refsOf(a));                    // step 7 kept the old pair named
+    expect(await h.signOut()).toBe('durable');                                   // the file write lands; the vault index still fails
+    restore!();
+    const file = await h.read(); const dir = h.copy();
+    const next = await restart(dir);
+    await expect(next.vault.redact('plain text')).resolves.toBe('plain text');  // no committed entry outlived its file (vault.ts:187-188)
+    expect(file?.retiredRefs).toEqual(expect.arrayContaining(refsOf(a)));
+    await expectConsistent(dir, null);
+  });
+
   test('once a vault persist lands, a ref whose earlier removal failed counts as removed: a sign-out leaves no retired ref', async () => {
     const h = await harness(); const { account: a } = await h.signIn();
     let restore: (() => void) | undefined;
