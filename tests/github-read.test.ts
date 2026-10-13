@@ -1,6 +1,5 @@
 import { expect, test } from 'vitest';
 import { GitHubReader } from '../src/main/github';
-import { SIGNED_OUT, type GitHubCredential } from '../src/main/github-credential';
 import { githubRepositories, parseGitHubInput } from '../src/shared/github';
 
 const sha = 'a'.repeat(40);
@@ -168,6 +167,9 @@ test.each([
 // GitHub sign-in, U3 signed-in reads (docs/specification/github-sign-in.md 7.1, 7.2, 3.4; REQUIREMENTS F-13, F-14, F-16, S-4,
 // T-5). The credential is a fake of U5's send(): it signs with a marker built at run time and reports authenticated. Fixtures are
 // built from E-01/E-02/E-15 shapes, not a capture.
+// The seam's import sits here, below the cases the spec cites by line (7.1: :10-25; T-5: :10-84), so they keep those lines (U3-R6);
+// ES imports are hoisted, so its place changes nothing at run time.
+import { SIGNED_OUT, type GitHubCredential } from '../src/main/github-credential';
 const INTEGRATION = 'Resource not accessible by integration';
 const tokenMarker = () => ['ghu', Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString('hex')].join('_');
 /** U5's send() as the reader sees it: one signed request, authenticated, and a count of calls. */
