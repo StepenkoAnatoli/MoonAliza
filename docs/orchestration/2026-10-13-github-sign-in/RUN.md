@@ -4,7 +4,7 @@
 |-----------------|-------|
 | Status          | ACTIVE |
 | Started         | 2026-10-13 |
-| Last checkpoint | 2026-10-13 - Stage 4: Mandate presented, awaiting the user |
+| Last checkpoint | 2026-10-13 - Stage 4 DONE: GO MERGE (UD-2 read-only, UD-3 like local files; UD-1 open) |
 | Engagement      | Full (authentication, credential storage, new IPC, external service) |
 | Working branch  | `research/github-sign-in` (worktree `/home/user/task5-handoff/wt/gh-signin`) from `main` @ `0815f42`, for Stages 1-4 (docs only); the build branch is chosen at Stage 5 |
 | Skills          | auto-build, lead-orchestrator, careful-coding, Research-Kit 0.9.5 |
@@ -16,7 +16,7 @@
 | 1 Research | DONE: two projects, 21 credits, preflight PASS and handoff 0 each; every round refute-first verified (last: ACCEPT) | `docs/research/2026-10-12-app-sign-in`; `docs/research/2026-10-13-github-sign-in-design` (E-01..E-21, U-1..U-15 CLOSED, U-16 KNOWN-UNKNOWN) | 2026-10-13 |
 | 2 Requirements | DONE: 54 rows (F-1..F-27, S-1..S-8, T-1..T-10, A-1..A-4, D-1..D-5), each traced to a unit and a test | REQUIREMENTS.md | 2026-10-13 |
 | 3 Design | DONE: lifecycle-first design (three designs, three judges); critic rounds 1 (2 S2) and 2 (1 S3) resolved; final checks ACCEPT (brief) and three S4 wording items (design), applied by the lead | docs/specification/github-sign-in.md; DECISIONS.md; BREAKDOWN.md; USER-DECISIONS.md | 2026-10-13 |
-| 4 Mandate | ACTIVE: presented 2026-10-13, awaiting the user's reply (UD-1 registration, UD-2 scope, UD-3 private text) | MANDATE.md | 2026-10-13 |
+| 4 Mandate | DONE: user, 2026-10-13, "GO MERGE, read-only, private text like local files"; UD-1 (registration) open, so the build ships with empty constants (UD-1 option 3) | MANDATE.md | 2026-10-13 |
 | 5 Build | PENDING | - | - |
 | 6 Harden | PENDING | - | - |
 | 7 Audit | PENDING | - | - |
@@ -24,7 +24,7 @@
 | 9 Validate and report | PENDING | - | - |
 
 ## Next action
-Awaiting the user's Mandate reply (MANDATE.md). On GO or GO MERGE: Stage 5 from BREAKDOWN.md (U0 contracts by the lead, then U1-U8 builders, unit and integration reviews), with U9 once UD-1's client ID and install URL arrive. Meanwhile the research and design docs go to `main` as a docs-only PR.
+Merge PR #46 (research and design, docs only) under the merge checks. Stage 5 from BREAKDOWN.md: U0 contracts by the lead on the build branch, then the builders U1-U8 in waves with unit reviews, then the integration review. U9 when the user sends the client ID and install URL.
 
 ## Task statement
 User, 2026-10-12: "Can we make the app be able to login to GitHub/codex/Claude?" The Research-Kit check (`docs/research/2026-10-12-app-sign-in`, 8 credits) answered it. GitHub sign-in is allowed and is planned as its own task after the MoonAliza rename. Claude.ai sign-in is not allowed. Sign in with ChatGPT is not stated, so API keys are used until OpenAI confirms. The plan records this (`docs/superpowers/plans/2026-10-02-research-jobs.md`, "App sign-in", `64864bd`). User's order, 2026-10-12: Phase 2 and the rename, then this task, then the independent-operation track, then More models Phases 3-5. Standing words: "continue without asking or stopping", "merge as you decide just be careful", "dont lower quality", "you have full access. continue", "write less text. report in summary at the end of phase."
@@ -51,3 +51,4 @@ Kit 0.9.5, role collector, `firecrawl-cli` authenticated, 277 credits. `doctor`:
 - 2026-10-13: workflow `github-sign-in-stages2-3` returned (`reports/stages2-3-workflow.json`, 11 agents). Brief round 3: R2-1..R2-10 applied, no credits, preflight PASS; re-check FIX (S-1 S3: the 403 path's SAML remedy still one step; S-2..S-7 S4 residues). Requirements, three designs, three judges (lifecycle-first won two of three), a synthesis (spec, decisions, breakdown, requirements, 7 user decisions, 15 day-one checks) and a critic: FIX with DC-1 (S2: a refresh failing with any error but bad_refresh_token holds forever and never asks the user to sign in again), DC-2 (S2: a 401 on a just-refreshed token clears the account, assuming GitHub accepts a new token at once), DC-3..DC-7 S3, DC-8..DC-16 S4. The lead moved this run folder onto `research/github-sign-in` and wrote the drafts there. Workflow `github-sign-in-revise` launched.
 - 2026-10-13: workflow `github-sign-in-revise` returned (`reports/revise-workflow.json`, 4 agents). Round 4: S-1..S-7 fixed; E-21 (GitHub's own device-flow tutorial, 1 credit, 257 -> 256) settles that step 1 and the poll send form-encoded bodies with `Accept: application/json`; the refresh placement stays an inference for the day-one double refresh; preflight PASS (21 ledger entries, 15 CLOSED, 1 KNOWN-UNKNOWN). Design revised for DC-1..DC-16 (two departures from the critic, stated in the docs). Re-checks: brief FIX (RC-1..RC-4, S4); critic 2 FIX (GS-1 S3: the fresh-token guard can refresh on every read without a hold or a clear; GS-2..GS-11 S4). Final pass launched; it ends Stage 3, since severity fell from S2 to S3/S4 and further rounds would only polish text the build reviews will read again.
 - 2026-10-13: final pass (workflow `github-sign-in-final-pass`, run `wf_dc08841d-4fe`, 4 agents, `reports/final-pass-workflow.json`): brief RC-1..RC-4 fixed, check ACCEPT (two optional S4 residues); design GS-1..GS-11 fixed (stated departures in the docs), check FIX with three S4 wording items (RF-1..RF-3). The lead applied RF-1..RF-3, the optional 403-text residue (N-2) and the reviser's note that step 7 of `replace` could orphan a committed vault entry by writing `retiredRefs: []` after a failed removal. Both research projects: preflight PASS, handoff 0; `scripts/check-handoff.mjs` exit 0. Mandate presented (MANDATE.md).
+- 2026-10-13: Mandate reply, verbatim: "GO MERGE, read-only, private text like local files". Recorded in MANDATE.md and USER-DECISIONS.md; the spec status is now approved; the plan got the read-only correction notes (the GitHub bullet and step 1 of "GitHub, approved as four steps").

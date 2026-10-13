@@ -1,6 +1,6 @@
 # Mandate: GitHub sign-in
 
-**Status: awaiting the user's reply** (presented 2026-10-13). The task is architectural and AGENTS.md carries no standing auto-build mandate, so nothing is built until the user answers.
+**Status: approved.** Presented 2026-10-13; the user replied the same day (below). The task is architectural and AGENTS.md carries no standing auto-build mandate, so the build waited for this reply.
 
 ## What was researched and what it proved
 
@@ -86,3 +86,13 @@ Reply in one of three ways:
 - **STOP AFTER DESIGN**: build nothing.
 
 Add your answers to UD-1..UD-3 to the reply. Any other reply is a correction to incorporate.
+
+## The user's reply (2026-10-13)
+
+> GO MERGE, read-only, private text like local files
+
+- **GO MERGE:** build, review and merge each unit under the merge policy above.
+- **UD-2:** read-only now. Contents and Metadata are read-only; the research collector keeps its pasted token; the plan gets a correction note; the write path is its own task.
+- **UD-3:** private repository text is treated like local project files (as recommended above).
+- **UD-1 is not answered yet:** the app is not registered. The build follows UD-1's third option: the sign-in ships with empty constants and says it is not configured in this build. U9 fills in the client ID and install URL when the user sends them, and the configured e2e journey (journey B) and the day-one checks wait for that.
+- **UD-4..UD-6:** taken as recommended, as stated above; the user did not overrule them.

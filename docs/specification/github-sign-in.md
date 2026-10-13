@@ -1,6 +1,6 @@
 # GitHub sign-in design
 
-**Status: proposed, awaiting the user's Mandate** (`docs/orchestration/2026-10-13-github-sign-in/MANDATE.md`, 2026-10-13). Nothing here is built.
+**Status: approved, not yet built.** The user's Mandate reply (2026-10-13, `docs/orchestration/2026-10-13-github-sign-in/MANDATE.md`): GO MERGE, read-only (UD-2), private text like local project files (UD-3). UD-1 is open: until the user registers the GitHub App, the build ships with empty constants and the sign-in says it is not configured in this build.
 
 With GitHub sign-in, the user signs in to GitHub from MoonAliza using the device flow of a public GitHub App. The app has Contents: Read-only and Metadata: Read-only, issues expiring user tokens, and has no client secret anywhere. `read_github` can then read the user's **private** repositories, read-only.
 

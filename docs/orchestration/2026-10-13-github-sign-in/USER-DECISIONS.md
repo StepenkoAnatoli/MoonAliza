@@ -1,4 +1,6 @@
-# User decisions and day-one checks (synthesis draft)
+# User decisions and day-one checks
+
+Answered 2026-10-13 (MANDATE.md, "The user's reply"): UD-2 read-only, UD-3 like local project files, GO MERGE; UD-1 open (the build ships with empty constants until the app is registered); UD-4..UD-6 as recommended.
 
 ## Decisions
 
