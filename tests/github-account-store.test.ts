@@ -796,6 +796,18 @@ describe('concurrency (L-6)', () => {
     expect(h.store.current()).toBeNull(); expect((await h.read())?.account).toBeNull();
   });
 
+  // After a refresh's ReplaceFailure(true) the file names the new pair and live the old one; the login would land on one and not the
+  // other, so setLogin writes only while the file names live's pair. The service clears the account next (X-9) (U2-R10).
+  test('setLogin after a refresh whose commit failed changes nothing: the file names a pair live does not', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    h.spy.on('commit', (_ref, count) => count === 3 ? 'fail' : undefined);      // the refresh's first commit
+    await expect(h.refresh(a)).rejects.toMatchObject({ written: true });
+    const before = await h.read();
+    expect(before?.account?.accessRef).not.toBe(a.accessRef);
+    await h.store.setLogin(a.signInId, 'octo-cat');
+    expect(h.store.current()).toBe(a); expect(await h.read()).toEqual(before);
+  });
+
   test('a sign-out that lands while setLogin is writing is not undone: no account in memory, in the file or in the vault (GS-10)', async () => {
     // The injected clock is read inside setLogin's write, before atomicJson, so the clear's prologue runs mid-write.
     let midWrite: (() => void) | undefined;
