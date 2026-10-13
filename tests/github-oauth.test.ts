@@ -261,6 +261,12 @@ test('a body over 64 KiB is refused by its declared length and while streaming, 
   expect(await deviceCode(true, limits, async () => new Response(stepOne.body, { status: 200, headers: { 'content-type': 'application/json', 'content-length': '70000' } }))).toEqual({ kind: 'failed' });
   const big = (size: number) => { const base = JSON.stringify({ ...tokenAnswer(m).json as object, pad: '' }); return base.replace('"pad":""', `"pad":"${'p'.repeat(size - base.length)}"`); };
   expect(big(65_536).length).toBe(65_536);
+  const exact: Fetcher = async () => {   // a declared length of exactly 64 KiB is not over the bound
+    const response = new Response(big(65_536), { status: 200, headers: { 'content-type': 'application/json', 'content-length': '65536' } });
+    expect(response.headers.get('content-length')).toBe('65536');
+    return response;
+  };
+  expect(await token(pollParams(m), limits, exact)).toMatchObject({ kind: 'tokens' });
   fake.answer(ROUTES.token, { text: big(65_537), chunked: true, headers: { 'content-type': 'application/json' } }, { text: big(65_536), chunked: true, headers: { 'content-type': 'application/json' } });
   fake.answer(ROUTES.device, { text: big(70_000), chunked: true, headers: { 'content-type': 'application/json' } });
   expect(await token(pollParams(m))).toEqual({ kind: 'transient' });
@@ -307,8 +313,8 @@ test('a parse failure leaves no cause and no piece of the token: a form body ser
 const CODES = ['authorization_pending', 'slow_down', 'expired_token', 'token_expired', 'incorrect_device_code', 'bad_verification_code', 'access_denied',
   'device_flow_disabled', 'incorrect_client_credentials', 'unsupported_grant_type', 'unverified_user_email', 'bad_refresh_token', 'a_code_not_yet_named'];
 
-test.each(CODES)('the error %s is classified the same at 200, 400, 401 and 403, on a token request and at step 1', async code => {
-  for (const status of [200, 400, 401, 403]) {
+test.each(CODES)('the error %s is classified the same at 200, 400, 401, 403, 500 and 503, on a token request and at step 1', async code => {
+  for (const status of [200, 400, 401, 403, 500, 503]) {
     fake.answer(ROUTES.token, errorAnswer(code, status)); fake.answer(ROUTES.device, errorAnswer(code, status));
     expect(await token(pollParams(markers())), `${code} at ${status}`).toEqual({ kind: 'error', code, intervalS: null });
     expect(await deviceCode(), `${code} at ${status}, step 1`).toEqual({ kind: 'error', code });
@@ -360,6 +366,8 @@ test.each([
   ['a 403 with remaining 0 and a reset 30 s away (the floor)', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(30) }), 60_000],
   ['a 403 with remaining 0 and a reset already past', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(-30) }), 60_000],
   ['a 403 with remaining 0 and a reset more than an hour away', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(3_601) }), 60_000],
+  ['a 403 with remaining 0 and a reset exactly an hour away (the floor: less than an hour is required)', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(3_600) }), 60_000],
+  ['a 429 with a reset but remaining not 0 (the floor: the reset is read only at remaining 0)', limited(429, { 'x-ratelimit-remaining': '5', 'x-ratelimit-reset': resetIn(1_800) }), 60_000],
   ['a 403 with retry-after', limited(403, { 'retry-after': '30' }), 30_000],
   ['a 429 with retry-after', limited(429, { 'retry-after': '30' }), 30_000],
   ['retry-after before the reset', limited(429, { 'retry-after': '10', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(120) }), 10_000],
