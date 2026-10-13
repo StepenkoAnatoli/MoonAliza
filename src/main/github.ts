@@ -95,6 +95,9 @@ export class GitHubReader {
         const bytes = Buffer.from(encoded, 'base64'); if (bytes.length !== file.data.size || bytes.length > MAX_FILE) throw new Error('GITHUB_INVALID_RESPONSE');
         let text: string; try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new Error('GITHUB_UNSUPPORTED_FILE'); }
         if ([...text].some(char => { const code = char.charCodeAt(0); return (code < 32 && ![9, 10, 13].includes(code)) || code === 127; })) throw new Error('GITHUB_UNSUPPORTED_FILE');
+        // X-3 (spec 7.3): redact the whole text before the cuts below, so a vault secret straddling a cut never leaves as a prefix
+        // main's final exact-value redaction cannot match. A redaction failure is GITHUB_UNAVAILABLE (the catch below).
+        if (this.redact) text = await this.redact(text);
         const lines = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
         const selected = lines.slice(input.startLine - 1, input.startLine - 1 + input.lineCount).join('\n'); const excerpt = selected.slice(0, 16000);
         const endLine = excerpt ? input.startLine + excerpt.split('\n').length - 1 : input.startLine - 1;

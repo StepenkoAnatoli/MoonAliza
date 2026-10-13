@@ -322,3 +322,28 @@ test('rerun with a credential: Stop discards a late signed response even when th
   await expect(reader.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
   expect(inits).toHaveLength(1); expectSignedInit(inits[0]!, marker);
 });
+
+// GitHub sign-in, U3 X-3 (docs/specification/github-sign-in.md 7.3; REQUIREMENTS S-2): with `redact`, a file's decoded text is
+// redacted before the 200-line and 16,000-character cuts, so a vault secret that straddles the cut never leaves as a prefix that
+// main's final exact-value redaction (src/main/index.ts:122) cannot match.
+const fileAnswer = (content: string) => async (target: string) => target.includes('/commits/') ? json({ sha })
+  : json({ type: 'file', path: 'file.txt', size: Buffer.byteLength(content), encoding: 'base64', content: Buffer.from(content).toString('base64') });
+const exactRedactor = (secret: string) => async (text: string) => text.split(secret).join('[redacted]');
+const fragments = (value: string) => Array.from({ length: value.length - 7 }, (_, index) => value.slice(index, index + 8));
+
+test('pre-redaction: a vault secret straddling the 16,000-character cut does not appear in part', async () => {
+  const secret = tokenMarker(); const redact = exactRedactor(secret);
+  const content = 'a'.repeat(16_000 - 20) + secret + 'b'.repeat(100);
+  const reader = new GitHubReader(fileAnswer(content), signedIn(tokenMarker()).credential, redact);
+  const output = await redact(await reader.read({ url, path: 'file.txt' }, allowed, new AbortController().signal));
+  for (const fragment of fragments(secret)) expect(output).not.toContain(fragment);
+  const result = JSON.parse(output) as { text: string; truncated: boolean; totalLines: number };
+  expect(result.text).toBe('a'.repeat(16_000 - 20) + '[redacted]' + 'b'.repeat(10)); expect(result.truncated).toBe(true); expect(result.totalLines).toBe(1);
+});
+
+test('pre-redaction: a redaction failure inside the reader is GITHUB_UNAVAILABLE, and no text is returned', async () => {
+  let redactions = 0;
+  const reader = new GitHubReader(fileAnswer('plain text'), SIGNED_OUT, async () => { redactions++; throw new Error('REDACTION_UNAVAILABLE'); });
+  await expect(reader.read({ url, path: 'file.txt' }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_UNAVAILABLE');
+  expect(redactions).toBe(1);
+});
