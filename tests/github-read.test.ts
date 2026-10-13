@@ -265,6 +265,29 @@ test('signed in, Stop during the bounded 403 body read gives RUN_CANCELLED', asy
   expect(body.locked).toBe(false);
 });
 
+// U3-R1: a signed-in 403 whose body fails part-way, as a reset connection does, is still a refusal, and Stop still wins over the
+// failed read. The error holds no body text and the body is released. Built from E-15 shapes, not a capture.
+/** A 403 whose body sends `text` on its first pull (none when empty), then runs `before` and fails. */
+function failingResponse(text: string, before: () => void) {
+  let sent = !text;
+  const body = new ReadableStream<Uint8Array>({ pull(controller) {
+    if (!sent) { sent = true; controller.enqueue(new TextEncoder().encode(text)); return; }
+    before(); controller.error(new Error('ECONNRESET'));
+  } }, { highWaterMark: 0 });
+  return new Response(body, { status: 403 });
+}
+test.each<{ name: string; text: string; stops: boolean; code: string }>([
+  { name: 'Stop, then a reset', text: '{"message":"Forb', stops: true, code: 'RUN_CANCELLED' },
+])('signed in, a 403 body that fails part-way ($name) gives $code, with no body text in the error and the body released', async ({ text, stops, code }) => {
+  const marker = sentinel(); const stop = new AbortController(); const { credential } = signedIn(tokenMarker()); const targets: string[] = [];
+  const response = failingResponse(text && `${text} ${marker}`, () => { if (stops) stop.abort(); });
+  const reader = new GitHubReader(async target => { targets.push(target); return response; }, credential);
+  const error = await rejection(reader.read({ url }, allowed, stop.signal));
+  expect(error.message).toBe(code); expect(targets).toHaveLength(1);
+  for (const line of errorTexts(error)) expect(line).not.toContain(marker);
+  expect(response.body!.locked).toBe(false);
+});
+
 test.each(['GITHUB_RENEWAL_UNAVAILABLE', 'GITHUB_RATE_LIMIT', 'GITHUB_SIGN_IN_REQUIRED'])('no fallback: the credential\'s %s passes through and nothing is fetched', async code => {
   let fetched = 0;
   const reader = new GitHubReader(async () => { fetched++; return json({ sha }); }, { async send() { throw new Error(code); } });
