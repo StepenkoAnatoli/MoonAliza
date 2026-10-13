@@ -190,7 +190,7 @@ The run uses the existing settings (`modelStepBudget`, `runDurationMinutes`). A 
 
 In the same transaction as the run's terminal event, the engine records:
 
-- a final answer: run status `awaiting_review`, with no job edge yet;
+- a final answer: run status `awaiting_review`, with no job edge yet. An empty or whitespace-only answer counts: its text is never used, the kit judges the workspace, and Anthropic documents empty `end_turn` answers after tool results (wire E-11). Nothing empty is stored (Stage 7 fix round, which kept this rule when the empty-answer failure was added for other runs);
 - failure: `reviewing → not_ready`, actor `engine`, failure `REVIEW_RUN_FAILED`, `REVIEW_BUDGET_EXCEEDED` or `REVIEW_CONTEXT_LIMIT`;
 - Stop of the run itself (`run.cancel`) while it executes: `REVIEW_STOPPED`;
 - a cancel through `research.cancel`: the job is already `cancelling`, and the engine commits `cancelling → cancelled` (`REVIEW_CANCELLED`) once the run is terminal. The kit tools wait for main's terminal acknowledgement even after Stop, as commands do (`src/engine/index.ts` `command`), so no kit child is live then.

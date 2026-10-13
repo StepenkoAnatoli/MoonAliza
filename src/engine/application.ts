@@ -397,8 +397,13 @@ export class Application {
         if (output.usage) this.event(run.id, 'usage.updated', { ...output.usage, modelSteps: step + 1 });
         if (output.outcome !== 'tool_calls') {
           // A complete outcome with no visible text and no call is no answer (an empty Anthropic end_turn, wire E-11;
-          // thinking only, then end_turn; a chat kind's empty stop): it is not stored, and the run says so.
-          if (output.outcome === 'complete' && !output.content.trim() && !output.toolCalls?.length) throw new Error('STEP_EMPTY');
+          // thinking only, then end_turn; a chat kind's empty stop): it is not stored, and the run says so. A review's
+          // final answer is never read (the kit judges the workspace, research-review.md "Run end"), so there an empty
+          // one ends the run as any answer does, still unstored.
+          if (output.outcome === 'complete' && !output.content.trim() && !output.toolCalls?.length) {
+            if (review) { this.endReview(run.id, { kind: 'answer' }); return; }
+            throw new Error('STEP_EMPTY');
+          }
           this.message(run, { role: 'assistant', content: output.content }, output.outcome !== 'complete');
           if (output.outcome !== 'complete') throw new Error(output.outcome === 'blocked' ? 'STEP_BLOCKED' : 'STEP_INCOMPLETE');
           if (review) { this.endReview(run.id, { kind: 'answer' }); return; }
