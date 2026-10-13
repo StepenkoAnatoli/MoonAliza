@@ -1,0 +1,963 @@
+{
+ "workflow": "github-sign-in-stage1",
+ "run": "wf_a788bf15-8c0",
+ "result": {
+  "research": {
+   "projectPath": "/home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design",
+   "preflightExit": 0,
+   "handoffExit": 0,
+   "creditsBefore": 277,
+   "creditsAfter": 265,
+   "creditsSpent": 12,
+   "unknowns": [
+    {
+     "id": "U-1",
+     "question": "Which GitHub App permission and level reads repository contents read-only, and is any permission (such as Metadata) mandatory or automatic?",
+     "status": "CLOSED",
+     "answer": "Request the repository permission Contents: Read-only. GitHub lists commits/{ref}, contents/{path}, git/trees, git/blobs, readme, tarball and zipball under Contents with access 'read' for user access tokens. Also request Metadata: Read-only, which GET /user/installations/{id}/repositories requires and which covers GET /repos/{owner}/{repo}. The levels are Read-only, Read & write and No access. Apps start with no permissions, but a user token still reads public resources. A missing permission returns 403 with an X-Accepted-GitHub-Permissions header. Whether Metadata is mandatory or added automatically is not stated on the captured pages, so the design selects it explicitly.",
+     "evidence": "E-05, E-07, E-04, E-03"
+    },
+    {
+     "id": "U-2",
+     "question": "Does a user access token reach only repositories where the app is installed, which REST endpoints list the reachable installations and repositories, and what installation URL does a user follow?",
+     "status": "CLOSED",
+     "answer": "Yes: the token reaches only resources both the user and the app can access, and repository permissions apply to the account where the app is installed. Public repositories stay readable. List them with GET /user/installations (no permission needed) and GET /user/installations/{installation_id}/repositories (needs Metadata read), with per_page up to 100. The install URL is https://github.com/apps/APP-NAME/installations/new, with an optional ?state=. Only a public app can be installed by others. The device-flow request accepts an optional repository_id that narrows the token to one repository. Adding a repository through the API needs a write permission, so the user does it on GitHub.",
+     "evidence": "E-01, E-04, E-07, E-12"
+    },
+    {
+     "id": "U-3",
+     "question": "Device flow for GitHub Apps: endpoints, parameters, enabling setting, errors, lifetimes, polling interval.",
+     "status": "CLOSED",
+     "answer": "Turn on 'Enable Device Flow' (otherwise the token request fails with device_flow_disabled). Call POST https://github.com/login/device/code with client_id and optionally scope=offline_access. It returns device_code (40 characters), user_code (8 characters with a hyphen), verification_uri https://github.com/login/device, expires_in (default 900 s) and interval (default 5 s). Poll POST https://github.com/login/oauth/access_token with client_id, device_code and grant_type=urn:ietf:params:oauth:grant-type:device_code, with no client secret, no faster than interval. slow_down adds 5 s. Errors come back as HTTP 200 with an error field: authorization_pending, slow_down, expired_token, unsupported_grant_type, incorrect_client_credentials, incorrect_device_code, access_denied, device_flow_disabled, plus bad_verification_code and unverified_user_email. The page names two of these codes twice: expired_token/token_expired, and incorrect_device_code/bad_verification_code. Success returns a ghu_ token with expires_in 28800 and a ghr_ refresh token with refresh_token_expires_in 15897600. The GitHub App page describes the responses as query parameters, so the client should parse both form-encoded and JSON bodies.",
+     "evidence": "E-01, E-03"
+    },
+    {
+     "id": "U-4",
+     "question": "Refreshing a user access token: endpoint, parameters, client_secret for device-flow tokens, rotation, errors.",
+     "status": "CLOSED",
+     "answer": "POST https://github.com/login/oauth/access_token with client_id, grant_type=refresh_token and refresh_token. client_secret is 'Required unless the user access token was generated using the device flow', so no secret is needed here. Every refresh returns a new access token and a new refresh token. The used refresh token and the old access token stop working, so the vault must replace both atomically and refreshes must run one at a time. bad_refresh_token (invalid or expired) means running the device flow again; a wrong grant type returns unsupported_grant_type. Expiry is on by default but 'an optional feature and subject to change'.",
+     "evidence": "E-02, E-01"
+    },
+    {
+     "id": "U-5",
+     "question": "Ending a sign-in: can a no-secret app revoke, how does the user revoke on GitHub, when does GitHub expire or revoke tokens itself?",
+     "status": "CLOSED",
+     "answer": "DELETE /applications/{client_id}/token and /grant need Basic auth with the client secret, so this app cannot use them. POST /credentials/revoke takes no authentication (an authenticated call returns 403), accepts ghu_ and ghr_, allows 60 requests/hour and notifies the token's owner. GitHub describes it for exposed credentials the caller does not own, not for sign-out. The user revokes the app's authorization in GitHub account settings, which revokes its tokens; after that, calls return 401 Bad Credentials. GitHub revokes on its own when a token is pushed to a public repository or gist, after one year unused for OAuth tokens (not stated for GitHub App tokens), when an 11th token is issued for the same user/app/scope, and when enterprise or organization owners revoke SSO. User tokens also expire after 8 hours. Recommended sign-out: delete both tokens from the vault, then point the user to GitHub settings. The exact settings URL page was not collected.",
+     "evidence": "E-08, E-11, E-09, E-01"
+    },
+    {
+     "id": "U-6",
+     "question": "GitHub token formats and prefixes.",
+     "status": "CLOSED",
+     "answer": "ghp_ (classic PAT), github_pat_ (fine-grained PAT), gho_ (OAuth app), ghu_ (GitHub App user access token), ghs_ (installation token), ghr_ (GitHub App refresh token). The token responses confirm ghu_ and ghr_. Lengths of ghu_ and ghr_ are not stated, and installation tokens changed length in 2026, so screen and redact by prefix, not by length.",
+     "evidence": "E-10, E-01, E-02, E-08"
+    },
+    {
+     "id": "U-7",
+     "question": "Which REST endpoints accept a GitHub App user access token for commits, contents, trees, blobs and archives, and which permission each needs?",
+     "status": "CLOSED",
+     "answer": "GitHub's user-access-token list includes GET /repos/{o}/{r}/commits/{ref}, /contents/{path}, /git/trees/{tree_sha}, /git/blobs/{file_sha}, /tarball/{ref} and /zipball/{ref}, plus the two /user/installations endpoints. Each read needs only Contents read. Both endpoints read_github uses today are on the list.",
+     "evidence": "E-06, E-05"
+    },
+    {
+     "id": "U-8",
+     "question": "Registration settings for a desktop device-flow app.",
+     "status": "CLOSED",
+     "answer": "Callback URL is optional and ignored for the device flow. Keep 'Expire user authorization tokens' selected (on by default, strongly recommended). Select Enable Device Flow. Deselect webhook Active for an auth-only app. Choose 'Any account' under 'Where can this GitHub App be installed?', because only a public app can be installed by others. Permissions are as in U-1. The name is at most 34 characters and unique; a Homepage URL is required. Leaving 'Request user authorization (OAuth) during installation' off is an inference: it starts the web flow, which needs a callback URL.",
+     "evidence": "E-03, E-12, E-02"
+    },
+    {
+     "id": "U-9",
+     "question": "Is REST API version 2022-11-28 (sent by read_github) still supported, given GitHub's examples now send 2026-03-10?",
+     "status": "KNOWN-UNKNOWN",
+     "answer": "Not stated on any captured page. Day one, on the collector machine: collect https://docs.github.com/en/rest/about-the-rest-api/api-versions into this project. Until then keep 2022-11-28, which works today, and do not change the version as part of the sign-in work.",
+     "evidence": "E-01, E-08, E-11 (examples show 2026-03-10); no supporting row"
+    }
+   ],
+   "commands": [
+    "cat /home/user/task5-handoff/wt/app-sign-in/docs/research/2026-10-12-app-sign-in/research/BRIEF.md; ls ~/.agents/research-kit; (cwd gh-signin) git status; git branch --show-current",
+    "cat ~/.agents/research-kit/README.md",
+    "ls ~/.agents/research-kit/{bin,template,recipes}; cat ~/.agents/research-kit/START_HERE.md; cat ~/.agents/research-kit.config.json (absent: default role collector)",
+    "ls -la ~/.agents; cat ~/.agents/research-kit.install.json; ls worked-example dirs",
+    "cat worked example app-sign-in research/{DISCOVERY,MAP,plan.json,kit.json,SOURCES,TIMELINE}",
+    "cat worked example EVIDENCE.md, head of raw/.fetches.jsonl, .usage.jsonl, .gitignore, .gitattributes",
+    "cat ~/.agents/research-kit/template/AGENTS.md",
+    "cat /home/user/task5-handoff/wt/gh-signin/AGENTS.md; ls 2026-10-12-gap-audit-more-models",
+    "cat gap-audit-more-models research/{DISCOVERY,MAP,plan.json}",
+    "(cwd /home/user/task5-handoff/wt/gh-signin) node ~/.agents/research-kit/bin/new-project.mjs docs/research/2026-10-13-github-sign-in-design --topic \"What does a GitHub App device-flow sign-in in the MoonAliza Electron app need on GitHub's side to read a user's private repositories read-only, refresh and end its tokens, and stay within GitHub's limits?\"  -> exit 0",
+    "(cwd project) cat scaffold files; node ~/.agents/research-kit/bin/decompose.mjs --help",
+    "cat ~/.agents/research-kit/recipes/api-integration.md; node ~/.agents/research-kit/bin/research.mjs --help",
+    "(cwd project) node ~/.agents/research-kit/bin/research.mjs --status  -> exit 0 (no balance shown)",
+    "(cwd project) node ~/.agents/research-kit/bin/doctor.mjs  -> exit 1 (2 pre-collection blockers: no unknowns, no ledger); firecrawl-auth 277 credits",
+    "(cwd project) node ~/.agents/research-kit/bin/decompose.mjs --dry-run --recipe api-integration  -> exit 0 (13 rows, no spend)",
+    "grep prior project's GitHub App capture (read-only) to plan pages",
+    "read src/shared/github.ts and src/main/github.ts (read-only) to find read_github's endpoints and API version",
+    "Write research/plan.json (10 URLs, depth normal, maxScrapes 10), research/DISCOVERY.md (intent + U-1..U-8 OPEN), Edit research/MAP.md (all 13 rows classified + T-1..T-5)",
+    "(cwd project) node ~/.agents/research-kit/bin/research.mjs --plan research/plan.json --dry-run  -> exit 0 (10 pages, 0 searches)",
+    "(cwd project) node ~/.agents/research-kit/bin/research.mjs --plan research/plan.json  -> exit 0 (10 collected, spent 10)",
+    "(cwd project) node ~/.agents/research-kit/bin/doctor.mjs | grep firecrawl-auth  -> 267 credits",
+    "read the 10 captures with token-shaped strings masked on display",
+    "node -e (edit research/plan.json: add 2 URLs, maxScrapes 2) then node research.mjs --plan research/plan.json --dry-run from cwd research/  -> exit 2 (wrong cwd: plan.json does not exist; no spend)",
+    "(cwd project) node ~/.agents/research-kit/bin/research.mjs --plan research/plan.json --dry-run  -> exit 0 (10 cached, 2 to collect)",
+    "(cwd project) node ~/.agents/research-kit/bin/research.mjs --plan research/plan.json  -> exit 0 (2 collected, 10 cached, spent 2); doctor firecrawl-auth line showed no count",
+    "(cwd project) node ~/.agents/research-kit/bin/doctor.mjs | grep firecrawl  -> 265 credits",
+    "read the 2 run-2 captures (masked) and the auto-written EVIDENCE.md/SOURCES.md; read ~/.agents/research-kit/lib/quotes.mjs (quote normalisation)",
+    "verify cited table line numbers in the permissions capture",
+    "Write research/EVIDENCE.md (12 rewritten findings with [quote: ...] anchors); python3 rewrite of the DISCOVERY.md unknowns table (U-1..U-8 CLOSED, U-9 KNOWN-UNKNOWN); python3 edit of the MAP.md S-1 row and coverage note",
+    "(cwd project) node ~/.agents/research-kit/bin/preflight.mjs  -> exit 0 PASS (0 blocking, 8 warnings, 12 passing)",
+    "(cwd project) node ~/.agents/research-kit/bin/preflight.mjs --checks; preflight.mjs --json (66 quotes found)",
+    "(cwd project) node ~/.agents/research-kit/bin/handoff.mjs  -> exit 0",
+    "(cwd project) node ~/.agents/research-kit/bin/brief.mjs --help; node ~/.agents/research-kit/bin/brief.mjs  -> exit 0 (draft); brief.mjs --state  -> draft",
+    "grep prior OAuth-app capture for the Accept: application/json lines (read-only)",
+    "Write research/BRIEF.md (authored, 'Reviewed by: agent'); verify cited line numbers; python3 fixes to 3 references",
+    "(cwd project) node ~/.agents/research-kit/bin/brief.mjs --state  -> authored; node ~/.agents/research-kit/bin/preflight.mjs  -> exit 0 PASS; node ~/.agents/research-kit/bin/handoff.mjs  -> exit 0",
+    "(cwd project) node ~/.agents/research-kit/bin/doctor.mjs  -> READY (secret-scan pass, 265 credits); grep -c token patterns over authored files (all 0); (cwd gh-signin) git status --short; git check-ignore -v research/raw/.fetches.jsonl (matched only by the '!' negation rule, shown as untracked, so it will be committed)"
+   ],
+   "problems": [
+    "Mistake: the first run-2 dry run was run from research/ instead of the project directory. Impact: it exited 2 with 'research/plan.json does not exist'; nothing was spent and nothing was written except the plan edit made just before. Cause: a cd into research/ was left in the same shell command. Fix: re-ran the dry run from the project directory. Verified: exit 0, 10 pages cached and 2 to collect.",
+    "Right after run 2, doctor's firecrawl-auth line printed 'authenticated' with no credit count. A re-run showed 265 credits. Totals: 277 before, 267 after run 1, 265 after run 2; 12 credits for 12 pages, within the 15-credit and 12-page limits.",
+    "U-9 is KNOWN-UNKNOWN: no captured page says whether REST API version 2022-11-28 (sent by read_github) is still supported; every captured example sends 2026-03-10. It was not collected because the 12-page cap was reached. The day-one step is in DISCOVERY.md and BRIEF.md.",
+    "Not stated on the captured owner pages, and recorded as such without inference: (1) whether Metadata is mandatory or granted automatically; the design selects it explicitly. (2) The exact GitHub settings URL where a user revokes a GitHub App's authorization; the 'Reviewing and revoking authorization of GitHub Apps' page was not collected. (3) Whether revocation after one year unused applies to GitHub App user tokens. (4) The lengths of ghu_ and ghr_ tokens. (5) Whether Accept: application/json applies to GitHub App device-flow responses; it is documented only on the OAuth-app page (prior E-01).",
+    "GitHub's device-flow page contradicts itself twice: an expired code is named both expired_token and token_expired, and a wrong device code both incorrect_device_code and bad_verification_code. Both pairs are recorded in EVIDENCE E-01 and BRIEF Contradictions; the client should handle both names.",
+    "Two brief recommendations are inferences, labelled as such: leave 'Request user authorization (OAuth) during installation' off, and 'Any account' means a public app (the registering page links that setting to 'Making a GitHub App public or private').",
+    "The gate shows 8 corroboration/one-voice warnings (every answer rests on GitHub's own pages). They are accepted in the brief, as in the prior project.",
+    "Rate limits were not collected again. Following the instruction, they are DISMISSED in the map and cited from the prior project (docs/research/2026-10-12-app-sign-in, its U-4, E-01, E-08).",
+    "Two captures hold GitHub's own documentation example token strings, written by the collector: the OAuth authorizations page (2 lines) and the revocation page (1 line). They were not edited, because captures are evidence and must stay unaltered. They were masked in every display and copied into no authored file; a pattern scan of EVIDENCE, BRIEF, DISCOVERY, MAP, plan.json and SOURCES found 0, and doctor's secret-scan passes.",
+    "Optional prior.mjs was not run.",
+    "Nothing was committed or pushed, as instructed. The only change in the worktree is the untracked directory docs/research/2026-10-13-github-sign-in-design/. Its ledger research/raw/.fetches.jsonl is not git-ignored (the project's .gitignore negation rule keeps it), so a plain git add of the folder includes it. No other worktree and nothing under /home/user/moonaliza was modified; the prior project's captures were only read."
+   ]
+  },
+  "verify": {
+   "verdict": "FIX",
+   "findings": [
+    {
+     "id": "F-1",
+     "severity": "S2",
+     "problem": "The Decision says a 401 means the token was revoked, so the app clears the vault and asks the user to sign in again. No capture supports reading a 401 that way. Following it would throw away a refresh token that is still good for 6 months whenever an access token past its 8-hour expiry is used.",
+     "evidence": "E-01 line 44 gives only one direction: 'If your app continues to use a revoked access token, it will receive the `401 Bad Credentials` error.' No capture says what status an expired ghu_ token gets, or that a 401 always means revocation. BRIEF.md lines 232-233 say: '401 means revoked (clear and ask to sign in, E-01)'. The refresh plan (BRIEF.md lines 225-229) runs on a timer 'shortly before the 8-hour expiry'. A Windows laptop asleep past that point wakes up holding an expired token, and the agent's next read_github call would wipe the vault.",
+     "fix": "Reword the claim to what E-01 actually says: a revoked token gets 401, and the status for an expired token is not stated. Change the Decision as follows. Check the access token's expiry before every request and refresh, single-flight, when it is close. On a 401, if the vault holds a refresh token that has not passed refresh_token_expires_in, refresh once and retry the call. Clear the vault only when the refresh returns bad_refresh_token or the retried call still returns 401. Add a test for each path."
+    },
+    {
+     "id": "F-2",
+     "severity": "S2",
+     "problem": "The installation requirement is only half answered, yet U-2 is marked CLOSED. Two things are missing: what GitHub returns for a private repository the app is not installed on, and who is allowed to install the app on an organization or on another user's account. The Decision assumes a 404 and offers the install link as the fix. For organization members who are not owners, and for collaborator repositories, that link leads nowhere.",
+     "evidence": "DISCOVERY.md U-2's 'Why it blocks' names 'the error a not-installed repository produces', but neither U-2's Evidence cell nor BRIEF.md answers it. BRIEF.md line 231: 'A 404 on a repository that may be private shows the install link'. None of the 12 captures says who may install on an organization (owner, member request, approval) or on another user's account. E-12 line 55 links 'Installing a GitHub App from a third party' and E-03 line 93 / E-12 line 36 link 'Making a GitHub App public or private'; neither was collected. E-07 line 658 covers only the API's add-repository call, which needs admin access. E-01 line 34 (SAML SSO session) gives another way a repository can be invisible, and the error mapping does not account for it.",
+     "fix": "Option one: collect 'Installing a GitHub App from a third party', 'Making a GitHub App public or private' and 'Troubleshooting the REST API' (the #resource-not-accessible section). That needs the operator to raise the 12-page cap; 3 of the 15 budgeted credits are left. Option two: mark this KNOWN-UNKNOWN with a day-one test using the registered app. Read a private repository (a) on the user's own account before installing, and (b) in an organization where the user is a member but not an owner, and record the status and body of each. Either way, the UI should tell three cases apart: 'install on your account', 'ask the owner or organization admin to install', and 'start a SAML session'."
+    },
+    {
+     "id": "F-3",
+     "severity": "S2",
+     "problem": "The Decision tells a missing permission from a rate limit by a header that the captures do not tie to permission failures, and it leaves the primary rate limit out. A 403 for a primary limit has no retry-after header, so it matches neither rule. A rate-limit 403 that also carries X-Accepted-GitHub-Permissions would be reported as a missing permission.",
+     "evidence": "E-04 line 77 and E-05 line 30 say 'you will receive the `X-Accepted-GitHub-Permissions` header in the REST API response'; neither limits it to 403 or permission-failure responses. Prior E-08 line 136: exceeding the primary limit gives '403 or 429' with x-ratelimit-remaining 0, and the client waits until x-ratelimit-reset; no retry-after is mentioned. Line 138: for a secondary limit, retry-after applies only 'if ... present'. BRIEF.md lines 233-234 map '403 with X-Accepted-GitHub-Permissions' to a missing permission and '403/429 with retry-after' to GITHUB_RATE_LIMIT. The user's 5,000 requests/hour are shared with every app and PAT acting for them (prior E-08 line 46), so running out of the primary limit is a realistic case.",
+     "fix": "Check for rate limits first. Map to GITHUB_RATE_LIMIT any 429; any 403 with x-ratelimit-remaining: 0 (wait until x-ratelimit-reset); and any 403 or 429 that carries retry-after or a secondary-limit message. Only after that treat a 403 as a missing permission, and use X-Accepted-GitHub-Permissions as a hint, not as the test. Add tests for a primary-limit 403 with no retry-after, and for a rate-limit 403 that also carries the permissions header. Cite prior E-08 lines 136-138."
+    },
+    {
+     "id": "F-4",
+     "severity": "S3",
+     "problem": "The brief says without qualification that a device-flow app always refreshes without a client secret. The captured wording grants the exemption per token. After the first refresh, the token the app holds came from the refresh grant, not from the device flow. Staying signed in for 6 months depends on every refresh in that chain being exempt.",
+     "evidence": "E-02 line 79 marks client_secret '**Required** unless the user access token was generated using the device flow.' No capture says whether a token produced by refreshing a device-flow token still counts. BRIEF.md line 123: 'A device-flow app refreshes with no secret.' DISCOVERY.md U-4 says the same. The likely reading supports the brief, but if it is wrong, users must sign in again every 8 hours.",
+     "fix": "Quote the page's per-token wording rather than paraphrasing it as a general rule. Add a day-one check to Known unknowns, to run with the registered app before the refresh scheduler ships: run the device flow, then two refreshes in a row without a secret; both must succeed. Record the fallback if the second one fails."
+    },
+    {
+     "id": "F-5",
+     "severity": "S3",
+     "problem": "The brief says every device-flow error comes back as HTTP 200 with an `error` field, which goes beyond the capture. The page also documents no error responses at all for step 1 (POST /login/device/code). The first build step's test fake has every error code return HTTP 200, so the tests would never exercise a non-200 error or a failure at step 1.",
+     "evidence": "E-01 line 152 covers only the pending phase: 'Until the user enters the code, GitHub will respond with a 200 status and an `error` response query parameter.' No status is given for expired_token, access_denied, device_flow_disabled, incorrect_client_credentials, unsupported_grant_type, bad_verification_code or unverified_user_email. Lines 118-132 (step 1) list no errors. BRIEF.md line 83 says 'Errors come back as HTTP 200 with an `error` field (E-01, line 152)', and Next steps lines 251-256 have the fake return HTTP 200 for every code.",
+     "fix": "Limit the claim to what line 152 covers. The client should read `error` from the body whatever the HTTP status, and handle step 1 failing (non-2xx, or a body with `error`). The fakes should add non-200 error variants and step-1 failures, such as an invalid client_id or device_flow_disabled returned at /login/device/code. Record 'step-1 errors: not stated'."
+    },
+    {
+     "id": "F-6",
+     "severity": "S3",
+     "problem": "Two limits that GitHub states for OAuth apps are applied to this GitHub App as fact, with no 'not stated' label: 50 device-code submissions per hour, and ten tokens per user/app/scope plus ten new tokens per hour. The brief does attach that label to the neighbouring one-year-unused rule. It also does not consider that, for a public app, '50 submissions in an hour per application' could cap sign-ins across all MoonAliza users.",
+     "evidence": "The 50-per-hour rule appears only on the OAuth-app page: prior E-01 line 307, 'there is a rate limit of 50 submissions in an hour per application'. This project's GitHub App page (E-01) has no such rule; a grep for 'submission' finds nothing. The ten-token rule sits under E-09 line 78, headed 'Token revoked due to excess of tokens for an OAuth app with the same scope'. BRIEF.md lines 147-148, 162, 166 and 226-227 apply both to the GitHub App, and the refresh rationale in the Decision relies on the second one.",
+     "fix": "Label both limits 'stated for OAuth apps; not stated for GitHub Apps'. Keep the conservative refresh policy. Add a plain message for a sign-in that times out because the user's code submission failed on GitHub's side, which ends as expired_token. Note the possible app-wide cap on sign-ins per hour as a product risk."
+    },
+    {
+     "id": "F-7",
+     "severity": "S3",
+     "problem": "Several brief claims rest on the prior corpus, which a builder working on this branch cannot open. These are the Limits section, the JSON Accept option, the 2,000 OAuth token requests/hour and the GITHUB_RATE_LIMIT mapping. The brief points the builder to a path that does not exist in this tree.",
+     "evidence": "BRIEF.md lines 13-14 point to `docs/research/2026-10-12-app-sign-in/research/EVIDENCE.md`. That directory is not on branch research/github-sign-in (HEAD 0815f42) or on main. It exists only on branch research/app-sign-in (commit 5389cd1, /home/user/task5-handoff/wt/app-sign-in). I checked the cited lines there and they support the claims: prior E-01 lines 200-240, 266-280, 307 and 341; prior E-08 lines 46, 90-95 and 136-138.",
+     "fix": "Merge research/app-sign-in before or together with this project, or state the dependency in the brief by branch and commit, so the builder can check every 'prior E-xx' row."
+    },
+    {
+     "id": "F-8",
+     "severity": "S3",
+     "problem": "The screening decision says 'by prefix, length-agnostic' but does not say what characters follow the prefix. E-10 shows that the new stateless installation token is ghs_ followed by an app-ID part and a JWT part. A JWT contains '.' separators and base64url characters. A screen that only matches [A-Za-z0-9_] after the prefix would stop at the first '.' and leave the rest of the token unredacted.",
+     "evidence": "E-10 line 145 gives the stateless format as a placeholder: the ghs_ prefix, an app-ID part, then a JWT part. BRIEF.md lines 156-158 and 242-243 specify only prefixes and 'length-agnostic'.",
+     "fix": "State that after a prefix the screen consumes base64url characters and '.', or redacts up to the next whitespace, quote or delimiter. Add a test using a synthetic placeholder of the new shape, never a real token."
+    },
+    {
+     "id": "F-9",
+     "severity": "S4",
+     "problem": "Three attribution overstatements, none of which changes the design.",
+     "evidence": "(1) DISCOVERY.md U-8 and the researcher's report say 'only a public app can be installed by other users (E-12)'. E-12 line 36 says only 'If your GitHub App is public, other users and organizations can install your app', and 'Any account' meaning public is an inference, because the linked page was not collected. (2) BRIEF.md lines 143-144 say the github_app_authorization webhook is one 'which an app with webhooks off does not receive (E-01)'. E-01 line 44 says 'GitHub Apps cannot unsubscribe from this event' and nothing about webhooks being off. (3) BRIEF.md line 155 and DISCOVERY.md U-6 cite E-08 as confirming ghu_ and ghr_. E-08 line 30 names only gho_ and ghu_.",
+     "fix": "(1) Reword as 'if public, others can install', with the mapping from 'Any account' to public marked as inference. (2) Mark the webhook statement as an inference. (3) Cite E-08 for ghu_ only."
+    }
+   ],
+   "checked": [
+    "Ran from /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design: /root/.agents/research-kit/bin/preflight.mjs exited 0 with PASS (0 blocking, 8 corroboration/one-voice warnings, 12 passing). /root/.agents/research-kit/bin/handoff.mjs exited 0 (12 ledger entries, chain verifies, role=collector).",
+    "Checked the ledger myself: research/raw/.fetches.jsonl has 12 entries, all with transport firecrawl-cli and completeness full. The bodySha256 in each entry matches the sha256 I recomputed for all 12 captures. .usage.jsonl shows 10 + 2 = 12 credits spent, consistent with 277 before and 265 after.",
+    "Quotes: 66 [quote:] items in EVIDENCE.md. 62 occur exactly in the cited capture. The other 4 occur word for word once markdown bold/link markup is removed: E-02 client_secret, E-03 Enable Device Flow, E-03 'Where can this GitHub App be installed?', E-08 Basic Authentication.",
+    "Every E-row exists, cites a capture that is on disk and is a docs.github.com owner page (P).",
+    "Line references checked against the captures. E-01: 34-44, 112-132, 138-178, 187-188, 194-215, 266-285. E-02: 32-46, 63-81, 89-94. E-03: 36, 53-93. E-04: 30-57, 75-87. E-05: Contents rows 1007/1010/1017/1022/1027/1035/1036 and Metadata row 1181, with no additional-permission marks. E-06: 300-301, 517, 667, 678, 1093, 1136, 1144, and the revoke endpoints are absent. E-07: 274-313, 449-496, 656-670, 722-763. E-08: 30-39, 310-343. E-09: 28-96. E-10: 141-154. E-11: 22-65. E-12: 36, 53-59.",
+    "Prior-project citations checked on branch research/app-sign-in: prior E-01 lines 200-240, 266-280, 307, 341; prior E-08 lines 46, 90-95, 136-138. They support the brief's statements. The directory is absent from branch research/github-sign-in.",
+    "Every captured request example sends X-GitHub-Api-Version 2026-03-10 (E-01, E-07, E-08, E-11), and no capture mentions 2022-11-28. U-9 is honestly KNOWN-UNKNOWN.",
+    "Checked the Intent against the code: src/main/github.ts in the gh-signin worktree sends X-GitHub-Api-Version 2022-11-28 and calls commits/{ref} and contents/{path}.",
+    "Blocking design questions reviewed. Permission names are answered (Contents and Metadata, Read-only). The installation requirement is partly open (F-2). Refresh without a client secret is answered for the first refresh (F-4). Revocation without a client secret is answered (E-08, E-11, E-09). Token prefixes are answered, with a screening detail missing (F-8). Endpoints for user tokens are answered (E-06). Registration settings are answered (E-03, E-12).",
+    "Read-only confirmed: after running preflight and handoff, no file in the project is newer than research/BRIEF.md, and no credential or token value was printed (captures were read through a redaction filter)."
+   ]
+  },
+  "maps": [
+   {
+    "area": "MoonAliza GitHub surfaces vs a GitHub App device-flow sign-in (read-only contents, expiring user tokens). Repo root: /home/user/task5-handoff/wt/gh-signin (main @ 0815f42, read only). All `where` paths are relative to that root. Brief: /home/user/task5-handoff/wt/app-sign-in/docs/research/2026-10-12-app-sign-in/research/BRIEF.md (evidence captures under its research/raw/).",
+    "facts": [
+     {
+      "claim": "read_github contract: the input schema is strict {url<=2048, path<=1024?, ref<=200?, startLine 1..1e6 default 1, lineCount 1..200 default 200}. The tool description sent to the model says \"Read a public GitHub repository URL ... no private authentication, general websites, cloning or writes\".",
+      "where": "src/shared/github.ts:4-9"
+     },
+     {
+      "claim": "Only HTTPS github.com root, tree and blob URLs parse. The owner must match [a-z0-9-]+ and the repo [a-z0-9_.-]+. Path and ref segments that are empty, '.', '..', contain backslash, '?' or '#', or contain control characters are rejected. The repository key is lowercased owner/repo.",
+      "where": "src/shared/github.ts:10-23"
+     },
+     {
+      "claim": "Repository scope comes only from URLs in saved user messages, capped at 20 repositories. Unsupported URLs grant nothing.",
+      "where": "src/shared/github.ts:24-31"
+     },
+     {
+      "claim": "GitHubErrorCodeSchema is the closed set of codes that may cross main->engine: RUN_CANCELLED, GITHUB_INVALID_URL, GITHUB_SCOPE_REQUIRED, GITHUB_PATH_EXCLUDED, GITHUB_REDIRECT, GITHUB_NOT_FOUND, GITHUB_RATE_LIMIT, GITHUB_FORBIDDEN, GITHUB_UNAVAILABLE, GITHUB_TOO_LARGE, GITHUB_UNSUPPORTED_FILE, GITHUB_INVALID_RESPONSE, GITHUB_TIMEOUT.",
+      "where": "src/shared/github.ts:34"
+     },
+     {
+      "claim": "githubFailure maps each reason to a public ErrorCode and message, always with retry 'never'. NOT_FOUND says the repository 'may be private. This reader supports public repositories without credentials.' RATE_LIMIT is NETWORK_ERROR, 'rate-limited the public reader ... do not paste a token into chat.' FORBIDDEN says 'This reader does not authenticate to private repositories.' Unknown reasons fall back to NETWORK_ERROR.",
+      "where": "src/shared/github.ts:35-49"
+     },
+     {
+      "claim": "How a private repository is refused today: GitHubReader.request sends GET https://api.github.com${route} with redirect:'manual', credentials:'omit', cache:'no-store' and the headers Accept, X-GitHub-Api-Version 2022-11-28 and User-Agent 'MoonAliza-public-repository-reader'. It sends no Authorization header, so GitHub answers 404 for a private repository, which becomes GITHUB_NOT_FOUND.",
+      "where": "src/main/github.ts:13-16,20"
+     },
+     {
+      "claim": "Status mapping: 3xx -> GITHUB_REDIRECT (redirects are never followed). 404 -> GITHUB_NOT_FOUND. 429, or 403 with x-ratelimit-remaining '0' or a retry-after header -> GITHUB_RATE_LIMIT. Any other 401 or 403 -> GITHUB_FORBIDDEN. Other non-OK statuses -> GITHUB_UNAVAILABLE. BRIEF next step 2 (map 403/429 with retry-after to GITHUB_RATE_LIMIT) is therefore already implemented; the retry-after value itself is not surfaced.",
+      "where": "src/main/github.ts:19-23"
+     },
+     {
+      "claim": "Reader bounds: 2 MiB response by declared length and while streaming, 256 KiB file, a 20 s deadline for the whole read, at most 1000 directory entries parsed, 200 entries / 35,000 chars returned, 200 lines / 16,000 chars of text. Only base64 UTF-8 text without control characters is accepted. Symlinks and submodules are refused.",
+      "where": "src/main/github.ts:5-6,24-31,38,52-74"
+     },
+     {
+      "claim": "The reader re-checks scope before any request (GITHUB_SCOPE_REQUIRED) and refuses sensitive paths before any request (GITHUB_PATH_EXCLUDED). Sensitive entries are dropped from listings.",
+      "where": "src/main/github.ts:34-37,53"
+     },
+     {
+      "claim": "Commit pinning: each GitHubReader caches repository:ref -> sha. There is one reader per active run, constructed with the global fetch as its default fetcher.",
+      "where": "src/main/github.ts:9-12,41-45; src/main/index.ts:45,193,293"
+     },
+     {
+      "claim": "Error normalisation: stop -> RUN_CANCELLED, deadline -> GITHUB_TIMEOUT, GITHUB_* codes pass through, anything else -> GITHUB_UNAVAILABLE.",
+      "where": "src/main/github.ts:78-82"
+     },
+     {
+      "claim": "Main's readGitHub validates the run context (engine, epoch, capability, running status, project, profile revision, assertConversationPolicy) before and after the read, then returns vault.redact(result). Redaction replaces every non-tombstoned vault secret value.",
+      "where": "src/main/index.ts:110-123; src/main/vault.ts:183-195"
+     },
+     {
+      "claim": "Engine side: read_github is offered only when the host has readGitHub, the user-supplied repositories are non-empty and the run is not a review run. The engine re-derives scope from saved user messages before asking main. Failures become a tool.failed event plus a JSON {error, message} tool result.",
+      "where": "src/engine/application.ts:22,310-326,366-372"
+     },
+     {
+      "claim": "System prompts tell the model that read_github is for 'public GitHub repositories explicitly supplied by the user'.",
+      "where": "src/engine/application.ts:374-376"
+     },
+     {
+      "claim": "Engine<->main port: github.read carries only {runId, input} from the engine. The reply is github.result (a string, max 262,144 chars) or github.error with a GitHubErrorCodeSchema code. Main collapses any code outside that enum to GITHUB_UNAVAILABLE.",
+      "where": "src/engine/index.ts:31-40,63-66; src/engine/control.ts:107-108,120; src/main/engine.ts:56-62"
+     },
+     {
+      "claim": "run.context returns repositories derived from saved user messages. Main's contextSchema caps them at 20 strings of at most 200 chars. General chat (projectId null) may be offered read_github and nothing else.",
+      "where": "src/engine/control-dispatch.ts:26-28; src/main/index.ts:67,93"
+     },
+     {
+      "claim": "The public error surface is ErrorCodeSchema, which already contains UNAUTHORIZED and CREDENTIAL_REVOKED; GitHub reads use neither today. Main-thrown codes reach the renderer only if publicMessages maps them; anything else becomes INTERNAL_ERROR.",
+      "where": "src/shared/errors.ts:3-17; src/main/bridge.ts:11-57"
+     },
+     {
+      "claim": "Vault: values are encrypted with safeStorage, write-once per random UUID ref (saveStaged, then commit, then tombstone, then remove), at most 32,768 bytes. The grant purposes are 'inference' | 'provider-test' | 'research' | 'provision'. provider-test and research grants are capped at 30 s. withSecret checks the grant before and after reading the file.",
+      "where": "src/main/vault.ts:11-17,81-104,129-181"
+     },
+     {
+      "claim": "Startup reconcile deletes tombstoned refs and staged refs that are not in the reference set. The set is engine vault.references plus collectorSettings.references(); a new main-owned GitHub account file would have to add its refs here.",
+      "where": "src/main/vault.ts:106-121; src/main/index.ts:181-183"
+     },
+     {
+      "claim": "Inference grants use contextId = runId (125 s) and are revoked after every model step. Run end, cancel, session-policy change, trust revoke and profile credential change also call revokeContext(runId).",
+      "where": "src/main/index.ts:102-104,156,177,202,205,211,266"
+     },
+     {
+      "claim": "Pasted collector token: research.collector.save accepts a printable-ASCII token (1..16384). CollectorSettings stores only a vault ref in <userData>/research-kit/collector.json and uses the retiredSecretRef crash-safe rotation pattern. The renderer sees only tokenConfigured.",
+      "where": "src/shared/params.ts:54-59,127-128; src/main/collector-settings.ts:18-90; src/main/index.ts:55-57"
+     },
+     {
+      "claim": "The collector token is decrypted only inside a 30 s 'research' grant, into the child environment as RESEARCH_KIT_GITHUB_TOKEN, with nothing inherited (no GITHUB_TOKEN). Watches can run up to 3,600,000 ms.",
+      "where": "src/main/collector.ts:389-395; src/adapters/research-kit/collector.ts:50,55-60"
+     },
+     {
+      "claim": "The collector needs Actions read and write and dispatches workflows. A read-only-contents GitHub App token cannot replace it.",
+      "where": "src/renderer/ResearchPanel.tsx:295,299-300; src/renderer/research-text.ts:20-22; tests/fixtures/fake-github.ts:66"
+     },
+     {
+      "claim": "Verified import: one GET of /repos/{o}/{r}/actions/runs/{id} with Authorization: Bearer from a 30 s research grant, redirect 'manual', credentials 'omit', User-Agent 'MoonAliza-research-import', a 1 MiB bound and a 20 s timeout. Every failure is a code; response text is never used.",
+      "where": "src/main/research-import.ts:23,38-60,68-78"
+     },
+     {
+      "claim": "The renderer has no network access: main cancels every renderer request outside the renderer folder. external.open passes any http(s) URL without credentials or fragment to shell.openExternal.",
+      "where": "src/main/index.ts:300,315; src/shared/contracts.ts:10-12; src/shared/params.ts:154"
+     },
+     {
+      "claim": "A test-routing 'production switch' (env var or flag read by main) was rejected because packaged builds run the e2e tests. Tests inject fetchers or patch main's global fetch instead.",
+      "where": "docs/specification/research-journeys.md:11-14; e2e/fixtures/collector-network.cjs:6-8"
+     },
+     {
+      "claim": "Spec and architecture state public-only and no credentials: 'Main makes only unauthenticated GET requests ... no cookies, authorization'; 'Cloning and GitHub credential storage are not implemented'. The composer footnote says 'Paste a public GitHub repository URL'.",
+      "where": "docs/specification/github-url-reading.md:3,5,9,11,13; docs/ARCHITECTURE.md:38; src/renderer/App.tsx:237"
+     },
+     {
+      "claim": "The plan says sign-in 'would replace pasted tokens for private repositories and the research collector', and one GitHub connection is meant to serve collection, private reading and later write steps. This conflicts with the BRIEF's read-only-contents GitHub App.",
+      "where": "docs/superpowers/plans/2026-10-02-research-jobs.md:426,491"
+     },
+     {
+      "claim": "Every message, tool results included, is full-text indexed (history_fts), and the tool.completed event carries the output to the renderer. Private repository text read with a token would be persisted and indexed like local file reads are.",
+      "where": "src/engine/migrations.ts:94-103; src/engine/application.ts:318; src/main/index.ts:158"
+     },
+     {
+      "claim": "Evidence (BRIEF captures): a GitHub App user token reaches only resources both the user and the app can access, so the app must be installed on the private repository (E-03 raw line 38). Access tokens start with ghu_ and refresh tokens with ghr_ (E-03 raw lines 91,93). For OAuth apps, using a refresh token invalidates it and the old access token (E-01 raw line 328). bad_refresh_token means the user must sign in again (E-03 raw line 275). The unauthenticated REST limit is 60 requests/hour per IP (E-08 raw line 40).",
+      "where": "/home/user/task5-handoff/wt/app-sign-in/docs/research/2026-10-12-app-sign-in/research/raw/2026-10-12-generating-a-user-access-token-for-a-git-github-f80aa743.md:38,91,93,275; .../2026-10-12-authorizing-oauth-apps-github-docs-github-ce29d520.md:328; .../2026-10-12-rate-limits-for-the-rest-api-github-docs-github-4a04a6e2.md:40"
+     }
+    ],
+    "touchpoints": [
+     "src/main/github.ts:13-16 - request(): add Authorization: Bearer <user token> only when signed in, only to the constructed https://api.github.com route, through a vault grant with a new purpose and its own contextId (not runId). Keep redirect:'manual' so the token is never sent on. Rename or retarget the 'MoonAliza-public-repository-reader' User-Agent (no test pins it; ARCHITECTURE.md:48 records UA names).",
+     "src/main/github.ts:19-23 - status mapping: 401 with a token now means expired or revoked. Refresh once (single-flight), retry once, then emit a new sign-in-required code instead of GITHUB_FORBIDDEN. A 403 'not accessible' and a 404 must say 'install the MoonAliza GitHub App on this repository or check access' rather than 'public only'.",
+     "src/main/github.ts:12 + src/main/index.ts:45,193,293 - GitHubReader construction: inject a token capability (for example a `credential(signal) => Promise<string|undefined>` hook) next to the default global fetch. Keep global fetch so the e2e main patch still intercepts.",
+     "src/shared/github.ts:9 - GITHUB_TOOL.description (model-facing contract) drops 'no private authentication'. Keep it static per run; tools are fixed per run (application.ts:370-372; Anthropic prefix-bound runs).",
+     "src/shared/github.ts:34 - GitHubErrorCodeSchema: add any new code (for example GITHUB_SIGN_IN_REQUIRED / GITHUB_APP_NOT_INSTALLED). Otherwise src/main/engine.ts:60-61 collapses it to GITHUB_UNAVAILABLE. This widens ToEngineSchema github.error (src/engine/control.ts:108).",
+     "src/shared/github.ts:35-49 - githubFailure: rewrite the NOT_FOUND, RATE_LIMIT and FORBIDDEN messages and map new reasons. UNAUTHORIZED and CREDENTIAL_REVOKED already exist in ErrorCodeSchema (src/shared/errors.ts:4,11), so ErrorCodeSchema need not widen.",
+     "src/engine/application.ts:374-376 - the system prompt's 'public GitHub repositories' wording.",
+     "src/main/vault.ts:13,135 - CredentialBinding.purpose union: add a GitHub purpose and decide its grant cap (one read is 20 s, src/main/github.ts:38).",
+     "New main-owned store (pattern: src/main/collector-settings.ts:18-90) at <userData>/github/... holding only vault refs (access, refresh, retired), expiry times and a login. The access and refresh tokens are two separate vault entries so exact-value redaction (vault.ts:183-195) matches each one. Rotation uses the retiredSecretRef crash-safe pattern.",
+     "src/main/index.ts:181-183 - add the GitHub store's references() to the startup reconcile set.",
+     "New main-only device-flow client (POST github.com/login/device/code, then poll github.com/login/oauth/access_token, plus refresh) with an injectable fetcher, no client secret and no base-URL setting. Cancel polling in before-quit (src/main/index.ts:324-336).",
+     "src/shared/params.ts:94-158 MethodSpec - new main-owned methods (for example github.account.read / github.signIn.start / github.signIn.cancel / github.signOut). Results carry user_code, verification_uri, expiry and status only, never device_code or tokens. Add the matching publicMessages entries in src/main/bridge.ts:11-51.",
+     "src/main/index.ts:300 / src/shared/params.ts:154 - open the verification URI from main (validated https://github.com/login/device) instead of round-tripping a GitHub-supplied URL through the renderer's external.open.",
+     "src/main/index.ts:110-123 readGitHub - keep the name and position (source-text pins). Pre- and post-validation and vault.redact stay as they are.",
+     "src/renderer/App.tsx:237 composer footnote and the Model profiles dialog (src/renderer/App.tsx:221,290): add a GitHub sign-in panel (code, link, signed-in login, Sign out) and state plainly that Claude and OpenAI use API keys.",
+     "docs/specification/github-url-reading.md:3,5,9,11,13, docs/ARCHITECTURE.md:38 (and a new row in the same commit, per the gate), docs/development-status.md, HANDOFF.md.",
+     "Out of scope, but flagged: src/main/research-import.ts and the collector token (src/main/collector-settings.ts, src/adapters/research-kit/collector.ts:57-59). These stay on the pasted Actions-write token; the plan text docs/superpowers/plans/2026-10-02-research-jobs.md:426 needs a correction note."
+    ],
+    "invariants": [
+     "Tokens (access, refresh, device_code) never reach the engine, SQLite, events, logs, renderer, argv or any file in clear (AGENTS.md invariant table). Only vault refs live on disk. The renderer sees only user_code, verification URI, status and login.",
+     "Repository scope is unchanged by sign-in: only repositories whose URLs appear in saved user messages, at most 20. Model output, tool inputs and repository content can never widen it, and sign-in grants no listing of the user's repositories (src/shared/github.ts:24-31; src/engine/application.ts:314-315; src/main/github.ts:36).",
+     "Fixed hosts only: github.com URLs in, requests only to constructed https://api.github.com/repos/... routes (src/main/github.ts:15). Redirects are never followed (redirect:'manual' -> GITHUB_REDIRECT), so the Authorization header can never be forwarded. API-provided download URLs and targets are never followed.",
+     "Not signed in = byte-identical behaviour to today: no Authorization header (pinned by tests/github-read.test.ts:14 and e2e/github-reading.spec.ts:36).",
+     "Bounds and refusals unchanged: 20 s, 2 MiB, 256 KiB, 200 lines / 16,000 chars, 200 entries / 35,000 chars. Sensitive paths are refused before any request. Response bodies are never echoed.",
+     "Main re-validates run, epoch, policy and profile revision before and after each read. Stop or a policy change discards late results. Results pass vault.redact before crossing to the engine (src/main/index.ts:113-122).",
+     "Only GitHubErrorCodeSchema codes cross main->engine. Only ErrorCodeSchema codes with mapped messages cross the bridge; anything else is INTERNAL_ERROR.",
+     "Review (research-mode) runs never get read_github (src/engine/application.ts:369-372).",
+     "No client secret ships in the Electron binary. Device flow only (BRIEF decision).",
+     "No production switch for test routing (docs/specification/research-journeys.md:11). Tests inject fetchers or patch main's global fetch.",
+     "The collector token path stays separate: research purpose, a 30 s grant, child env RESEARCH_KIT_GITHUB_TOKEN only, no inherited GITHUB_TOKEN.",
+     "Each vault secret is the exact token value, never a JSON blob, so exact-value redaction and provider-screen refusals still catch a leaked token.",
+     "Errors never claim a cause that was not observed. A 404 stays ambiguous (missing, no access, or app not installed) and the message says so."
+    ],
+    "tests": [
+     "tests/github-read.test.ts:10-25 - no Authorization, redirect 'manual', credentials 'omit', host api.github.com, one commit lookup per run. Keep for the signed-out reader; add a signed-in twin that asserts the exact Bearer header and the same hosts.",
+     "tests/github-read.test.ts:38-41 and :75-78 - 302/404/403/429 classification and 403 with x-ratelimit-remaining 0. These change if 401/403 split under a token; add 401 -> refresh -> retry-once and 401-after-refresh -> sign-in-required cases.",
+     "tests/github-read.test.ts:27-36,48-56,58-62,70-73,80-84 - unsafe URLs, scope, unsupported payloads, Stop, stream bound, sensitive paths. All must stay green with a token present.",
+     "tests/folder-free-chat.test.ts:133-146 (general chat offers only read_github), :148-158 (model-supplied URL -> FORBIDDEN, no read), :160-173 (stop/policy discards late result).",
+     "e2e/github-reading.spec.ts:31-45,64-71 - patches main's global fetch and throws UNEXPECTED_AUTH on any Authorization header; also asserts the commit-pinned source URL and restart persistence. It stays valid only if signed-out reads send no header and the reader keeps using global fetch.",
+     "tests/contracts.test.ts:42-60 - exact MethodSpec key list; every params and result object rejects unknown keys. Update it for the new sign-in methods. tests/contracts.test.ts:105-107 covers the external.open URL rules.",
+     "tests/research-contracts.test.ts:76-84 - pattern for asserting that methods reject secret/token fields; extend the same check to the sign-in methods.",
+     "tests/vault.test.ts:37-58 - grant purpose/expiry binding and the encrypted-at-rest byte scan. Add cases for the new purpose and for a rotated ref.",
+     "tests/research-collector-settings.test.ts:49-140 and e2e/research-collector.spec.ts:19-38 - template for a GitHub account store: reconcile survival, CAS, crash windows, no plaintext in any userData file.",
+     "tests/provider-screen.test.ts:166-185, tests/ollama-locality.test.ts:298-316, tests/anthropic-transport.test.ts:334-342 - source-text slices of src/main/index.ts from 'async function infer(' to 'async function readGitHub('. Renaming or moving readGitHub, or inserting code between the two, breaks all three.",
+     "tests/research-import.test.ts:121-140,308+ and tests/research-journeys-network.test.ts:109-155 - collector/import Bearer and refused-fetch pins. Untouched if the collector stays on its own token.",
+     "tests/research-collector-protocol.test.ts:54-57 and tests/research-collector-supervisor.test.ts:116-117 - collector child env has only RESEARCH_KIT_GITHUB_TOKEN. A sign-in token must not leak into it.",
+     "New, red-first: a device-flow client against a fake GitHub on port 0 via an injected fetcher, covering authorization_pending, slow_down (+5 s), expired_token, access_denied, device_flow_disabled, cancel and quit (BRIEF next step 1).",
+     "New: single-flight refresh. Two concurrent reads on an expired token make exactly one refresh request; a crash between saveStaged and the file write leaves no orphan after reconcile; bad_refresh_token clears the account and asks the user to sign in again.",
+     "New: a byte scan of userData and the SQLite/WAL files for the access, refresh and device_code markers after a signed-in private read (pattern: e2e/research-collector.spec.ts:32, the provider-state scan in tests/application.test.ts). This is Windows CI only, because safeStorage stalls without a keyring on Linux (AGENTS.md environments)."
+    ],
+    "risks": [
+     "Refresh-token race. Using a refresh token invalidates it and the old access token (E-01 raw line 328). Concurrent runs or a crash mid-rotation can lose the only valid refresh token, forcing a new sign-in. This needs a single-flight refresh in main plus the retiredSecretRef crash-safe pattern (src/main/collector-settings.ts:63-77) and the reconcile set (src/main/index.ts:181-183).",
+     "Redaction granularity. vault.redact matches whole decrypted entry values (src/main/vault.ts:183-195). Storing {access, refresh, expiry} as one JSON secret would leave each token unredacted in results and provider screening.",
+     "Grant/context collision. infer() and run end call revokeContext(runId) (src/main/index.ts:104,156). A GitHub grant keyed on runId could be revoked mid-read; use a distinct contextId per read.",
+     "Silent error collapse. A new code missing from GitHubErrorCodeSchema becomes GITHUB_UNAVAILABLE (src/main/engine.ts:60-61) and an unknown githubFailure reason becomes NETWORK_ERROR (src/shared/github.ts:48). An unmapped main-thrown sign-in error becomes INTERNAL_ERROR (src/main/bridge.ts:54).",
+     "Ambiguous 404. With a GitHub App, a private repository the app is not installed on looks the same as one that does not exist (E-03 raw line 38). Messages must offer install/check-access guidance and not invent a cause.",
+     "Rate-limit bucket change. Sending the token on public reads moves them from the per-IP 60/h unauthenticated bucket (E-08 raw line 40) to the user's shared 5,000/h, and ties the user's identity to every public read. Choose deliberately: always when signed in, versus only for repositories that 404 unauthenticated (double requests).",
+     "Privacy and policy wording. Private code would be persisted in messages and FTS (src/engine/migrations.ts:94-103) and, under cloud-allowed, sent to the cloud model. The spec's 'scoped public lookup disclosed by the composer' (docs/specification/github-url-reading.md:11) and the composer text (src/renderer/App.tsx:237) must be revised. Local-only inference is unaffected.",
+     "Scope creep. The plan says sign-in replaces the collector token (docs/superpowers/plans/2026-10-02-research-jobs.md:426,491), but the collector needs Actions write and workflow dispatch (src/renderer/ResearchPanel.tsx:295) and long child watches (src/adapters/research-kit/collector.ts:50). A read-only-contents, 8-hour token cannot serve it, so keep the collector out of this build and record the plan correction.",
+     "Source-text pins. Three tests slice index.ts between infer() and readGitHub(); restructuring readGitHub or adding helpers between them turns them red even with correct behaviour.",
+     "Test routing. The device-flow endpoints are on github.com (not api.github.com); tests must inject a fetcher because a base-URL override is a rejected production switch (docs/specification/research-journeys.md:11). Moving GitHub calls to Electron session/net.fetch would bypass the e2e global-fetch patch (e2e/github-reading.spec.ts:31-45).",
+     "external.open trust. It opens any http(s) URL (src/shared/contracts.ts:10-12). If the renderer opens a verification_uri taken from GitHub's response, a tampered response could steer the browser. Main should open a validated https://github.com/login/device URL.",
+     "Device-flow limits. Codes expire after 900 s, polling must honour interval and slow_down, there are 50 code submissions per hour per app, and at most 10 tokens per user/app (BRIEF). Auto-retry loops or repeated sign-ins can lock the user out or revoke older tokens.",
+     "Sign-out is local only. Server-side token revocation is not in the BRIEF's evidence (likely needs the client secret, which the app does not ship). Sign-out can only tombstone and remove the vault entries; the UI should point the user to GitHub settings to revoke. Treat this as a known unknown.",
+     "Verification gap. safeStorage and the vault cannot run in the Linux container (AGENTS.md environments), so the sign-in e2e and userData byte scans are Windows CI only. A local pass is not evidence.",
+     "User-Agent drift. 'MoonAliza-public-repository-reader' becomes inaccurate. It is unpinned by tests but recorded in docs (docs/ARCHITECTURE.md:48)."
+    ]
+   },
+   {
+    "area": "MoonAliza @ 0815f42 (/home/user/task5-handoff/wt/gh-signin, read-only): credential storage and secrecy (vault, grants, redaction, provider screen), the main-owned credential settings precedent (research collector token), model-profile credential flow and UI, the IPC/bridge/preload contracts, and the public read_github path, all mapped for a GitHub App device-flow sign-in with an 8 h access token and a 6-month refresh token. Answer to \"where would the token live\": as TWO separate vault entries (access, refresh), each its own opaque ref, referenced by a new main-owned JSON file under userData modelled on CollectorSettings (<userData>/research-kit/collector.json). The file holds only refs, retired refs, non-secret account identity and both expiry times as ISO DateTimes. Not in the engine SQLite profile tables and not in the engine-owned Settings. Nothing in the repo was modified. The untracked docs/research/2026-10-13-github-sign-in-design/ was already present before this run.",
+    "facts": [
+     {
+      "claim": "The vault is main-process only. It is constructed at startup over <userData>/vault with Electron safeStorage as its cryptor and the initial epoch 'starting'. Its doc comment says consumers get a capability, never a credential retrieval API.",
+      "where": "src/main/index.ts:51-52; src/main/vault.ts:24-31"
+     },
+     {
+      "claim": "A secret is one opaque UTF-8 string of at most 32,768 bytes. It is refused with ENCRYPTION_UNAVAILABLE when OS encryption is unavailable, and written encrypted to <uuid-v4>.bin (mode 0600, fsync) as a 'staged' entry. The ref must match a UUID v4 pattern.",
+      "where": "src/main/vault.ts:22, 66-69, 81-94"
+     },
+     {
+      "claim": "A vault index entry holds only state ('staged'|'committed'|'tombstoned') and createdAt. There is no kind, owner, label or expiry field, so the vault itself cannot record an 8 h or 6-month lifetime or tell which component owns a ref.",
+      "where": "src/main/vault.ts:20-21, 39-47"
+     },
+     {
+      "claim": "No secret can be updated in place. Rotation means saveStaged(new) -> commit(new) -> tombstone(old) -> remove(old), each with a new ref. profile.save and the collector's retire both do exactly this.",
+      "where": "src/main/vault.ts:81-104, 164-181; src/main/index.ts:259-268; src/main/collector-settings.ts:64-87"
+     },
+     {
+      "claim": "The startup reconcile commits staged refs that are in the given set, and deletes staged refs not in the set as well as tombstoned entries. It never removes a committed entry, even one nothing references. The set is the engine's 'vault.references' (DISTINCT profile_revisions.secret_ref) plus collectorSettings.references().",
+      "where": "src/main/vault.ts:106-121; src/main/index.ts:181-183; src/engine/control-dispatch.ts:51; src/engine/store.ts:170"
+     },
+     {
+      "claim": "CredentialBinding.purpose is exactly 'inference' | 'provider-test' | 'research' | 'provision'. A grant binds epoch, purpose, contextId, secretRef, optional profileRevisionId and expiresAt. There is no GitHub purpose. shared/host.ts duplicates the purpose list in PurposeSchema, and that schema is used only by tests.",
+      "where": "src/main/vault.ts:11-19; src/shared/host.ts:4-19; tests/contracts.test.ts:144-156"
+     },
+     {
+      "claim": "The vault caps grant lifetime only for 'provider-test' and 'research' (at most 30 s). 'inference' and 'provision' have no vault cap. infer() takes a 125 s grant, profile.test 30 s, and collector launch and import 30 s.",
+      "where": "src/main/vault.ts:135-137; src/main/index.ts:103, 282; src/main/research-import.ts:23, 76; src/adapters/research-kit/collector.ts:17"
+     },
+     {
+      "claim": "Grants live only in memory. setEpoch clears them all and runs on every engine (re)start through the restarted hook. revokeContext clears one context and runs on run end, cancel, project trust revoke and session policy update. tombstone revokes every grant on a ref synchronously, before the disk write.",
+      "where": "src/main/vault.ts:28, 55-58, 143-145, 164-169; src/main/index.ts:156, 177-178, 202, 205, 211"
+     },
+     {
+      "claim": "withSecret checks the grant against the binding before and after reading the ciphertext, then passes the decrypted string to a callback. infer() calls revokeContext(runId) in finally, which revokes every grant whose contextId is that runId.",
+      "where": "src/main/vault.ts:147-162; src/main/index.ts:101-104"
+     },
+     {
+      "claim": "Redaction matches exact values only. redact() decrypts every non-tombstoned entry (staged included) and replaces each whole value with '[redacted]', longest first. If any entry fails to decrypt it throws REDACTION_UNAVAILABLE. No prefix or pattern token scanner exists anywhere in src: a grep for GitHub token prefixes finds nothing.",
+      "where": "src/main/vault.ts:183-195"
+     },
+     {
+      "claim": "Consumers of redact: screenCompletion runs on every completion and checks the tool-call JSON and its leaves, plus provider-state leaves and content. Any change there is PROVIDER_PROTOCOL_ERROR, and then the content is redacted. Also redacted: GitHub read results, command output, review supervisor output and the research document reader.",
+      "where": "src/main/provider-screen.ts:33-46; src/main/index.ts:79, 107, 122, 128, 297"
+     },
+     {
+      "claim": "Today's GitHub reader is one GitHubReader per active run, constructed with no fetcher, so it uses Node's global fetch, not an Electron session. It sends GET only, to constructed https://api.github.com URLs, with redirect 'manual' (any 3xx becomes GITHUB_REDIRECT), credentials 'omit', cache 'no-store', no Authorization header, a 20 s deadline and a 2 MiB bound, and pins the commit per run.",
+      "where": "src/main/github.ts:10-16, 19, 24-30, 38, 41-44; src/main/index.ts:193, 293"
+     },
+     {
+      "claim": "GitHub read failures: 404 gives GITHUB_NOT_FOUND. 429, or 403 with x-ratelimit-remaining 0 or retry-after, gives GITHUB_RATE_LIMIT (the brief's step 2 mapping already exists). Any other 401 or 403 gives GITHUB_FORBIDDEN. A code reaches the engine only if it is in GitHubErrorCodeSchema, otherwise it becomes GITHUB_UNAVAILABLE. The public messages say the reader is public-only and unauthenticated.",
+      "where": "src/main/github.ts:20-23; src/shared/github.ts:34-49 (texts at :40, :42); src/main/engine.ts:56-62; src/engine/control.ts:107-108"
+     },
+     {
+      "claim": "Repository scope comes only from github.com URLs in the session's saved user messages (at most 20). The engine checks it, and main checks it again through run.context. read_github is offered only when such repositories exist and the run is not a review run.",
+      "where": "src/shared/github.ts:24-31; src/engine/application.ts:314-315, 367, 372; src/engine/control-dispatch.ts:28; src/main/github.ts:36"
+     },
+     {
+      "claim": "Main's readGitHub re-validates the run (epoch, capability, status, profile revision, conversation policy) before and after the read and returns vault.redact(result). The engine then stores the output in a tool.completed event.",
+      "where": "src/main/index.ts:110-123; src/engine/application.ts:310-319"
+     },
+     {
+      "claim": "The tool description, the system prompts and the spec all say private authentication is not supported. ARCHITECTURE and HANDOFF say GitHub credential storage and private-repository connection are not implemented.",
+      "where": "src/shared/github.ts:9; src/engine/application.ts:374-376; docs/specification/github-url-reading.md:5, 9; docs/ARCHITECTURE.md:38; HANDOFF.md:56"
+     },
+     {
+      "claim": "The precedent for a main-owned credential setting is CollectorSettings. It keeps a strict file {version, revision, repository, workflow, ref, secretRef, retiredSecretRef, lastRequest, updatedAt}. Saves are compare-and-set and replay by request id, with an inputHash that covers only whether a token was supplied, never its value. A missing or invalid file reads as 'not configured'. references() feeds the reconcile, and the renderer sees only tokenConfigured.",
+      "where": "src/main/collector-settings.ts:8-13, 26, 30-43, 51-81, 88-90; src/main/index.ts:55-57, 183-184; src/shared/params.ts:54-59"
+     },
+     {
+      "claim": "How the existing GitHub token is used: the research collector token takes a 30 s 'research' grant per use with a unique contextId (import:<job>:<uuid> / collector:<job>:<uuid>). It goes only into a Bearer Authorization header, or the child's env block. Redirects are not followed and the grant is revoked in finally.",
+      "where": "src/main/research-import.ts:35-44, 69-77; src/main/collector.ts:389-394"
+     },
+     {
+      "claim": "Model-profile credentials: StoredProfileSchema is ProfileSchema minus hasCredential plus an optional secretRef, persisted in engine SQLite (profile_revisions.secret_ref). The public Profile exposes only hasCredential. ProfileKindSchema is openai-compatible | openai-responses | anthropic | ollama. A GitHub account is not expressible as a profile without pushing its ref into engine history.",
+      "where": "src/engine/control.ts:10-11; src/engine/store.ts:75, 170; src/engine/application.ts:156-161; src/shared/contracts.ts:24-26"
+     },
+     {
+      "claim": "profile.save runs in main. It validates the endpoint, does a revision CAS, and refuses to carry a credential to a new endpoint or kind (CREDENTIAL_UNAVAILABLE). It then stages, has the engine save, commits, aborts runs on the old profile, and tombstones and removes the old ref. profile.delete is declared main-owned, but main has no case for it, so it returns NOT_IMPLEMENTED.",
+      "where": "src/main/index.ts:249-271, 301; src/shared/params.ts:118-120"
+     },
+     {
+      "claim": "The engine-owned SettingsSchema has no credential fields.",
+      "where": "src/shared/params.ts:74"
+     },
+     {
+      "claim": "The IPC registry is MethodSpec in src/shared/params.ts, not contracts.ts. Each method has strict params and result zod schemas, an owner (main|engine), an effect and an authorization rule. contracts.ts holds the DTOs, such as Profile with hasCredential, plus DateTimeSchema and HttpUrlSchema.",
+      "where": "src/shared/params.ts:87-158; src/shared/contracts.ts:5, 10-12, 26"
+     },
+     {
+      "claim": "The bridge accepts calls only from the expected main frame and refuses inputs over 2,000,000 chars. It parses each result with the method's strict schema, and a result with extra fields fails. Errors cross only as mapped codes with fixed messages, else INTERNAL_ERROR.",
+      "where": "src/main/bridge.ts:5-8, 11-51, 53-57, 59-75; src/shared/protocol.ts:16-22"
+     },
+     {
+      "claim": "ErrorCodeSchema already has CREDENTIAL_UNAVAILABLE, CREDENTIAL_REVOKED and UNAUTHORIZED, but publicMessages has no text for CREDENTIAL_REVOKED or UNAUTHORIZED. The vault's CREDENTIAL_CAPABILITY_DENIED and REDACTION_UNAVAILABLE are not public codes, so they surface as INTERNAL_ERROR. ENCRYPTION_UNAVAILABLE has a message.",
+      "where": "src/shared/errors.ts:3-17 (:11); src/main/bridge.ts:11-51 (:41)"
+     },
+     {
+      "claim": "The preload exposes only invoke, onEvent ('moonaliza:event', EventSchema) and onResearch ('moonaliza:research', ResearchSchema). There is no push channel for sign-in progress. AppApi mirrors this.",
+      "where": "src/preload/index.ts:4-25; src/renderer/App.tsx:8-12"
+     },
+     {
+      "claim": "The renderer cannot reach the network. Its CSP has connect-src 'none', the renderer partition cancels every request outside the renderer folder, and window.open is denied.",
+      "where": "src/renderer/index.html:2; src/main/index.ts:310-315"
+     },
+     {
+      "claim": "external.open is main-owned and user-confirmed. It accepts any HttpUrlSchema URL (http/https, no userinfo or fragment) and calls shell.openExternal.",
+      "where": "src/shared/params.ts:154; src/shared/contracts.ts:10-12; src/main/index.ts:300"
+     },
+     {
+      "claim": "The engine child gets an allowlisted env (SystemRoot, WINDIR, TEMP, TMP, PATH, USERPROFILE, LOCALAPPDATA). The CommandBroker passes main's full process.env to project commands.",
+      "where": "src/main/engine.ts:39-41; src/main/index.ts:70"
+     },
+     {
+      "claim": "The UI holds credentials two ways. The Model profiles dialog keeps the API key in React state in a password input. The collector token uses a write-only uncontrolled input through a ref, cleared after save, and shows only 'token saved'. The sidebar bottom has 'Local models' and 'Model profiles' buttons. No GitHub account UI exists.",
+      "where": "src/renderer/App.tsx:221, 280, 283, 290; src/renderer/ResearchPanel.tsx:148-149, 230-241, 292-302"
+     },
+     {
+      "claim": "Two file helpers exist. atomicJson writes a temp file in a private directory, fsyncs and renames. serialized is an in-process lock per absolute path. CollectorSettings uses both, and a single-flight refresh could reuse them.",
+      "where": "src/models/artifact-files.ts:40-63; src/main/collector-settings.ts:4, 52"
+     },
+     {
+      "claim": "The project rules state the token invariant: tokens never reach the engine, DB, events, logs, renderer, argv or files in clear, and credential values stay out of source, logs, research and PRs. Main owns credentials.",
+      "where": "AGENTS.md:9, 80; docs/ARCHITECTURE.md:5, 23"
+     },
+     {
+      "claim": "What the existing types CAN express: an opaque secret per ref (vault), a short purpose-bound grant, a main-owned JSON settings file with refs, a retired ref and CAS/replay (CollectorSettings), a boolean configured flag to the renderer (hasCredential/tokenConfigured), and ISO times (DateTimeSchema). What they CANNOT express: (1) expiry or rotation metadata in the vault; (2) a GitHub grant purpose; (3) two tokens in one entry with per-token redaction; (4) a pair of refs that rotates atomically (CollectorSettings has one secretRef and one retiredSecretRef); (5) GitHub sign-in or expiry error codes in GitHubErrorCodeSchema or publicMessages; (6) a push channel for device-flow status.",
+      "where": "src/main/vault.ts:13, 20, 183-195; src/main/collector-settings.ts:8-13; src/shared/contracts.ts:5, 26; src/shared/github.ts:34; src/main/bridge.ts:11-51; src/preload/index.ts:4-25"
+     }
+    ],
+    "touchpoints": [
+     "src/main/vault.ts:13 and :135-137: add a GitHub purpose (e.g. 'github') to CredentialBinding.purpose and cap its grants like 'research' (at most 30 s). Mirror it in src/shared/host.ts:4 or note that copy is test-only.",
+     "New main-owned store (e.g. src/main/github-account.ts), modelled on src/main/collector-settings.ts. The file (e.g. <userData>/github/account.json) holds: version, revision, accessRef, refreshRef, retired refs, accessExpiresAt and refreshExpiresAt as ISO times computed from expires_in / refresh_token_expires_in, a non-secret account identity, lastRequest and updatedAt. Methods: open/finishStartup/references(), a serialized single-flight refresh, and signOut, which tombstones and removes both refs.",
+     "src/main/index.ts:181-184: add the account store's references() to the reconcile set. Open and finish it next to collectorSettings (:56-57). Otherwise a staged-but-referenced token is deleted at start.",
+     "New main-only device-flow and refresh client (e.g. src/main/github-auth.ts): POST https://github.com/login/device/code, poll https://github.com/login/oauth/access_token honouring interval and slow_down, and refresh with the refresh token. Use an injectable fetcher (port-0 fakes), redirect 'manual', credentials 'omit'. device_code stays in memory only. No client secret.",
+     "src/main/github.ts:10-16: give GitHubReader an optional per-request token source. It decrypts through vault.withSecret under a short grant, sends Authorization only to the constructed api.github.com URL, and keeps redirect 'manual'. Construction sites are src/main/index.ts:193 (policy-route admit) and :293 (review start; review runs are never offered read_github).",
+     "src/shared/github.ts:9 (GITHUB_TOOL description), :34 (GitHubErrorCodeSchema: new codes such as sign-in required, sign-in expired, repository not reachable by the app) and :35-49 (githubFailure texts at :40 and :42). src/engine/control.ts:108 inherits the enum. src/engine/application.ts:374-376 changes the 'public only' system-prompt text.",
+     "src/shared/params.ts:94-158: new main-owned methods, e.g. github.account.read (read, authenticated), github.signin.start (network, user-confirmed, returns userCode, verificationUri, expiresAt and interval only), github.signin.cancel, and github.signout (write, user-confirmed). Add a strict GitHubAccount DTO with status, login and expiry DateTimes, and never a token or device_code.",
+     "src/main/index.ts:221-302 handle() switch: route the new main-owned methods. The default case is NOT_IMPLEMENTED (:301).",
+     "src/shared/errors.ts:3-17 and src/main/bridge.ts:11-51: public codes and fixed messages for the sign-in outcomes (code expired, access denied, device flow disabled, refresh expired), or reuse UNAUTHORIZED / CREDENTIAL_REVOKED, which today have no message.",
+     "src/preload/index.ts:4-25 and src/renderer/App.tsx:8-12: either the renderer polls github.account.read through invoke, or a new schema-validated push channel is added (pattern: onResearch).",
+     "src/renderer/App.tsx:221: add a 'GitHub account' button and dialog in the sidebar bottom that shows the user code and a link that opens only a validated https://github.com/login/device. Also App.tsx:290 Model profiles text: state that Claude and OpenAI use API keys (brief, next step 3).",
+     "tests/contracts.test.ts:42-54: the exact MethodSpec route list must gain the new methods.",
+     "Docs: docs/specification/github-url-reading.md:5, 9 (unauthenticated only), docs/ARCHITECTURE.md:38 (credential storage not implemented) and :5, HANDOFF.md:56, and the AGENTS.md:80 invariant evidence column. Add a new spec under docs/specification/."
+    ],
+    "invariants": [
+     "The access token, refresh token and device_code never reach the engine (process or its allowlisted env), SQLite (DB, WAL, shm), events, notices, the renderer (React state, DOM, IPC results), logs, argv, main's process.env (CommandBroker passes it to project commands), or any file in clear. On disk there are only opaque refs and non-secret metadata (AGENTS.md:80; src/main/engine.ts:39-41; src/main/index.ts:70).",
+     "Each token is its own vault entry, because redaction matches whole exact values (src/main/vault.ts:183-195). A JSON blob holding both tokens would leave neither token redacted.",
+     "Tokens are decrypted only inside vault.withSecret under a short, purpose-bound grant that is revoked in finally (pattern: src/main/research-import.ts:73-77). The vault never gains an API that returns a secret (src/main/vault.ts:24).",
+     "A token travels only in an Authorization header, to URLs main builds itself (https://api.github.com/... for reads, https://github.com/login/... for auth), with redirect 'manual', credentials 'omit' and cache 'no-store'. A redirect is never followed with the token (src/main/github.ts:15-19; src/main/research-import.ts:35-44).",
+     "Signing in never widens scope. read_github still reads only repositories the user pasted in the session, GET only (read-only) (src/shared/github.ts:24-31; src/engine/application.ts:314-315; src/main/github.ts:36).",
+     "Every GitHub read result passes vault.redact before it crosses to the engine (src/main/index.ts:122), and every completion passes screenCompletion (src/main/index.ts:107).",
+     "The startup reconcile keeps the live account refs: the account file's refs join the set at src/main/index.ts:183, and staged refs nothing references are dropped (src/main/vault.ts:106-121).",
+     "Saves and sign-in state changes are compare-and-set with request-id replay, and the replay hash never covers a secret (src/main/collector-settings.ts:53-57).",
+     "With no OS encryption the app refuses with ENCRYPTION_UNAVAILABLE and never stores in clear (src/main/vault.ts:83; src/main/bridge.ts:41).",
+     "Errors cross IPC only as ErrorCodeSchema codes with fixed messages. GitHub response bodies and raw errors are never shown (src/main/bridge.ts:53-57; docs/specification/github-url-reading.md:13).",
+     "Renderer DTOs expose status, identity and expiry times only, the way hasCredential and tokenConfigured do, and strict result schemas reject extra fields (src/shared/contracts.ts:26; src/shared/params.ts:54; src/main/bridge.ts:69).",
+     "Stop, cancel, trust revoke and policy changes revoke grants and discard late results. Sign-out tombstones both refs, which revokes their grants synchronously (src/main/index.ts:156, 177, 202-211; src/main/vault.ts:164-169).",
+     "No client secret is shipped in the binary (BRIEF Decision). The renderer stays network-less (src/renderer/index.html:2)."
+    ],
+    "tests": [
+     "tests/vault.test.ts:37-44 (research grant at most 30 s; a GitHub purpose cap belongs beside it), :46-58 (encrypted bytes, bound grant, no plaintext in the vault dir), :60-69 (reconcile keeps referenced staged refs, drops orphans), :71-81 (tombstone invalidates grants), :83-94 (epoch and context revoke), :96-101 (encryption unavailable), :103-110 (overlapping exact-value redaction)",
+     "tests/provider-screen.test.ts:65-164 (a vault secret in tool calls or provider state fails PROVIDER_PROTOCOL_ERROR, including escaped and split forms) and :166 (infer() returns only through screenCompletion)",
+     "tests/research-collector-settings.test.ts:49-148, especially :100-130 (crash windows recover through the file and the reconcile) and :132-148 (no file holds the plaintext token; the replay hash does not cover it). This is the template for an account store test.",
+     "tests/research-collector-supervisor.test.ts:108-125 (token only in the child env; absent from controls, notices and state.sqlite)",
+     "tests/research-import.test.ts:115-118 and :121-145 (Bearer only in the one GET, no redirect, token absent from controls, notices and the DB) and :308 (every read revokes its grant)",
+     "tests/github-read.test.ts:10-26 (asserts NO Authorization header, redirect manual, credentials omit, api.github.com only), :32 (scope only from supplied URLs), :75 (rate limit distinguished from auth refusal)",
+     "e2e/github-reading.spec.ts:36 (main's fetch throws UNEXPECTED_AUTH if a GitHub request carries Authorization)",
+     "e2e/research-collector.spec.ts:19-40 (the reconcile keeps a main-owned ref; byte scan of every userData file for the token)",
+     "e2e/workbench.spec.ts:77 (Authorization only on the chat request) and :83-86 (vault files hold no plaintext key)",
+     "e2e/anthropic.spec.ts:100-108 (userData byte scan in UTF-8 and UTF-16 forms; the pattern for a token scan)",
+     "tests/contracts.test.ts:42-63 (exact route list and ownership), :65-71 (write-only credentials), :74-79 (DTOs reject secretRef or secret), :105-107 (external.open rejects credentialed or non-http URLs), :150-156 (host messages exclude credentials)",
+     "tests/bridge.test.ts:23-28 (private fields in a result cannot cross) and :30-36 (internal error text, including key text, is replaced)"
+    ],
+    "risks": [
+     "Redaction gap: storing both tokens as one secret string means neither is redacted, because redact replaces only the whole decrypted value (src/main/vault.ts:192).",
+     "Refresh-token rotation plus a crash: if GitHub replaces the refresh token on every refresh (open in the design contract, U-4), a crash between receiving the new pair and committing refs and the file loses the only valid refresh token and forces a re-sign-in. The order must be stage, then file, then commit, then retire, as in src/main/collector-settings.ts:64-81.",
+     "Concurrent refresh: two runs refreshing with the same refresh token can make the second fail with bad_refresh_token and wrongly sign the user out. Refresh must be single-flight, e.g. serialized() in src/models/artifact-files.ts:59.",
+     "Epoch coupling: grants are bound to the engine epoch and wiped on any engine restart (src/main/vault.ts:55-58; src/main/index.ts:178). An account-level refresh or sign-in grant that spans a restart fails with CREDENTIAL_CAPABILITY_DENIED and must be retried, not treated as revocation.",
+     "contextId collision: infer() calls revokeContext(runId) in finally (src/main/index.ts:104). A GitHub grant keyed on the bare runId can be revoked by an overlapping inference. Use distinct contextIds (as the collector does) and revoke them explicitly on run end.",
+     "Orphaned committed tokens: the reconcile never deletes committed entries (src/main/vault.ts:106-121), and an invalid settings file reads as 'not configured' (src/main/collector-settings.ts:30-33). A lost account file leaves live tokens in the vault, never revoked. Sign-out must tombstone and remove explicitly.",
+     "A retired access token stops being redacted once removed (src/main/vault.ts:172-181, 186), yet it may stay valid at GitHub for up to 8 h.",
+     "Blast radius: one undecryptable token entry makes every redact() throw REDACTION_UNAVAILABLE (src/main/vault.ts:187-188). Every model call and GitHub read would then fail as INTERNAL_ERROR.",
+     "Existing tests deliberately forbid Authorization on GitHub reads (tests/github-read.test.ts:14; e2e/github-reading.spec.ts:36). The signed-out path must keep them green, and the authenticated path needs its own tests rather than weakened ones.",
+     "Rate budget: sending the token on public reads moves them onto the user's shared 5,000/h. The device flow allows 50 code submissions per hour per app (prior brief), so sign-in start must be user-initiated and single-flight.",
+     "GitHubReader and research-import use Node's global fetch (src/main/github.ts:12; src/main/research-import.ts:69), not an Electron session (src/main/index.ts:66), while decision 4 calls for a main-owned broker with the system proxy (docs/specification/decisions.md:8). Authenticated reads behind a proxy may behave differently, and e2e stubs globalThis.fetch (e2e/github-reading.spec.ts:33-36).",
+     "Private repository content becomes model input and is persisted in tool.completed events and the DB (src/engine/application.ts:318). In cloud-allowed conversations it reaches the provider. The UI should say so.",
+     "Current public texts claim public-only access (src/shared/github.ts:40, 42). With a GitHub App token, a private repository where the app is not installed likely answers 404 (installation scope is open in the design contract, U-2) and needs its own explained code.",
+     "verification_uri comes from the network, and external.open opens any http(s) URL (src/shared/params.ts:154). Validate it to https://github.com/login/device before showing or opening it. The device flow can last up to 900 s, so a single long invoke holds an IPC call: prefer start plus status polling, or a validated push channel.",
+     "safeStorage stalls on Linux without a keyring (AGENTS.md:41), so the sign-in e2e and any real-vault check can only run on Windows CI.",
+     "A 'paste a token' fallback in ProfileDialog would put it in React state (src/renderer/App.tsx:280). Use the write-only uncontrolled input pattern instead (src/renderer/ResearchPanel.tsx:148-149)."
+    ]
+   },
+   {
+    "area": "MoonAliza main-process runtime for a GitHub device-flow sign-in (read-only discovery of /home/user/task5-handoff/wt/gh-signin at main 0815f42; all paths below are relative to that root; nothing was modified). Scope: outbound HTTPS from main, the credential vault, IPC methods and push channels, cancellation and long-running tasks, opening external URLs, startup and quit hooks, and the e2e harness. What a polling flow of up to 15 minutes needs is listed under touchpoints (items starting \"15-min flow needs\").",
+    "facts": [
+     {
+      "claim": "Main creates two Electron sessions. 'moonaliza-local' is set to a direct proxy; 'moonaliza-providers' has no setProxy call, so it uses the default (system) proxy. Neither partition has a persist: prefix, so both are in memory.",
+      "where": "src/main/index.ts:64-66"
+     },
+     {
+      "claim": "Model-provider and local-runtime requests go through session.fetch, choosing the local or the provider session by profile locality.",
+      "where": "src/main/index.ts:97-98, 223, 276"
+     },
+     {
+      "claim": "The one chat-request init is POST with redirect 'error' and credentials 'omit' (INV-5). The code's comment says 'omit' does not withhold the session's cached Proxy-Authorization (D10 Electron check, 44.4.5).",
+      "where": "src/main/inference.ts:177-183; docs/ARCHITECTURE.md:35"
+     },
+     {
+      "claim": "Under Electron, session.fetch without credentials:'omit' sends the session's cookies and HTTP authentication. Without cache:'no-store', the session's HTTP cache can answer a later request. Electron enforces redirect:'error'.",
+      "where": "docs/specification/more-models.md:119-124; src/main/ollama-locality.ts:56-58"
+     },
+     {
+      "claim": "GitHub API reads do NOT go through an Electron session. GitHubReader defaults to Node's global fetch, and both places that admit a run construct `new GitHubReader()` without a fetcher.",
+      "where": "src/main/github.ts:8-12; src/main/index.ts:193, 293"
+     },
+     {
+      "claim": "A public GitHub read is a GET to https://api.github.com plus a constructed route only, with redirect 'manual', credentials 'omit', cache 'no-store', Accept application/vnd.github+json, X-GitHub-Api-Version 2022-11-28 and User-Agent 'MoonAliza-public-repository-reader'. It sends no Authorization header.",
+      "where": "src/main/github.ts:13-16; tests/github-read.test.ts:13-14"
+     },
+     {
+      "claim": "How a GitHub read handles a response: 3xx is GITHUB_REDIRECT; 404 is NOT_FOUND; 429, or 403 with x-ratelimit-remaining 0 or a retry-after header, is GITHUB_RATE_LIMIT; 401/403 is FORBIDDEN. The body is read as a stream and capped at 2 MiB, then parsed as strict UTF-8 JSON. Its text is never echoed.",
+      "where": "src/main/github.ts:5, 19-32; tests/github-read.test.ts:38-41"
+     },
+     {
+      "claim": "The per-call deadline pattern is AbortSignal.any([stop, AbortSignal.timeout(20_000)]). A Stop maps to RUN_CANCELLED, the timeout to GITHUB_TIMEOUT, and any other failure to GITHUB_UNAVAILABLE.",
+      "where": "src/main/github.ts:38, 78-82"
+     },
+     {
+      "claim": "The verified import's authenticated GitHub request uses Node's global fetch by default. The token is decrypted only inside vault.withSecret through a 30-second grant and sent only in that request's Authorization header. It uses redirect 'manual', a 20 s timeout and a 1 MiB bound, and the grant is revoked in finally.",
+      "where": "src/main/research-import.ts:23, 34-44, 69, 73-78"
+     },
+     {
+      "claim": "Reviewed decision 4: a main-owned Electron network broker binds each credential's destination to trusted profiles. It uses the system proxy and normal certificate validation, bounds streams, and defines abort and authenticated-redirect handling.",
+      "where": "docs/specification/decisions.md:8"
+     },
+     {
+      "claim": "Break test, observed on Linux only: with NODE_USE_ENV_PROXY=1, main's global fetch followed the environment proxy (ECONNREFUSED), while session fetches returned 200. On Windows this is unverified. The packaged build ignores NODE_OPTIONS, NODE_EXTRA_CA_CERTS and --inspect because of its fuses.",
+      "where": "docs/evidence/2026-10-12-break-test.md:26, 127; docs/ARCHITECTURE.md:49"
+     },
+     {
+      "claim": "Main has no outbound host allowlist; each caller builds its own URL. validateEndpoint allows https to any host, or http only on loopback, with no userinfo, query or fragment.",
+      "where": "src/main/inference.ts:16-25; src/main/github.ts:15"
+     },
+     {
+      "claim": "The renderer has no network. Its session (partition 'moonaliza-renderer') cancels every request outside the renderer folder, denies every permission, and its CSP has connect-src 'none'.",
+      "where": "src/main/index.ts:306, 313-315; src/renderer/index.html:2"
+     },
+     {
+      "claim": "The app window denies window.open, prevents navigation and webviews, and removes the menu, so no GitHub page can load inside the app.",
+      "where": "src/main/index.ts:307, 310-312"
+     },
+     {
+      "claim": "Main has no custom protocol handler, no power hooks and no HTTP server of its own: grep finds no setAsDefaultProtocolClient, open-url or powerMonitor anywhere in src, and the only createServer is a port probe in src/models/managed-ollama.ts:42. Nothing under src writes logs (no console.* calls).",
+      "where": "src/ (grep); src/models/managed-ollama.ts:42"
+     },
+     {
+      "claim": "The vault is main-only. Each secret is encrypted with safeStorage in its own <uuid>.bin file (mode 0o600) and indexed in index.json. Values over 32,768 bytes are refused, and so is any save when OS encryption is unavailable (ENCRYPTION_UNAVAILABLE).",
+      "where": "src/main/vault.ts:24-31, 66-94; src/main/index.ts:51-52"
+     },
+     {
+      "claim": "Vault grants have a fixed purpose: 'inference', 'provider-test', 'research' or 'provision'. Each grant is bound to epoch, contextId, secretRef and profileRevisionId. Only 'provider-test' and 'research' grants are capped at 30 s. withSecret re-checks authorization before and after reading the file.",
+      "where": "src/main/vault.ts:11-17, 129-162"
+     },
+     {
+      "claim": "vault.setEpoch clears every grant. Engine.start calls hooks.restarted(epoch) synchronously, and so does an engine child's exit; main wires that hook to vault.setEpoch and aborts every active run.",
+      "where": "src/main/vault.ts:55-58; src/main/engine.ts:37-38, 89-96; src/main/index.ts:178"
+     },
+     {
+      "claim": "Startup reconcile commits staged entries that are referenced and deletes unreferenced staged and tombstoned entries; committed entries are kept. Main feeds it the engine's references plus collectorSettings.references(), so any credential reference kept outside the engine database has to be added here.",
+      "where": "src/main/vault.ts:106-121; src/main/index.ts:181-184"
+     },
+     {
+      "claim": "vault.redact decrypts every non-tombstoned entry and replaces each WHOLE decrypted value with [redacted]. It is applied to command output, model completions and GitHub read results.",
+      "where": "src/main/vault.ts:183-195; src/main/index.ts:79, 107, 122"
+     },
+     {
+      "claim": "CollectorSettings is the precedent for a credential reference that main owns outside the engine database. It is a bounded JSON file holding secretRef and retiredSecretRef. Saves are compare-and-set by revision and replay by clientRequestId with a hash that excludes the token. The sequence is: saveStaged, then atomicJson, then commit; retiring a token tombstones it and then removes it. A missing or invalid file reads as 'not configured'. Its public view carries only tokenConfigured.",
+      "where": "src/main/collector-settings.ts:9-13, 18-91; src/shared/params.ts:54-59"
+     },
+     {
+      "claim": "File helpers: atomicJson writes a temp file, fsyncs it and renames it into place; boundedJson reads with a size cap; serialized() is a per-path promise lock.",
+      "where": "src/models/artifact-files.ts:40-63"
+     },
+     {
+      "claim": "The renderer's collector-token input is an uncontrolled ref, never React state or a DOM attribute, and it is cleared after a save.",
+      "where": "src/renderer/ResearchPanel.tsx:148-149, 233-239; docs/ARCHITECTURE.md:40"
+     },
+     {
+      "claim": "MethodSpec is the only registry of renderer methods. Each method has params, result, owner, effect and authorization. Main-owned methods are dispatched in handle()'s switch; a main-owned method with no case returns NOT_IMPLEMENTED. handle() refuses everything while engine or window is unset.",
+      "where": "src/shared/params.ts:87-158; src/main/index.ts:196-302"
+     },
+     {
+      "claim": "The 'authorization' field (for example 'user-confirmed') is metadata only. No code reads it, and the only test asserts that it is truthy.",
+      "where": "src/shared/params.ts:89-91; tests/contracts.test.ts:59"
+     },
+     {
+      "claim": "The bridge accepts only the expected main frame (same webContentsId, frameId and URL), caps requests at 2,000,000 characters, and validates each result against its method schema. Only error codes listed in publicMessages cross; anything else becomes INTERNAL_ERROR. Every error code must also be in ErrorCodeSchema.",
+      "where": "src/main/bridge.ts:5-8, 11-57, 59-75; src/shared/errors.ts:3-22"
+     },
+     {
+      "claim": "The preload turns a failed response into new Error(message), so the renderer never sees the error code.",
+      "where": "src/preload/index.ts:5-11"
+     },
+     {
+      "claim": "There are exactly two push channels, each validated by a schema in the preload: 'moonaliza:event' (run-scoped EventSchema with runId and seq) and 'moonaliza:research' (ResearchSchema). Main sends on them only while the window exists and is not destroyed.",
+      "where": "src/main/index.ts:158, 160; src/preload/index.ts:12-25; src/shared/events.ts:6-32"
+     },
+     {
+      "claim": "The renderer's AppApi is invoke, onEvent and an optional onResearch. The research panel merges notices by revision so that a late list reply never overwrites a newer notice.",
+      "where": "src/renderer/App.tsx:8-13; src/renderer/ResearchPanel.tsx:151; docs/ARCHITECTURE.md:40"
+     },
+     {
+      "claim": "external.open takes {url: HttpUrlSchema}, which allows http or https, any host and a query, but no userinfo and no fragment. It is main-owned with effect 'native', and its handler calls shell.openExternal(url) with no further check. No renderer code calls it today.",
+      "where": "src/shared/params.ts:154; src/shared/contracts.ts:10-12; src/main/index.ts:300; src/renderer (grep: no external.open)"
+     },
+     {
+      "claim": "The model for a long-running main-owned task is CollectorSupervisor. It has injectable now() and sleep(), an abortable defaultSleep, and a per-job wake AbortController. hold() returns a release function. close() sets closing, stops attempts, drains for quitDrainMs (15 s), then aborts.",
+      "where": "src/main/collector.ts:27-36, 63-70, 102-105, 145-171, 196-197; src/adapters/research-kit/collector.ts:12-18"
+     },
+     {
+      "claim": "inference.ts has an abortable wait that tells a Stop (RUN_CANCELLED) apart from the call's own deadline. It is not exported, and review.ts keeps its own copy of defaultSleep.",
+      "where": "src/main/inference.ts:161-168; src/main/review.ts:62"
+     },
+     {
+      "claim": "Run cancellation: each active run is held as {run, stop: AbortController, github}. It is aborted, and its vault grants revoked, on run.cancel, trust revocation, a session policy change, the engine's cancel message and terminal run events.",
+      "where": "src/main/index.ts:45, 156, 177, 202, 205, 211"
+     },
+     {
+      "claim": "Existing deadlines: GitHub read 20 s, import run read 20 s, profile.test 25 s, inference grant 125 s, engine request/control 30 s, engine ready 20 s with up to 3 restarts.",
+      "where": "src/main/github.ts:38; src/main/research-import.ts:23; src/main/index.ts:103, 280; src/main/engine.ts:44, 95, 105"
+     },
+     {
+      "claim": "Startup order: setName, the user-data-dir override and the single-instance lock. Then, inside whenReady: vault.initialize('starting'), collector settings open, kit and sessions, the CommandBroker and the supervisors, Engine start, the vault reconcile, finishStartup, supervisor.attach, the policy route, and finally the window is created and loaded. Any throw shows an error box and quits.",
+      "where": "src/main/index.ts:34-38, 49-66, 154-194, 305-320"
+     },
+     {
+      "claim": "Quit: second-instance focuses the existing window, and window-all-closed calls app.quit. before-quit runs once: it prevents default, aborts active runs, awaits collector.close, review.close, researchKit.close and engine.close, then quits. Closing the window revokes its tickets.",
+      "where": "src/main/index.ts:318, 322-336"
+     },
+     {
+      "claim": "The engine utility process gets a minimal environment (SystemRoot, WINDIR, TEMP, TMP, PATH, USERPROFILE, LOCALAPPDATA). The command broker is given process.env.",
+      "where": "src/main/engine.ts:39-41; src/main/index.ts:70"
+     },
+     {
+      "claim": "Existing tests read src/main/index.ts as source text. They slice infer() up to 'async function readGitHub(' and the profile.test case up to the next \"case '\", and they count the occurrences of screenCompletion( and verifyOllamaLocality(.",
+      "where": "tests/provider-screen.test.ts:165-186; tests/anthropic-transport.test.ts:305-343; tests/ollama-locality.test.ts:298-323"
+     },
+     {
+      "claim": "The GitHub-reading e2e stubs main's globalThis.fetch through app.evaluate and throws UNEXPECTED_AUTH on any api.github.com request that carries Authorization. The stub works only because GitHubReader uses Node's global fetch.",
+      "where": "e2e/github-reading.spec.ts:31-46"
+     },
+     {
+      "claim": "The provider e2e fakes are reachable because a profile endpoint is a user setting on loopback. Those specs plant a cookie in a partition to prove credentials:'omit', and scan userData and vault bytes for the test key.",
+      "where": "e2e/anthropic.spec.ts:47-53; e2e/workbench.spec.ts:61-77, 84-86"
+     },
+     {
+      "claim": "The collector-network.cjs harness is loaded with -r into the unpackaged app only. It refuses every Node fetch from main to a host that is not loopback, and routes only a GitHub run read.",
+      "where": "e2e/fixtures/collector-network.cjs:91-103; e2e/research-journeys.spec.ts:23-26, 54-58"
+     },
+     {
+      "claim": "The fake GitHub's TLS leaf names only api.github.com and artifacts.invalid, its proxy tunnels only those hosts, and a test pins the exact SAN string. No github.com fake exists.",
+      "where": "tests/fixtures/github-tls.ts:13; tests/fixtures/fake-github.ts:46; tests/github-tls.test.ts:36"
+     },
+     {
+      "claim": "e2e runs on Windows only. Playwright uses a 60 s default timeout and 1 worker, and specs raise it to 120 s. The CI job runs on windows-latest with a 35-minute timeout. The packaged e2e runs only on workflow_dispatch.",
+      "where": "playwright.config.ts:4; e2e/github-reading.spec.ts:9; .github/workflows/windows.yml:10-11, 30, 49-53"
+     },
+     {
+      "claim": "On Linux, Electron e2e cannot run (as root it needs --no-sandbox, and safeStorage stalls without a keyring). Vitest's testTimeout is 15 s, and the node project runs with isolate:false, so a global fetch stub leaks across files.",
+      "where": "AGENTS.md:41-43; vitest.config.ts:5, 12"
+     },
+     {
+      "claim": "The current documents state that the GitHub reader is unauthenticated and that GitHub credential storage is not implemented. The tool description and error texts tell the model the same.",
+      "where": "docs/ARCHITECTURE.md:38; docs/specification/github-url-reading.md:9; HANDOFF.md:56; src/shared/github.ts:9, 40-42"
+     },
+     {
+      "claim": "Recorded invariant: tokens never reach the engine, the database, events, logs, the renderer, argv or files in clear. A commit that touches src must stage docs/ARCHITECTURE.md.",
+      "where": "AGENTS.md:80, 98"
+     }
+    ],
+    "touchpoints": [
+     "src/main/github-signin.ts (new; the name is a suggestion): a main-owned device-flow client and supervisor shaped like CollectorSupervisor, with an injected fetcher, now() and sleep(), one AbortController per flow, and close(). Keep it out of src/main/index.ts so the source-text pins on infer() and profile.test stay valid.",
+     "src/main/index.ts: construct the client after vault.initialize; add its token references to the vault.reconcile set (line 183); add handle() cases for the new main-owned methods (lines 221-302); push status to the window as lines 158/160 do; abort the client synchronously in before-quit and await its close() alongside the others (lines 324-336). Do not place new code between 'async function infer(' and 'async function readGitHub(', or between the profile.test case and the next case.",
+     "src/main/vault.ts: CredentialBinding.purpose (line 13) and the grant cap (line 135). A refresh needs either a new purpose such as 'github' with an explicit short cap, or a documented reuse of an existing purpose.",
+     "A new main-owned settings file under userData (pattern: src/main/collector-settings.ts), holding one opaque reference each for the access token and the refresh token, expiry times, a revision and retired references. A missing or invalid file must read as signed out.",
+     "src/shared/params.ts MethodSpec: new methods, for example github.signin.start / github.signin.read / github.signin.cancel / github.signout. Results carry only status, user_code, a fixed verification URL, expiresAt and signedIn/login; never device_code or a token.",
+     "src/shared/errors.ts ErrorCodeSchema and src/main/bridge.ts publicMessages: any new public code. Unmapped codes surface as INTERNAL_ERROR. Prefer status values in results or pushes, because the preload gives the renderer only the message.",
+     "src/preload/index.ts and src/renderer/App.tsx AppApi: a new schema-validated push channel (for example 'moonaliza:github'), or rely on a status-read method. Also a renderer sign-in panel, for example in the Model profiles dialog (App.tsx:290), that shows user_code and opens the page.",
+     "Opening GitHub's page: either main calls shell.openExternal with the constant https://github.com/login/device, or the renderer calls the existing external.open (index.ts:300) with that constant. Never pass a verification_uri taken from the network through unchecked.",
+     "Later step, not the sign-in: src/main/github.ts GitHubReader (constructor at line 12) and readGitHub in index.ts (lines 110-123), to send the user token on private reads through a vault grant. The texts in src/shared/github.ts (lines 9, 40-42) and the documents that say 'unauthenticated' change with it.",
+     "Tests to add or update: tests/contracts.test.ts (the exact method list, lines 42-54); a new unit test file for the device-flow client with an injected fetcher, clock and sleep; tests/vault.test.ts if a purpose is added; a new e2e on Windows with a main-fetch stub or an injected seam; tests/fixtures/github-tls.ts and tests/github-tls.test.ts:36 only if a github.com TLS fake is added.",
+     "docs/ARCHITECTURE.md (in the same commit as any src change), the AGENTS.md invariants table, HANDOFF.md:56 and docs/development-status.md, plus a spec under docs/specification/.",
+     "15-min flow needs: a background task owned by main, not one IPC call. Every existing deadline is 20-125 s, and the engine control times out at 30 s. The start method returns at once with the code, and progress arrives by push or by a status read.",
+     "15-min flow needs: an abortable wait that honours interval and slow_down (+5 s each), plus a flow deadline taken from expires_in (at most 900 s per the brief). The repository's equivalents (collector.ts:63-70, inference.ts:161-168) are private to their modules.",
+     "15-min flow needs: a short timeout on each poll, built with the AbortSignal.any([stop, AbortSignal.timeout(n)]) pattern (github.ts:38); a bounded response body; redirect 'manual' or 'error'; credentials 'omit'; cache 'no-store'; and response text never echoed.",
+     "15-min flow needs: cancellation on user Cancel, sign-out, a new start (one flow at a time), before-quit and window close. Window close means app.quit, via index.ts:323. An engine restart must not cancel the flow, because the flow does not depend on the engine.",
+     "15-min flow needs: on success, saveStaged for each token, then write the settings file, then commit, then tombstone and remove the previous references. This gives the crash-window behaviour of collector-settings.ts:51-81 and the reconcile at index.ts:183.",
+     "15-min flow needs: a status the renderer can re-read after a reload or remount, because pushes are lost when nobody is listening. A remount must never request a new device code automatically (the brief cites 50 code submissions per hour per app).",
+     "15-min flow needs: an injected now() and sleep() in tests and short fake intervals. Vitest allows 15 s per test, Playwright 60-120 s, and the Windows job 35 minutes."
+    ],
+    "invariants": [
+     "Tokens (access and refresh) and the device_code never reach the engine, the SQLite database, events, logs, the renderer, argv, command environments or any file in clear. They exist only in main's memory during a request and encrypted in the vault (AGENTS.md:80; engine.ts:39-41; index.ts:70 passes process.env to commands, so tokens must never be placed in process.env).",
+     "The renderer gets only status, user_code, a fixed verification URL, expiry and signed-in state, never a secretRef. This is the same as tokenConfigured (collector-settings.ts:88-90) and the profile schema, which rejects secretRef (tests/contracts.test.ts:65-82).",
+     "A credential is sent only in an explicit Authorization header (or form body) to a fixed GitHub host. Redirects are never followed with it (github.ts:15, 19; research-import.ts:35-44), and no session cookie or HTTP authentication rides along (credentials 'omit', inference.ts:179-183).",
+     "Each token is stored as its own vault entry, so that vault.redact, which replaces each whole decrypted value, redacts each token wherever it appears (vault.ts:183-195).",
+     "Vault writes follow staged, then settings file, then commit; a replaced token is tombstoned before it is removed. Every reference kept outside the engine database is fed to the startup reconcile (vault.ts:81-121; index.ts:181-184; collector-settings.ts:51-91).",
+     "Grants are bound to the engine epoch and are cleared on any engine restart (vault.ts:55-58, 129-154). A refresh re-grants and never caches a decrypted token.",
+     "No refusal or error carries GitHub's response text, and only mapped codes cross the bridge (bridge.ts:53-57; github.ts:19-25; tests/github-read.test.ts:38-41).",
+     "The renderer stays network-less. External pages open only in the system browser through shell.openExternal, never in the app window (index.ts:306-315; index.html:2).",
+     "The public read_github path stays unauthenticated until the private-repository step deliberately changes it (github.ts:15-16; tests/github-read.test.ts:13-14; e2e/github-reading.spec.ts:36).",
+     "Quit is never blocked indefinitely: before-quit aborts first and awaits bounded closes (index.ts:324-336; collector.ts:162-171).",
+     "A missing or corrupt sign-in settings file must not abort app start (index.ts:320) and reads as signed out (collector-settings.ts:31-33)."
+    ],
+    "tests": [
+     "tests/vault.test.ts: grant lifetime caps, purpose and epoch binding, staged/committed reconcile, tombstone invalidating grants, refusal when encryption is unavailable, overlapping-secret redaction (lines 36-111).",
+     "tests/research-collector-settings.test.ts: public view only tokenConfigured; compare-and-set and replay without a second vault entry; clearing revokes outstanding grants; crash windows recover through the reconcile; no file holds the plaintext token and the replay hash excludes it (lines 49-147).",
+     "e2e/research-collector.spec.ts:19-43: userData byte scan for the token; the startup reconcile keeps a reference held outside the engine database; clear works.",
+     "e2e/workbench.spec.ts:61-86: credentials 'omit' shown by a planted-cookie positive control; Authorization carries the key; vault files never hold the plaintext.",
+     "e2e/anthropic.spec.ts:47-53: the same cookie proof for the providers partition.",
+     "tests/bridge.test.ts:8-38: trusted-sender check, invalid requests never reach a handler, private fields stripped, exceptions mapped to safe codes.",
+     "tests/contracts.test.ts:42-63 (exact method list, strict params and results), 65-82 (no secretRef or locality from the renderer), 105-107 (external.open refuses file:, javascript:, userinfo and ftp).",
+     "tests/github-read.test.ts:10-84: no Authorization, credentials 'omit', redirect 'manual', scope from user text only, status classification without echoing the body, size bounds, Stop discards a late response.",
+     "e2e/github-reading.spec.ts:8-73: the main global-fetch stub with UNEXPECTED_AUTH on any Authorization; durable terminal status; restart persistence.",
+     "tests/github-tls.test.ts:30-78: generated CA and leaf with SAN pinned to api.github.com and artifacts.invalid; no private key committed.",
+     "tests/provider-screen.test.ts:165-186, tests/anthropic-transport.test.ts:305-343, tests/ollama-locality.test.ts:298-323: source-text pins on src/main/index.ts that a careless insertion into index.ts would break.",
+     "tests/research-collector-supervisor.test.ts: byte scans showing the token never reaches the engine, notices or the spool (cited at AGENTS.md:80); and the pattern for testing a long-lived supervisor with injected sleep and now.",
+     "Owed by the new work (not present yet): device-flow unit tests on a fake GitHub listening on port 0 for authorization_pending, slow_down (+5 s), expired_token, access_denied, device_flow_disabled, a cancel mid-wait, a quit mid-wait, and an engine restart mid-flow; a test that device_code and the tokens never appear in any push, result or file; a refresh single-flight test; a Windows e2e of sign-in and sign-out with a userData byte scan."
+    ],
+    "risks": [
+     "Transport choice. Existing GitHub calls use Node's global fetch (github.ts:12; research-import.ts:69), but decision 4 asks for Electron networking with the system proxy and normal certificate validation (decisions.md:8). How Node fetch handles the Windows system proxy and certificate store is unverified, and the packaged app ignores NODE_EXTRA_CA_CERTS (ARCHITECTURE.md:49). Sign-in could work on one transport and fail behind a corporate proxy or TLS inspection on the other.",
+     "Testability follows from that choice. If sign-in uses session.fetch, the e2e technique of stubbing globalThis.fetch through app.evaluate (github-reading.spec.ts:31-46) does not intercept it, and github.com is a fixed host, not a user setting. Either inject a fetcher seam that the e2e can replace in main, or add a github.com TLS fake, which turns the SAN pin at tests/github-tls.test.ts:36 red.",
+     "The providers session uses the system proxy, and credentials 'omit' does not withhold a cached Proxy-Authorization (ARCHITECTURE.md:35). This is acceptable for GitHub, but it must be stated in the spec.",
+     "external.open accepts any http(s) URL with a query and calls shell.openExternal without further checks (params.ts:154; index.ts:300). Its 'user-confirmed' authorization is not enforced (contracts.test.ts:59 only checks that it is truthy). A verification_uri relayed from the network or the renderer could open an arbitrary page, so open a constant URL or validate it exactly in main.",
+     "Storing both tokens in one JSON vault entry would defeat redaction of each token (vault.ts:187-193). Every redact call also decrypts every entry, so refreshes every 8 hours pile up entries unless the old references are tombstoned and removed.",
+     "Concurrent refreshes, from two runs or from a refresh racing a re-sign-in, can each spend the refresh token and get bad_refresh_token. Serialize them (serialized() in artifact-files.ts:59-63) and make the refresh single-flight.",
+     "An engine restart clears every grant (vault.ts:55-58; index.ts:178), so a refresh in flight can fail with CREDENTIAL_CAPABILITY_DENIED. Re-grant per attempt, and keep the device flow itself independent of the engine and the epoch.",
+     "A new vault purpose has no lifetime cap unless one is added at vault.ts:135. Reusing 'research' would mix GitHub sign-in grants into research revocation semantics.",
+     "Quit and crash windows: a token received during before-quit, or between saveStaged and the settings write, is deleted by the next reconcile, which is fine. One received after the settings write survives only if its reference is fed to the reconcile at index.ts:183. The flow must not add an unbounded await to before-quit.",
+     "A 15-minute operation implemented as one IPC call would hold a pending invoke and lose its result on a renderer reload. Pushes are dropped when the window is gone (index.ts:158). The renderer needs a status-read method, and a remount must not request a fresh device code (the brief cites a limit of 50 code submissions per hour per app).",
+     "Waits based on setTimeout drift across system sleep or hibernation. Check expiry against the clock after each wake, and treat GitHub's expired_token as authoritative.",
+     "New error codes that are not added to ErrorCodeSchema and publicMessages surface as INTERNAL_ERROR (bridge.ts:54), and the renderer sees only messages (preload/index.ts:9). Model sign-in states as data, not errors.",
+     "Source-text pins on src/main/index.ts (provider-screen, anthropic-transport, ollama-locality) break if code is placed between infer() and readGitHub(), or between the profile.test case and the next case. Keep the logic in its own module.",
+     "Vitest's node project runs with isolate:false (vitest.config.ts:12), so a test that stubs global fetch leaks into other files. Inject the fetcher.",
+     "The e2e and native checks cannot run in this Linux container (AGENTS.md:41-43). Proof needs a green Windows CI run on the exact head, within the 35-minute job budget (windows.yml:11).",
+     "The collector token (a user-entered token for workflow dispatch, collector-settings.ts) and the sign-in user token are different credentials with different permissions. Do not reuse one for the other or share their settings files and references.",
+     "Changing read_github to send a token (a later step) changes a recorded contract: it breaks github-read.test.ts:14 and github-reading.spec.ts:36 and contradicts ARCHITECTURE.md:38, github-url-reading.md:9 and the tool description at shared/github.ts:9. Do that deliberately in its own commit, not as a side effect of the sign-in."
+    ]
+   }
+  ],
+  "critic": {
+   "gaps": [
+    {
+     "what": "Register and own the GitHub App. Someone has to decide which account owns it (the user's personal account or an organization), what it is called (at most 34 characters and unique on GitHub; 'MoonAliza' may already be taken), what Homepage URL it uses, and that it is set to 'Any account'. They then pass back the client ID and the app slug.",
+     "why": "The device-flow client needs the client ID as a build-time constant, because the repository has already rejected a production switch for this kind of routing (docs/specification/research-journeys.md:11). The install link the Decision shows, https://github.com/apps/APP-NAME/installations/new (E-12), needs the slug. Only the account owner can create the registration. The owning account also carries GitHub's per-application limits for every MoonAliza install.",
+     "close": "Ask the user once. Write the design with named placeholders for the client ID and the slug until the values arrive. Both are public identifiers, not credentials: no client secret is generated or shipped.",
+     "kind": "user-decision"
+    },
+    {
+     "what": "Choose the permission scope now, because the approved plan says something different. docs/superpowers/plans/2026-10-02-research-jobs.md:426 says sign-in 'would replace pasted tokens for private repositories and the research collector'. Line 491 approves 'one secure GitHub connection ... shared by research collection, private repository reading and the steps below' (CI evidence, Actions runs, Issues and PR writes). The research and the maps instead design Contents and Metadata read-only, and keep the collector on its pasted Actions-write token. Separately, the map adds 'Claude and OpenAI use API keys' text to the Model profiles dialog, which is outside this run's 'GitHub sign-in only' scope.",
+     "why": "Permissions are expensive to widen after release. Each installing account owner is prompted to approve new permissions, and until they do, their installation keeps the old ones (choosing-permissions capture line 57, E-04). If the collector shared the connection, every refresh would kill the old access token (E-02) while a collector child might still hold it, since a watch can run up to 3,600,000 ms (src/adapters/research-kit/collector.ts:50). The facts for the broader choice are already in the corpus: dispatches, runs and artifacts are all on the user-token list (E-06 lines 141, 193, 225). What is missing is the user's choice.",
+     "close": "Ask the user one question. Option (a): read-only private reading now, the collector keeps its token, and a correction note goes into the plan. Option (b): register with the broader permission set now. Drop the Model-profiles text from this build unless the user asks for it.",
+     "kind": "user-decision"
+    },
+    {
+     "what": "Decide how private code is treated. In a cloud-allowed session, private repository text that read_github reads is sent to the cloud provider. It is also stored, full-text indexed (src/engine/migrations.ts:94-103) and sent to the renderer through tool.completed. General chat has no project trust gate, and read_github may be offered there (src/main/index.ts:67,93). The spec's consent sentence covers only 'the scoped public lookup' (docs/specification/github-url-reading.md:11). Three sub-choices are also open: whether to send the token on public reads, which moves them to the user's shared 5,000/h bucket and ties the user's identity to every public read; whether a token failure on a public repository falls back to an unauthenticated read; and whether signing out purges private text already read.",
+     "why": "These choices decide the consent UI, whether readGitHub needs an extra policy check, the composer text (src/renderer/App.tsx:237) and the spec rewrite. They are product and privacy decisions, not facts.",
+     "close": "Ask the user one question; it can be combined with the scope question. Proposed default: the same rules as local project files. Private reads are allowed after the user pastes the URL; local-only stays local; history is kept; the token is sent only when signed in.",
+     "kind": "user-decision"
+    },
+    {
+     "what": "The build branch is missing the evidence the new brief rests on. The brief's 'Prior E-xx' citations live in docs/research/2026-10-12-app-sign-in. They cover the rate limits behind the D-3 and D-7 dismissals, the response-encoding resolution, F-3's fix (prior E-08 lines 136-138) and the 50 submissions per hour. That project is committed only on branch research/app-sign-in (5389cd1). It is not on main@0815f42 or on research/github-sign-in. The new project itself is still untracked (git status: ?? docs/research/2026-10-13-github-sign-in-design/).",
+     "why": "A builder on the build branch cannot check the claims the design rests on, and handoff cannot pass for a corpus that was never committed.",
+     "close": "Merge research/app-sign-in (docs only) into the build branch. Commit the new nested project including research/raw/.fetches.jsonl (its own .gitignore line 32 already un-ignores it). Run handoff.mjs with each project directory as the working directory.",
+     "kind": "repo-surface"
+    },
+    {
+     "what": "VERIFY F-2 is still open: the not-installed case, who may install on organizations, and SAML. No capture says what status GitHub returns for a private repository the app is not installed on. None says who may install on an organization or another user's account (owner, member request, approval), or what a SAML-protected organization returns (E-01 line 34). Owner pages to collect: docs.github.com/en/apps/using-github-apps/installing-a-github-app-from-a-third-party, docs.github.com/en/apps/using-github-apps/requesting-a-github-app-from-your-organization-owner, docs.github.com/en/apps/sharing-github-apps/making-a-github-app-public-or-private, and docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api.",
+     "why": "U-2 is marked CLOSED, but its own 'why it blocks' cell (the error a not-installed repository produces) has no answer. The Decision's 'a 404 shows the install link' leads nowhere for organization members who are not owners and for collaborators. The map invariant 'errors never claim a cause that was not observed' depends on this.",
+     "close": "Option one: collect the four pages in one run (needs the budget approval in the next item). Option two, which costs no credits: mark this KNOWN-UNKNOWN with a day-one test using the registered app. Read a private repository (a) on the user's own account before installing, (b) in an organization where the user is a member but not an owner, and (c) in a SAML organization, and record each status and its headers. Either way, the 404 message names all three possibilities.",
+     "kind": "external-fact"
+    },
+    {
+     "what": "Approve a second collection run. This run's cap of 12 pages is used up (12 pages, 12 of the 15 budgeted credits; balance 265). The open fetches total about 7 pages: the four F-2 pages, rate-limits-for-github-apps, reviewing-and-revoking-authorization-of-github-apps, and about-the-rest-api/api-versions (U-9).",
+     "why": "Under Rule 5, raising a budget is the operator's decision, never the agent's. Without approval, these items can only become KNOWN-UNKNOWNs closed by day-one tests.",
+     "close": "One question to the operator: about 7 credits, owner pages named directly, no search, never --fallback.",
+     "kind": "user-decision"
+    },
+    {
+     "what": "The research and the map disagree on what a 401 means (VERIFY F-1). The Decision says '401 means revoked (clear and ask to sign in, E-01)'. The map's touchpoint for src/main/github.ts:19-23 says refresh once, retry once, then report sign-in-required. No capture says what status an expired ghu_ token gets; E-01 line 44 covers only revoked tokens. The Decision's refresh runs on a timer 'shortly before the 8-hour expiry'.",
+     "why": "A Windows laptop that wakes from sleep after the expiry still holds an expired token. Under the Decision's rule, the next read would wipe a refresh token that is still good for up to 6 months.",
+     "close": "No collection needed. Adopt F-1: check expiry before each request and refresh single-flight when close. On a 401, refresh once if the refresh token is still within refresh_token_expires_in, then retry. Clear the vault only on bad_refresh_token, or when a call with a fresh token still gets 401. Add a day-one test: send a token past its expiry and record the status.",
+     "kind": "contradiction"
+    },
+    {
+     "what": "How a 403 is classified (VERIFY F-3). The Decision maps '403 with X-Accepted-GitHub-Permissions' to a missing permission. The captures say that header comes back on REST responses in general, not only on permission failures (E-04 line 77, E-05 line 30). The code already checks rate limits first (src/main/github.ts:21). But a secondary-limit 403 with neither retry-after nor x-ratelimit-remaining 0 ('Otherwise, wait for at least one minute', prior E-08 line 138) falls through to GITHUB_FORBIDDEN. Once signed in, that message would claim a permission or installation problem. The exact wording of the secondary-limit error message was not captured.",
+     "why": "It breaks the invariant 'errors never claim a cause that was not observed', and the spec rule that response bodies are never surfaced limits how the case can be told apart.",
+     "close": "Design decision, no collection. Map a 403 without rate-limit headers to an ambiguous FORBIDDEN that lists the possibilities: no access, app not installed, SAML, or a secondary limit. Use X-Accepted-GitHub-Permissions only as a hint. Optionally match the body internally without echoing it. Add tests for a primary-limit 403 without retry-after and a rate-limit 403 that also carries the permissions header.",
+     "kind": "contradiction"
+    },
+    {
+     "what": "The brief's 'prefix secret screen' does not exist in the repository. The Decision says 'add ghu_, ghr_, gho_, ghp_, ghs_ and github_pat_ prefixes to the secret screen'. MoonAliza has no prefix screen. Its screen is exact-value vault redaction (src/main/vault.ts:183-195), used by provider-screen.ts:33-46 and readGitHub (src/main/index.ts:122).",
+     "why": "A new prefix screen would change read_github output for private repositories that contain such strings, such as fixtures or docs, and nothing defines whether a match is redacted or refused. It would also trip provider-screen's 'redact changed the text, so PROVIDER_PROTOCOL_ERROR' rule (provider-screen.ts:37-43) whenever a model tool call quotes such text.",
+     "close": "Design decision. Store each token as its own vault entry so exact-value redaction catches it (as the map's invariant says). Use the prefixes only to validate the shape of the token response. Drop the screen bullet or define it narrowly.",
+     "kind": "contradiction"
+    },
+    {
+     "what": "The research and the map disagree about a repository listing. The Decision and next step 3 add a 'repositories I can read' view built on GET /user/installations and /user/installations/{id}/repositories (E-07). The map's invariant says sign-in grants no listing of the user's repositories, and that scope stays limited to URLs in saved user messages (src/shared/github.ts:24-31).",
+     "why": "This decides the new MethodSpec methods (and the exact key list pinned in tests/contracts.test.ts:42-60), whether listing results could ever reach the model, and part of the reason for requesting Metadata.",
+     "close": "Design decision: a listing shown only in the UI (main to renderer), never offered to the engine and never widening scope, or no listing in v1.",
+     "kind": "contradiction"
+    },
+    {
+     "what": "The refresh lifecycle is not mapped against Stop, the 20 s deadline, quit, engine restart and sign-out. A read runs under AbortSignal.any([stop, 20 s timeout]) (src/main/github.ts:38). before-quit aborts every run (src/main/index.ts:327). An engine restart calls vault.setEpoch, which clears all grants (src/main/index.ts:178; src/main/vault.ts:53-56). The map covers single-flight refresh but not whether a refresh can be cancelled, nor what happens to a read in flight when the user signs out.",
+     "why": "Once GitHub issues the new pair, the old one is dead (E-02). A refresh aborted after its request is sent therefore loses both tokens and forces a new sign-in. That puts the 'Stop discards late results' invariant at odds with staying signed in.",
+     "close": "Design rule, no collection. The refresh runs on a main-owned signal, outside the run's stop and the 20 s deadline. Quit waits, with a bound, for an in-flight refresh to persist. Decide whether the GitHub grant is tied to the engine epoch. Sign-out tombstones the refs (vault.tombstone revokes grants synchronously), and reads in flight fail with CREDENTIAL_REVOKED. Add tests for each.",
+     "kind": "invariant"
+    },
+    {
+     "what": "How the renderer learns the device-flow status is not mapped. Pending, slow_down, expired, denied and success all have to reach the renderer. The map lists request methods only. The existing push channels are 'moonaliza:event' and 'moonaliza:research' (src/main/index.ts:158,160; src/preload/index.ts:12-20).",
+     "why": "This decides whether to add a new preload channel with its own schema and contract tests, or to have the renderer poll github.account.read. Either way, device_code must never cross.",
+     "close": "Read src/preload/index.ts and src/shared/contracts.ts, then choose between polling and a typed 'moonaliza:github' status channel.",
+     "kind": "repo-surface"
+    },
+    {
+     "what": "VERIFY F-4: whether the refresh-chain exemption holds. E-02 line 79 exempts client_secret per token: 'Required unless the user access token was generated using the device flow'. No capture says whether a token produced by refreshing a device-flow token still counts as generated by the device flow.",
+     "why": "If it does not count, every user has to sign in again every 8 hours, and the 6-month design fails.",
+     "close": "Day-one test with the registered app, before the refresh scheduler ships: sign in, refresh twice in a row without a secret, and record the result. Quote the page's per-token wording in the design.",
+     "kind": "external-fact"
+    },
+    {
+     "what": "The device-flow cap per application and the GitHub App rate limits are unverified. '50 submissions in an hour per application' comes from the OAuth-apps page (prior E-01 line 307). The GitHub App page refers instead to 'Rate limits for GitHub Apps' (E-01 line 40), which was not collected. Owner page: docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps.",
+     "why": "One public app serves every MoonAliza install, so a per-application cap is a global limit on sign-ins. Neither the cap nor the error a user gets when it is exceeded is stated for GitHub Apps.",
+     "close": "Collect that one page in the approved second run. Pair it with the user's expected install count from the registration question.",
+     "kind": "external-fact"
+    },
+    {
+     "what": "Two pages the research itself left as non-blocking are needed before this build. (1) docs.github.com/en/apps/using-github-apps/reviewing-and-revoking-authorization-of-github-apps gives the exact place where a user revokes the app, which the sign-out help text needs. (2) docs.github.com/en/rest/about-the-rest-api/api-versions answers U-9. Note that research-import also sends 2022-11-28 (src/main/research-import.ts:43), while decisions.md item 10 says research uses 2026-03-10.",
+     "why": "The sign-out text cannot name the settings page without (1). U-9 affects two code paths, not one.",
+     "close": "Collect both in the approved second run (2 credits). Until then keep 2022-11-28, as U-9 already says.",
+     "kind": "external-fact"
+    },
+    {
+     "what": "Showing the signed-in login rests on uncited evidence. The map's UI shows the GitHub login, which needs GET /user. That endpoint is on the user-token list (E-06 line 1231), but no U-row cites it and its permission requirement is not stated.",
+     "why": "Without a citation, a design claim about the login display rests on no evidence row.",
+     "close": "Add an evidence citation of E-06 line 1231 (no fetch needed), or drop the login display.",
+     "kind": "external-fact"
+    },
+    {
+     "what": "Choose the network stack for the GitHub calls. The reader, and the new device-flow client, use Node's global fetch (src/main/github.ts:12), which does not use the Windows system proxy. Model providers use an Electron session (src/main/index.ts:66,98). Keeping global fetch is required by the e2e patch (e2e/github-reading.spec.ts:31-45).",
+     "why": "A user behind a mandatory corporate proxy could chat with a cloud model but could not sign in to GitHub. This is a design trade-off that should be stated, not left implicit.",
+     "close": "Record it as an accepted limitation in the spec, or choose a session fetch and change the e2e routing. No external fact is needed.",
+     "kind": "repo-surface"
+    }
+   ]
+  }
+ }
+}

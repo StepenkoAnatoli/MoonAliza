@@ -1,0 +1,295 @@
+{
+ "workflow": "github-sign-in-revise",
+ "run": "wf_67d80142-ad4",
+ "result": {
+  "brief": {
+   "fixes": [
+    {
+     "id": "S-1",
+     "done": "BRIEF.md Decision step 3 (403 'Without it' branch): the one-step 'a SAML session is needed' is replaced with the two steps: 'the organization uses SAML SSO - start a SAML session for the organization on GitHub, then sign in to MoonAliza again (E-01 line 34; status not stated)'. Next steps 3: the test for a 403 with neither the header nor the body text now lists that two-step SAML text."
+    },
+    {
+     "id": "S-2",
+     "done": "The 'only 403 cause' claim now reads 'apart from rate limits (E-15 line 32), the only 403 cause the captured pages document for a GitHub App token reading a repository', with a note that the 403 at E-11 line 43 comes from an authenticated call to POST /credentials/revoke, not a read. Changed in four places: the BRIEF Registration bullet, the BRIEF Contradictions entry 'What a 403 means', DISCOVERY U-10 and the EVIDENCE E-15 row. In E-15 the SAML clause now ends with a full stop, and the X-Accepted-GitHub-Permissions quote starts its own sentence."
+    },
+    {
+     "id": "S-3",
+     "done": "U-10, the BRIEF Registration bullet and the E-15 row no longer count unapproved permissions among the causes that give only a 404. Each now says they are on the 404 checklist (E-15 line 70), but an installation keeps its old permissions until the owner approves (E-04 line 57). So a read that needs a newly requested permission may come back as a 403 instead. That is labelled as an inference from E-04 lines 57 and 75, and the cause may show as either status. Decision step 3 now cites only E-04 line 75 and E-15 line 108 for the missing-permission cause. It keeps the unapproved-permissions example, labelled as an inference, says it may show as either status, and says it does not arise while MoonAliza ships its fixed read-only set. A Contradictions note records the round-3 inconsistency."
+    },
+    {
+     "id": "S-4",
+     "done": "The 'sign in again' fallback now covers every route that installs the app or adds a repository. In Decision step 4 it covers the user's own account, the organization routes and another person's account: \"if it still fails after the app is installed or the repository added, sign in again\". The same wording is in DISCOVERY U-2 and in the BRIEF bullet on reach after a later install. The day-one reach check in Known unknowns is widened. Where a test organization is available it repeats with an owner installing on the organization and a repository admin adding a repository, using a token issued before each change. If none is available, the own-account result is assumed to carry over (labelled as an assumption, not a GitHub statement), and the organization routes keep the fallback until an organization result is recorded. Next steps 6 is updated to match."
+    },
+    {
+     "id": "S-5",
+     "done": "The repository-admin route is qualified: a repository admin may be able to add the repository (E-13 line 70), unless the owners restrict it (line 72); if not, ask an owner. This is applied in Decision step 4. In DISCOVERY U-11 it carries the quote \"repository admins cannot install or add GitHub Apps for their repository\". The BRIEF 'Who may install' bullet carries the full line-72 sentence word for word. Next steps 3 mentions the owner restriction."
+    },
+    {
+     "id": "S-6",
+     "done": "'are small beside it' is deleted. In its place, in the BRIEF Rate limits bullet and in DISCOVERY U-16, is per-app arithmetic labelled as arithmetic, not a GitHub figure. An access token lasts 8 hours (E-02 line 34), so a MoonAliza running all day refreshes about 3 times a day. Across all users that is about active users x 3 / 24 refreshes an hour, which reaches 2,000 at about 16,000 users active across a day. This matters only if refreshes count toward the limit and the limit counts per app; GitHub states neither. It is kept as part of U-16's product risk."
+    },
+    {
+     "id": "S-7",
+     "done": "Decision Refresh now refreshes, single-flight, when fewer than 5 minutes (300 s) remain. Expiry is the local time the token response was received plus expires_in. This is labelled a design choice: GitHub gives the 8-hour lifetime (E-01 line 174, E-02 line 34) but no margin. The margin matches the spec's refreshMarginMs. 'An expired token never reaches GitHub' became 'an expired token is not sent knowingly; a token that expires in flight, or after a local clock change, can still reach GitHub (Known unknowns)', and the Decision says how a 401 or a 404 is then handled. Known unknowns (the expired-token status item) and DISCOVERY U-5 ('never knowingly sends') are updated to match."
+    },
+    {
+     "id": "OF-1 collect",
+     "done": "Collected exactly one page: GitHub's 'Building a CLI with a GitHub App' (the URL E-01 line 112 links; it has not moved). plan.json gained the URL, maxScrapes went from 8 to 1, and a round-4 note was added. The dry run showed 20 pages cached and 1 to collect. The real run (no --fallback) collected 1 page and spent 1 credit, with transport firecrawl-cli and completeness full. Ledger entry 21 is in a chain that verifies. Balance from doctor: 257 before, 256 after. E-21 was rewritten into a real claim with 12 word-for-word quotes, all found by preflight. It answers OF-1 as follows. In GitHub's own example, step 1 (client_id) and the poll (client_id, device_code, grant_type) are form-encoded with URI.encode_www_form and passed to Net::HTTP.post. Neither URL has a query string, and both requests send the header Accept: application/json and parse the response as JSON. That Net::HTTP.post sends this as an application/x-www-form-urlencoded body is Ruby's standard library, not stated on the page, and is labelled as an inference. The tutorial makes no refresh request, so where the refresh parameters go stays not stated; sending them like the poll's is labelled an inference, to be checked by the day-one test of two refreshes in a row. The tutorial's REST call to /user sends Accept: application/vnd.github+json. U-3 (now citing E-21) closes the device-flow placement. U-4 labels the refresh placement. The BRIEF's 'Response encoding' bullet became 'Where the parameters go, and the Accept header'. A refresh-placement bullet, a reworded Contradictions entry, Decision Sign-in text, a Next steps 1 placement pin and a Known-unknowns item on the responses' Content-Type were added. Small pointers were added to the E-01 and E-02 rows."
+    },
+    {
+     "id": "gate",
+     "done": "All kit commands were run with /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design as cwd. preflight.mjs exit 0: PASS, 0 blocking, 12 passing, 15 warnings, all corroboration/one-voice; 138 quotes found; chain of 21 verifies; 15 CLOSED and 1 KNOWN-UNKNOWN. handoff.mjs exit 0: 21 ledger entries, 21 evidence rows, captures on disk. doctor reports READY, including the secret scan. brief.mjs --force was run once to restamp the brief against the new inputs. The authored text was restored above the new stamp, and the .bak-2026-10-13 it left was deleted (no .bak remains). brief.mjs --state reports authored, with both judged sections answered. The BRIEF gate line was updated to these counts."
+    }
+   ],
+   "notes": [
+    "Files changed in the research project, which is untracked; nothing was committed or pushed. Edited by me: research/plan.json, research/DISCOVERY.md, research/EVIDENCE.md, research/BRIEF.md. Written by the kit: research/SOURCES.md (row appended), research/raw/.fetches.jsonl (entry 21), research/raw/.usage.jsonl, and the new capture research/raw/2026-10-13-building-a-cli-with-a-github-app-github--github-973c0d9b.md plus its .source.html. MAP.md, the design drafts and everything else are untouched.",
+    "Out of scope, flagged for the lead and not used: E-21 line 592 says the tutorial updates parse_response 'to handle the case where the token has expired or been revoked' with '401 Unauthorized'. That bears on U-5, which the corpus still marks 'status of an expired GitHub App token: not stated', and on day-one check DO-5. Using it would mean citing a tutorial's handling code as a status statement; that is the lead's decision.",
+    "Also out of scope: the tutorial's whoami call (E-21 line 581) sends the access token in a JSON body on a GET. MoonAliza should not copy that. It is not recorded in the corpus.",
+    "Design drafts that now lag the corpus (I did not touch them): DR-9 and OF-1 in DECISIONS.md and the spec say 'if the credit is approved'. The credit was spent and the device-flow placement is settled as body plus Accept: application/json (E-21). DO-2 can shrink to the refresh placement only, which the DO-1 two-refresh check already exercises. DO-3 (the responses' Content-Type) stays open.",
+    "Mistake (where: my backup step before editing). Impact: I ran 'cp EVIDENCE.md DISCOVERY.md BRIEF.md <scratchpad>/' into the scratchpad root and overwrote three earlier scratch files of the same names from previous sessions. Scratch only: no project file and nothing delivered is affected. Cause: I did not check that the scratchpad was empty first. Fix: later backups went to scratchpad/round4/. Verified: cmp confirmed the overwritten copies equal the pre-edit research files, now also kept in round4/.",
+    "Mistake (where: the first E-21 draft). Impact: the quote 'JSON.parse(response.body)' drew a citations/quote-too-short warning. Cause: the quote was under 3 words and under 40 characters. Fix: it was lengthened to 'when Net::HTTPOK, Net::HTTPCreated JSON.parse(response.body)'. Verified: preflight re-run, citations pass with 138 quotes found.",
+    "Mistake (where: rewrapping BRIEF Decision step 3). Impact: textwrap put '- start a SAML session' at the start of an indented line, which Markdown would render as a stray nested bullet. Cause: an automatic reflow broke the line before a hyphen. Fix: it now breaks before 'SSO -'. Verified: diffed every bullet and numbered line against the pre-round backup; the only new bullet is the intended Known-unknowns item.",
+    "No credential, token or key was printed, copied or written. Every capture read was piped through a gh*_/github_pat_ redaction filter. The new capture has 0 token-like strings. doctor's secret scan passes, and grep finds no gh*_ values in the research markdown or plan.json."
+   ],
+   "creditsBefore": 257,
+   "creditsAfter": 256,
+   "preflightExit": 0
+  },
+  "revise": {
+   "fixes": [
+    {
+     "id": "DC-1",
+     "done": "Adopted, with one extension. Refresh error codes are now classified. `bad_refresh_token`, `unsupported_grant_type` and `incorrect_client_credentials` clear the account at any status; the last ends as `client-rejected` (E-01 l.256). The same unknown code three times in a row (`maxSameRefreshError`) also clears it. Extension beyond the critic's fix: the doubling hold (30 s, 60 s, ... up to 1 h, `failed()` in spec 6.5) applies to every refresh failure that keeps the account, not only unknown codes, for the same U-16 reason; this is recorded in DR-4 (f). The critic's 'GitHub rejected MoonAliza's registration' text was softened: the likely cause is DO-1 failing, not the registration. Edited: spec L-12, 2.1, 6.5 (code and rationale), 3.2/2.3 (the `ended` reason enum), 8.2 texts, refresh test 4/5; DR-4 (decision, alternative (f), rests-on); F-6, F-7, T-4; DO-1 now records what a failing second refresh returns; UD-6 'Why' says how the account clears."
+    },
+    {
+     "id": "DC-2",
+     "done": "Adopted. The fresh-token guard is added. A 401 on a token under `freshTokenMs` (5 s) old is resent with the same token after 1 s, then 2 s (`pause`). These resends are not a refresh or the retry, so the C-6 budget is unchanged. A third fresh 401 gives GITHUB_RENEWAL_UNAVAILABLE and keeps the account; only a 401 on an older token clears it. Added DO-16 (refresh, then immediately GET /user plus a private read, 20 times, recording status and delay); the guard can be removed once it passes. Edited: spec 6.4 (code and rationale), L-12, L-14, 2.1, 2.5, 3.7 limits, known limit 15, refresh test 10, and C-6's test with the clock past 5 s. Also e2e journey B step 6, and the U7 journey, now wait at least 5 s before the forced 401. Without that, journey B would no longer trigger a refresh. The GITHUB_RENEWAL_UNAVAILABLE text no longer says 'this read was not sent', which is now false. Also DR-4 (g), F-8, T-4, T-9, A-4 and the BREAKDOWN U5/U8 rows."
+    },
+    {
+     "id": "DC-3",
+     "done": "Adopted. A frozen main-only constant `REQUEST_OFFLINE_ACCESS = true` is added in src/main/github-app.ts (spec 3.1, BREAKDOWN U0). `requestDeviceCode` takes an `offlineAccess` parameter. The constants test pins the value, with a failure message naming UD-6; the oauth test pins `{client_id, scope}` against `{client_id}`. DR-1 Risks, UD-6 option 2, DO-1 and F-2 all say that the expiry-off fallback also turns off the scope (E-01 l.120, E-02 l.40-42), and that accounts already signed in keep their expiring pair until they sign in again."
+    },
+    {
+     "id": "DC-4",
+     "done": "Adopted. The sign-in admit is now `signOuts === s0`, taken at F4 entry (spec 6.3), and L-6 states one admit rule for each mutation kind. The critic's fix was incomplete: an app clear whose prologue ran before an admitted sign-in would, in its locked part, still remove whatever refs the file names, which are the new sign-in's. So clear()'s locked part gains a 'newer sign-in won' rule: if `live` is non-null, it does nothing (spec 4.3). Added the critic's three tests (device test 14) and a store concurrency case. Also DR-3 (Admits, alternative (e)), F-9, T-3, the 2.2 F4 row and the guard table."
+    },
+    {
+     "id": "DC-5",
+     "done": "Adopted the `committed: boolean` option on the pending DTO, not 'project as signed-in': projecting as signed-in would stop the 1 Hz poll before the login arrives. cancel() is a true no-op from F4: it aborts nothing and records no outcome. Only signOut and quit abort F5, and a new start() during F4/F5 returns status() without a request. The renderer calls cancel on close only while pending with committed false, and the committed view shows only 'GitHub confirmed the code. Finishing sign-in…'. Edited: spec 2.2, 2.3, 2.5, 3.2, 3.9 outcome table, 6.1, 6.6, 6.8, 8.1, 8.2; device tests 8/9 and the panel test; DR-6, F-1, F-2, F-10, F-21, T-3, T-7; BREAKDOWN U0 DTO and the U4/U5 rows."
+    },
+    {
+     "id": "DC-6",
+     "done": "Adopted, with corrected wording. clear() now keeps the tombstone persist promises and returns `ClearResult` ('not-admitted' | 'removed' | 'not-durable'). Either write reaching disk is enough; if neither does, both are retried once (spec 4.3). signOut sets `signOutIncomplete`, a new field on the signed-out DTO. The critic's text 'it will retry when MoonAliza restarts' is false: nothing records the intent across a restart, and the next start reads the account. The text is therefore 'you may be signed in again after MoonAliza restarts; if so, sign out again' (spec 8.2, DR-10 (e)). Added the store durability tests, device test 16, crash-window rows in 4.5 and known limit 14. Also DR-10, F-11, F-12 and the 3.3 table."
+    },
+    {
+     "id": "DC-7",
+     "done": "Adopted. ReplaceFailure's message is now 'ACCOUNT_STORE_FAILED' (spec 3.6, BREAKDOWN frozen names). `CREDENTIAL_ERRORS` is frozen in U0 in src/main/github-credential.ts (spec 3.4, BREAKDOWN), and send() throws only its members. G-19 (U3, tests/github-text.test.ts) parses CREDENTIAL_ERRORS plus the five reasons and is proved red in U3. The source-literal scan of `throw new Error('GITHUB_…')` sites moved to the new tests/github-reason-scan.test.ts, owned by U6. Also spec 3.9, DR-7 Risks, F-16, the BREAKDOWN 'Reason timing' paragraph and the U3/U6 rows."
+    },
+    {
+     "id": "DC-8",
+     "done": "Adopted. src/shared/host.ts is unchanged and dropped from U0's owned files and code block. The spec's changed-source count goes from 9 to 8, and host.ts is added to 'Not changed'. A typecheck test asserts that HostMessage['payload']['purpose'] is a subset of CredentialBinding['purpose'] and excludes 'github' (spec 3.8). Also S-3, T-7, and a DECISIONS 'Set aside' entry."
+    },
+    {
+     "id": "DC-9",
+     "done": "Adopted. L-7 is reworded: MoonAliza code keeps no reference to a token after the request carrying it settles, and runtime copies (init, Request/Headers, socket buffers, V8 strings) are out of scope. The tests are listed: the byte scans, the copy check, a walker over every rejection's message and cause chain for a marker or any 8-character substring of one, and wire parse errors replaced without cause (spec 5.3, the oauth parsing case with a form body served as JSON, the U7 walker). The 2.4 heading now reads 'checked by named tests'. Also S-2 and T-6."
+    },
+    {
+     "id": "DC-10",
+     "done": "Adopted the 'retire the oldest first' option. Every writer keeps retiredRefs at 8 or fewer, tombstoning and removing the oldest beyond 8 first. The dropped refs are always earlier rotations, already tombstoned, so the reconcile deletes them (spec 4.2, applied in 4.3 step 4 and clear step 2). Added the store 'retired cap' test from the critic, plus a clear over 8 retired refs and a live pair. Also F-5, DR-2 and the BREAKDOWN U2 row and pre-mortem."
+    },
+    {
+     "id": "DC-11",
+     "done": "Adopted the critic's fix, though its premise was partly stale: the critic saw a truncated spec. 6.3 did not keep the old account; it ran clear(() => true), which also broke F-10. Now store.rollback(admit) rewrites the file to the account and retiredRefs kept at step 4, then removes the new refs, and the outcome is failed. If the rollback write fails, the store makes the new pair live (the file names it), the flow continues with no outcome, and staged refs fail reads as renewal-unavailable until restart. Added one race the critic missed: the rollback takes the sign-in admit, so a sign-out that began first makes it do nothing (spec 3.6, 4.3, 4.5, 6.3). Tests: store rollback and device test 15. Also DR-2, F-10 and T-3."
+    },
+    {
+     "id": "DC-12",
+     "done": "Adopted. rateLimitWait is clamped to at least 1 s (spec 5.4). A refresh's rate-limit hold is max(w, transientHoldMs) (6.5, 2.1); polls keep their interval floor. Tests: oauth `retry-after: 0` gives 1 s, and refresh test 6 (a 429 with retry-after 0 plus two reads sends one refresh). Also DR-4, F-3, F-6 and DO-8."
+    },
+    {
+     "id": "DC-13",
+     "done": "Adopted. The signed-out pin deep-compares the init with `signal` removed, asserts the exact Object.keys list, and asserts that init.signal.aborted flips when the test's Stop aborts. The signed-in init passes the same three checks, with Authorization as its only extra header (spec read tests, L-10). Also T-5, DR-5 Risks, the BREAKDOWN U3 commit 1 and pre-mortem (1)."
+    },
+    {
+     "id": "DC-14",
+     "done": "Adopted. The cap test refuses a `github` grant at Date.now() + 60_000, as tests/vault.test.ts:41 does for research, and allows one at + 30_000; the removal proof uses the 60 s case (spec U0 tests, BREAKDOWN U0 row and pre-mortem (2), T-7)."
+    },
+    {
+     "id": "DC-15",
+     "done": "Adopted A2. open() sets `openedAppChanged()` (a new store method), and the service starts in A2 with ended 'app-changed'. That reason has its own dialog text. The 2.1 startup row is split (spec 2.1, 2.3, 3.6, 4.4, L-12, 8.2). Tests: the store startup check, and device test 16 (another client ID gives signed-out with ended 'app-changed' and zero fetcher calls). Also F-5, F-21, DR-4 and DR-6."
+    },
+    {
+     "id": "DC-16",
+     "done": "Already resolved before this round: the critic saw only U0..U6, and the BREAKDOWN Lead row (and D-3) already owned docs/specification/github-url-reading.md :1-:13. Made explicit: the Lead row and D-3 now say that :9 and :11 are rewritten for the signed-in path and point to docs/specification/github-sign-in.md."
+    },
+    {
+     "id": "Round 4 (E-21, OF-1)",
+     "done": "Took the researcher's E-21 result into the wire-format text. Spec 5.1 cites E-21 for both device-flow requests (l.300-304, l.315-322) and for /user's Accept (l.582); its notes give the Accept: application/json source and say the Content-Type is a Ruby-stdlib inference. Spec 5.2 is retitled 'resolved by E-21'. It says `scope` follows `client_id` (an inference, harmless while expiry is on) and that the refresh placement is an inference checked by DO-1/DO-2. DR-9 is rewritten. F-3, F-6 and S-4 cite E-21. OF-1 is marked resolved in USER-DECISIONS, REQUIREMENTS and the BREAKDOWN 'Before U0' bullet, noting the lead approved the credit per RUN.md and recording the balance change from 257 to 256. DO-2 is reworded (the refresh placement, read from DO-1's first refresh); DO-3 cites E-21 l.277-285. U1 no longer depends on the OF-1 answer."
+    }
+   ],
+   "notes": [
+    "Files edited (and nothing else): /home/user/task5-handoff/wt/gh-signin/docs/specification/github-sign-in.md (1314 -> 1432 lines), /home/user/task5-handoff/wt/gh-signin/docs/orchestration/2026-10-13-github-sign-in/DECISIONS.md, BREAKDOWN.md, REQUIREMENTS.md, USER-DECISIONS.md. Modification times confirm no other file under docs/src/tests/e2e changed after the round-4 researcher's last write; RUN.md and the research corpus were only read. Nothing committed or pushed.",
+    "Consistency checks run (verified): every markdown table row in the five files has its header's column count (0 bad rows). BREAKDOWN gained a 'Traceability (requirement, unit, test)' table; a script confirmed all 54 requirement rows (F-1..F-27, S-1..S-8, T-1..T-10, A-1..A-4, D-1..D-5) appear in it. Units still own disjoint files: the only new file is tests/github-reason-scan.test.ts (U6), and the U0/U9 sharing of github-app.ts is unchanged and was already there. A grep for stale terms (DO-1..DO-15, PurposeSchema in U0, GITHUB_STORE_FAILED, ended: true/false, 'OF-1 credit', E-01..E-20) found no leftovers. A scan for token-shaped strings in the five files found none.",
+    "Frozen-contract changes the lead must carry into U0 (expected, not yet built): GitHubEndedSchema, plus the signed-out fields `ended` (enum or null) and `signOutIncomplete`, and the pending field `committed`; REQUEST_OFFLINE_ACCESS; CREDENTIAL_ERRORS; ACCOUNT_STORE_FAILED; host.ts untouched. U-owned API changes: requestDeviceCode(offlineAccess), ClearResult, rollback(admit), openedAppChanged(), and the new limits maxSameRefreshError, freshTokenMs, freshRetryMs.",
+    "Where I departed from the critic (stated in the docs): (1) DC-1's doubling hold extends to all refresh failures that keep the account, not only unknown codes (DR-4 (f)); (2) DC-1's 'GitHub rejected MoonAliza's registration' text is softened; (3) DC-6's suggested 'it will retry when MoonAliza restarts' text is false, so it was replaced; (4) DC-4 also needed clear()'s 'newer sign-in won' rule, or its own test 2 would wipe the new sign-in; (5) DC-11 also needed the rollback to take the sign-in admit, to close a sign-out race; (6) DC-11 and DC-16 had stale premises from the truncated spec the critic saw.",
+    "A side effect found while applying DC-2, now fixed in the docs: the e2e journey B's forced 401 (and the U7 journey's) must come at least 5 s after the refresh, or the guard would resend instead of refreshing and the journey's 'exactly one refresh' assertion would fail. Spec step 6, T-9 and the U8 row now say so.",
+    "Untested: these are design documents only. No code or test was run against them, and the new tests and guards are specified, not written. Not done: RUN.md's 'Next action' and Stage 3 row still describe this revision as pending. That file is outside this step's scope, so updating it is left to the lead."
+   ]
+  },
+  "briefCheck": {
+   "verdict": "FIX",
+   "findings": [
+    {
+     "id": "RC-1",
+     "severity": "S4",
+     "problem": "S-7 is not fully fixed. One unqualified 'never sends' sentence is still in the brief. The 'Ending a sign-in' bullet says outright that the Decision never sends an expired token. The Decision, Known unknowns and U-5 now say the opposite: a token that expires in flight, or after a local clock change, can still reach GitHub.",
+     "evidence": "/home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design/research/BRIEF.md lines 332-334: 'So a 401 alone does not mean \"revoked\", and an expired token could come back as a 404 that looks like a missing repository; the Decision never sends one.' Compare line 526 ('never knowingly sent'), lines 534-537 ('A token that expires in flight, or after a local clock change, can still reach GitHub') and DISCOVERY U-5 ('never knowingly sends ... can still reach GitHub').",
+     "fix": "Replace 'the Decision never sends one' with 'the Decision never knowingly sends one; a token that expires in flight, or after a local clock change, can still reach GitHub (Known unknowns), and a 404 then gets the step-4 message'."
+    },
+    {
+     "id": "RC-2",
+     "severity": "S4",
+     "problem": "S-2 is not fully fixed. Four places now carry the qualifier: the Registration bullet, U-10 and E-15 say 'the captured pages document', and the E-15 row is fixed too. Two places dropped the qualifier and now make a claim about all of GitHub's documentation, which the corpus cannot support. The Contradictions entry says 'the only 403 cause GitHub documents'. Decision step 3 says 'the one 403 cause GitHub documents for a repository read'. A possible counterexample comes from my own knowledge, not from the corpus, and I did not check it: organization IP allow lists answer API calls with a 403. This step collects nothing.",
+     "evidence": "BRIEF.md lines 382-384 (Contradictions, 'What a 403 means'): 'apart from rate limits (E-15 line 32), the only 403 cause GitHub documents for an app token reading a repository is insufficient permissions'. BRIEF.md lines 556-557 (Decision step 3): 'read first as the one 403 cause GitHub documents for a repository read once rate limits are excluded'. The S-2 fix text asked for 'the only 403 cause the captured pages document for a GitHub App token reading a repository'.",
+     "fix": "In both places, write 'the captured pages document' in place of 'GitHub documents', matching BRIEF line 87, U-10 and the E-15 row."
+    },
+    {
+     "id": "RC-3",
+     "severity": "S4",
+     "problem": "The new capture E-21 contains a GitHub statement about the status of an expired token. The E-21 row leaves it out, and the brief and contract still say no captured page states it. E-21 line 592 links 'the token has expired or been revoked' to a '401 Unauthorized' response from GET https://api.github.com/user. Lines 818-825 show an altered, invalid token taking the same path. Yet the brief's 'Ending a sign-in' bullet, the Contradictions entry 'What a 401 means' ('states nothing for an expired one'), U-5 ('The status an expired GitHub App access token gets is not stated (E-01)') and the Known-unknowns item all say this is not stated. The design does not change: a 401 already triggers refresh-once-and-retry. But a closed claim is now inaccurate for this corpus.",
+     "evidence": "E-21 capture /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design/research/raw/2026-10-13-building-a-cli-with-a-github-app-github--github-973c0d9b.md line 592: 'Update the `parse_response` function to handle the case where the token has expired or been revoked. Now, if you get a `401 Unauthorized` response, the CLI will prompt the user to run the `login` command.' (code at lines 597-609, `when Net::HTTPUnauthorized`). BRIEF.md lines 327-328, 375-376 and 456-461; DISCOVERY.md U-5. The E-21 row in EVIDENCE.md does not mention line 592.",
+     "fix": "Add line 592 as a [quote: ...] to the E-21 row. In U-5, the Ending-a-sign-in bullet, the Contradictions entry and Known unknowns, change 'not stated' to: GitHub's tutorial treats an expired or revoked token as a 401 on GET /user (E-21 line 592, a tutorial, not a reference statement). A 404 for an expired token on a private repository is still plausible by analogy (E-15), so it stays a day-one check. U-5 should cite E-21."
+    },
+    {
+     "id": "RC-4",
+     "severity": "S4",
+     "problem": "S-3 has a mirror case that is still unflagged. S-3 was fixed for unapproved permissions: they are on the 404 checklist and may also surface as a 403. But the same 404 checklist for GitHub App user tokens also lists the app's permissions (E-15 line 66) and the user's permissions (line 67). So GitHub documents insufficient permissions both as a 403 (E-04 line 75) and as a 404 check. The Registration bullet, U-10, the E-15 row and the Contradictions entry name only repository access (line 68) and unapproved permissions (line 70) as 404-checklist items, and treat insufficient permissions as 403 only. Rule 4 says contradictions are flagged, not left out. Decision step 4's list of 404 possibilities also leaves out 'the app or your account lacks a permission this read needs'. The practical impact is small. The shipped Contents + Metadata set covers every read MoonAliza makes (E-05), apart from unapproved updates, which are already listed.",
+     "evidence": "E-15 capture /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design/research/raw/2026-10-13-troubleshooting-the-rest-api-github-docs-github-3b8ce161.md lines 44, 48, 65-67, under the heading '404 Not Found for an existing resource': 'If you are using a GitHub App user access token, you should ensure that: - The GitHub App has the permissions that are required to use the endpoint. - The user that authorized the token has any permissions that are required to use the endpoint.' Compare the E-04 capture line 75: 'If your app makes a REST API request with insufficient permissions, the API will return a `403` response.' BRIEF.md lines 84-94 and 379-390; DISCOVERY U-10; BRIEF.md lines 570-582 (step 4).",
+     "fix": "Add a Contradictions note: GitHub ties insufficient permissions to a 403 (E-04 line 75) and also lists it on the 404 checklist for user tokens (E-15 lines 66-67), so it may surface as either status, as already said for unapproved permissions. Then either add 'the app or your account lacks a permission this read needs' to step 4's 404 possibilities, or say in one clause why it is left out: moot for the fixed read-only set, E-05."
+    }
+   ],
+   "checked": [
+    "Gates, run from /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design (verified). `node /root/.agents/research-kit/bin/preflight.mjs` exits 0 with PASS: 0 blocking, 15 one-voice warnings, 12 passing, 138 quotes found in their captures, a chain of 21 entries that verifies, 15 CLOSED and 1 KNOWN-UNKNOWN. `node /root/.agents/research-kit/bin/handoff.mjs` exits 0: 21 ledger entries, 21 evidence rows, chain verifies, role=collector.",
+    "S-1 is fixed (verified). BRIEF Decision step 3 (lines 567-569) and step 4 (lines 579-581) both carry the two-step SAML remedy, citing E-01 line 34 with no status. The Next steps 3 tests (lines 644-646) carry it too. U-10 and the E-01 row match. E-01 capture line 34 reads 'start an active SAML session for their organization before reauthorizing'.",
+    "S-2 is fixed in the Registration bullet (lines 87-91), U-10 and the E-15 row. The E-15 row now has the full stop after the SAML clause, and the X-Accepted-GitHub-Permissions quote starts its own sentence. The qualifier was lost in two places: see RC-2. The E-11 'not a read' note is in the Registration bullet and the E-15 row only, not in U-10 or Contradictions. That is harmless, but the researcher's report says it is in four places.",
+    "S-3 is fixed (verified). Unapproved permissions are no longer counted among 404-only causes in U-10, the Registration bullet or the E-15 row. Decision step 3 cites E-04 line 75 and E-15 line 108 for the cause, and labels the unapproved-permissions example an inference that may show as either status. The Contradictions entry records the round-3 slip. E-04 line 57 and E-19 line 28 say what the brief cites them for. The mirror case is RC-4.",
+    "S-4 is fixed (verified). Decision step 4 attaches 'if it still fails after the app is installed or the repository added, sign in again' to every install or add route. U-2 and the BRIEF reach bullet (lines 169-175) match. The Known-unknowns reach check is widened to organization routes, with the carry-over assumption labelled. Next steps 6 matches.",
+    "S-5 is fixed (verified). Decision step 4, U-11 and the Who-may-install bullet carry the owner restriction. The line-72 sentence in the BRIEF (lines 183-184) matches the E-13 capture line 72 word for word.",
+    "S-6 is fixed (verified). 'small beside it' is gone. The per-app refresh arithmetic in the BRIEF (lines 285-289) and in U-16 is labelled as arithmetic: 16,000 x 3 / 24 = 2,000 checks out. E-02 line 34 gives eight hours.",
+    "S-7 is fixed in the Decision Refresh section: a 300 s margin, expiry taken as receipt time plus expires_in, labelled a design choice, citing E-01 line 174 and E-02 line 34, which I checked. Known unknowns and U-5 are fixed too. The spec's refreshMarginMs is 300_000, which matches. One unqualified sentence remains: see RC-1.",
+    "E-21 row against its capture (verified line by line). Every [quote] is in the capture: line 22; line 294; lines 300-304; line 315; lines 316-320 (whitespace-normalised); line 277; lines 284-285; line 327; line 582. The line references 294-306, 309-325, 321-322, 364 and 274 are correct. 'No refresh request' holds: no 'refresh' anywhere in the capture. 'No Content-Type set' holds. E-01 line 112 links this page. The Ruby Net::HTTP form-body default is correctly labelled an inference. The capture holds no token-like string (count 0) and only the YOUR_CLIENT_ID placeholder. One E-21 fact is missing from the corpus claims: see RC-3.",
+    "Ledger and usage checked. Entry 21 has transport firecrawl-cli and completeness full. Entries 1-20 are all firecrawl-cli; 16 (E-16) is partial and the rest are full, as the BRIEF says. .usage.jsonl shows runs of 10, 2, 8 and 1 pages; the round-4 run spent 1 with 20 cached. That fits the stated balances 277 -> 267 -> 265 -> 257 -> 256. plan.json has maxScrapes 1 and the round-4 note. SOURCES.md lists the E-21 URL.",
+    "Prior-project citation checked: prior E-01 lines 200-221 and 266-277 do show `Accept: application/json` for /login/device/code and /login/oauth/access_token, as BRIEF line 150 says.",
+    "Not a defect, recorded for the lead. The previous workflow said the 20-credit budget was spent and a 21st credit needed the lead's approval. plan.json's round-4 note records the 1-credit collection but does not say who approved going past 20.",
+    "Read-only. Nothing in the worktree was modified, nothing was committed, and no token or example credential string was printed."
+   ]
+  },
+  "critic": {
+   "verdict": "FIX",
+   "findings": [
+    {
+     "id": "GS-1",
+     "severity": "S3",
+     "problem": "The fresh-token guard (DC-2) can loop, refreshing on every read with no hold and never clearing the account. When the guard runs out (three 401s on a token under 5 s old), it throws GITHUB_RENEWAL_UNAVAILABLE and sets no hold. On the next read more than 5 s later, the same token is no longer 'fresh', so the 401 rule refreshes again instead of clearing. That refresh succeeds and resets `hold` and `failures`, and its new token meets the guard again. Two cases trigger it: (a) GitHub persistently rejects tokens that a refresh just issued; (b) GitHub's propagation delay is longer than about 3 s and the model rereads 5-8 s apart. In case (b) every reread rotates the pair before it propagates. Each read then costs one refresh on the shared per-app endpoint (U-16), the dialog shows no `renewalHeld`, and the account never reaches 'sign in again'. This is the same class of defect as DC-1. In production the C-6 clear inside a call can no longer happen: the retry always follows the refresh within 5 s.",
+     "evidence": "Spec 6.4 l.683-692: the fresh branch throws RENEWAL_UNAVAILABLE when `budget.fresh === 2` and calls no `failed()`. For a token at least 5 s old with an unspent budget, it reaches `budget.refreshed = true ... waitRefresh`. 6.5 l.753: a successful refresh sets `hold = null; failures = 0`. Three statements become false: 6.5 l.761 ('at most once per expiry window, plus once per hold period while failing. Never once per request'); known limit 15, l.1094 ('A token GitHub really rejected meets the 401 rule on the next read after those 5 s', where in fact the rule refreshes); DECISIONS DR-4 trade-offs l.190 ('keeps the account for up to 5 s longer'). Refresh test 10 (l.1227) tests C-6 only by moving the injected clock past `freshTokenMs`, a state real timing never reaches.",
+     "fix": "When the guard runs out, call `failed()`, so the doubling hold blocks further refreshes. Count consecutive guard exhaustions toward `maxSameRefreshError`, and clear the account as `sign-in-ended` after 3. Also, do not refresh on a 401 for a token a refresh produced less than `transientHoldMs` ago; fail with the hold's reason instead. Correct the wording in 6.5 l.761, known limit 15 and DR-4 (l.190). Add two tests. (1) The fake accepts every refresh but answers 401 to every resource request; reads run 6 s apart for 5 minutes. Expect a bounded number of refresh requests (at most 3), the account ending `sign-in-ended`, and `renewalHeld` true in between. (2) The fake answers 401 until 8 s after a token is issued, and reads run 6 s apart. Expect recovery after exactly one refresh."
+    },
+    {
+     "id": "GS-2",
+     "severity": "S4",
+     "problem": "DC-1 is only partly fixed. Only answers that carry an `error` code count toward the three-in-a-row clear. An `unusable` refresh answer (a 3xx, a 4xx without `error` such as a JSON `message` body or an HTML page, or a 2xx without `access_token`) calls `failed()` and resets `sameError`. A dead account is therefore held, with doubling holds, until the refresh token expires up to six months later, and it is never cleared. If DO-1 fails with such an answer, the user stays 'Signed in as <login>' and every read fails as renewal-unavailable. UD-6's 'Why' implies every failing second refresh ends in 'sign in again'.",
+     "evidence": "Spec 5.3 rows 2 and 8 (l.560, l.566): such answers are `unusable`. 6.5 l.741: `if r is not error -> sameError = null`. l.748: `unusable, transient -> failed()`. USER-DECISIONS UD-6 'Why' l.79 and DO-1 l.100 promise the clear only 'for any other code'. No test feeds a non-`error` 4xx refresh answer three times.",
+     "fix": "Treat consecutive identical `unusable` answers like unknown codes: key `sameError` by `status:<n>` and clear after `maxSameRefreshError`. Keep hold-only behaviour for `transient` (network, timeout, 5xx). If clearing is judged too aggressive behind a proxy, state instead in DO-1 and UD-6 that such an answer holds rather than clears, and have DO-1 record it. Add refresh test 4b: a 401 with a JSON `message` body three times either clears the account after at most 3 requests, or is documented as held."
+    },
+    {
+     "id": "GS-3",
+     "severity": "S4",
+     "problem": "`rollback()` (DC-11) can restore a stale file. It runs as a separate `serialized(file)` call after `replace` throws, so any writer already queued on the lock runs between the two. A refresh of the old account A that waited while the sign-in held the lock is admitted: `generation` is unchanged and `live` is still A. That refresh writes A' to the file, commits it, sets `live = A'`, then retires and removes A and S. `rollback` then writes the step-4 snapshot back, so the file names A, whose refs are now removed, and its revision goes backwards. Until the next rotation, `live` is A' but the file names dead refs. If MoonAliza restarts first, the user is signed out and A' is left as orphan committed entries that the reconcile never deletes.",
+     "evidence": "`src/models/artifact-files.ts:59-63`: `serialized` is a FIFO promise chain per key, so queued tasks run before `rollback`'s task. Spec 4.3 l.474: rollback 'writes the file back to the account and retiredRefs kept at step 4 (revision + 2)' with no check that the file is unchanged. 6.3 l.654: rollback is called only after the throw. 6.5 l.750: the refresh admit is `generation === g0 && live?.accessRef === from.accessRef`, and both still hold because a failed sign-in does neither `generation++` nor set `live`. `src/main/vault.ts:106-121`: the reconcile never deletes committed entries.",
+     "fix": "Do the rollback inside `replace` while it still holds the lock: a sign-in passes an option such as `onCommitFailure: 'rollback'`, and `replace` returns a distinct result. Alternatively, have `rollback` compare the file's revision with the one step 4 wrote. If the file has moved on, write nothing and only tombstone and remove the new refs the current file does not name. Add a store test: the commit fails for a sign-in while a refresh `replace` is queued behind it. After rollback, the file and `live` agree, and reopening plus reconciling gives the refreshed account with no orphan entries."
+    },
+    {
+     "id": "GS-4",
+     "severity": "S4",
+     "problem": "During a hold, `usable()` refuses an access token that is still valid. In the last 300 s before expiry, any active hold, including the new doubling hold, makes reads fail as GITHUB_RENEWAL_UNAVAILABLE or GITHUB_RATE_LIMIT, although the token still works and L-5 allows sending it when no refresh is possible. A transient refresh failure at T-299 s blocks every read for the whole hold, even though GitHub would accept them.",
+     "evidence": "Spec `usable()` step 4, l.699-701: 'if a hold is active, throw hold.reason and send nothing (L-13)'. Step 5, l.702, already sends a still-valid token when the refresh token has expired. L-5, l.121: 'within the 300 s margin, when a refresh is possible'. L-13, l.149, restricts refresh requests, not reads. REQUIREMENTS F-6, l.88: 'Calls during a hold fail at once'.",
+     "fix": "In step 4, when a hold is active, fall through to step 5: send the token while `accessExpiresAt > t`, and throw `hold.reason` only once it has expired. Reword F-6 to 'Calls that need a refresh during a hold fail at once'. Add a test: with a hold active and the token 200 s from expiry, the read is sent with that token and no refresh request is made."
+    },
+    {
+     "id": "GS-5",
+     "severity": "S4",
+     "problem": "Nothing tests or injects the link between `REQUEST_OFFLINE_ACCESS` and the service (DC-3). The constants test pins the value and the oauth test pins `requestDeviceCode(..., offlineAccess)`. A service that passes a literal `true` would pass both, so UD-6's fallback (flip the constant) would silently keep sending `scope=offline_access`. REQUIREMENTS T-3 claims a device-flow test 'step 1 without scope when REQUEST_OFFLINE_ACCESS is false', but the spec's device tests 1-16 do not list it, and `GitHubSignInDeps.config` offers no way to set it. Mocking the module is hazardous under `isolate: false`.",
+     "evidence": "Spec 3.1, l.181; 3.7, l.349 (`config?: { clientId; installUrl }` only); 6.1 step 4, l.612; device tests l.1178-1197; guard table, l.1410 ('the constants test; the oauth request shapes'). REQUIREMENTS T-3, l.130. `vitest.config.ts:12`: `isolate: false`.",
+     "fix": "Add `offlineAccess?: boolean` to `GitHubSignInDeps.config`, defaulting to `REQUEST_OFFLINE_ACCESS`; it is a test seam, not a setting. Add device test 2b with two cases. With `offlineAccess: false`, the step-1 body keys are exactly `{client_id}`. With default construction, they are `{client_id, scope}`, so the default is proved to read the constant. List both cases in the guard table."
+    },
+    {
+     "id": "GS-6",
+     "severity": "S4",
+     "problem": "The spec contradicts itself on what `send()` may throw. 3.4 and BREAKDOWN U5 say it throws only `CREDENTIAL_ERRORS` (or rejects when the signal aborts). 6.4 `withAccess` step 5 lets a fetch failure and ENCRYPTION_UNAVAILABLE pass through, and `renew` leaves local vault failures inside `withRefresh` unclassified: ENCRYPTION_UNAVAILABLE, a missing `.bin` file, a failed decrypt. A builder who enforces 3.4 would map a network error on a signed-in read to GITHUB_RENEWAL_UNAVAILABLE. That text tells the model to ask the user to sign in again, where today's GITHUB_UNAVAILABLE says nothing of the kind. A builder who follows 6.4 breaks a typed contract and any test written from it.",
+     "evidence": "Spec 3.4, l.268: 'Throws only a member of CREDENTIAL_ERRORS, or rejects when signal aborts.' BREAKDOWN U5 row, l.126: 'Throws only CREDENTIAL_ERRORS from send()'. Spec 6.4 `withAccess` step 5, l.722: 'Other errors pass through: a fetch failure, or ENCRYPTION_UNAVAILABLE'. 6.5 l.739-740 classifies only DENIED from `withRefresh`. `src/main/vault.ts:158-161`: `withSecret` can throw ENOENT, ENCRYPTION_UNAVAILABLE or a decrypt error. `src/main/github.ts:80-81`: non-GITHUB_ errors become GITHUB_UNAVAILABLE.",
+     "fix": "Change 3.4 and the U5 row to: 'send() originates only CREDENTIAL_ERRORS; it rethrows the request's own rejection and ENCRYPTION_UNAVAILABLE unchanged (the reader maps them to GITHUB_UNAVAILABLE).' In `renew`, classify local vault failures as `failed()`: nothing was sent, but it holds. Add a test: when the refresh token's decrypt throws, the read gets GITHUB_UNAVAILABLE (or the chosen reason), the token endpoint gets zero requests, and a second read within the hold makes no decrypt attempt."
+    },
+    {
+     "id": "GS-7",
+     "severity": "S4",
+     "problem": "The design assumes a GitHub behaviour that the corpus does not state and no day-one check covers: an access token killed by a refresh gets 401. The 401 rule's 'rotated meanwhile, retry with the current token' path (F-8) depends on it. E-02 says only that the old token 'will no longer work'. The corpus gives 401 for revoked tokens and calls a 404 plausible for expired ones. If a rotation-killed token gets 404 on a private repository, a read in flight during a rotation reports GITHUB_NOT_FOUND_SIGNED_IN ('may not exist ... not installed') instead of retrying.",
+     "evidence": "E-02 capture l.36: 'Once you use a refresh token, that refresh token and the old user access token will no longer work.' E-01 l.44: a revoked token gets '401 Bad Credentials'. DISCOVERY U-5: for an expired token, '404 is plausible by analogy, not stated'. Spec 6.4 l.688 (the rotated path acts on a 401 only); 7.2 step 2 (a 404 becomes NOT_FOUND_SIGNED_IN). DO-5 (USER-DECISIONS l.104) covers expired tokens only.",
+     "fix": "Extend DO-1, or DO-5: after the first refresh, send `GET /user` and a private read with the access token that the refresh just retired, and record the statuses. List it in spec 'Day one' and REQUIREMENTS A-4. Until it is checked, say in known limit 5 that a read in flight across a rotation may show the signed-in 404 text."
+    },
+    {
+     "id": "GS-8",
+     "severity": "S4",
+     "problem": "`GET /user` carries the access token, but neither its request options nor a test pin `redirect: 'manual'` and `credentials: 'omit'` for it. 5.1 states those options for 'every OAuth request', and the login request is not an OAuth request. `fetchLogin`'s contract names only the 64 KiB bound, and its tests check only the `login` filter and a 401. S-4 ('No redirect is followed with a credential') therefore has no test for this request, and a builder may use fetch's default `redirect: 'follow'`.",
+     "evidence": "Spec 5.1, l.522-534 ('Every OAuth request uses: redirect: manual, ...', then a table that includes Login); 3.5, l.304 (the `fetchLogin` comment: '64 KiB; keeps only login; any failure is null'); oauth tests, l.1159 (`fetchLogin`: login only, 401 gives null); guard table, l.1394 ('oauth shape pin; read twin'). REQUIREMENTS S-4, l.118.",
+     "fix": "State that `fetchLogin` uses `redirect: 'manual'`, `credentials: 'omit'`, `cache: 'no-store'` and the 20 s signal. Add oauth tests: the login init's exact keys; a 302 gives `null` after exactly one fetch, and the Location host receives nothing. Add the row to the guard table."
+    },
+    {
+     "id": "GS-9",
+     "severity": "S4",
+     "problem": "Refresh test 6 cannot prove the `transientHoldMs` floor on a rate-limit hold, although the guard table says it does. With the 30 s floor removed, `rateLimitWait`'s 1 s floor still holds the account. The two reads run at the same injected time, so only one refresh is sent either way, and the test stays green with its guard removed.",
+     "evidence": "Spec refresh test 6, l.1218 ('A 429 with retry-after: 0, followed by two reads, sends one refresh request in total'); 5.4, l.580 (the 1 s clamp); 6.5, l.742 (`max(w, transientHoldMs)`); guard table, l.1401 ('the refresh hold's transientHoldMs floor | ... refresh 6').",
+     "fix": "In refresh test 6, advance the injected clock 2 s after the 429. A read there must send no refresh (proving the 30 s floor) and `renewalHeld` must be true. At 31 s, one more refresh follows. Record the removal run for each floor separately."
+    },
+    {
+     "id": "GS-10",
+     "severity": "S4",
+     "problem": "A refresh that overlaps the login read (F5) loses the login for good. `renew` builds the new account with `from.login`, a snapshot taken before F5's `setLogin`, and `setLogin` applies only while `live.accessRef` is still the sign-in's ref. Whichever completes first, the login ends up null: the refresh overwrites it with `from.login = null`, or `setLogin` finds the rotated ref and does nothing. L-2 allows no second `GET /user` until another sign-in. The trigger needs a 401 at 5-20 s on the just-issued token, or a token issued with under 300 s left. It is rare, but its cause is in the contract.",
+     "evidence": "Spec 6.5, l.750: `store.replace(tokens, receivedAt, from.login, ...)`. 3.6, l.326: `setLogin` acts 'only while live.accessRef === accessRef'. 6.3 step 3, l.664-668. L-2, l.111-117.",
+     "fix": "For a refresh, have `replace` copy `live.login`, read under the lock, instead of the caller's snapshot. Let `setLogin` apply while the live account descends from the same sign-in, for example by an in-memory sign-in id carried across refreshes. Add a test: a refresh commits during a slow F5, and the login is set after both complete."
+    },
+    {
+     "id": "GS-11",
+     "severity": "S4",
+     "problem": "Two passages promise more than the revised design does. (1) REQUIREMENTS F-8 still says the account is cleared 'only when the refresh returns bad_refresh_token or the retried call still gets 401'. Since DC-1 and DC-2 that is wrong in both directions: other codes, three identical unknown codes and a malformed 2xx also clear the account, and a retry 401 on a token under 5 s old does not. (2) `ClearResult 'removed'` counts a durable tombstone persist alone. The dialog then says 'MoonAliza deleted its copy of your GitHub sign-in from this computer', yet step 3's `remove` may have failed, for example because a Windows file lock stopped the unlink, leaving the encrypted `.bin` files until the next start's reconcile.",
+     "evidence": "REQUIREMENTS F-8, l.90 (the 'only when' sentence), against F-7 (l.89) and spec L-12 (l.140-148). Spec 3.6, l.315-316 ('removed: the clear reached disk (a tombstone persist or the file write)'); 4.3, l.485; 6.7, l.790; 8.2, l.949. `src/main/vault.ts:172-180`: `remove` unlinks and can fail independently.",
+     "fix": "(1) Reword F-8 to defer to L-12: 'The account is cleared only in the L-12 cases; for the 401 rule, a retry that still gets 401 on a token at least 5 s old.' (2) Return 'removed' only when step 3's removals succeeded. Otherwise return a third value, such as 'tombstoned', and change the text to say MoonAliza stopped using its copy and deletes it when it next starts. Alternatively, reword the first sentence for all cases. Add the store test: tombstone persist succeeds, `remove` fails, and the expected result and text follow."
+    }
+   ],
+   "checked": [
+    "DC-1: fixed for answers that carry an `error` code: bad_refresh_token, unsupported_grant_type and incorrect_client_credentials clear the account at any status; three identical unknown codes clear it; the hold doubles; refresh test 4 covers these. Residue: an `unusable` answer still holds forever (GS-2).",
+    "DC-2: the fresh-token guard, DO-16 and the journey-B timing are added. The guard brings a new defect: when it runs out it sets no hold, so the next read refreshes again (GS-1).",
+    "DC-3: fixed. REQUEST_OFFLINE_ACCESS is frozen and pinned, and the oauth body keys are pinned. Residue: nothing tests that the service passes the constant, and T-3's claimed test has no injection point (GS-5).",
+    "DC-4: fixed. The sign-in is admitted against the sign-out count, and clear() gains the 'a newer sign-in won' rule. I traced it against serialized()'s FIFO order (src/models/artifact-files.ts:59-63): a refresh before or after the sign-in, an app clear before or after it, and a sign-out between replace step 6 and 6.3 step 2 all end consistent.",
+    "DC-5: fixed. `committed` is in the DTO; Cancel, dialog close and start() are no-ops from F4; the renderer close rule and its tests are present.",
+    "DC-6: fixed. ClearResult, signOutIncomplete, one retry, honest text and store durability tests. I checked that any later vault persist records the in-memory tombstones (vault.ts:71-79, :164-170). Wording residue in GS-11.",
+    "DC-7: fixed. ReplaceFailure's message is ACCOUNT_STORE_FAILED; CREDENTIAL_ERRORS is frozen in U0; G-19 can be proved red in U3; U6 owns the reason scan. Contract residue: 3.4 contradicts 6.4 (GS-6).",
+    "DC-8: fixed. host.ts is unchanged; HostMessage['payload']['purpose'] exists (src/shared/host.ts:4-10); tsconfig includes tests/, so the typecheck test runs under `npm run typecheck`.",
+    "DC-9: fixed. L-7 is reworded and its tests are listed; parse errors are replaced without `cause`.",
+    "DC-10: fixed. Writers keep retiredRefs at 8 or fewer, and the retired-cap store test is present.",
+    "DC-11: fixed (rollback, plus treating the commit as reached if rollback's write fails). A race with a refresh queued on the lock remains (GS-3).",
+    "DC-12: fixed. rateLimitWait has a 1 s floor and refresh holds a 30 s floor. Test residue: refresh test 6 cannot prove the 30 s floor (GS-9).",
+    "DC-13: fixed. The pins check `signal` by behaviour, the exact key list, and the signed-in twin.",
+    "DC-14: fixed. The test refuses a grant at 60 s and allows one at 30 s; vault.ts:135 uses strict `>`, so the 30 s case is not flaky.",
+    "DC-15: fixed. A2 with `app-changed`, endedReason set at construction, device test 16.",
+    "DC-16: fixed. The lead's docs unit rewrites github-url-reading.md:9 and :11 (BREAKDOWN Lead row, D-3).",
+    "Code read: src/main/vault.ts (grant, withSecret, tombstone, remove, reconcile, has), src/main/github.ts, src/shared/github.ts, src/main/index.ts (startup order :49-184, handle, before-quit :324-336), src/main/engine.ts (epoch and setEpoch ordering, github.error collapse), src/models/artifact-files.ts (atomicJson, serialized), src/main/collector-settings.ts, src/main/bridge.ts, src/preload/index.ts, src/shared/host.ts, src/shared/params.ts, src/shared/errors.ts, src/engine/application.ts readGitHub, tests/vault.test.ts:37-44, tests/github-read.test.ts:58-61, tests/contracts.test.ts, vitest.config.ts, tsconfig.",
+    "Captures re-read with token-shaped strings masked (none copied): E-01 l.40-46, 116-180, 250-287; E-02 l.28-94; DISCOVERY U-5, U-13, U-15.",
+    "Races traced: refresh against sign-in commit; app clear against sign-in; sign-out during F4, F5 and a refresh's persist; quit during F4 and a refresh; engine restart against refresh and login grants (epoch and setEpoch are updated together synchronously, engine.ts:37-38); rollback against a queued writer (GS-3); a refresh during F5 (GS-10).",
+    "Token paths: renderer DTO, IPC errors (safeError), engine (only a reason code crosses, engine.ts:60-61), events (static failure texts), DB and redaction, argv and env, the account file, error message and cause chains (the reader's `{cause}` wrapping; undici's header-value errors are excluded by headerSafeToken). The one gap found: GET /user's redirect and credentials options are not pinned (GS-8).",
+    "Ownership: no overlapping source files between units. docs/ARCHITECTURE.md is shared by design and merged by the lead; the fixture is owned by U1 and imported read-only by U5 and U7.",
+    "Requirements traceability: every F, S, T, A and D row maps to a unit and a test. Exception: the DC-3 case claimed in T-3 has no spec test and no injection point (GS-5).",
+    "Guard-removal table, each entry checked for a test that stays green with its guard removed: the only weak entry is the transientHoldMs floor (GS-9).",
+    "Over-built: nothing worth a finding beyond what the judges already accepted. The interacting counters (hold, failures, sameError, budget.fresh) are where GS-1 arises, so its fix should reuse failed() rather than add a fifth mechanism."
+   ]
+  }
+ }
+}

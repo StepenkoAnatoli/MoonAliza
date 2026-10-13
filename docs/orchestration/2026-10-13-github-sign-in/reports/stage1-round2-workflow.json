@@ -1,0 +1,287 @@
+{
+ "workflow": "github-sign-in-stage1-round2",
+ "run": "wf_c08132e9-66a",
+ "result": {
+  "research": {
+   "preflightExit": 0,
+   "handoffExit": 0,
+   "creditsBefore": 265,
+   "creditsAfter": 257,
+   "pagesCollected": [
+    "https://docs.github.com/en/apps/using-github-apps/installing-a-github-app-from-a-third-party (E-13, full)",
+    "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private (E-14, full)",
+    "https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api (E-15, full)",
+    "https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/rate-limits-for-github-apps (E-16, graded partial by the kit's 1,500-character bar only; the stored source.html main element holds the same 944 characters of text; chosen because E-01 line 40 sends user-access-token readers there; it gives no numbers and points to the REST rate-limit page, which the prior project already holds)",
+    "https://docs.github.com/en/apps/using-github-apps/reviewing-and-revoking-authorization-of-github-apps (E-17, full)",
+    "https://docs.github.com/en/rest/about-the-rest-api/api-versions (E-18, full)",
+    "https://docs.github.com/en/apps/using-github-apps/approving-updated-permissions-for-a-github-app (E-19, full)",
+    "https://docs.github.com/en/rest/users/users (E-20, full)"
+   ],
+   "fixes": [
+    {
+     "id": "F-1",
+     "done": "Adopted the lead's fix verbatim in the BRIEF Decision (Refresh): check expiry before every request and refresh single-flight when close; on a 401, refresh once if the refresh token is within refresh_token_expires_in, then retry once; clear the vault only on bad_refresh_token or a second 401. E-01 row now says 401 is stated for a revoked token only and the status for an expired token is not stated. U-5 says the same, citing E-15 lines 53-64. The day-one check for the expired-token status is in Known unknowns, and Next steps names a test per path."
+    },
+    {
+     "id": "F-2",
+     "done": "Collected E-13 (installing from a third party), E-14 (public or private) and E-15 (troubleshooting). New rows U-10 (a failed private read: 404 'to avoid confirming the existence of private repositories', five checklist causes at E-15 lines 65-70, plus SAML from E-01 line 34) and U-11 (who may install: owners; repository admins when the app requests no org permission; members and outside collaborators send a request via Install and request / Request; location limited to the user's own account or an organization they belong to) are both CLOSED. The BRIEF's 404 message lists the possibilities and never claims one cause. The three-field-case observation is a non-blocking day-one check."
+    },
+    {
+     "id": "F-3",
+     "done": "Decision mapping reordered as the lead specified. Rate limits come first: 429; 403 with x-ratelimit-remaining 0 (wait until x-ratelimit-reset); 403/429 with retry-after or a secondary-limit message (else wait at least a minute). Only then is a 403 'forbidden', with the causes listed (no access, app not installed, SAML, secondary limit) and X-Accepted-GitHub-Permissions as a hint only. Now cited to this ledger (E-15 lines 32-38, 108-112) as well as prior E-08. The E-04 row and U-1 were reworded: the header comes 'in the REST API response', not only on failures. Tests named in Next steps."
+    },
+    {
+     "id": "F-4",
+     "done": "The E-02 row, U-4 and the BRIEF quote the per-token wording ('Required unless the user access token was generated using the device flow') and state that refresh-of-a-refresh is not stated. The day-one check (device flow, then two refreshes in a row without a secret, with the registered app, before the scheduler ships) is in Known unknowns, with the fallback recorded: re-sign-in every 8 h, or deselect expiry. Never a shipped secret."
+    },
+    {
+     "id": "F-5",
+     "done": "The E-01 row, U-3 and the BRIEF limit the HTTP-200 claim to the pending phase (E-01 line 152). Other codes' status and all step-1 errors are marked not stated. The client reads error from the body whatever the status and handles step-1 failures separately. The Next-steps fake adds non-200 variants and step-1 failures (invalid client_id, device_flow_disabled at /login/device/code)."
+    },
+    {
+     "id": "F-6",
+     "done": "Both limits are now labelled 'stated for OAuth apps; not stated for GitHub Apps': 50 device-flow submissions/hour (prior E-01 line 307) and the ten-token rule (E-09 line 78 heading quoted). U-16 is a new KNOWN-UNKNOWN for the per-app device-flow cap, with a day-one step: GitHub Support question, or a measured test. The expired_token message also says GitHub may be limiting sign-ins. The app-wide cap is recorded as a product risk. The refresh policy stays conservative."
+    },
+    {
+     "id": "F-7",
+     "done": "The prior project is cited by its path in this tree, docs/research/2026-10-12-app-sign-in/ (merged at d0df7e9; ../2026-10-12-app-sign-in from the project folder), naming the capture files behind prior E-01 and prior E-08. In DISCOVERY the prior rows are cited by capture path rather than 'prior E-xx', so the gate does not read them as this project's E-01/E-08."
+    },
+    {
+     "id": "F-8",
+     "done": "Prefix-screen claim dropped. The Decision says each token (access, refresh) is stored as its own vault value so the existing exact-value redaction catches it. Prefixes are used only to validate the token response's shape (prefix only, no length or character-set assumption, E-10 line 145). U-6's why-cell and MAP T-1 were reworded to match. 'Prefix-based secret screen' is listed as out of scope."
+    },
+    {
+     "id": "F-9",
+     "done": "(1) U-8 and the E-12 row now say 'if public, others can install'; public/private semantics come from E-14 line 26, and 'Any account' = public is marked an inference (E-03 line 93, E-14 line 20), with a day-one check. (2) The webhook statement is marked an inference about MoonAliza; E-01 line 44 is quoted ('GitHub Apps cannot unsubscribe from this event'), and delivery to an app with webhooks inactive is marked not stated. (3) U-6 and the BRIEF cite E-08 for ghu_ only (with gho_; it does not name ghr_)."
+    },
+    {
+     "id": "CRITIC-external-facts",
+     "done": "Closed within the 8-page list: install rights and member requests (E-13), visibility (E-14), not-installed/404 semantics (E-15), GitHub App user-token rate limits (E-16 plus E-01 line 40 and prior E-08), revocation place (E-17, U-13), API versions (E-18, U-9 CLOSED: 2022-11-28 supported until March 10, 2028), permission updates (E-19, U-14), GET /user (E-20 plus E-06 line 1231, U-15). The device-flow cap for GitHub Apps is still not stated anywhere: U-16 KNOWN-UNKNOWN. The critic's extra page requesting-a-github-app-from-your-organization-owner was not collected (not in the lead's list); E-13 line 74 covers member requests."
+    },
+    {
+     "id": "LEAD-listing-note",
+     "done": "The 'repositories I can read' listing is kept only as a UI-side option (main process to renderer, from the two /user/installations endpoints), never offered to the engine or the model and never widening scope. It is explicitly marked 'a design choice, not a research claim' in the BRIEF Decision."
+    }
+   ],
+   "unknowns": [
+    {
+     "id": "U-1",
+     "status": "CLOSED",
+     "answer": "Contents: Read-only plus Metadata: Read-only. Insufficient permissions give a 403 ('Resource not accessible by integration'). X-Accepted-GitHub-Permissions is returned in REST responses generally, so it is a hint only. Whether Metadata is mandatory is not stated.",
+     "evidence": "E-05, E-07, E-04, E-03, E-15"
+    },
+    {
+     "id": "U-2",
+     "status": "CLOSED",
+     "answer": "The token reaches the intersection of what the user and the app can access. Listing uses GET /user/installations and GET /user/installations/{id}/repositories. Install link: https://github.com/apps/APP-NAME/installations/new. The not-installed error and install rights moved to U-10 and U-11.",
+     "evidence": "E-01, E-04, E-07, E-12, E-13"
+    },
+    {
+     "id": "U-3",
+     "status": "CLOSED",
+     "answer": "Device flow as before. HTTP 200 + error is stated only for the pending phase. Other statuses and step-1 errors are not stated, so the client reads error from the body whatever the status.",
+     "evidence": "E-01, E-03"
+    },
+    {
+     "id": "U-4",
+     "status": "CLOSED",
+     "answer": "Refresh needs no client_secret for a token 'generated using the device flow' (worded per token). Whether a refreshed token still counts is not stated; the two-refreshes day-one check is in the BRIEF. Each refresh rotates both tokens. bad_refresh_token means a new sign-in.",
+     "evidence": "E-02, E-01"
+    },
+    {
+     "id": "U-5",
+     "status": "CLOSED",
+     "answer": "No secret means no DELETE /applications/*. /credentials/revoke is for exposed credentials. A revoked token gets 401 Bad Credentials; the status for an expired token is not stated. The ten-token rule is stated for OAuth apps only.",
+     "evidence": "E-08, E-11, E-09, E-01, E-17, E-15"
+    },
+    {
+     "id": "U-6",
+     "status": "CLOSED",
+     "answer": "Prefixes ghu_ (user) and ghr_ (refresh), among others. Lengths and character sets are not stated. Used only to validate the token response's shape; redaction is exact-value per vault entry.",
+     "evidence": "E-10, E-01, E-02, E-08"
+    },
+    {
+     "id": "U-7",
+     "status": "CLOSED",
+     "answer": "commits, contents, trees, blobs, tarball and zipball all accept user tokens with Contents read.",
+     "evidence": "E-06, E-05"
+    },
+    {
+     "id": "U-8",
+     "status": "CLOSED",
+     "answer": "Settings unchanged. A public app can be installed and authorized by anyone; a private one only on the owning account. 'Any account' = public is an inference (E-03 line 93, E-14 line 20).",
+     "evidence": "E-03, E-14, E-12, E-02, E-01"
+    },
+    {
+     "id": "U-9",
+     "status": "CLOSED",
+     "answer": "2022-11-28 is supported until March 10, 2028; 2026-03-10 has no end date. A retired version returns 410 Gone, with Deprecation/Sunset headers beforehand; an unknown version returns 400. Keep 2022-11-28 for the sign-in work.",
+     "evidence": "E-18, E-15"
+    },
+    {
+     "id": "U-10",
+     "status": "CLOSED",
+     "answer": "A private resource the request cannot reach returns 404, not 403. GitHub's 404 checklist for user tokens: app permission, user permission, app has repository access (installed), user has access, updated permissions approved. SAML needs an active session (status not stated). The client cannot tell the causes apart, so its message lists them. Field observation of three cases is a non-blocking day-one check.",
+     "evidence": "E-15, E-01, E-04"
+    },
+    {
+     "id": "U-11",
+     "status": "CLOSED",
+     "answer": "Anyone can install on their own account and owners on their organization. Repository admins can install for repositories they administer when the app requests no org permission (unless owners restrict it). Members and outside collaborators trigger an owner request (Install and request / Request). The app manager role cannot install. A collaborator on another person's personal repository must ask that person (a reading of the option list).",
+     "evidence": "E-13, E-14, E-03"
+    },
+    {
+     "id": "U-12",
+     "status": "CLOSED",
+     "answer": "User-token requests take the signed-in user's own 5,000 requests/hour, shared across apps and tokens, plus secondary limits including 2,000 OAuth token requests/hour for GitHub Apps (numbers from the prior project's REST rate-limit capture). Exceeding a limit gives 403/429: primary with x-ratelimit-remaining 0; secondary with a message and retry-after only if present, else wait at least 1 minute.",
+     "evidence": "E-16, E-01, E-15 (plus docs/research/2026-10-12-app-sign-in/research/raw/2026-10-12-rate-limits-for-the-rest-api-github-docs-github-4a04a6e2.md lines 46, 60, 95)"
+    },
+    {
+     "id": "U-13",
+     "status": "CLOSED",
+     "answer": "Settings > Integrations: Applications > Authorized GitHub Apps tab > Revoke (no direct URL stated). Only the authorizing person can revoke; org owners can uninstall instead. Revoking revokes the tokens, which then get 401.",
+     "evidence": "E-17, E-09, E-01"
+    },
+    {
+     "id": "U-14",
+     "status": "CLOSED",
+     "answer": "Owners of installing accounts are notified and must approve; until then the installation keeps its old permissions. Authorized-only users are not notified. A request can 404 until updated permissions are approved.",
+     "evidence": "E-19, E-04, E-15"
+    },
+    {
+     "id": "U-15",
+     "status": "CLOSED",
+     "answer": "GET /user works with GitHub App user tokens and needs no permission; statuses 200/304/401/403; the example carries login and id. Public vs private response for app tokens is not stated; login is expected and checked on day one.",
+     "evidence": "E-20, E-06"
+    },
+    {
+     "id": "U-16",
+     "status": "KNOWN-UNKNOWN",
+     "answer": "Whether the device flow's 50 submissions/hour per application (stated for OAuth apps) applies to a GitHub App, per app, is not stated on any GitHub App page. Day one: the product owner asks GitHub Support (or measures past 50 in an hour with a test account) and records the answer in U-16. Until then, assume per-app, give expired_token a message that mentions possible limiting, and record it as a product risk.",
+     "evidence": "E-01, E-16 (no limit stated); prior capture docs/research/2026-10-12-app-sign-in/research/raw/2026-10-12-authorizing-oauth-apps-github-docs-github-ce29d520.md line 307"
+    }
+   ],
+   "commands": [
+    "cwd for every kit command: /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design",
+    "node /root/.agents/research-kit/bin/research.mjs --status  -> exit 0 (role collector, firecrawl-cli authenticated)",
+    "node /root/.agents/research-kit/bin/doctor.mjs  -> READY, firecrawl-auth 265 credits (before)",
+    "node /root/.agents/research-kit/bin/research.mjs --plan research/plan.json --dry-run  -> exit 0; 12 cached, 8 would collect, 0 searches, budget 8",
+    "node /root/.agents/research-kit/bin/research.mjs --plan research/plan.json  -> exit 0; collected 8, cached 12, failed 0, spent 8 (no --fallback)",
+    "node /root/.agents/research-kit/bin/doctor.mjs  -> firecrawl-auth 257 credits (after); ledger 20 entries, chain verifies",
+    "node /root/.agents/research-kit/bin/preflight.mjs  -> PASS (iterated; final: 0 blocking, 15 warnings all corroboration/one-voice, 12 passing, 116 quotes found)",
+    "node /root/.agents/research-kit/bin/evidence-context.mjs --all --json  -> used to confirm each unknown cites only real E-rows of this project",
+    "node /root/.agents/research-kit/bin/brief.mjs --force  (twice; the second after the last EVIDENCE edit) -> fresh stamp inputs=a85582b0e588ad52 gate=pass; the authored brief is written on top",
+    "node /root/.agents/research-kit/bin/brief.mjs --state  -> authored; contradictions answered; decision answered",
+    "node /root/.agents/research-kit/bin/handoff.mjs  -> exit 0 (20 ledger entries, 20 evidence rows, chain verifies)",
+    "node /root/.agents/research-kit/bin/doctor.mjs  -> READY; secret-scan no match",
+    "node /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/map-update.mjs (scratch script, project cwd) -> MAP.md rows D-1/D-2/D-3/D-4/D-7/D-9/S-1/S-3/T-1..T-4 and coverage notes"
+   ],
+   "problems": [
+    "Files changed, all inside the untracked nested project; nothing committed or pushed and no tracked file modified: research/DISCOVERY.md, research/EVIDENCE.md, research/BRIEF.md, research/MAP.md, research/plan.json (maxScrapes 8, 8 URLs added, notes). The collector also appended research/SOURCES.md, 8 captures plus source.html under research/raw/, 8 ledger entries in research/raw/.fetches.jsonl and a usage line. The whole project, including the ledger, still has to be committed by the lead: git add docs/research/2026-10-13-github-sign-in-design and git add -f .../research/raw/.fetches.jsonl.",
+    "E-16 (rate-limits-for-github-apps) is graded partial in the ledger because the page is genuinely short. I checked its source.html main element: it holds the same 944 characters of text. The page gives no numbers and points to 'Rate limits for the REST API'. U-12 therefore takes its numbers from the prior project's 2026-10-12 capture in this tree, cited by path. capture-completeness passes because U-12 also cites E-01 and E-15.",
+    "U-16 stays KNOWN-UNKNOWN. No GitHub App owner page states a device-flow submission cap; the 50/hour figure is on the OAuth-app page only. If it counts per app, it limits sign-ins across all MoonAliza installs. This is a product risk that no client design removes.",
+    "The API-versions page was collected at the lead-named current path /en/rest/about-the-rest-api/api-versions (HTTP 200). The captures I hold link the older /rest/overview/api-versions, and E-15 links the current one.",
+    "brief.mjs --force wrote research/BRIEF.md.bak-2026-10-13. I confirmed it was byte-identical to the round-1 brief and removed it from the project so it cannot be committed by accident. A copy of the round-1 brief is at /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/BRIEF.round1.md, and the round-1 plan at .../scratchpad/plan.round1.json.",
+    "Got wrong and fixed: mistake - my first DISCOVERY rewrite wrote 'prior E-08' and 'prior E-01' in U-12/U-16 cells; where - research/DISCOVERY.md U-12, U-16, Already decided; impact - the gate and evidence-context counted them as this project's E-08 (OAuth authorizations page) and E-01, a false citation for U-12, though preflight still passed; cause - the kit parses any E-## token in an evidence cell; fix - the prior rows are now cited by capture path, and U-/F- cross-references in cells are reworded; verified - evidence-context --all shows U-12 citing only E-16, E-01, E-15 and no gaps, and preflight PASS.",
+    "Got wrong and fixed: mistake - a first draft of the E-20 row said login and id are 'in the public fields either way'; where - research/EVIDENCE.md E-20; impact - an unsupported claim (the public-response example tab is not in the capture); nothing delivered was affected; cause - inferred from the example without checking which example was captured; fix - reworded to 'expected, not shown', with a day-one check; verified - grep found only 'Response with public and private profile information' (line 72) in the capture, and preflight PASS.",
+    "Not addressed, by design: the critic's user-decision and repo-surface gaps. These are app owner and name, scope (read-only vs a shared connection with the collector), treatment of private code, network stack, and the renderer status channel. They are listed in BRIEF 'Not answered here' for the lead to take to the user. The critic's extra page requesting-a-github-app-from-your-organization-owner was not in the lead's 8-page list and was not collected.",
+    "Credentials: none printed, copied or written. Captures were read through a redaction filter. My grep for token-like strings (gh*_ 10+ chars, github_pat_, sk- 16+, fc- 16+, Bearer values) over BRIEF, DISCOVERY, EVIDENCE, MAP, plan.json and SOURCES found 0 matches, and doctor's secret-scan reports no match."
+   ]
+  },
+  "verify": {
+   "verdict": "FIX",
+   "findings": [
+    {
+     "id": "R2-1",
+     "severity": "S3",
+     "problem": "The 403 mapping leaves out the only 403 cause GitHub documents, insufficient permissions. It lists two causes GitHub never ties to 403: app not installed (documented as a 404 cause) and SAML (status not stated). The lead's F-3 fix said that once rate limits are excluded, a 403 is treated as a missing permission. The round-2 text dropped that meaning entirely.",
+     "evidence": "BRIEF.md lines 374-376: '403 otherwise -> forbidden ... no access, app not installed, SAML session needed, or a secondary limit GitHub did not label'. E-04 capture line 75: 'If your app makes a REST API request with insufficient permissions, the API will return a `403` response.' E-15 capture line 108: 'Resource not accessible by integration' means 'your token has insufficient permissions'. E-15 lines 65-70 put 'The GitHub App has access to any repositories...' on the 404 checklist, not under 403. E-01 line 34 gives no status for SAML. The round-1 F-3 fix text: 'Only after that treat a 403 as a missing permission'.",
+     "fix": "In Decision step 3, put this cause first: 'the app or your account lacks a permission this read needs, for example an owner has not yet approved updated permissions' (E-04 line 75, E-15 lines 70 and 108). Use the body message 'Resource not accessible by integration' as GitHub's documented signal for it, and keep X-Accepted-GitHub-Permissions as a hint only. Keep 'app not installed' and 'SAML' only as labelled possibilities that GitHub does not state for 403. Add a Next-steps test: a 403 with that body and no rate-limit headers."
+    },
+    {
+     "id": "R2-2",
+     "severity": "S3",
+     "problem": "The SAML remedy leaves out half of what the capture says. GitHub tells the user to start a SAML session and then reauthorize. The brief tells them only to start a session. A user in a SAML organization who follows MoonAliza's message would start a session, retry with the same token, and could fail again with no next step.",
+     "evidence": "E-01 capture line 34: 'instruct the user to start an active SAML session for their organization before reauthorizing'. The E-01 row in EVIDENCE.md quotes this in full. DISCOVERY.md U-10 (line 34) says only 'needs an active SAML session before its resources show'. BRIEF.md lines 160-161 quote the sentence only up to 'for their organization', and Decision steps 3-4 (lines 375, 381) say 'a SAML session is needed'.",
+     "fix": "Change U-10, the BRIEF bullet and Decision steps 3-4 to: 'start a SAML session for the organization on GitHub, then sign in to MoonAliza again' (E-01 line 34). In Known unknowns (c), also record whether the existing token reaches the organization after the session starts, without a new sign-in."
+    },
+    {
+     "id": "R2-3",
+     "severity": "S3",
+     "problem": "The main recovery path for a repository the app is not installed on is: 404, install link, user installs, retry. That path assumes a token issued before the installation reaches the newly installed repositories. No capture says this, and the brief does not label it as an assumption or list it as a day-one check.",
+     "evidence": "Decision step 4 (BRIEF.md lines 377-382) offers the install link as the fix. E-01 line 38 describes reach in the present tense only ('can only access resources that both the user and app can access'). E-13 line 58 says installing and authorizing are separate. A grep of all 20 captures for reauthorization or post-install token behaviour finds nothing on this point. Known unknowns (BRIEF.md lines 315-334) does not list it.",
+     "fix": "Mark it 'not stated' in U-2/U-10. Add a day-one check with the registered app: sign in first; then install on the user's account with 'Only select repositories'; read a selected private repository with the existing token; then add another repository to the installation and read it. Record whether each read works without a new sign-in and how soon. Until then, the install message adds: 'if it still fails after installing, sign in again'."
+    },
+    {
+     "id": "R2-4",
+     "severity": "S3",
+     "problem": "The brief dismisses the secondary limit of 2,000 OAuth access-token requests per hour by counting refreshes per user. It does not consider that device-flow polls are, in GitHub's own words, access-token requests to the same endpoint. If the limit counts per app, it caps sign-ins and refreshes across all MoonAliza users. Separately, the rate-limit-first rule covers REST reads only: poll and refresh calls to github.com/login/oauth/access_token have no rate-limit handling, and nothing says a rate-limited refresh must keep the vault.",
+     "evidence": "BRIEF.md lines 327-328: 'not stated; MoonAliza refreshes about three times a day per user'. Prior rate-limit capture (docs/research/2026-10-12-app-sign-in/research/raw/2026-10-12-rate-limits-for-the-rest-api-github-docs-github-4a04a6e2.md) line 95: 'No more than 2,000 OAuth access token requests per hour are allowed for GitHub Apps and OAuth apps.' E-01 line 132 defines `interval` as the wait 'before you can make a new access token request (`POST https://github.com/login/oauth/access_token`)'. At the default 5 s interval and 900 s expiry (E-01 lines 131-132), one sign-in can make up to 180 polls. The error mapping (BRIEF.md lines 368-372) is written for read_github only.",
+     "fix": "Label it like U-16: whether the limit counts per app, and whether device-flow polls count toward it, is not stated. Add both questions to U-16's GitHub Support step and record the per-app case as a product risk. Apply the rate-limit-first classification to poll and refresh responses as well: 429; 403 with x-ratelimit-remaining 0; retry-after. A rate-limited refresh keeps the vault and fails the call as GITHUB_RATE_LIMIT. Add Next-steps tests for both."
+    },
+    {
+     "id": "R2-5",
+     "severity": "S3",
+     "problem": "Refresh failures are not fully specified, and E-15 is misread on expired tokens. (a) The brief says E-15 lists expired tokens as a 404 cause only for PATs and installation tokens. E-15 also lists them for OAuth-app user access tokens, and E-01 says a GitHub App user token is a type of OAuth token. (b) The brief says 'The Decision handles either' a 401 or a 404 for an expired token, but the 404 path never refreshes. That claim holds only if no call ever goes out with an expired token, and the brief does not say what a call does when its pre-check refresh fails for a reason other than bad_refresh_token (network, 5xx, rate limit). (c) 'Read `error` from the body whatever the status' is stated for the device flow only. The status of bad_refresh_token is not stated, so a client that checks res.ok first could treat it as transient and never clear the vault.",
+     "evidence": "DISCOVERY.md U-5 (line 29): 'E-15 lists expired tokens among 404 causes for personal access tokens and installation tokens only, lines 53-64'. The E-15 row in EVIDENCE.md and BRIEF.md lines 237-239 say the same. E-15 capture line 75, under 'If you are using an OAuth app user access token': 'The token has not been expired or revoked.' E-01 line 36: 'A user access token is a type of OAuth token.' BRIEF.md lines 316-317: '(401, or 404 on a private repository). The Decision handles either.' Decision 404 path: lines 377-382. Read-error-from-body rule: lines 350-352, sign-in only. E-01 line 275 gives no HTTP status for bad_refresh_token.",
+     "fix": "Correct 'only' to include E-15 line 75 (OAuth-app user tokens), noting it is an analogy, not a statement about GitHub App tokens. In the Decision, state that refresh responses are read for `error` whatever the HTTP status, and record 'status of refresh errors: not stated'. State that a call whose pre-check refresh fails transiently fails with a retriable error, keeps the vault, and never sends an expired token; that is what makes 'handles either' true. Also have the 401-triggered refresh join the same single-flight, and skip it when the vault's access token is no longer the one that got the 401 (rotation, E-02 line 36). Add tests for a transient refresh failure and for bad_refresh_token returned with a non-200 status."
+    },
+    {
+     "id": "R2-6",
+     "severity": "S4",
+     "problem": "The gate figures in the brief are stale.",
+     "evidence": "BRIEF.md line 25: '0 blocking, 11 checks passing, 116 quotes'. Running `node /root/.agents/research-kit/bin/preflight.mjs --show-pass` from the project folder on 2026-10-13 prints 'PASS 0 blocking, 15 warning(s), 12 passing' and '116 quotes found in their capture'.",
+     "fix": "Change it to 12 passing."
+    },
+    {
+     "id": "R2-7",
+     "severity": "S4",
+     "problem": "The brief says breaking changes come 'only in a new version'. The same capture lists exceptions to that rule.",
+     "evidence": "DISCOVERY.md U-9, the E-18 row in EVIDENCE.md, and BRIEF.md lines 180-181 all say 'only in a new version'. E-18 capture lines 91-103 are headed 'Exceptions to standard versioning'. Line 97 says GitHub may 'in rare cases, introduce a breaking change to an existing version'; line 103 covers deprecations for low-usage services.",
+     "fix": "Add: 'except the security, availability and low-usage exceptions GitHub lists (E-18 lines 91-103)'."
+    },
+    {
+     "id": "R2-8",
+     "severity": "S4",
+     "problem": "The Decision builds the install link from the app's 'slug'. No capture uses that word, and the captures call the URL segment the app's name.",
+     "evidence": "BRIEF.md lines 345-346: 'the app's slug (for the install link) ... the slug is part of the public install URL (E-12)'. E-12 line 53 and E-13 line 80 say APP-NAME 'is the name of the GitHub App'. E-03 line 53 describes a lowercase, hyphenated form of the name as what is shown in the UI when the app acts, not as the URL segment.",
+     "fix": "Have the product owner copy the install URL from the app's public page (E-12 lines 49-53), and store that URL in the build rather than deriving it from a name."
+    },
+    {
+     "id": "R2-9",
+     "severity": "S4",
+     "problem": "E-13 offers a remedy the organization case does not use, and contains an internal tension the brief does not record.",
+     "evidence": "E-13 line 70: once an organization owner has installed the app, repository administrators 'can update the existing installation to give the app access to repositories that they administer'. Decision step 4 (BRIEF.md lines 378-380) says only 'ask an owner or use Install and request / Request'. On the tension: E-13 line 74 lets 'outside collaborators' select the organization, while line 82 limits the location to 'an organization that you are a member of'. The Contradictions section does not mention it.",
+     "fix": "Add to the organization case: 'if the app is already installed on the organization, a repository admin can add this repository (E-13 line 70)'. Record the line 74 vs 82 tension under Contradictions."
+    },
+    {
+     "id": "R2-10",
+     "severity": "S4",
+     "problem": "The sign-out text does not tell the user that local sign-out leaves the GitHub authorization and its tokens live.",
+     "evidence": "Decision 'Sign-out' (BRIEF.md lines 390-397) deletes the tokens locally and makes no revocation call. E-02 line 34: the refresh token expires after six months. In MoonAliza, vault.redact (src/main/vault.ts lines 183-195) skips tombstoned entries, so once the tokens are deleted locally, their still-valid values are no longer redacted anywhere.",
+     "fix": "The sign-out help text says the authorization and its tokens stay valid on GitHub until the user revokes them there (E-17) or they expire (access token up to 8 h, refresh token up to 6 months). The builder confirms no copy of either value outlives its vault entry."
+    }
+   ],
+   "checked": [
+    "Ran from /home/user/task5-handoff/wt/gh-signin/docs/research/2026-10-13-github-sign-in-design: preflight.mjs exit 0 (PASS, 0 blocking, 15 one-voice warnings, 12 passing, 116 quotes found, chain of 20 verifies, 15 CLOSED + 1 KNOWN-UNKNOWN, 18 subtopics). handoff.mjs exit 0 (20 ledger entries, 20 evidence rows, captures on disk, chain verifies, role=collector). brief.mjs --state: authored, BRIEF.md md5 unchanged. git status shows only the untracked project; nothing was written into the project.",
+    "Ledger research/raw/.fetches.jsonl: 20 entries, all firecrawl-cli, docs.github.com, type P, only seq 16 (E-16) graded partial; usage log shows runs of 10, 2 and 8 credits = 20. The .gitignore negation keeps .fetches.jsonl committable and .usage.jsonl local. The project is not committed yet; it still has to be committed with its ledger.",
+    "All 116 [quote: ...] strings checked against their captures by script: 115 match after whitespace and bold normalisation; the E-08 Basic Authentication quote matches once markdown link markup is stripped (capture lines 39/99/208/316).",
+    "Line references checked by reading the capture lines for E-01 (34, 36, 38, 40, 44, 112-194, 269-285), E-02 (32-94), E-03 (36-93), E-04 (30-87), E-05 (947-1036, 1176-1181), E-06 (22, 300-301, 517-1231), E-07 (274-301, 449-470, 656-670), E-08, E-09 (28-94), E-10 (103, 139-154; the 145 placeholder is prefix plus two placeholder words, not echoed), E-11 (24-71), E-12 (28-59), E-13 (28-94), E-14 (18-51), E-15 (28-159), E-16 (whole page), E-17, E-18 (28-114), E-19, E-20 (24-90). Found: E-15 line 75 misread (R2-5) and E-18 exceptions omitted (R2-7); everything else matches.",
+    "E-16 partial grade: the stored source.html main element holds about 938 characters of text, with no numbers and no device-flow limit, so 'partial by length only' holds.",
+    "Prior project (F-7): docs/research/2026-10-12-app-sign-in is tracked on this branch with its ledger. Prior OAuth-app capture lines 200-221, 266-277 and 307, and prior rate-limit capture lines 46, 60, 95 and 136-138, say what the brief cites them for.",
+    "F-1 fixed: the E-01 row, U-5 and the BRIEF limit 401 to revoked tokens; the Decision adopts pre-check, single-flight, refresh-once-and-retry, and clearing only on bad_refresh_token or a second 401; tests are in Next steps 2. Residual issues are in R2-5.",
+    "F-2 fixed: E-13, E-14 and E-15 collected; U-10 and U-11 added; the 404 message lists the possibilities and claims none; the three UI cases are present. Residual issues are in R2-2, R2-3 and R2-9.",
+    "F-3 fixed for ordering: rate limits are checked first (429; 403 with remaining 0; retry-after or a secondary message), cited to E-15 lines 32-38; the header is a hint; tests are named. Residual issue: the 403 cause list (R2-1).",
+    "F-4 fixed: per-token wording quoted in the E-02 row, U-4 and the BRIEF; day-one two-refresh check and fallback in Known unknowns; no shipped secret.",
+    "F-5 fixed: HTTP 200 limited to the pending phase (E-01 line 152); other statuses and step-1 errors marked not stated; the fake includes non-200 and step-1 failures.",
+    "F-6 fixed: the 50/hour and ten-token rules are labelled 'stated for OAuth apps'; U-16 is KNOWN-UNKNOWN with a day-one step; the expired_token message and the product risk are recorded. Related gap on the 2,000/hour limit in R2-4.",
+    "F-7 fixed: prior project merged and cited by path and capture file; DISCOVERY cites captures, not 'prior E-xx'.",
+    "F-8 fixed: the prefix screen is withdrawn; each token is its own vault value; the prefix is used only for the shape check. Verified in MoonAliza src/main/vault.ts lines 183-195 that redaction is exact-value and that src/main has no prefix screen.",
+    "F-9 fixed: (1) 'if public' wording, with Any account = public labelled as an inference; (2) the webhook statement labelled as an inference; (3) E-08 cited for ghu_ only.",
+    "Credential hygiene: no token-shaped string (gh*_ or github_pat_ followed by 6+ characters), no sk- key and no 40-hex string in DISCOVERY.md, EVIDENCE.md, BRIEF.md, MAP.md, SOURCES.md, plan.json, TIMELINE.md, docs/ARCHITECTURE.md, AGENTS.md or START_HERE.md. Capture example tokens were masked in all output of this check.",
+    "Builder-readiness by area. Permissions: yes. Installation and not-installed case: mostly; guesses remain on SAML re-sign-in (R2-2) and post-install token reach (R2-3). Device flow: yes, apart from rate-limit handling at the token endpoint (R2-4). Refresh and its chain: yes, given the day-one two-refresh check; transient-failure and status handling need stating (R2-5). Revocation and sign-out: yes (R2-10 is wording only). Token shapes and redaction: yes. Endpoints for user tokens: yes (E-05, E-06, E-07, E-20). Rate limits and classification: mostly; the 403 meaning (R2-1) and the per-app 2,000/hour question (R2-4) are open. API version: yes (2022-11-28 supported until March 10, 2028; R2-7 is wording). Registration settings: yes (R2-8 is wording). Later permission changes: yes (E-19, E-04 line 57, E-15 line 70).",
+    "No S1 or S2 found. Every fix is an edit to DISCOVERY.md, EVIDENCE.md and BRIEF.md plus day-one checks or GitHub Support questions; no new collection or credits are required."
+   ]
+  }
+ }
+}
