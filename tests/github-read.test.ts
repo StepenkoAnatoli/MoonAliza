@@ -258,11 +258,13 @@ test.each<{ name: string; status: number; headers: Record<string, string>; body:
 });
 
 test('signed in, Stop during the bounded 403 body read gives RUN_CANCELLED', async () => {
-  const stop = new AbortController(); const { credential } = signedIn(tokenMarker());
-  const body = new ReadableStream<Uint8Array>({ pull(controller) { stop.abort(); controller.enqueue(new TextEncoder().encode(INTEGRATION)); } }, { highWaterMark: 0 });
+  const stop = new AbortController(); const { credential } = signedIn(tokenMarker()); let pulls = 0;
+  const body = new ReadableStream<Uint8Array>({ pull(controller) { pulls++; stop.abort(); controller.enqueue(new TextEncoder().encode(INTEGRATION)); } }, { highWaterMark: 0 });
   const reader = new GitHubReader(async () => new Response(body, { status: 403 }), credential);
   await expect(reader.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
-  expect(body.locked).toBe(false);
+  // U3-R4: the read stops at the first chunk after Stop, even on a transport that ignores abort; read()'s catch alone would
+  // still say RUN_CANCELLED after reading on to 64 KiB.
+  expect(pulls).toBe(1); expect(body.locked).toBe(false);
 });
 
 // U3-R1: a signed-in 403 whose body fails part-way, as a reset connection does, is still a refusal, and Stop still wins over the
