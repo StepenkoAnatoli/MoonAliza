@@ -212,11 +212,18 @@ beforeAll(async () => {
   nodeSha256 = digest(await readFile(process.execPath)); fixtureBytes = await readFile(fixture); fixtureSha = digest(fixtureBytes);
   process.env.MOONALIZA_TEST_SENTINEL = SENTINEL;
 });
-afterEach(async () => { for (const h of harnesses.splice(0)) { await h.review.close(); await h.kit.close(); h.store.close(); } });
+/**
+ * The cleanup hooks get 60 s, not vitest's 10 s hook default. On the Windows runner one store's close() usually takes
+ * 13-45 ms, but in the diagnostic run 38349350999 two took 992 and 1477 ms. One test here leaves 8 harnesses, so its
+ * cleanup can pass 10 s while every close succeeds: runs 38280249732 and 38347713470 failed that way after the test
+ * body had passed (S9-CI-1). On Linux the same cleanup takes 46 ms.
+ */
+const HOOK_TIMEOUT = 60_000;
+afterEach(async () => { for (const h of harnesses.splice(0)) { await h.review.close(); await h.kit.close(); h.store.close(); } }, HOOK_TIMEOUT);
 afterAll(async () => {
   delete process.env.MOONALIZA_TEST_SENTINEL;
   if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); }
-});
+}, HOOK_TIMEOUT);
 
 test('a passing review: rewrite the Finding, draft and answer the brief, end; the kit approves and main records approved', async () => {
   const h = await harness();
