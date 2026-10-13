@@ -518,6 +518,26 @@ test('an invoke failure shows its message, and the state shown is kept', async (
   expect(within(panelOf()).queryAllByRole('button')).toEqual([]);
 });
 
+test.each([
+  ['Open GitHub', 'github.open'],
+  ['Cancel', 'github.signIn.cancel'],
+] as const)('a refused %s stays on screen while the pending status is polled', async (name, method) => {
+  // The action's failure belongs to the user's click, not to a status read. Mutation that turns this red: clear the
+  // error whenever a status reply is applied (the refusal would then vanish at the next poll, a second later).
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  const fake = github(pending(), { [method]: () => { throw new Error('This operation is no longer available.'); } });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  fireEvent.click(within(panelOf()).getByRole('button', { name }));
+  await settle();
+  expect(within(panelOf()).getByRole('alert').textContent).toBe('This operation is no longer available.');
+  await tick(3000);
+  expect(fake.count('github.account.read')).toBe(4);
+  expect(within(panelOf()).getByRole('alert').textContent).toBe('This operation is no longer available.');
+  expect(within(panelOf()).getByText(CODE)).toBeTruthy();
+});
+
 test('every outcome and every ended reason has its spec text, and no text says anything was revoked or erased', async () => {
   const texts = await loadTexts();
   expect(Object.keys(texts.GITHUB_OUTCOMES).sort()).toEqual([...GitHubAttemptOutcomeSchema.options].sort());
