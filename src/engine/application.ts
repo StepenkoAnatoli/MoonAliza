@@ -47,10 +47,13 @@ const FROZEN_CONTEXT_LIMIT = 'This task outgrew the selected model\u2019s contex
  * Why a step ended without a usable answer (Stage 7 FX-1; reports/stage7-gap-audit.json GA-C1/GA-B1, GA-C2, GA-C4). Each
  * reason is internal: the run fails with an existing public code (F-21) and only its message names the cause, chosen
  * where `run.failed` is built, as FROZEN_CONTEXT_LIMIT is. The incomplete text never says "continue": history drops
- * partial answers (`!m.partial` below), so the next run would not see the cut-off text.
+ * partial answers (`!m.partial` below), so the next run would not see the cut-off text. It must be true of every path
+ * that reaches it, and some reach no limit: a stream cut with no stop reason, and a normal stop (`stop`, `end_turn`,
+ * `stop_sequence`) that carries a call, which the Phase 1 rule never runs. A Completion does not say which path it took,
+ * so the limit remedy is conditional.
  */
 const STEP_ENDINGS: Record<string, { code: 'PROVIDER_ERROR' | 'PROVIDER_PROTOCOL_ERROR'; message: string }> = {
-  STEP_INCOMPLETE: { code: 'PROVIDER_ERROR', message: 'The model stopped before finishing: it reached its maximum response (thinking counts toward it) or the context window, or the answer was cut off. Raise Maximum response or Context window in Model profiles, or split the request.' },
+  STEP_INCOMPLETE: { code: 'PROVIDER_ERROR', message: 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; otherwise send the request again or split it.' },
   STEP_BLOCKED: { code: 'PROVIDER_ERROR', message: 'The provider declined to answer this request. Rephrase it or try another model.' },
   STEP_EMPTY: { code: 'PROVIDER_ERROR', message: 'The model ended its turn without an answer. Send the request again or rephrase it.' },
   STEP_TOO_MANY_CALLS: { code: 'PROVIDER_PROTOCOL_ERROR', message: 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Ask for fewer actions at a time.' },

@@ -10,7 +10,7 @@ import { reviewWorkspacePath } from '../src/engine/research-review';
 import { complete, type Completion, type InferenceMessage, type InferenceProfile } from '../src/main/inference';
 import type { ProviderState } from '../src/engine/control';
 import type { Run } from '../src/shared';
-import { REFUSAL_SIGNATURE, builtStream, type BuiltBlock } from './fixtures/anthropic-state-refusals';
+import { REFUSAL_SIGNATURE, blockEvents, builtStream, messageStart, sseText, toolUseBlock, type BuiltBlock } from './fixtures/anthropic-state-refusals';
 
 const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(store => store.close()); roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })); });
@@ -621,7 +621,7 @@ test('a frozen review run that overflows keeps REVIEW_CONTEXT_LIMIT and the revi
 // step that ends without a usable answer keeps its public code (F-21) and says why, in a message chosen where run.failed
 // is built. Wherever the shape is an adapter's, the completion comes from the real complete() over a fake fetcher
 // (streams built from E-10 and OpenAI chat shapes, not captures), so the engine gets exactly what main hands it.
-const INCOMPLETE_TEXT = 'The model stopped before finishing: it reached its maximum response (thinking counts toward it) or the context window, or the answer was cut off. Raise Maximum response or Context window in Model profiles, or split the request.';
+const INCOMPLETE_TEXT = 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; otherwise send the request again or split it.';
 const BLOCKED_TEXT = 'The provider declined to answer this request. Rephrase it or try another model.';
 const EMPTY_TEXT = 'The model ended its turn without an answer. Send the request again or rephrase it.';
 const TOO_MANY_CALLS_TEXT = 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Ask for fewer actions at a time.';
@@ -633,6 +633,9 @@ const textBlock = (text: string): BuiltBlock => ({ start: { type: 'text', text: 
 const chatStream = (...chunks: unknown[]) => [...chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`), 'data: [DONE]\n\n'].join('');
 const chatText = (content: string) => ({ choices: [{ index: 0, delta: { role: 'assistant', content } }] });
 const chatStop = (finish_reason: string) => ({ choices: [{ index: 0, delta: {}, finish_reason }] });
+/** A chat stream that ends without a finish reason or `[DONE]`: a stream cut short. */
+const chatCut = (...chunks: unknown[]) => chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`).join('');
+const chatCall = (content: string) => ({ choices: [{ index: 0, delta: { role: 'assistant', content, tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'list_files', arguments: '{"path":"."}' } }] } }] });
 /** What an adapter makes of a streamed body: the real complete() over a fake fetcher. */
 const adapted = (profile: InferenceProfile, body: string) => complete(profile, [{ role: 'user', content: 'Go on.' }], { signal: new AbortController().signal, fetcher: async () => new Response(body, { headers: { 'Content-Type': 'text/event-stream' } }) });
 const listStep = (count = 1): Completion => ({ content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: count }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: { path: '.' } })) });
@@ -651,6 +654,12 @@ test.each([
   ['an Anthropic context-window stop', ANTHROPIC, builtStream([textBlock('Here is the first half of the')], 'model_context_window_exceeded'), 'Here is the first half of the'],
   ['a chat-kind length stop with no text', CHAT, chatStream(chatText(''), chatStop('length')), ''],
   ['a chat-kind length stop mid-answer', CHAT, chatStream(chatText('Here is the first half of the'), chatStop('length')), 'Here is the first half of the'],
+  // No limit was reached on these paths (fix round R1-1): a cut with no stop reason, and a normal stop that carries a call,
+  // which the Phase 1 rule never runs. The text names them and makes the limit remedy conditional.
+  ['a chat-kind stream cut with no finish reason', CHAT, chatCut(chatText('Here is the first half of the')), 'Here is the first half of the'],
+  ['an Anthropic stream cut before message_stop', ANTHROPIC, sseText([messageStart(), ...blockEvents([textBlock('Here is the first half of the')])]), 'Here is the first half of the'],
+  ['a chat-kind stop that carries a tool call', CHAT, chatStream(chatCall('Let me list it.'), chatStop('stop')), 'Let me list it.'],
+  ['an Anthropic end_turn that carries a tool_use block', ANTHROPIC, builtStream([textBlock('Let me list it.'), toolUseBlock()], 'end_turn'), 'Let me list it.'],
 ] as const)('%s keeps the partial text and fails PROVIDER_ERROR with the incomplete message', async (_name, profile, body, text) => {
   // Guard: the incomplete outcome's own message (mutation: drop it; the generic "Check the selected profile and project
   // access" text returns). The text never says "continue": history drops partial answers (application.ts `!m.partial`).

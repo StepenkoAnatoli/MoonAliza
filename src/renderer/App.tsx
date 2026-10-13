@@ -303,6 +303,7 @@ function MessageItem({ message }: { message: Message }) {
   }
   const content = message.content || (message.toolCalls?.some(call => call.name === 'run_command') ? 'Preparing a command for review…' : message.toolCalls?.some(call => ['write_file', 'edit_file'].includes(call.name)) ? 'Preparing an edit for review…' : message.toolCalls?.length ? 'Inspecting the project…' : '');
   if (!content) return null;
-  // A partial answer was cut off or declined (the run's failure says which): labelled, so it is not read as a whole answer.
+  // A partial answer was cut off, declined or ended in a form MoonAliza cannot use (the run's failure says so): labelled,
+  // so it is not read as a whole answer.
   return <article className={`message ${message.role}`}><div className="message-author">{message.role === 'user' ? 'You' : 'MoonAliza'}{message.partial && <span className="message-flag">Incomplete answer</span>}</div><div className="message-content">{content}</div></article>;
 }
