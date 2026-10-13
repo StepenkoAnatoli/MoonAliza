@@ -43,6 +43,20 @@ function watchedBody(text: string) {
   const body = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode(text)); }, cancel() { state.cancelled = true; } });
   return { state, body };
 }
+/** A pull-based stream of `total` bytes in 16 KiB pieces, with no content-length, so only the streaming bound can refuse it; it
+ *  records how much was pulled and whether it was cancelled. */
+function watchedStream(total: number) {
+  const state = { cancelled: false, pulled: 0 };
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (state.pulled >= total) { controller.close(); return; }
+      const size = Math.min(16_384, total - state.pulled); state.pulled += size;
+      controller.enqueue(new Uint8Array(size).fill(0x20));
+    },
+    cancel() { state.cancelled = true; },
+  });
+  return { state, body };
+}
 
 /** Every 8-character piece of a marker, and every `cause`, found anywhere in an outcome: its own and non-enumerable keys, an
  *  Error's message and stack, and the whole cause chain (L-7, DC-9). */
@@ -247,6 +261,22 @@ test('a body over 64 KiB is refused by its declared length and while streaming, 
   expect(await token(pollParams(m))).toEqual({ kind: 'transient' });
   expect(await token(pollParams(m))).toMatchObject({ kind: 'tokens' });
   expect(await deviceCode()).toEqual({ kind: 'failed' });
+});
+
+test('a streamed body over 64 KiB with no content-length is cancelled when the streaming bound trips (5.1: always cancelled or released)', async () => {
+  const m = markers();
+  const streamed = (body: ReadableStream<Uint8Array>): Fetcher => async () => {
+    const response = new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+    expect(response.headers.get('content-length')).toBeNull();
+    return response;
+  };
+  const tokenBody = watchedStream(200_000); const stepOneBody = watchedStream(200_000);
+  expect(await token(pollParams(m), limits, streamed(tokenBody.body))).toEqual({ kind: 'transient' });
+  expect(await deviceCode(true, limits, streamed(stepOneBody.body))).toEqual({ kind: 'failed' });
+  for (const { state } of [tokenBody, stepOneBody]) {
+    expect(state.pulled).toBeLessThan(200_000);   // refused mid-stream, so the cancel below reaches an open stream
+    expect(state.cancelled).toBe(true);
+  }
 });
 
 test('a parse failure leaves no cause and no piece of the token: a form body served as JSON, and a JSON body with a bare token (DC-9)', async () => {
@@ -535,6 +565,15 @@ test('fetchLogin: a 302 gives null after exactly one fetch, and the Location rec
   expect(await fetchLogin(traced.fetcher, `Bearer ${m.access}`, live(), limits)).toBeNull();
   expect(traced.calls).toHaveLength(1);
   expect(fake.requests.map(request => request.path)).toEqual(['/user']);
+});
+
+test('fetchLogin: the body of a non-2xx answer, a 302 included, gives null and is cancelled unread (5.1)', async () => {
+  for (const status of [302, 401, 403, 500]) {
+    const unread = watchedBody(JSON.stringify({ login: 'someone' }));
+    const answer: Fetcher = async () => new Response(unread.body, { status, headers: { 'content-type': 'application/json' } });
+    expect(await fetchLogin(answer, `Bearer ${markers().access}`, live(), limits), String(status)).toBeNull();
+    expect(unread.state.cancelled, String(status)).toBe(true);
+  }
 });
 
 test.each([
