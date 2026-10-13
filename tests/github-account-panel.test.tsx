@@ -559,6 +559,35 @@ test.each([
   expect(within(panelOf()).getByText(CODE)).toBeTruthy();
 });
 
+test.each([
+  ['Sign in', 'github.signIn.start', signedOut(), 'Windows credential encryption is unavailable. The credential was not saved.'],
+  ['Open GitHub', 'github.open', pending(), 'The operation could not be completed. No private error details were shared.'],
+] as const)('a refused %s leaves the screen when the user clicks again, in the same view', async (name, method, initial, message) => {
+  // Spec 8.1 shows an invoke failure for the click it answers. Mutation that turns this red: keep the failure when the user
+  // clicks again (drop the clearing at the start of change() or open()); the refusal would then stand beside the result
+  // of the next click, in a view that has not changed.
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  let clicks = 0;
+  const fake = github(initial, { [method]: () => {
+    if (++clicks === 1) throw new Error(message);
+    if (method === 'github.open') return { opened: true };
+    fake.state.account = signedOut({ lastOutcome: 'start-failed' });
+    return { account: fake.state.account };
+  } });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  fireEvent.click(within(panelOf()).getByRole('button', { name }));
+  await settle();
+  expect(within(panelOf()).getByRole('alert').textContent).toBe(message);
+  fireEvent.click(within(panelOf()).getByRole('button', { name }));
+  await settle();
+  expect(clicks).toBe(2);
+  expect(within(panelOf()).queryByRole('alert')).toBeNull();
+  if (method === 'github.open') expect(within(panelOf()).getByText(CODE)).toBeTruthy();
+  else expect(within(panelOf()).getByRole('status').textContent).toBe(OUTCOMES['start-failed']);
+});
+
 test('a failed status read is shown until a later reply is shown, so the confirmed view holds only its sentence', async () => {
   // Spec 8.1 shows invoke failures; spec 8.2 has the confirmed view show only "GitHub confirmed the code. Finishing
   // sign-in...". Guard: an applied reply clears a failed read (mutation: keep it; one transient poll failure, an engine
