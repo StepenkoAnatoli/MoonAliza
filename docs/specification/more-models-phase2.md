@@ -1245,3 +1245,21 @@ Recorded from the build, the unit reviews, the live probes and the integration r
   the full set (20 or more per model, Opus and Fable too) is Phase 4 input. Replaying re-serialized tool
   input was accepted with string arguments only; integer-like key order and number normalisation are
   not exercised.
+- From the Stage 7 gap audit (`docs/evidence/2026-10-13-gap-audit.md`), not fixed in Phase 2:
+  - Prefilled token values for the Anthropic kind (GA-B2): at the form's defaults (8,192 and 2,048) a thinking run
+    freezes and stops after a few steps, and from the second run on drops all history (GA-C5). Prefilling larger
+    values (for example a 1,000,000-token window and 32,000 maximum response) reverses "No token values are
+    prefilled" and raises what each step can cost; the hint now says so, and the choice is the user's (Phase 4
+    presets, or earlier if the user asks).
+  - Retrying a fetch that rejects (connection reset, DNS or TLS failure, Electron `net::ERR_*`) and an in-stream
+    `overloaded_error` that arrives before any content block (GA-B3): today neither is retried, although the
+    Anthropic SDK retries connection errors (E-12 l.41).
+  - Carrying the provider's own overflow numbers ("340027 tokens > 200000 maximum", D2) to the CONTEXT_LIMIT text
+    (GA-B4, downgraded to wording).
+  - Ollama models that think through `num_predict` end `length` with empty content, or `stop` with only thinking
+    (the verifier's inference; no live Ollama was available): the Stage 7 texts now name both, but the thinking
+    itself is discarded (`provider-stream.ts`).
+  - Whether Anthropic advises discarding text streamed before a `refusal` stop (its refusals page was not
+    collected): today that text is stored as a partial answer and labelled.
+  - An incomplete or declined step with no text still stores an empty partial message (not shown; the banner names
+    the cause), and an answer made only of zero-width characters counts as an answer (Stage 7 review R1-3, R1-4).
