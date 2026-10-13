@@ -229,12 +229,17 @@ test('research opens per project from the details pane and is not requested befo
 // The Anthropic profile option (docs/specification/more-models-phase2.md section 7; F-19). The data-use sentence is pinned
 // whole, as one string, so a dropped or reworded clause is red (sources: SL-E11 l.12, l.26; SL-E17 l.16, l.45, l.140,
 // l.241). The hint never says "not retained" and never names Haiku 4.5, which may retire before this merges (SL-E01 l.27).
+// Stage 7 FX-3 (GA-B2, GA-C5): at the form's 8,192 / 2,048 a thinking run ends with the frozen CONTEXT_LIMIT after two
+// steps and drops all history from its second run on. Prefilling larger values is a cost decision and reverses "No token
+// values are prefilled: presets are Phase 4", so the hint says it instead, with the cost; README repeats it.
+const RAISE_TOKENS = "Raise Context window and Maximum response for these models: at the form's defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed for the input it sends, so a larger window costs more per step.";
 const ANTHROPIC_DATA_USE = "Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs; Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page refers to its commercial data retention policy, which MoonAliza has not reviewed.";
 
 test('the profile form offers Anthropic API after the existing options, with its endpoint and hint', async () => {
   // Guards: the option (mutation: remove it; the option list then lacks it); the endpoint default (mutation: anthropic
   // falls back to the OpenAI endpoint); the hint (mutations, one each: drop a clause of the data-use sentence; drop the
-  // hint's "several minutes"; name Haiku 4.5 beside the 5.x models; say "is not retained by default").
+  // hint's "several minutes"; name Haiku 4.5 beside the 5.x models; say "is not retained by default"; drop the sentence
+  // that says the token fields need raising, Stage 7 FX-3, GA-B2/GA-C5).
   render(<App api={api([project])} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Model profiles' }));
   const dialog = await screen.findByRole('dialog', { name: 'Model profiles' });
@@ -249,8 +254,9 @@ test('the profile form offers Anthropic API after the existing options, with its
   // The page's CSP is style-src 'self': the note is laid out by the stylesheet, never by an inline style (U4-R4).
   expect(screen.getByRole('note', { name: 'Anthropic API notes' }).getAttribute('style')).toBeNull();
   const hint = screen.getByRole('note', { name: 'Anthropic API notes' }).textContent ?? '';
-  // In the spec's order: workspace key, thinking and the model figures, duration, data use, how it was checked.
-  const order = ['created for a single workspace', 'Thinking counts toward the maximum response', 'Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens', 'several minutes', ANTHROPIC_DATA_USE, 'tested against requests and responses recorded from the live API; the app itself has not yet been run against it'];
+  // In the spec's order: workspace key, thinking and the model figures, then (Stage 7 FX-3) that the form's token defaults
+  // need raising for them and what that costs, duration, data use, how it was checked.
+  const order = ['created for a single workspace', 'Thinking counts toward the maximum response', 'Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens', RAISE_TOKENS, 'several minutes', ANTHROPIC_DATA_USE, 'tested against requests and responses recorded from the live API; the app itself has not yet been run against it'];
   const positions = order.map(fragment => hint.indexOf(fragment));
   expect(positions.every(position => position >= 0), `missing: ${order.filter((_fragment, index) => positions[index]! < 0).join(' | ')}`).toBe(true);
   expect([...positions].sort((a, b) => a - b)).toEqual(positions);

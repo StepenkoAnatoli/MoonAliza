@@ -257,11 +257,15 @@ function defaultEndpoint(kind: string): string {
  * repeats it. Never "not retained": the retention page's own words are a commitment for features that need storage.
  */
 const ANTHROPIC_DATA_USE = "Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs; Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page refers to its commercial data retention policy, which MoonAliza has not reviewed.";
-/** Shown while the Anthropic API kind is selected. Names only models that are not retiring (SL-E01 l.22-23, l.27). */
+/**
+ * Shown while the Anthropic API kind is selected. Names only models that are not retiring (SL-E01 l.22-23, l.27). The
+ * token sentence (Stage 7 FX-3, GA-B2/GA-C5) names the form's own defaults (the useState values below) and the cost, since
+ * no token value is prefilled for a kind (presets are Phase 4).
+ */
 function AnthropicHint() {
   return <div className="muted provider-hint" role="note" aria-label="Anthropic API notes">
     <p>Use an API key created for a single workspace.</p>
-    <p>Thinking counts toward the maximum response. Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens.</p>
+    <p>Thinking counts toward the maximum response. Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens. Raise Context window and Maximum response for these models: at the form's defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed for the input it sends, so a larger window costs more per step.</p>
     <p>A step can take several minutes.</p>
     <p>{ANTHROPIC_DATA_USE}</p>
     <p>MoonAliza's Anthropic connection is tested against requests and responses recorded from the live API; the app itself has not yet been run against it.</p>
