@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { GitHubReader } from '../src/main/github';
 import { githubRepositories, parseGitHubInput } from '../src/shared/github';
 
@@ -315,11 +315,25 @@ test('no fallback: after a signed request the credential refuses, and the read i
 test('a credential failure that is not a reason becomes GITHUB_UNAVAILABLE, and Stop or the deadline map as today', async () => {
   const unavailable = new GitHubReader(async () => json({ sha }), { async send() { throw new Error('ENCRYPTION_UNAVAILABLE'); } });
   await expect(unavailable.read({ url }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_UNAVAILABLE');
-  const stop = new AbortController();
+  // The fakes record what send() saw and the test asserts it afterwards: an expect() thrown inside send() would be mapped by
+  // read() like any other failure and could never fail the test.
+  const stop = new AbortController(); const seen: boolean[] = [];
   const stopped = new GitHubReader(async () => json({ sha }), { async send(_request, signal) {
-    stop.abort(); expect(signal.aborted).toBe(true); throw new Error('GITHUB_RENEWAL_UNAVAILABLE');
+    stop.abort(); seen.push(signal.aborted); throw new Error('GITHUB_RENEWAL_UNAVAILABLE');
   } });
   await expect(stopped.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
+  // U3-R7: the 20 s deadline through its one seam, AbortSignal.timeout, replaced for this case only. A credential that fails
+  // after the deadline fired gives GITHUB_TIMEOUT, as today, not its own reason.
+  const deadline = new AbortController(); const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(deadline.signal);
+  try {
+    const late = new GitHubReader(async () => json({ sha }), { async send(_request, signal) {
+      deadline.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')); seen.push(signal.aborted);
+      throw new Error('GITHUB_RENEWAL_UNAVAILABLE');
+    } });
+    await expect(late.read({ url }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_TIMEOUT');
+    expect(timeout).toHaveBeenCalledWith(20_000);
+  } finally { timeout.mockRestore(); }
+  expect(seen).toEqual([true, true]);
 });
 
 test('reruns with a credential: scope and sensitive paths refuse before send(), while an allowed read is signed', async () => {
