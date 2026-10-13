@@ -1169,7 +1169,7 @@ describe('application and boundaries', () => {
   function app(research: 'off' | 'public-technical' = 'public-technical') {
     const { store } = open(); project(store, research);
     const published: Research[] = [];
-    const application = new Application(store, { publish() {}, publishResearch: r => published.push(r), async infer() { return { content: '', outcome: 'complete' }; } });
+    const application = new Application(store, { publish() {}, publishResearch: r => published.push(r), async infer() { return { content: 'Answer.', outcome: 'complete' }; } });
     const call = <M extends MethodName>(method: M, params: MethodParams<M>, clientRequestId: string = randomUUID()) => application.handle({ protocolVersion: 1, clientRequestId, method, params }) as Promise<MethodResult<M>>;
     return { store, application, published, call };
   }

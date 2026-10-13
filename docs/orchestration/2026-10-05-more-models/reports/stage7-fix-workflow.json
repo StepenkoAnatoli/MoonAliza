@@ -1,0 +1,322 @@
+{
+  "summary": "Stage 7 fixes: build FX-1..FX-3 on build/s7-fix, two refute-first reviewers, up to two fix rounds",
+  "agentCount": 5,
+  "logs": [
+    "round 1: 6 blocking",
+    "round 2: 0 blocking remain"
+  ],
+  "result": {
+    "build": "FX-1, FX-2 and FX-3 are done on `build/s7-fix`, one commit each, nothing pushed. The full suite has no new failure: exactly the 74 baseline failures, and the 20 new tests all pass. I stopped at no item; four judgement calls for you are under \"Judged and not stopped\" below.\n\n## Report\n\nCommits:\n\n| Unit | Commit | Files |\n|---|---|---|\n| FX-1 | `ca469b2` | 10 files, +163/−13 |\n| FX-2 | `8377ebf` | 3 files, +31/−2 |\n| FX-3 | `9293d02` | 4 files, +17/−7 |\n\nAll runs: Node 24.21.0, cwd `/home/user/task5-handoff/wt/s7-fix`, `TMPDIR=/tmp/s7t` (full suite `/tmp/s7f`). Every commit passed the research gate.\n\nTo prove each guard I removed it alone, ran the test files, and put the file back. `cmp` confirmed each file was restored byte for byte.\n\n### FX-1: say why a step ended without an answer (`ca469b2`)\n\n**Change (`src/engine/application.ts`):**\n- A new table, `STEP_ENDINGS`, holds four internal reasons that never leave the engine as codes:\n  - `STEP_INCOMPLETE` and `STEP_BLOCKED`: the partial text is still stored, then the run fails with `PROVIDER_ERROR`.\n  - `STEP_EMPTY`: a `complete` outcome with empty or whitespace-only content and no tool call. Nothing is stored and the run fails with `PROVIDER_ERROR`.\n  - `STEP_TOO_MANY_CALLS`: more than `MAX_STEP_CALLS` (8) calls fails with `PROVIDER_PROTOCOL_ERROR`. The count is checked after the calls' own validity checks, so an invalid call among nine keeps the existing \"invalid or not offered\" text.\n- The message is chosen where `run.failed` is built. `reviewEnd` gets the same text, so `REVIEW_RUN_FAILED` now appends it.\n- The four texts are the brief's word for word; nothing forced a change.\n\n**Renderer:** `MessageItem` in `src/renderer/App.tsx` shows \"Incomplete answer\" beside the author of a stored partial message. A `.message-flag` style was added in `src/renderer/styles.css`.\n\n**Fixtures that returned an empty answer as success** now return `'Answer.'`:\n- `tests/application.test.ts` (the oversized-prompt test)\n- `tests/policy-guard-control.test.ts:25`\n- `tests/research-jobs-state.test.ts:1172`\n- `tests/research-purge.test.ts:47`\n\nThis weakens nothing: none of those tests ever calls `infer`. A grep for `run.start`, `whenIdle` and `beginReview` finds none in the three other files, and the application test asserts `invoked` stays false.\n\n**`e2e/`:** no assertion on the old texts and no empty final answer, so nothing changed there.\n\n**Tests (in `tests/application.test.ts` unless noted):**\n- Incomplete ×5: Anthropic `max_tokens` while thinking (empty text), `max_tokens` mid-answer, the context-window stop, and chat `length` with empty and with non-empty text.\n- Blocked ×2: Anthropic refusal and chat `content_filter`.\n- Empty ×4, each after a tool step: empty `end_turn`, thinking then `end_turn`, whitespace-only text, and chat empty `stop`.\n- One test for 9 versus 8 calls, plus an invalid call among nine.\n- 4 review-run cases in `tests/research-review-engine.test.ts`, 1 label test in `tests/workbench.test.tsx`.\n- Where the shape belongs to an adapter, the completion comes from the real `complete()` over a fake fetcher.\n\n**Red first:** all 17 new tests failed before the source change, each for the expected reason.\n\n**Each guard removed alone:**\n\n| Guard removed | Tests red |\n|---|---|\n| incomplete text | 6 |\n| blocked text | 3 |\n| blocked given the incomplete reason | 3 |\n| the empty-answer check | 5 |\n| the empty check without `trim` | 2 |\n| the over-8 text | 2 |\n| cap raised to 9 | 2 |\n| count checked before validity | 1 |\n| `reviewEnd` given only the `failures` table entry | 4 |\n| the label | 1 |\n\nNo other test went red under any of them.\n\n**Checks:** typecheck, lint and `npx eslint e2e` exit 0. The touched and related test files: 295 passed, 1 skipped (Windows-only). After the commit, the 6 touched files: 239 passed, 1 skipped.\n\n### FX-2: empty tool-call arguments are `{}` (`8377ebf`)\n\n**Change:** in `src/main/inference.ts`, `parseCalls` now goes through a new helper, `callArguments`, which reads an empty or whitespace-only joined argument string as `{}`. Any other string is parsed as before, and one that is not an object still fails the step.\n\n**Test:** one test with three rows in `tests/provider-transport.test.ts`: two empty fragments, one empty fragment, and whitespace only. The stream has the shape of the live U06/U18 compatible-route recordings, applied to a `git_status` call with no arguments.\n\n**Red first:** all three rows threw `PROVIDER_INVALID_RESPONSE` before the change. Removing the rule turns those 3 red and nothing else; removing only the `trim` turns the whitespace row red.\n\n**Checks:** typecheck, lint and `npx eslint e2e` exit 0. Provider transport, stream and screen tests: 148 passed. After the commit, `tests/provider-transport.test.ts`: 94 passed.\n\n### FX-3: the Anthropic hint says the token fields need raising (`9293d02`)\n\n**Change:**\n- The brief's sentence is added to `AnthropicHint`, right after the model figures. The form still prefills no token values.\n- README repeats the sentence. There, \"these models\" is spelled out as \"Claude Fable 5.1, Opus 5.5 and Sonnet 5.5\", because README's paragraph never names them.\n\n**Test:** `tests/workbench.test.tsx` pins the whole sentence, in order before \"several minutes\", and still checks the hint names no Haiku model.\n\n**Red first:** the hint test failed (\"missing: Raise Context window …\") before the hint changed. Removing the sentence turns it red, and so does removing only its cost clause.\n\n**Checks:** typecheck, lint, `npx eslint e2e` and `node scripts/check-handoff.mjs` all pass. Workbench: 14 passed. `e2e/` has no assertion on the hint's text.\n\n`docs/ARCHITECTURE.md`'s Phase 2 paragraph is updated in each of the three commits.\n\n### Full suite\n\nRun once at the end: `npx vitest run --reporter=json --outputFile=/tmp/s7t/full.json`, then `compare.py`.\n\n| | Result |\n|---|---|\n| Total tests | 1562 (1542 before + 20 new) |\n| Passed / failed / skipped | 1482 / 74 / 6 |\n| Baseline failures | 74 of 74, the same names |\n| New failures | none |\n| Baseline tests now passing | none |\n| Files with no results | none |\n\nThe log also printed three Node \"PromiseRejectionHandledWarning\" warnings. They are not failures, and I did not check whether the baseline runs printed them too.\n\n### Judged and not stopped\n\nNothing in the brief looked wrong, so I didn't stop at any item. These four are for you:\n1. **Empty review answers now fail.** A review run whose final answer is empty used to go to `awaiting_review` and packaging; now it ends `not_ready` / `REVIEW_RUN_FAILED` with the empty-answer text. The brief's empty rule applies to every run, and I found no recorded decision for this case. A retry continues with the kept edits.\n2. **Specs not updated.** `more-models-phase2.md` section 7's hint list (one more sentence now) and the notes on P2-BRK-3, P2-BRK-4 and section 5.5 (the \"generic text\" behaviour, which now has specific texts) still describe the old behaviour. I left them for your docs commit.\n3. **Hard-coded defaults.** The hint states the form's defaults (8,192 and 2,048) as literals. If the `useState` defaults ever change, the hint will be wrong; the test pins the sentence.\n4. **Empty cut-off answers.** An incomplete step with no text still stores an empty partial message, as before. It is still not rendered, but the banner now names the cause.\n\n### What I got wrong\n\n1. **Test precondition.**\n   - **Mistake:** I first wrote the empty-answer precondition as `toEqual({…, usage: expect.anything()})`.\n   - **Where:** `tests/application.test.ts`, the empty-answer test.\n   - **Impact:** the chat row would have failed for a reason unrelated to the engine, since its stream has no usage chunk. Nothing delivered was affected.\n   - **Cause:** I assumed every adapter output carries usage.\n   - **Fix:** `toMatchObject` on outcome and content, plus `toolCalls` undefined. I caught it before the first run.\n   - **Verified:** the first run failed every empty row on the engine's outcome, past the precondition.\n2. **Commit message claim.**\n   - **Mistake:** the first FX-2 commit message said a call that needs arguments but gets `{}` is refused \"as a tool result\".\n   - **Where:** that commit's Why section.\n   - **Impact:** wrong for `run_command` and write/edit, whose schema failure fails the run. No code was affected.\n   - **Cause:** I generalised from the read tools without reading the command and write paths.\n   - **Fix:** amended (unpushed) to name each path.\n   - **Verified:** I read the `CommandInputSchema.parse` call in `src/engine/application.ts` and `write()` in `src/engine/operations.ts`.\n\nFiles are in /home/user/task5-handoff/wt/s7-fix:\n- src/engine/application.ts\n- src/main/inference.ts\n- src/renderer/App.tsx\n- src/renderer/styles.css\n- README.md\n- docs/ARCHITECTURE.md\n- tests/application.test.ts\n- tests/research-review-engine.test.ts\n- tests/workbench.test.tsx\n- tests/provider-transport.test.ts\n\nFull suite report: /tmp/s7t/full.json",
+    "history": [
+      {
+        "round": 1,
+        "reviews": [
+          {
+            "verdict": "FIX",
+            "findings": [
+              {
+                "id": "R1-1",
+                "severity": "S3",
+                "problem": "No test covers a frozen run for any of the new step texts. Every new FX-1 engine row runs after `listStep()`, which carries no provider state, so all of them are unfrozen runs. A real Anthropic thinking tool step carries appendOnly state and freezes the run, which is the actual GA-C1 scenario. So the path where the incomplete, declined or empty text matters most for Anthropic is not pinned, and a later change that let FROZEN_CONTEXT_LIMIT win would pass every test.",
+                "evidence": "Mutation M18 (`const message = frozen ? FROZEN_CONTEXT_LIMIT : known ...`, the frozen text for every code): application, research-review-engine and anthropic-transport tests, 167 passed, 0 red. Mutation M19 (`(code === 'CONTEXT_LIMIT' || ending) && frozen ? FROZEN_CONTEXT_LIMIT`): also 0 red there, and 0 red across anthropic, context, research-review-e2e, research-review-main, provider-transport, folder-free-chat and project-policy-engine (420 passed). Today's behaviour is correct. In my probe, a real Anthropic tool_use step (complete() over a fake fetcher, providerState.appendOnly true) followed by incomplete, empty incomplete, blocked, empty complete or nine calls ends with each step's own text and never 'This task outgrew...'. The same holds unfrozen after two tool steps.",
+                "fix": "Add a frozen row (or a test.each) to tests/application.test.ts. The first step is `complete(ANTHROPIC, ..., { tools: [REFUSAL_TOOL], ... })` over `builtStream([thinkingOnly, textBlock(''), toolUseBlock()], 'tool_use')`; assert `providerState.appendOnly === true`. Then end the run with incomplete (empty and non-empty), blocked, empty complete and nine calls, and assert the step text with the existing code each time. Show it red under M19."
+              },
+              {
+                "id": "R1-2",
+                "severity": "S3",
+                "problem": "A review run whose final answer is empty now fails the job, and that answer is the documented Anthropic pattern after tool results. Before this change the run went to awaiting_review, and the kit's preflight and packaging judged the edits. Now the run fails, and the job ends not_ready / REVIEW_RUN_FAILED with the empty-answer text, even when the review finished its work. This reverses the spec's final-answer edge with no recorded decision. GA-C2's harm (a silent 'completed' with nothing shown) does not apply to reviews: the job status reports the outcome, and when work is unfinished the kit gives a more precise reason. The builder flagged this as judgement call 1. The brief's empty rule does not decide reviews explicitly.",
+                "evidence": "Probe on a copy of the research-review-engine harness: write_file research/MAP.md (approved), then answer(''). Result: run 'failed', job 'not_ready', failure REVIEW_RUN_FAILED, MAP.md edit kept ('classified'). docs/specification/research-review.md:193 says 'a final answer: run status `awaiting_review`, with no job edge yet', and line 312 shows a passing review ends after the agent 'writes `Reviewed by: agent` and ends'. Wire E-11 l.86, quoted by the verifier, says empty end_turn happens 'particularly after tool results', which is how a review ends (after research_draft_brief or a write). Hitting this costs the user a retry run.",
+                "fix": "Lead's decision. Recommended: in review mode, treat a `complete` outcome with empty or whitespace-only content and no call as the final answer. Store no empty message and call `this.endReview(run.id, { kind: 'answer' })`. Keep the incomplete, blocked and nine-call review texts, and change the 'an empty answer' row in tests/research-review-engine.test.ts to expect awaiting_review. If the failure is kept instead, record it as a decision and update research-review.md:193."
+              },
+              {
+                "id": "R1-3",
+                "severity": "S4",
+                "problem": "An incomplete or blocked outcome with no text still stores an empty partial assistant message. This affects a thinking-only max_tokens stop and an empty refusal.",
+                "evidence": "Probe, messages stored per case: thinking-only max_tokens gives [['',false,1],['',true,0]], and an empty refusal stop gives the same. The behaviour is pre-existing (P2-BRK-4, an optional fix). The brief's no-store rule covers only `complete`. The message is not rendered (MessageItem returns null) and history drops it (`m.content && !m.partial`). The banner now names the cause.",
+                "fix": "Optional: skip storing a partial message whose content trims to empty. Otherwise leave it as recorded."
+              },
+              {
+                "id": "R1-4",
+                "severity": "S4",
+                "problem": "An answer made only of zero-width characters counts as a real answer. It is stored, the run completes, and the user sees nothing.",
+                "evidence": "Probe B1: ' ', '\\n\\t \\r\\n', U+00A0, U+3000, U+FEFF and U+2028 all end failed PROVIDER_ERROR with nothing stored. U+200B alone ends 'completed' with stored=1, because String.prototype.trim does not strip it. No vendor is known to emit this.",
+                "fix": "Optional: test for emptiness with `/^[\\s​-‍⁠]*$/` in place of `!content.trim()`."
+              },
+              {
+                "id": "R1-5",
+                "severity": "S4",
+                "problem": "The `!deadline.signal.aborted &&` guard in `ending` can never take effect, so no test can pin it.",
+                "evidence": "Mutation M11 (drop the guard): 126 passed, 0 red. The reason: assertConversationPolicy throws RUN_CANCELLED on an aborted signal (src/engine/policy.ts:73) right after infer returns, before any STEP_* throw. Probe B6b (time limit fires during infer, then the step returns empty, incomplete or nine calls) ends BUDGET_EXCEEDED with 'The run reached its step or time limit.', as before.",
+                "fix": "None needed. It is harmless defensive code; drop it or say in its comment that it is defensive."
+              },
+              {
+                "id": "R1-6",
+                "severity": "S4",
+                "problem": "Revert test: FX-1 (ca469b2) and FX-2 (8377ebf) cannot be reverted alone without a textual conflict. Each appends to the same single-line Phase 2 paragraph in docs/ARCHITECTURE.md.",
+                "evidence": "I reverse-applied each commit's diff to HEAD in a temporary index (`git apply --cached --check`). ca469b2 and 8377ebf fail with 'patch failed: docs/ARCHITECTURE.md:32'. Every other file applies cleanly, and 9293d02 reverts cleanly. The one-line paragraph predates this branch.",
+                "fix": "None required: the conflict is resolved by hand. Optionally put each Stage 7 sentence on its own line, so later fixes revert cleanly."
+              },
+              {
+                "id": "R1-7",
+                "severity": "S4",
+                "problem": "Docs and hint drift, as the builder flagged. The section 7 hint list in more-models-phase2.md lacks the new sentence. The hint states the form defaults (8,192 and 2,048) as literals. A test pins only the 8192 default (tests/workbench.test.tsx:91), so changing useState(2048) would leave the hint wrong with no test red.",
+                "evidence": "In src/renderer/App.tsx:278 the defaults are useState(8192) and useState(2048). In tests/workbench.test.tsx, only line 91 asserts a default ('8192'). The other spec sentences I checked remain true: more-models-phase2.md 585-586 and 1164-1166 (the deadline, 529 and cut paths still show the generic text, and the empty partial is still stored).",
+                "fix": "In the lead's docs commit, add the sentence to section 7's hint list. Optionally pin the Maximum response default ('2048') next to line 91, so a default change forces a look at the hint."
+              },
+              {
+                "id": "R1-8",
+                "severity": "S4",
+                "problem": "The 'Incomplete answer' label also appears on a declined (blocked) partial, whose text is the provider's refusal rather than a cut-off answer.",
+                "evidence": "In App.tsx MessageItem, `message.partial && <span className=\"message-flag\">Incomplete answer</span>` fires for any partial message. engine `this.message(..., output.outcome !== 'complete')` marks both incomplete and blocked as partial. The banner text ('The provider declined...') does distinguish the two cases.",
+                "fix": "Wording only. If the label should fit both cases, use 'Partial answer'. The outcome is not stored, so a label per outcome would need a schema change, which is outside this brief."
+              }
+            ],
+            "checked": [
+              "Diff 687e565..9293d02 read in full (src/engine/application.ts, src/main/inference.ts, src/renderer/App.tsx, styles.css, README, ARCHITECTURE, 7 test files). Commit identity, trailers and five-part reports are present.",
+              "npm run typecheck, npm run lint, npx eslint e2e: all exit 0 (Node 24.21.0, cwd /home/user/task5-handoff/wt/s7-fix, TMPDIR=/tmp/s7r).",
+              "Full suite once: npx vitest run --reporter=json, then compare.py. 1562 total, 1482 passed / 74 failed / 6 skipped. Baseline failures 74 of 74, new failures [], no baseline test now passing, no file without results. This matches the builder's numbers. The same 3 PromiseRejectionHandledWarning lines appeared; I did not trace their origin.",
+              "Gap-audit reproductions re-run against the new code, driving the real complete() over fake fetchers into the real Application and Store. Incomplete with empty and non-empty text (Anthropic max_tokens, chat length), blocked (Anthropic refusal, empty refusal), empty end_turn, thinking-only end_turn, chat empty stop, chat reasoning_content-only and reasoning-only stop, plain-JSON null content, nine calls (also after an earlier tool step). Each ends with the brief's exact text and code (PROVIDER_ERROR, or PROVIDER_PROTOCOL_ERROR for nine calls) in both run.failed and session.read. No new code appears. No empty assistant message is stored for complete outcomes. partial:true is kept on partial text. No 'STEP_' string appears in any event, message, failure, research row, journal or published research.",
+              "Ollama thinking-only via the real complete(): stop gives complete '' and length gives incomplete '', so the engine applies STEP_EMPTY and STEP_INCOMPLETE.",
+              "FX-2: compat argument-free call (fragments '', '' / '' / whitespace) gives tool_calls with input {}. src/main/bridge.ts publicMessages has no STEP_ key, and STEP_* is thrown only inside execute().",
+              "Break attempts: whitespace variants and U+200B (R1-4); empty answer with usage (usage.updated modelSteps 2 is recorded, run fails, nothing stored); frozen and unfrozen incomplete, blocked, empty and nine-call endings after earlier tool steps (correct, but frozen untested: R1-1); run.cancel racing each new path (cancelled, no run.failed, nothing from the step stored); run time limit racing (BUDGET_EXCEEDED); review runs (incomplete, blocked, empty, whitespace, nine: REVIEW_NOT_READY with the appended text, job not_ready REVIEW_RUN_FAILED); Stop racing an empty review answer (cancelled, REVIEW_STOPPED); edit then empty review (R1-2).",
+              "Red first: the four source files were restored to 687e565 and the four test files run. Exactly the 20 new tests plus the modified hint test went red, nothing else. Sources were restored and git status is clean.",
+              "Mutation check: each guard removed alone, files restored byte for byte against HEAD. Drop the empty check: 5 red. No trim: 2. Store before the check: 4. Blocked given the incomplete reason: 3. known from failures only: 16. Cap 9: 2. Drop the cap: 2. reviewEnd failures only: 4. partial flag dropped: 7. Too-many given PROVIDER_ERROR: 1. Drop the label: 1. Label always: 1. FX-2 rule removed: 3. FX-2 no trim: 1. FX-3 sentence removed: 1. Cost clause removed: 1. Survivors: the deadline guard (equivalent, R1-5) and the frozen-message mutations M18 and M19 (R1-1).",
+              "Fixtures changed from empty to non-empty (policy-guard-control:25, research-jobs-state:1172, research-purge:47): I put back the original '' with a console.error marker. All pass (7 / 70 / 22+1 skipped) with 0 markers, and a positive control on folder-free-chat printed 4. So infer is never reached and nothing is weakened. The application.test.ts oversized-prompt fixture asserts `invoked` is false.",
+              "e2e/ read for Windows-only risk: no assertion on the old failure texts, the hint, .message-author or partial; every fake's final answer is non-empty (build, commands, context-recovery, folder-free-chat, github-reading, recovery, workbench, the Anthropic fake STEP2_TEXT); commands.spec's git_status uses Ollama object arguments, which FX-2 does not affect; nothing Windows-only touches the changed paths.",
+              "Revert test simulated with a temporary index (R1-6).",
+              "Worktree left as found: HEAD 9293d02, only the .build and node_modules symlinks untracked, temp probes removed, /tmp/s7r deleted. No push, no --no-verify, no vendor request, no key-shaped string written."
+            ]
+          },
+          {
+            "verdict": "FIX",
+            "findings": [
+              {
+                "id": "R1-1",
+                "severity": "S2",
+                "problem": "The incomplete text is false for some paths that reach it. When a provider signals a normal stop but the step carries a tool call (chat finish_reason 'stop' with tool_calls, or Anthropic end_turn/stop_sequence with a tool_use block), the adapter returns outcome 'incomplete', which the Phase 1 rule pins in tests/provider-transport.test.ts:208 and tests/anthropic.test.ts:847-848. The engine then shows the incomplete text: 'it reached its maximum response ... or the context window, or the answer was cut off. Raise Maximum response or Context window ...'. On these paths no limit was reached and nothing was cut off. The advice is wrong and costs money: the hint itself says a larger window costs more per step. On a stream cut without a stop reason, 'the answer was cut off' fits the cause, but the only remedies given are raising limits or splitting the request. For a transient cut, sending the request again is the remedy.",
+                "evidence": "Probe on a scratchpad copy of build/s7-fix (git archive; I did not modify the worktree), using the real complete() over a fake fetcher, then the real Application through tests/application.test.ts's own helpers (adapted, taskEnding). (a) Chat stream: one delta with content 'Let me list it.' and a list_files tool_call, then finish_reason 'stop'. Result: {content:'Let me list it.',outcome:'incomplete'}, failure {code:'PROVIDER_ERROR',message:'The model stopped before finishing: it reached its maximum response (thinking counts toward it) or the context window, or the answer was cut off. Raise Maximum response or Context window in Model profiles, or split the request.'}, and a stored assistant message with partial:true, so it is labelled 'Incomplete answer'. (b) Anthropic builtStream of [text, tool_use] with end_turn: the same outcome and the same text. (c) Chat stream with no finish_reason: the same text. Source: src/main/inference.ts:258 (stop with calls is incomplete), src/main/anthropic.ts:341-344 (end_turn with tool_use is incomplete), src/engine/application.ts:403 (every non-blocked, non-complete outcome is STEP_INCOMPLETE). The repo's own corpus records a compatible route that ends a tool-call turn with finish_reason 'stop' (docs/research/2026-09-29-ollama-v1-stream-chunking/research/BRIEF.md:36, issue #7881). How often this happens is unknown.",
+                "fix": "Keep the code PROVIDER_ERROR. The Completion carries nothing that tells these paths apart, and adding a field is a schema change. So reword the incomplete text to be true for every incomplete path and to make the limit remedy conditional. For example: 'The model's answer ended before it was complete: it may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; otherwise send the request again or split it.' It must still never say 'continue'. Then add engine rows for a stream cut with no reason and for stop or end_turn carrying a call."
+              },
+              {
+                "id": "R1-2",
+                "severity": "S3",
+                "problem": "Review runs now get remedies the user cannot apply. reviewEnd appends the whole STEP_ENDINGS message to REVIEW_RUN_FAILED. The review conversation's banner then tells the user to 'Send the request again or rephrase it', 'Rephrase it or try another model', 'split the request' or 'Ask for fewer actions at a time'. A review has no user-written request. It is started from the Research panel with only a model choice, and the composer cannot send in research mode. The panel's own text for the same failure says 'start the review again'.",
+                "evidence": "src/engine/application.ts:436-437 passes known = ending.message to reviewEnd, which appends it at :454. tests/research-review-engine.test.ts (the new test.each in 'run end') pins e.g. 'The research review run failed. The research job is not ready. The model ended its turn without an answer. Send the request again or rephrase it.' src/renderer/ResearchPanel.tsx:264-269: the Start review form holds only a 'Review model' select. src/renderer/App.tsx:236: the Mode option 'research' is disabled. src/renderer/research-text.ts:37: REVIEW_RUN_FAILED's action reads 'Check the model profile, then start the review again.'",
+                "fix": "Split each STEP_ENDINGS entry into a cause and a remedy. Ordinary runs show both. reviewEnd appends the cause plus a remedy that fits a review, for example 'Raise Maximum response or Context window in Model profiles, then start the review again.' for incomplete, 'Start the review again or choose another review model.' for blocked, and 'Start the review again.' for empty or too many calls. Pin the review texts in research-review-engine.test.ts."
+              },
+              {
+                "id": "R1-3",
+                "severity": "S3",
+                "problem": "The empty-answer rule now fails review runs on the path Anthropic documents. The review instruction asks only for 'a short final answer', and then 'the kit then packages and judges the corpus'. The answer's text is never used. Anthropic documents empty end_turn answers 'particularly after tool results', and a review's last step follows tool results: an approved edit, research_preflight or research_draft_brief. Before FX-1, such a review went to awaiting_review and was packaged, and the gate judged the workspace. Now it ends not_ready / REVIEW_RUN_FAILED, and the user must pay for another review run, which can end empty again. The builder flagged this as judgement 1. I found no recorded decision for it, and the brief's review bullet speaks only of text.",
+                "evidence": "src/engine/application.ts:401: the STEP_EMPTY throw comes before line 404, `if (review) { this.endReview(run.id, { kind: 'answer' }); return; }`. src/engine/research-review.ts:97 (reviewInstruction): 'When the review is done, give a short final answer; the kit then packages and judges the corpus.' research-review.ts:142-144: an 'answer' end moves the run to awaiting_review. The gap audit's GA-C2 benchmark (E-11) is quoted in stage7-gap-audit.json. The new review test row 'an empty answer' pins the not_ready outcome.",
+                "fix": "Lead's decision. The smallest option: apply STEP_EMPTY only when `!review`, so an empty review answer goes to awaiting_review as before and packaging judges the workspace. Record the choice, either way, in the FX-1 commit or the spec, and add a review test for an empty end_turn after a tool step."
+              },
+              {
+                "id": "R1-4",
+                "severity": "S3",
+                "problem": "Docs and spec text no longer match the code. (1) docs/ARCHITECTURE.md's Phase 2 paragraph still says '`PROVIDER_PROTOCOL_ERROR` now crosses from main to the engine as itself, with one widened message for every cause'. The same paragraph's FX-1 sentence now gives the over-8 cause its own message, so the two contradict. (2) more-models-phase2.md section 6 says 'the widened text applies to every kind and every cause that raises the code', which is no longer true for more than 8 calls. The builder's report did not list this one. (3) Section 7 says the hint's items come 'in this order' and lists them; the list lacks the new token sentence between the model figures and 'several minutes'. Its README list lacks it too.",
+                "evidence": "docs/ARCHITECTURE.md:35 (the first sentences, against the 'Stage 7 FX-1' sentences later in the same line). docs/specification/more-models-phase2.md:666-671 (\"The `failures` entry is shared, so the widened text applies to every kind and every cause that raises the code\") and :704-733 (the hint list and 'No token values are prefilled'), :734-741 (the README list). src/engine/application.ts:409 gives STEP_TOO_MANY_CALLS its own message under PROVIDER_PROTOCOL_ERROR.",
+                "fix": "In the lead's docs commit: change ARCHITECTURE's sentence to 'one widened message for every cause except more than 8 calls, which has its own (FX-1)'. Add the same exception to spec section 6. Add the token sentence to section 7's hint list, in its position, and to the README list, with a pointer to GA-B2/FX-3. While editing, the P2-BRK-3/-4 note at :1164-1166 can say that a clean early end now shows the incomplete text."
+              },
+              {
+                "id": "R1-5",
+                "severity": "S4",
+                "problem": "The hint and README say 'so a larger window costs more per step' as a certainty. The window only allows more input: a larger value costs more only when there is more history or tool output to send, and the first step of a new conversation costs the same. Also, the hint's '8,192 and 2,048' are literals. The test pins the context default (tests/workbench.test.tsx:91 '8192'), but no test pins the outputTokens default of 2048, so that half of the sentence could drift without a test failing.",
+                "evidence": "src/renderer/App.tsx:268 (the hint) and :278 (useState(8192) and useState(2048)); README.md:24; the history reserve and trimming in src/engine/context.ts send only what exists. grep shows no '2048' assertion on the form in tests/workbench.test.tsx.",
+                "fix": "Optionally write 'so a larger window can cost more per step', and update RAISE_TOKENS and README with it. Either derive the two figures from shared constants that also feed useState, or add an assertion that the Maximum response field's default is '2048' next to the existing '8192' one."
+              },
+              {
+                "id": "R1-6",
+                "severity": "S4",
+                "problem": "A declined (blocked) partial message is labelled 'Incomplete answer'. That is accurate enough, and the banner says 'declined', but the label does not say the provider refused. Separately, the label sits inside .message-author with no whitespace, so the author's textContent and copied text read 'MoonAlizaIncomplete answer'.",
+                "evidence": "src/renderer/App.tsx:307. The engine stores blocked text with partial:true (application.ts:402). tests/workbench.test.tsx asserts `.message-author` textContent contains 'Incomplete answer'.",
+                "fix": "Optional: add a space or separator before the span (e.g. ' · '). If the lead wants it, a label that fits both outcomes, such as 'Incomplete or declined answer', is possible without a schema change. Otherwise leave as is."
+              }
+            ],
+            "checked": [
+              "Read the brief (briefs/s7-fix-builder.md), the gap audit's GA-C1/GA-B1/GA-C2/GA-C4/GA-B2/GA-C5 entries, the full diff 687e565..build/s7-fix (src, README, docs, tests), and all three commit messages.",
+              "Followed every path into each new text. Incomplete comes from: Anthropic null/no message_stop, max_tokens, model_context_window_exceeded, and end_turn/stop_sequence with tool_use; chat length, model_length, no reason, and stop with tool_calls; Ollama !done or done_reason other than stop. Blocked comes from Anthropic refusal and chat content_filter/refusal. Empty is a complete outcome with blank content. Too-many-calls fires when calls exceed 8 (the schema allows 128, so the path is reachable). Probed three of these paths end to end on an isolated git-archive copy (see R1-1).",
+              "Confirmed no new text contains provider output and the incomplete text never says 'continue' (history filter !m.partial at application.ts:373).",
+              "Confirmed 'Nothing from that step was run' is true: STEP_TOO_MANY_CALLS is thrown before the assistant message is stored and before any call runs.",
+              "Codes unchanged: PROVIDER_ERROR for incomplete, blocked and empty; PROVIDER_PROTOCOL_ERROR for more than 8 calls. Object.hasOwn guards the STEP_ENDINGS lookup. A deadline abort still wins as BUDGET_EXCEEDED, and a cancelled run emits no message.",
+              "Hint/README: the field labels 'Context window (tokens)' and 'Maximum response (tokens)' and the 'Model profiles' dialog name match the texts. The useState defaults are 8192/2048 (App.tsx:278). The hint names no Haiku (test line 263 asserts it). The Anthropic adapter sends no cache_control, so every request is billed for its full input.",
+              "Renderer label: tests/workbench.test.tsx passes 14/14 on the copy. Five label mutants were each killed by the new test: label dropped, always shown, shown for user role only, moved into the content, negated. Three hint mutants were killed: Haiku appended, defaults changed, sentence moved after 'several minutes'. Each file was restored and confirmed with cmp. Only assistant messages are ever stored with partial:true (application.ts:300), and an empty partial still renders nothing.",
+              "tests/application.test.ts and tests/research-review-engine.test.ts: 126/126 pass on the copy. I did not run the full suite, as instructed.",
+              "e2e/: no assertion on the old texts, on message-author or on partial; the fakes' final answers are non-empty.",
+              "Commit messages: author and committer are StepenkoAnatoli <318295322+StepenkoAnatoli@users.noreply.github.com>; all five named parts are present, with verified/untested/expected words; git interpret-trailers parses both trailers. No model identifier appears beyond the trailer, apart from the product names quoted from the hint in FX-3, which earlier commits also use. The diff and messages contain no key-shaped strings. The fixture-change claim holds: grep finds no run.start, whenIdle or beginReview in the three fixture files. The FX-2 claim about INVALID_TOOL_INPUT matches fileToolFailure.",
+              "docs/ARCHITECTURE.md Phase 2 paragraph: the FX-1, FX-2 and FX-3 sentences match the code. One older sentence in the paragraph is now contradicted (R1-4). list_files has no required path, so 'list_files with no path' is accurate.",
+              "Specs: more-models-phase2.md sections 5.5, 6, 7 and the P2-BRK notes. Section 6 and section 7 are stale (R1-4); section 5.5's 'larger maximum response is the remedy' remains true.",
+              "Isolation: all test runs and mutations ran in a git-archive copy in the scratchpad, because the other reviewer's full suite was running in the worktree. git status in /home/user/task5-handoff/wt/s7-fix is unchanged and HEAD is still 9293d02."
+            ]
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "fixer": "All six findings are fixed in five new commits on `build/s7-fix` (from `9293d02`). None was rejected, and the full suite shows no new failures against the 74-failure baseline. Nothing was amended, pushed or committed with `--no-verify`, and neither `/home/user/moonaliza` nor any other worktree was touched. Two findings share id R1-1 and two share R1-2, so below they are listed in the order given, numbered #1 to #6.\n\n**#3 R1-1 (S2), incomplete text: FIXED in `76e941b`**\n- A probe confirmed the finding. `complete()` returns `incomplete` for a chat `stop` that carries a tool call, an Anthropic `end_turn` or `stop_sequence` that carries a `tool_use` block, and a stream cut with no stop reason on either kind.\n- The code stays `PROVIDER_ERROR`. The text now reads: \"The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; otherwise send the request again or split it.\" It never says \"continue\".\n- I added four engine rows (chat cut with no reason, Anthropic cut before `message_stop`, chat `stop` with a call, Anthropic `end_turn` with `tool_use`).\n- Red first: 10 tests failed against the old source text. The four new rows failed on the message assertion (`tests/application.test.ts:670`), after their adapter precondition had passed.\n\n**#4 R1-2 (S3), review remedies: FIXED in `e5a8b42`**\n- Each `STEP_ENDINGS` entry is now a cause plus two remedies, one for ordinary runs and one for reviews. Ordinary-run texts are byte-identical to before.\n- Review remedies:\n  - Incomplete: \"If a limit was reached, raise Maximum response or Context window in Model profiles; then start the review again.\"\n  - Blocked and more than 8 calls: \"Start the review again or choose another review model.\"\n  - Empty: \"Start the review again.\" This one is never reached, because of `a17aa7a`.\n- Red first: the 3 review rows failed. Giving reviews the ordinary remedy turned those 3 red; swapping the two remedies turned 19 red.\n\n**#2 R1-2 and #5 R1-3 (S3), empty review answer: FIXED in `a17aa7a` (one commit for both)**\n- Both reviewers marked this as the lead's decision; I applied the option both recommended. In a review run, an empty or whitespace-only `complete` answer with no call is the final answer: nothing is stored and the run goes to `awaiting_review`.\n- This restores the rule at `research-review.md:193`, which FX-1 had reversed. The decision is recorded in the commit and in that spec section.\n- The old \"an empty answer\" failure row is replaced by two rows: an empty answer after an approved write of `research/MAP.md`, and a whitespace-only answer as the first step.\n- Red first: both rows failed with \"expected 'failed' to be 'awaiting_review'\". Removing the exemption turned 2 red, and so did storing the empty message.\n- **Your call:** if you want empty review answers to keep failing the job, revert `a17aa7a` alone.\n\n**#1 R1-1 (S3), frozen-run coverage: FIXED in `ad2778b` (tests only)**\n- Five rows start with a real Anthropic thinking tool step from `complete()`, asserted to have `appendOnly` true. The run then ends incomplete (empty and with text), blocked, empty, or with nine calls.\n- Under M18 and under M19, the 5 new rows went red and the other 57 tests in the file passed.\n\n**#6 R1-4 (S3), docs: FIXED in `16a27c8`**\n- `docs/ARCHITECTURE.md` now says the widened `PROVIDER_PROTOCOL_ERROR` message covers every cause except more than 8 calls.\n- In the Phase 2 spec: section 6 has the same exception. Section 7 has the FX-3 token sentence in both the hint list and the README list. The P2-BRK note now says a clean early end shows the incomplete text.\n- The quoted sentence matches `AnthropicHint` exactly, and `node scripts/check-handoff.mjs` passes.\n\n**Commands and results** (Node 24.21.0, cwd `/home/user/task5-handoff/wt/s7-fix`, `TMPDIR=/tmp/s7t`)\n- After each commit, `npm run typecheck`, `npm run lint` and `npx eslint e2e` all exited 0, and the touched test files passed:\n  - `a17aa7a`: 165 passed\n  - `76e941b`: 163 passed\n  - `e5a8b42`: 175 passed\n  - `ad2778b`: 62 passed\n- Every mutation was reverted afterwards and checked byte for byte with `cmp`.\n- No file under `e2e/` asserts on any of these texts.\n- Full suite, run once: 1572 tests, 1492 passed, 74 failed, 6 skipped (Windows-only). `compare.py` reports all 74 failures are in the baseline, no new failures, and no file without results.\n- No key-shaped strings appear in the diff.\n- Not run: the Windows e2e journeys and the packaged app.\n\n**What I got wrong:** nothing to report. I also did not run `node scripts/prepare-research-kit.mjs` before the suite, because `.build` is a symlink into `/home/user/moonaliza` and that script would have written there.\n\nThe commit message bodies are in `/tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/s7r1/` (`msg-c1.txt` to `msg-c5.txt`), and the suite report is `full.json` in the same folder.",
+        "rereview": {
+          "verdict": "ACCEPT",
+          "findings": [
+            {
+              "id": "R2-N1",
+              "severity": "S4",
+              "problem": "STEP_ENDINGS.STEP_EMPTY.review ('Start the review again.') can never be shown. A review run's empty answer now returns through endReview({kind:'answer'}) before STEP_EMPTY is thrown, so the text is dead data, kept only so every entry has the same shape (the code comment says so).",
+              "evidence": "src/engine/application.ts:59-60 (the comment and the entry); :408-411 (the review branch returns before `throw new Error('STEP_EMPTY')`). Mutation M20, which drops the exemption, is the only way to reach it.",
+              "fix": "Optional. Leave it as documented, or make `review` optional for STEP_EMPTY. No behaviour changes either way."
+            },
+            {
+              "id": "R2-N2",
+              "severity": "S4",
+              "problem": "The review's incomplete remedy, 'If a limit was reached, raise Maximum response or Context window in Model profiles; then start the review again.', can be read as making 'start the review again' conditional too. That would leave a reader whose limit was not reached without a step.",
+              "evidence": "src/engine/application.ts:57 (STEP_INCOMPLETE.review); pinned verbatim in tests/research-review-engine.test.ts:333.",
+              "fix": "Optional wording change: 'Start the review again; if a limit was reached, first raise Maximum response or Context window in Model profiles.' Update the pinned row to match."
+            }
+          ],
+          "checked": [
+            "Head is 16a27c8 on build/s7-fix with five fix-round commits after 9293d02 (a17aa7a, 76e941b, e5a8b42, ad2778b, 16a27c8). The worktree is clean apart from the untracked .build and node_modules symlinks.",
+            "#1 R1-1 S3 (frozen coverage), FIXED. tests/application.test.ts:722-738 adds 5 rows. Each starts with a real Anthropic thinking tool step from complete() and asserts appendOnly is true, then ends incomplete (empty and with text), blocked, empty or with nine calls. Verified by mutation in place, with the file restored by cmp and git diff --quiet afterwards. M18 (`frozen ? FROZEN_CONTEXT_LIMIT`) and M19 (`(code === 'CONTEXT_LIMIT' || ending) && frozen`) each turned exactly those 5 red, out of 136 tests in application.test.ts and research-review-engine.test.ts.",
+            "#2 R1-2 and #5 R1-3 S3 (empty review answer), FIXED (a17aa7a). application.ts:408-411: in review mode an empty or whitespace-only complete answer with no call goes to endReview({kind:'answer'}) and nothing is stored. research-review.md:193 records the decision. The two new rows (empty after an approved MAP.md write; whitespace-only as the first step) assert awaiting_review, no run.failed, the job still reviewing with no failure, and no stored empty message. Mutation M20 (drop the exemption) turned exactly those 2 red. Main never reads the answer text (src/main/review.ts:302 acts on run.status awaiting_review only), so nothing downstream depends on the missing message.",
+            "#3 R1-1 S2 (incomplete text), FIXED (76e941b). The new cause is true on every path to outcome incomplete: chat stop with calls (inference.ts:258), Ollama not done or done_reason other than stop (:238), chat and Anthropic stream cuts, end_turn or stop_sequence with tool_use, max_tokens, model_context_window_exceeded and length (anthropic.ts:339-347). The limit remedy is now conditional, and the text never says 'continue'. 4 new engine rows cover a chat cut, an Anthropic cut, chat stop with a call and Anthropic end_turn with tool_use. The old text survives only in the historical brief.",
+            "#4 R1-2 S3 (review remedies), FIXED (e5a8b42). STEP_ENDINGS is split into cause, remedy and review, and `known` picks by run.mode (application.ts:446). The 3 review rows pin the review texts and assert that no ordinary remedy wording appears. Mutation M21 (ordinary remedy for reviews) turned exactly those 3 red. The ordinary-run texts are unchanged, and the application.test.ts constants still match.",
+            "#6 R1-4 S3 (docs), FIXED (16a27c8). ARCHITECTURE.md:35 now says the widened PROVIDER_PROTOCOL_ERROR message covers every cause except more than 8 calls. Spec section 6 carries the same exception. Section 7's hint list puts the token sentence between the model figures and 'several minutes'; it matches AnthropicHint (App.tsx:268) word for word and in order. Section 7's README list matches README.md:24. The P2-BRK note is updated. node scripts/check-handoff.mjs exits 0 (117 links).",
+            "Regressions, verified on Node 24.21.0 in /home/user/task5-handoff/wt/s7-fix: npm run typecheck exit 0, npm run lint exit 0, npx eslint e2e exit 0.",
+            "Full suite run once (TMPDIR=/tmp/s7r2t, npx vitest run --reporter=json): 1572 tests, 1492 passed, 74 failed, 6 skipped (Windows-only). compare.py: all 74 failures are in the baseline, no new failures, none of the 74 baseline tests now passes, every file has results. Report: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/s7r2/full.json.",
+            "No e2e/ file asserts on the FX-1 texts, the old generic text or an empty final answer (grep).",
+            "No key-shaped strings (sk- followed by 16+ characters) in git diff 687e565..HEAD. All 8 commits use the StepenkoAnatoli identity and carry the Co-Authored-By and Claude-Session trailers, and each has the five-part report including the got-wrong line.",
+            "Not run: the Windows e2e journeys, the packaged app, any live vendor request. A scratch copy outside the worktree was denied by the permission classifier because it needed a node_modules symlink into /home/user/moonaliza. The mutations were therefore applied to src/engine/application.ts in this worktree, one at a time, after the full suite had finished. The file was restored and checked with cmp and git diff --quiet HEAD after each one; the worktree is clean at 16a27c8."
+          ]
+        }
+      }
+    ],
+    "remainingBlocking": []
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Review"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Fix"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "aa88118f6569a3ca5",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791851075378,
+      "queuedAt": 1791851075370,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "until grep -q \"numTotalTests\\|Traceback\" /tmp/claude-0/-hom…",
+      "promptPreview": "MoonAliza Electron/TypeScript app. Worktree /home/user/task5-handoff/wt/s7-fix, branch build/s7-fix from 687e565. The brief is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/briefs/s7-fix-builder.md and the gap audit it answers is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/reports/stage7-gap-audit.json. Node 24: export PATH=/versions/…",
+      "promptFramed": true,
+      "lastProgressAt": 1791853094766,
+      "tokens": 335096,
+      "toolCalls": 104,
+      "durationMs": 2019387,
+      "resultPreview": "FX-1, FX-2 and FX-3 are done on `build/s7-fix`, one commit each, nothing pushed. The full suite has no new failure: exactly the 74 baseline failures, and the 20 new tests all pass. I stopped at no item; four judgement calls for you are under \"Judged and not stopped\" below.\n\n## Report\n\nCommits:\n\n| Unit | Commit | Files |\n|---|---|---|\n| FX-1 | `ca469b2` | 10 files, +163/−13 |\n| FX-2 | `8377ebf` | 3…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "review-r1:behaviour",
+      "phaseIndex": 2,
+      "phaseTitle": "Review",
+      "agentId": "a2487ff452f4b55fe",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791853097413,
+      "queuedAt": 1791853097349,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "FIX",
+      "promptPreview": "MoonAliza Electron/TypeScript app. Worktree /home/user/task5-handoff/wt/s7-fix, branch build/s7-fix from 687e565. The brief is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/briefs/s7-fix-builder.md and the gap audit it answers is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/reports/stage7-gap-audit.json. Node 24: export PATH=/versions/…",
+      "promptFramed": true,
+      "lastProgressAt": 1791854982373,
+      "tokens": 263968,
+      "toolCalls": 85,
+      "durationMs": 1884958,
+      "resultPreview": "{\"verdict\":\"FIX\",\"findings\":[{\"id\":\"R1-1\",\"severity\":\"S3\",\"problem\":\"No test covers a frozen run for any of the new step texts. Every new FX-1 engine row runs after `listStep()`, which carries no provider state, so all of them are unfrozen runs. A real Anthropic thinking tool step carries appendOnly state and freezes the run, which is the actual GA-C1 scenario. So the path where the incomplete, de…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "review-r1:texts-docs",
+      "phaseIndex": 2,
+      "phaseTitle": "Review",
+      "agentId": "ad9ea445d0e91c828",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791853097414,
+      "queuedAt": 1791853097350,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "FIX",
+      "promptPreview": "MoonAliza Electron/TypeScript app. Worktree /home/user/task5-handoff/wt/s7-fix, branch build/s7-fix from 687e565. The brief is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/briefs/s7-fix-builder.md and the gap audit it answers is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/reports/stage7-gap-audit.json. Node 24: export PATH=/versions/…",
+      "promptFramed": true,
+      "lastProgressAt": 1791853709890,
+      "tokens": 229930,
+      "toolCalls": 66,
+      "durationMs": 611693,
+      "resultPreview": "{\"verdict\":\"FIX\",\"findings\":[{\"id\":\"R1-1\",\"severity\":\"S2\",\"problem\":\"The incomplete text is false for some paths that reach it. When a provider signals a normal stop but the step carries a tool call (chat finish_reason 'stop' with tool_calls, or Anthropic end_turn/stop_sequence with a tool_use block), the adapter returns outcome 'incomplete', which the Phase 1 rule pins in tests/provider-transport…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "fix-r2",
+      "phaseIndex": 3,
+      "phaseTitle": "Fix",
+      "agentId": "a99e2150f3f29d42c",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791854984809,
+      "queuedAt": 1791854984801,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "cd /home/user/task5-handoff/wt/s7-fix && git status --short…",
+      "promptPreview": "MoonAliza Electron/TypeScript app. Worktree /home/user/task5-handoff/wt/s7-fix, branch build/s7-fix from 687e565. The brief is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/briefs/s7-fix-builder.md and the gap audit it answers is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/reports/stage7-gap-audit.json. Node 24: export PATH=/versions/…",
+      "promptFramed": true,
+      "lastProgressAt": 1791857033286,
+      "tokens": 259524,
+      "toolCalls": 83,
+      "durationMs": 2048476,
+      "resultPreview": "All six findings are fixed in five new commits on `build/s7-fix` (from `9293d02`). None was rejected, and the full suite shows no new failures against the 74-failure baseline. Nothing was amended, pushed or committed with `--no-verify`, and neither `/home/user/moonaliza` nor any other worktree was touched. Two findings share id R1-1 and two share R1-2, so below they are listed in the order given, …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "rereview-r2",
+      "phaseIndex": 3,
+      "phaseTitle": "Fix",
+      "agentId": "aefaed18d7c4b82ef",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1791857035482,
+      "queuedAt": 1791857035470,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "ACCEPT",
+      "promptPreview": "MoonAliza Electron/TypeScript app. Worktree /home/user/task5-handoff/wt/s7-fix, branch build/s7-fix from 687e565. The brief is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/briefs/s7-fix-builder.md and the gap audit it answers is /home/user/task5-handoff/wt/s7-fix/docs/orchestration/2026-10-05-more-models/reports/stage7-gap-audit.json. Node 24: export PATH=/versions/…",
+      "promptFramed": true,
+      "lastProgressAt": 1791857984632,
+      "tokens": 177692,
+      "toolCalls": 44,
+      "durationMs": 949149,
+      "resultPreview": "{\"verdict\":\"ACCEPT\",\"findings\":[{\"id\":\"R2-N1\",\"severity\":\"S4\",\"problem\":\"STEP_ENDINGS.STEP_EMPTY.review ('Start the review again.') can never be shown. A review run's empty answer now returns through endReview({kind:'answer'}) before STEP_EMPTY is thrown, so the text is dead data, kept only so every entry has the same shape (the code comment says so).\",\"evidence\":\"src/engine/application.ts:59-60 (…"
+    }
+  ],
+  "totalTokens": 1266210,
+  "totalToolCalls": 382
+}

@@ -329,6 +329,43 @@ describe('run end', () => {
     expect(h.store.researchEvents('j1').events.at(-1)).toMatchObject({ from: 'reviewing', to: 'not_ready', actor: 'engine' });
   });
 
+  test.each([
+    ['an answer cut off', { content: 'The map is half', outcome: 'incomplete' } as Completion, 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. Start the review again; if a limit was reached, first raise Maximum response or Context window in Model profiles.'],
+    ['a declined answer', { content: 'I will not do that.', outcome: 'blocked' } as Completion, 'The provider declined to answer this request. Start the review again or choose another review model.'],
+    ['nine tool calls in one step', { content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: 9 }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: {} })) } as Completion, 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Start the review again or choose another review model.'],
+  ] as const)('%s ends the review REVIEW_RUN_FAILED and its message says why, with a remedy a review can take (Stage 7 FX-1, fix round)', async (_name, output, why) => {
+    // Guards: reviewEnd receives the step's own cause (mutation: pass it only the `failures` table's entry; the run then
+    // reads only "The research review run failed. The research job is not ready.", which names no cause); and a review's
+    // remedy, not an ordinary run's (mutation: give reviewEnd the ordinary text; it then asks the user to rephrase or
+    // resend a request a review does not have - the review is started from the Research panel with a model choice only).
+    const h = harness(); h.script.push(() => output);
+    const { run } = await h.begin(); await finished(h, run.id);
+    const failed = h.runEvents(run.id).find(event => event.type === 'run.failed')!;
+    expect(failed.payload).toEqual({ error: { code: 'REVIEW_NOT_READY', message: `The research review run failed. The research job is not ready. ${why}`, retry: 'never' } });
+    expect(h.store.getResearch('j1')).toMatchObject({ status: 'not_ready', failure: 'REVIEW_RUN_FAILED' });
+    for (const ordinary of ['Rephrase it', 'request again', 'split', 'fewer actions']) expect(why).not.toContain(ordinary);
+  });
+
+  test.each([
+    ['an empty answer after an approved edit', '', true],
+    ['a whitespace-only answer as the first step', ' \n', false],
+  ] as const)('%s is the review\'s final answer: the run goes to awaiting_review and nothing empty is stored (Stage 7 fix round)', async (_name, content, edit) => {
+    // Guard: the review exemption from the empty-answer failure (mutation: drop it; the run then fails REVIEW_RUN_FAILED and
+    // the job goes not_ready, although the answer's text is never used and the kit has not judged the workspace). Anthropic
+    // documents empty end_turn answers "particularly after tool results" (wire E-11), and a review ends after its tool steps.
+    const h = harness();
+    if (edit) h.script.push(() => call('w', 'write_file', { path: 'research/MAP.md', content: 'classified' }));
+    h.script.push(() => answer(content));
+    const { run } = await h.begin();
+    if (edit) await h.decide(run.id);
+    await finished(h, run.id);
+    expect(h.store.getRun(run.id)!.status).toBe('awaiting_review');
+    expect(types(h.runEvents(run.id))).not.toContain('run.failed');
+    expect(h.store.getResearch('j1')).toMatchObject({ status: 'reviewing' }); expect(h.store.getResearch('j1')!.failure).toBeUndefined();
+    expect(h.store.listMessages(run.sessionId).filter(message => message.role === 'assistant').map(message => message.toolCalls?.length ?? 0)).toEqual(edit ? [1] : []);
+    if (edit) expect(readFileSync(join(h.workspace, 'research/MAP.md'), 'utf8')).toBe('classified');
+  });
+
   test('the time limit ends the review REVIEW_BUDGET_EXCEEDED and the message names the time limit', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const h = harness();

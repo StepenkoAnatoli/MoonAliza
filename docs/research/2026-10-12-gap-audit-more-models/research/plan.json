@@ -1,0 +1,42 @@
+{
+  "topic": "Gap audit comparison sets for MoonAliza More models Phases 1-2: how desktop and editor coding agents and Anthropic's own client handle truncated and refused answers, transient failures, and model token limits",
+  "notes": "Owner pages named directly, no search: Aider's token-limits troubleshooting page (U-01); Zed's LLM providers page, whose Anthropic setup moved to Use API Access (both, U-02); Claude Code's settings page, whose variable list moved to its env-vars page (both, U-03). The two follow-up URLs are copied from links inside the first captures (zed line 34, Claude Code lines 88 and 313). At most 5 credits, inside the 15-credit budget shared by both auditors.",
+  "depth": "quick",
+  "refreshDays": 30,
+  "limit": 8,
+  "perQuery": 3,
+  "maxScrapes": 5,
+  "prefer": [
+    "aider.chat",
+    "zed.dev",
+    "code.claude.com"
+  ],
+  "queries": [],
+  "urls": [
+    {
+      "url": "https://aider.chat/docs/troubleshooting/token-limits.html",
+      "type": "P",
+      "why": "U-01: how Aider reports output-limit and context-window truncation"
+    },
+    {
+      "url": "https://zed.dev/docs/ai/llm-providers",
+      "type": "P",
+      "why": "U-02: where Zed takes Anthropic models' context window and maximum output"
+    },
+    {
+      "url": "https://code.claude.com/docs/en/settings",
+      "type": "P",
+      "why": "U-03: Claude Code's documented maximum output tokens and API timeout settings"
+    },
+    {
+      "url": "https://zed.dev/docs/ai/use-api-access.html",
+      "type": "P",
+      "why": "U-02: Zed's Anthropic API setup, where model context window and maximum output are configured (link from the llm-providers capture, line 34)"
+    },
+    {
+      "url": "https://code.claude.com/docs/en/env-vars",
+      "type": "P",
+      "why": "U-03: Claude Code's documented variables for maximum output tokens and API timeout (link from the settings capture, lines 88 and 313)"
+    }
+  ]
+}

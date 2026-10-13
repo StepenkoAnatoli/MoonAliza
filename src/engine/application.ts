@@ -43,6 +43,25 @@ const terminal = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
  * not be true. Review runs keep REVIEW_CONTEXT_LIMIT and their own message.
  */
 const FROZEN_CONTEXT_LIMIT = 'This task outgrew the selected model\u2019s context budget. This provider needs the earlier steps of a task sent back unchanged, so MoonAliza could not shorten them while the task ran. Saved messages and any applied changes remain available; commands are not retried. Split the task into smaller requests, or open Model profiles to check the model\u2019s supported context and response reserve.';
+/**
+ * Why a step ended without a usable answer (Stage 7 FX-1; reports/stage7-gap-audit.json GA-C1/GA-B1, GA-C2, GA-C4). Each
+ * reason is internal: the run fails with an existing public code (F-21) and only its message names the cause, chosen
+ * where `run.failed` is built, as FROZEN_CONTEXT_LIMIT is. The incomplete text never says "continue": history drops
+ * partial answers (`!m.partial` below), so the next run would not see the cut-off text. It must be true of every path
+ * that reaches it, and some reach no limit: a stream cut with no stop reason, and a normal stop (`stop`, `end_turn`,
+ * `stop_sequence`) that carries a call, which the Phase 1 rule never runs. A Completion does not say which path it took,
+ * so the limit remedy is conditional. Each reason has a cause and two remedies: an ordinary run's, and a review run's,
+ * since a review has no request the user wrote and is started again from the Research panel with a model choice only.
+ */
+const STEP_ENDINGS: Record<string, { code: 'PROVIDER_ERROR' | 'PROVIDER_PROTOCOL_ERROR'; cause: string; remedy: string; review: string }> = {
+  STEP_INCOMPLETE: { code: 'PROVIDER_ERROR', cause: 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use.', remedy: 'If a limit was reached, raise Maximum response or Context window in Model profiles; otherwise send the request again or split it.', review: 'Start the review again; if a limit was reached, first raise Maximum response or Context window in Model profiles.' },
+  STEP_BLOCKED: { code: 'PROVIDER_ERROR', cause: 'The provider declined to answer this request.', remedy: 'Rephrase it or try another model.', review: 'Start the review again or choose another review model.' },
+  // A review never ends here (its empty answer is its final answer, below); the review text is kept for the table's shape.
+  STEP_EMPTY: { code: 'PROVIDER_ERROR', cause: 'The model ended its turn without an answer.', remedy: 'Send the request again or rephrase it.', review: 'Start the review again.' },
+  STEP_TOO_MANY_CALLS: { code: 'PROVIDER_PROTOCOL_ERROR', cause: 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run.', remedy: 'Ask for fewer actions at a time.', review: 'Start the review again or choose another review model.' },
+};
+/** The most tool calls one step may ask for; a step asking for more runs none of them. */
+const MAX_STEP_CALLS = 8;
 
 function fileToolFailure(reason: string): PublicError {
   const failures: Record<string, [PublicError['code'], string]> = {
@@ -382,12 +401,22 @@ export class Application {
         this.assertRunPolicy(run, profile.locality, signal);
         if (output.usage) this.event(run.id, 'usage.updated', { ...output.usage, modelSteps: step + 1 });
         if (output.outcome !== 'tool_calls') {
+          // A complete outcome with no visible text and no call is no answer (an empty Anthropic end_turn, wire E-11;
+          // thinking only, then end_turn; a chat kind's empty stop): it is not stored, and the run says so. A review's
+          // final answer is never read (the kit judges the workspace, research-review.md "Run end"), so there an empty
+          // one ends the run as any answer does, still unstored.
+          if (output.outcome === 'complete' && !output.content.trim() && !output.toolCalls?.length) {
+            if (review) { this.endReview(run.id, { kind: 'answer' }); return; }
+            throw new Error('STEP_EMPTY');
+          }
           this.message(run, { role: 'assistant', content: output.content }, output.outcome !== 'complete');
-          if (output.outcome !== 'complete') throw new Error('PROVIDER_ERROR');
+          if (output.outcome !== 'complete') throw new Error(output.outcome === 'blocked' ? 'STEP_BLOCKED' : 'STEP_INCOMPLETE');
           if (review) { this.endReview(run.id, { kind: 'answer' }); return; }
           this.event(run.id, 'run.completed', {}, { status: 'completed', finishedAt: new Date().toISOString() }); return;
         }
-        if (!output.toolCalls?.length || output.toolCalls.length > 8 || output.toolCalls.some(call => !offered.has(call.name) || call.inputError || seen.has(call.id)) || new Set(output.toolCalls.map(call => call.id)).size !== output.toolCalls.length) throw new Error('PROVIDER_PROTOCOL_ERROR');
+        if (!output.toolCalls?.length || output.toolCalls.some(call => !offered.has(call.name) || call.inputError || seen.has(call.id)) || new Set(output.toolCalls.map(call => call.id)).size !== output.toolCalls.length) throw new Error('PROVIDER_PROTOCOL_ERROR');
+        // After the calls' own checks, so an invalid call among too many keeps the text that names it.
+        if (output.toolCalls.length > MAX_STEP_CALLS) throw new Error('STEP_TOO_MANY_CALLS');
         const assistant: InferenceMessage = { role: 'assistant', content: output.content, toolCalls: output.toolCalls, ...(output.providerState ? { providerState: output.providerState } : {}) };
         this.message(run, assistant); current.push(assistant);
         if (output.providerState?.appendOnly === true) frozen = true;
@@ -412,9 +441,11 @@ export class Application {
       const reason = error instanceof Error ? error.message : '';
       const cancelled = stop.aborted || (!deadline.signal.aborted && reason === 'RUN_CANCELLED');
       const failures: Record<string, string> = { SNAPSHOT_QUOTA: 'The snapshot budget is full of protected edits. Finish the run or review interrupted operations before proposing more edits.', SNAPSHOT_CORRUPT: 'Snapshot storage could not be verified. The proposed edit was not applied.', COMMAND_UNKNOWN: 'The command’s outcome could not be confirmed. Inspect the project before running it again.', COMMAND_UNAVAILABLE: 'The requested program is not installed in a supported location.', COMMAND_CHANGED: 'The command executable or working folder changed after review.', BUDGET_EXCEEDED: 'The run reached its step or time limit.', CONTEXT_LIMIT: 'This request exceeds the selected model’s context budget after reducing saved tool excerpts. Open Model profiles to check the model’s supported context and response reserve, shorten the request, or start a fresh conversation. Saved messages and any applied changes remain available; commands are not retried.', APPROVAL_DENIED: 'The proposed action was declined. No further actions were taken.', FILE_CONFLICT: 'The file changed after review. The proposed edit was not applied.', APPROVAL_STALE: 'Project permissions changed. Review the task again.', PROVIDER_PROTOCOL_ERROR: 'The provider returned a tool call or step MoonAliza could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.', LOCAL_MODEL_UNVERIFIED: 'MoonAliza could not confirm that this Ollama keeps prompts on this computer, and this conversation is local only. Ollama can send prompts to ollama.com cloud models unless its cloud features are off. Check that Ollama is running and up to date, turn off its cloud features (set OLLAMA_NO_CLOUD=1, or "disable_ollama_cloud": true in Ollama’s server.json), restart Ollama, then try again.' };
-      const code = deadline.signal.aborted ? 'BUDGET_EXCEEDED' : reason in failures ? reason : 'PROVIDER_ERROR';
-      if (run.mode === 'research') { this.endReview(run.id, this.reviewEnd(cancelled, deadline.signal.aborted, reason, failures[code])); return; }
-      const message = code === 'CONTEXT_LIMIT' && frozen ? FROZEN_CONTEXT_LIMIT : failures[code] ?? 'The model or tool request failed. Check the selected profile and project access.';
+      const ending = !deadline.signal.aborted && Object.hasOwn(STEP_ENDINGS, reason) ? STEP_ENDINGS[reason] : undefined;
+      const code = deadline.signal.aborted ? 'BUDGET_EXCEEDED' : ending ? ending.code : reason in failures ? reason : 'PROVIDER_ERROR';
+      const known = ending ? `${ending.cause} ${run.mode === 'research' ? ending.review : ending.remedy}` : failures[code];
+      if (run.mode === 'research') { this.endReview(run.id, this.reviewEnd(cancelled, deadline.signal.aborted, reason, known)); return; }
+      const message = code === 'CONTEXT_LIMIT' && frozen ? FROZEN_CONTEXT_LIMIT : known ?? 'The model or tool request failed. Check the selected profile and project access.';
       this.event(run.id, cancelled ? 'run.cancelled' : 'run.failed', cancelled ? {} : { error: { code, message, retry: 'never' } }, { status: cancelled ? 'cancelled' : 'failed', finishedAt: new Date().toISOString() });
     } finally { clearTimeout(timer); }
   }
