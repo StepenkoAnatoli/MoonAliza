@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
 import { DEVICE_CODE_URL, DEVICE_PAGE_URL, REQUEST_OFFLINE_ACCESS, TOKEN_URL, USER_URL } from '../src/main/github-app';
 import type { Fetcher } from '../src/main/github-credential';
 import { fetchLogin, headerSafeToken, oauthRequest, rateLimitWait, requestDeviceCode, requestToken, type WireLimits } from '../src/main/github-oauth';
+import { DateTimeSchema } from '../src/shared/contracts';
 import { GitHubUserCodeSchema } from '../src/shared/github-account';
 import { ROUTES, codeAnswer, errorAnswer, fetcherFor, markers, startFakeGitHubOAuth, tokenAnswer, type FakeGitHubOAuth, type FakeReply, type Markers } from './fixtures/fake-github-oauth';
 
@@ -439,6 +440,8 @@ test.each([
   ['refresh_token_expires_in 0', (m: Markers) => tokenAnswer(m, { refresh_token_expires_in: 0 })],
   ['a form expires_in with a sign', (m: Markers) => ({ form: { access_token: m.access, expires_in: '+28800', refresh_token: m.refresh, refresh_token_expires_in: '15897600' } })],
   ['a form expires_in of 11 digits', (m: Markers) => ({ form: { access_token: m.access, expires_in: '12345678901', refresh_token: m.refresh, refresh_token_expires_in: '15897600' } })],
+  ['a JSON expires_in of 11 digits, the twin of the form bound', (m: Markers) => tokenAnswer(m, { expires_in: 10_000_000_000 })],
+  ['a JSON refresh_token_expires_in of 11 digits', (m: Markers) => tokenAnswer(m, { refresh_token_expires_in: 10_000_000_000 })],
   ['an access token with the refresh prefix', (m: Markers) => tokenAnswer({ access: m.refresh, refresh: m.refresh })],
   ['an access token with a space', (m: Markers) => tokenAnswer({ access: `${m.access} x`, refresh: m.refresh })],
   ['an access token that is a number', (m: Markers) => tokenAnswer(m, { access_token: 7 })],
@@ -447,6 +450,20 @@ test.each([
 ] as const)('%s is malformed', async (_name, answer) => {
   const m = markers(); fake.answer(ROUTES.token, answer(m));
   expect(await token(refreshParams(m))).toEqual({ kind: 'malformed' });
+});
+
+test('an expiry of 10 digits is read in JSON as in a form body: the bound the two share keeps every expiry a valid date-time (5.5)', async () => {
+  const m = markers(); const top = 9_999_999_999;
+  fake.answer(ROUTES.token, tokenAnswer(m, { expires_in: top, refresh_token_expires_in: top }),
+    { form: { access_token: m.access, expires_in: String(top), refresh_token: m.refresh, refresh_token_expires_in: String(top) } });
+  const expected = { kind: 'tokens', receivedAt: NOW, tokens: { access: m.access, refresh: m.refresh, accessExpiresInS: top, refreshExpiresInS: top } };
+  expect(await token(refreshParams(m))).toEqual(expected);
+  expect(await token(refreshParams(m))).toEqual(expected);
+  // Why JSON has the form's bound: 4.2 stores expiries as DateTimeSchema. Unbounded, a JSON expiry could be any safe integer:
+  // 1e12 s lands past year 9999 (+033715-...), which the schema refuses, and 2^53 - 1 s makes toISOString throw.
+  expect(DateTimeSchema.safeParse(new Date(NOW + top * 1_000).toISOString()).success).toBe(true);
+  expect(DateTimeSchema.safeParse(new Date(NOW + 1e12 * 1_000).toISOString()).success).toBe(false);
+  expect(() => new Date(NOW + Number.MAX_SAFE_INTEGER * 1_000).toISOString()).toThrow(RangeError);
 });
 
 test('an answer without access_token is unusable with its status: a 2xx, a 401 or 400 with a JSON message, a 404 (GS-2)', async () => {
@@ -516,6 +533,7 @@ test.each([
   ['expires_in 0', { expires_in: 0 }],
   ['an absent expires_in', { expires_in: undefined }],
   ['expires_in as a JSON string', { expires_in: '900' }],
+  ['a JSON expires_in of 11 digits', { expires_in: 10_000_000_000 }],
   ['interval 0', { interval: 0 }],
   ['interval 301', { interval: 301 }],
   ['interval as a fraction', { interval: 2.5 }],
