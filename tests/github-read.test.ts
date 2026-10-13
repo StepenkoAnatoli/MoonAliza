@@ -277,6 +277,9 @@ function failingResponse(text: string, before: () => void) {
   return new Response(body, { status: 403 });
 }
 test.each<{ name: string; text: string; stops: boolean; code: string }>([
+  { name: 'part of a message, then a reset', text: '{"message":"Forb', stops: false, code: 'GITHUB_FORBIDDEN_SIGNED_IN' },
+  { name: 'the integration phrase, then a reset', text: `{"message":"${INTEGRATION}`, stops: false, code: 'GITHUB_PERMISSION_MISSING' },
+  { name: 'a reset before any byte', text: '', stops: false, code: 'GITHUB_FORBIDDEN_SIGNED_IN' },
   { name: 'Stop, then a reset', text: '{"message":"Forb', stops: true, code: 'RUN_CANCELLED' },
 ])('signed in, a 403 body that fails part-way ($name) gives $code, with no body text in the error and the body released', async ({ text, stops, code }) => {
   const marker = sentinel(); const stop = new AbortController(); const { credential } = signedIn(tokenMarker()); const targets: string[] = [];

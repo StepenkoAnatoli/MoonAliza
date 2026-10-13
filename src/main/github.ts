@@ -9,12 +9,12 @@ const MAX_FILE = 262_144;
 const MAX_FORBIDDEN_BODY = 65_536;
 const PERMISSION_MISSING = 'Resource not accessible by integration';
 const entrySchema = z.object({ type: z.string(), path: z.string().max(1024), name: z.string().max(255), size: z.number().nonnegative().optional(), submodule_git_url: z.unknown().optional() });
-/** Reads at most `limit` bytes as non-fatal UTF-8, then cancels and releases the body, so the caller's finally finds it unlocked. */
+/** Reads at most `limit` bytes as non-fatal UTF-8, then cancels and releases the body, so the caller's finally finds it unlocked. A body that fails part-way ends the read with the bytes that arrived: the status already made it a refusal (U3-R1). */
 async function boundedText(response: Response, limit: number, signal: AbortSignal): Promise<string> {
   if (!response.body) return '';
   const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let length = 0;
   try { while (length < limit) {
-    const part = await reader.read(); if (signal.aborted) throw new Error('RUN_CANCELLED'); if (part.done) break;
+    const part = await reader.read().catch(() => undefined); if (signal.aborted) throw new Error('RUN_CANCELLED'); if (!part || part.done) break;
     const kept = part.value.subarray(0, limit - length); chunks.push(kept); length += kept.byteLength;
   } } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
   return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
