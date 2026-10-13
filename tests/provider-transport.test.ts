@@ -175,6 +175,28 @@ test.each(['{"path":', '[]', 'null', '"text"', '{"path":1e400}'])('OpenAI reject
   await expect(complete(profile, [], { tools, fetcher, signal: signal() })).rejects.toThrow('PROVIDER_INVALID_RESPONSE');
 });
 
+test.each([
+  ['two empty fragments', ['', '']],
+  ['one empty fragment', ['']],
+  ['whitespace only', ['', ' \n\t ']],
+])('an argument-free call whose arguments join to %s is the empty object, as the native Anthropic adapter reads it (Stage 7 FX-2)', async (_name, fragments) => {
+  // GA-C3. The stream has the shape of Anthropic's compatible route in the live U06/U18 recordings
+  // (docs/evidence/2026-10-12-anthropic-probes/U06-one-tool-list.response.raw: id and name with arguments "", then an
+  // arguments "" fragment, then the pieces), for a tool that takes no arguments, so no piece follows. Built, not a capture.
+  // Guard: the empty-join rule in parseCalls (mutation: drop it; JSON.parse('') then fails the step as
+  // PROVIDER_INVALID_RESPONSE). A non-empty string that is not an object still fails (the malformed-arguments test above).
+  const gitStatus: ToolSpec = { name: 'git_status', description: 'Show the working tree status.', parameters: { type: 'object', properties: {}, additionalProperties: false } };
+  const chunk = (delta: unknown, finish_reason?: string) => `data: ${JSON.stringify({ id: 'msg_built', object: 'chat.completion.chunk', model: 'claude-built', choices: [{ index: 0, delta, ...(finish_reason ? { finish_reason } : {}) }] })}\n\n`;
+  const [first, ...rest] = fragments;
+  const body = chunk({ role: 'assistant' })
+    + chunk({ tool_calls: [{ index: 0, id: 'toolu_built_status', type: 'function', function: { name: 'git_status', arguments: first } }] })
+    + rest.map(piece => chunk({ tool_calls: [{ index: 0, type: 'function', function: { arguments: piece } }] })).join('')
+    + chunk({}, 'tool_calls') + 'data: [DONE]\n\n';
+  const fetcher = async () => new Response(body, { headers: { 'Content-Type': 'text/event-stream' } });
+  expect(await complete(profile, [{ role: 'user', content: 'Check git status.' }], { tools: [gitStatus], fetcher, signal: signal() }))
+    .toEqual({ content: '', outcome: 'tool_calls', toolCalls: [{ id: 'toolu_built_status', name: 'git_status', input: {} }] });
+});
+
 test('duplicate IDs and unoffered tool names never become executable calls', async () => {
   for (const calls of [[openaiCall, openaiCall], [{ ...openaiCall, function: { name: 'run_unknown', arguments: '{}' } }]]) {
     const fetcher = async () => Response.json({ choices: [{ message: { tool_calls: calls }, finish_reason: 'tool_calls' }] });

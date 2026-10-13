@@ -91,11 +91,18 @@ function chatMessages(transcript: CheckedTranscript, local: boolean): unknown[] 
   });
 }
 
+/**
+ * A call's streamed argument fragments joined. An empty or whitespace-only join is the empty object, the rule the native
+ * Anthropic adapter applies (an empty join takes the start object's `{}`; wire E-10: "the final `tool_use.input` is always
+ * an object"); a compatible route can stream an argument-free call that way (Stage 7 FX-2, GA-C3).
+ */
+const callArguments = (joined: string): unknown => JSON.parse(joined.trim() === '' ? '{}' : joined);
+
 function parseCalls(raw: unknown, local: boolean, tools: readonly ToolSpec[], usedIds: ReadonlySet<string>): ToolCall[] {
   try {
     const calls = local
       ? OllamaCalls.parse(raw).map(call => ({ id: call.id ?? `ollama-${randomUUID()}`, name: call.function.name, input: call.function.arguments }))
-      : OpenAICalls.parse(raw).map(call => ({ id: call.id, name: call.function.name, input: BoundedJsonObjectSchema.parse(JSON.parse(call.function.arguments)) }));
+      : OpenAICalls.parse(raw).map(call => ({ id: call.id, name: call.function.name, input: BoundedJsonObjectSchema.parse(callArguments(call.function.arguments)) }));
     const allowed = new Set(tools.map(tool => tool.name));
     const validated = InferenceToolCallsSchema.parse(calls);
     if (validated.some(call => usedIds.has(call.id) || !allowed.has(call.name))) throw new Error('Invalid call');
