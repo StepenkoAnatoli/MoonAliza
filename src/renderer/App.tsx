@@ -265,7 +265,7 @@ const ANTHROPIC_DATA_USE = "Data use: Anthropic's commercial terms say it may no
 function AnthropicHint() {
   return <div className="muted provider-hint" role="note" aria-label="Anthropic API notes">
     <p>Use an API key created for a single workspace.</p>
-    <p>Thinking counts toward the maximum response. Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens. Raise Context window and Maximum response for these models: at the form's defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed for the input it sends, so a larger window costs more per step.</p>
+    <p>Thinking counts toward the maximum response. Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 have a 1M-token context window and up to 128K output tokens. Raise Context window and Maximum response for these models: at the form's defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed for the input it sends, so a larger window can cost more per step.</p>
     <p>A step can take several minutes.</p>
     <p>{ANTHROPIC_DATA_USE}</p>
     <p>MoonAliza's Anthropic connection is tested against requests and responses recorded from the live API; the app itself has not yet been run against it.</p>
@@ -305,5 +305,5 @@ function MessageItem({ message }: { message: Message }) {
   if (!content) return null;
   // A partial answer was cut off, declined or ended in a form MoonAliza cannot use (the run's failure says so): labelled,
   // so it is not read as a whole answer.
-  return <article className={`message ${message.role}`}><div className="message-author">{message.role === 'user' ? 'You' : 'MoonAliza'}{message.partial && <span className="message-flag">Incomplete answer</span>}</div><div className="message-content">{content}</div></article>;
+  return <article className={`message ${message.role}`}><div className="message-author">{message.role === 'user' ? 'You' : 'MoonAliza'}{message.partial && <> <span className="message-flag">Incomplete answer</span></>}</div><div className="message-content">{content}</div></article>;
 }

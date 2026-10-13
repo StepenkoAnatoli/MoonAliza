@@ -204,7 +204,8 @@ test('a stored partial answer is labelled Incomplete answer beside its author; a
   fireEvent.click(await screen.findByRole('button', { name: 'Cut-off answer' }));
   const cut = (await screen.findByText('Here is the first half of the')).closest('article')!;
   expect(within(cut).getByText('Incomplete answer')).toBeTruthy();
-  expect(cut.querySelector('.message-author')!.textContent).toContain('Incomplete answer');
+  // A space keeps the label apart from the author when the text is read or copied (Stage 7 review R1-6).
+  expect(cut.querySelector('.message-author')!.textContent).toBe('MoonAliza Incomplete answer');
   const whole = screen.getByText('A whole answer.').closest('article')!;
   expect(within(whole).queryByText('Incomplete answer')).toBeNull();
   expect(screen.getAllByText('Incomplete answer')).toHaveLength(1);
@@ -232,7 +233,7 @@ test('research opens per project from the details pane and is not requested befo
 // Stage 7 FX-3 (GA-B2, GA-C5): at the form's 8,192 / 2,048 a thinking run ends with the frozen CONTEXT_LIMIT after two
 // steps and drops all history from its second run on. Prefilling larger values is a cost decision and reverses "No token
 // values are prefilled: presets are Phase 4", so the hint says it instead, with the cost; README repeats it.
-const RAISE_TOKENS = "Raise Context window and Maximum response for these models: at the form's defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed for the input it sends, so a larger window costs more per step.";
+const RAISE_TOKENS = "Raise Context window and Maximum response for these models: at the form's defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed for the input it sends, so a larger window can cost more per step.";
 const ANTHROPIC_DATA_USE = "Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs; Claude Fable 5.1 requires 30-day retention and is not available under zero data retention unless Anthropic expressly authorizes it; if a chat or session is flagged, Anthropic may keep its inputs and outputs for up to 2 years; for how long other requests are kept, Anthropic's retention page refers to its commercial data retention policy, which MoonAliza has not reviewed.";
 
 test('the profile form offers Anthropic API after the existing options, with its endpoint and hint', async () => {

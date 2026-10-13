@@ -715,7 +715,7 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
   - Context window and Maximum response need raising for these models (added by Stage 7 FX-3, gap audit
     GA-B2/GA-C5; as built: "Raise Context window and Maximum response for these models: at the form's
     defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed
-    for the input it sends, so a larger window costs more per step."). The values are still not prefilled
+    for the input it sends, so a larger window can cost more per step."). The values are still not prefilled
     (below);
   - a step can take several minutes (the 600 s timeout, section 4);
   - the data-use sentence, word for word (U4's renderer test pins it whole; the README repeats it):

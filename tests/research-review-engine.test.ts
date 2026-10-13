@@ -330,7 +330,7 @@ describe('run end', () => {
   });
 
   test.each([
-    ['an answer cut off', { content: 'The map is half', outcome: 'incomplete' } as Completion, 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. If a limit was reached, raise Maximum response or Context window in Model profiles; then start the review again.'],
+    ['an answer cut off', { content: 'The map is half', outcome: 'incomplete' } as Completion, 'The answer ended before it was complete: the model may have reached its maximum response (thinking counts toward it) or the context window, or the response was cut off or ended in a form MoonAliza cannot use. Start the review again; if a limit was reached, first raise Maximum response or Context window in Model profiles.'],
     ['a declined answer', { content: 'I will not do that.', outcome: 'blocked' } as Completion, 'The provider declined to answer this request. Start the review again or choose another review model.'],
     ['nine tool calls in one step', { content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: 9 }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: {} })) } as Completion, 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Start the review again or choose another review model.'],
   ] as const)('%s ends the review REVIEW_RUN_FAILED and its message says why, with a remedy a review can take (Stage 7 FX-1, fix round)', async (_name, output, why) => {
