@@ -439,6 +439,18 @@ describe('clear durability (DC-6, GS-11)', () => {
     await expectConsistent(h.copy(), null);
   });
 
+  test('once a vault persist lands, a ref whose earlier removal failed counts as removed: a sign-out leaves no retired ref', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    let restore: (() => void) | undefined;
+    h.spy.after('commit', (_ref, count) => { if (count === 4) restore = failVaultDisk(h.vault); });   // from the refresh's step 7 on
+    await h.refresh(a);
+    restore!();                                                                  // the vault index writes again
+    expect((await h.read())?.retiredRefs).toEqual(refsOf(a));
+    expect(await h.signOut()).toBe('durable');                                   // its tombstone persists land, recording the old pair's deletion
+    expect(await h.read()).toMatchObject({ account: null, retiredRefs: [] });
+    await expectConsistent(h.copy(), null);
+  });
+
   // A sign-out while a replace is past its step-4 write: the replace commits, its step-6 admit refuses, and the file names the
   // new pair, which the prologue never took. A prologue persist then records only the old pair, so it must not count (DC-6).
   for (const kind of ['sign-in', 'refresh'] as const) {
