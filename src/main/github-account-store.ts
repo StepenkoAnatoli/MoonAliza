@@ -65,18 +65,24 @@ export class GitHubAccountStore {
   // remove deletes before it persists (vault.ts:178-179). A tombstone persist that lands writes the whole index, so it clears the set
   // (this store tombstones before every removal).
   private readonly unrecorded = new Set<string>();
+  // open() could not read the file (an I/O error): it may name an account, so the next replace re-reads it before writing over it.
+  private unread = false;
 
   constructor(private readonly file: string, private readonly vault: Pick<Vault, 'saveStaged' | 'commit' | 'tombstone' | 'remove' | 'has'>,
     private readonly clientId: string, private readonly clock: () => number = Date.now) {}
 
-  /** Never throws (4.4). A missing, invalid, oversized or extra-key file reads as no account, and so does one that could not be read. */
+  /** Never throws (4.4). A missing, invalid, oversized or extra-key file reads as no account, and so does one that could not be read,
+   *  which the next replace re-reads. */
   async open(): Promise<void> {
     await serialized(this.file, async () => {
-      this.disk = null; this.live = null; this.appChanged = false; this.startupWrite = false;
+      this.disk = null; this.live = null; this.appChanged = false; this.startupWrite = false; this.unread = false;
       try { this.disk = AccountFileSchema.parse(await boundedJson(this.file, 64 * 1024)); }
       // finishStartup rewrites a file that was read and refused (JSON, schema, size or path: no errno code), never one that could not
       // be read (missing, or an I/O error such as EBUSY or EACCES): that one may be valid, and a rewrite would sign the user out for good.
-      catch (error) { this.startupWrite = typeof (error as NodeJS.ErrnoException)?.code !== 'string'; }
+      catch (error) {
+        const code = (error as NodeJS.ErrnoException)?.code;
+        this.startupWrite = typeof code !== 'string'; this.unread = typeof code === 'string' && code !== 'ENOENT';
+      }
       const disk = this.disk; if (!disk) return;
       const doomed = [...disk.retiredRefs];
       let account = disk.account;
@@ -128,6 +134,8 @@ export class GitHubAccountStore {
       if (!passes(admit, this.live)) { await this.discard(staged); return null; }                            // 3
       const from = kind === 'refresh' ? this.live : null;   // read here, under the lock, never from the caller's snapshot (GS-10)
       const signInId = from?.signInId ?? randomUUID();
+      // A file open() could not read may name an account: re-read it, so step 4 retires its pair instead of writing over it.
+      try { await this.reread(); } catch { await this.discard(staged); throw new ReplaceFailure(false); }
       const before = this.disk;                             // kept for a sign-in's rollback (step 5)
       let written: AccountFile;
       try {                                                                                                  // 4: the crash-recovery commit point
@@ -236,6 +244,13 @@ export class GitHubAccountStore {
   }
   private async tryWrite(account: FileAccount | null, retiredRefs: readonly string[]): Promise<boolean> {
     try { await this.write(account, retiredRefs); return true; } catch { return false; }
+  }
+  /** Throws while the file still cannot be read (an I/O error). A file read and refused, or missing, holds no account, as at open(). */
+  private async reread(): Promise<void> {
+    if (!this.unread) return;
+    try { this.disk = AccountFileSchema.parse(await boundedJson(this.file, 64 * 1024)); }
+    catch (error) { const code = (error as NodeJS.ErrnoException)?.code; if (typeof code === 'string' && code !== 'ENOENT') throw error; }
+    this.unread = false;
   }
   /** Calls vault.tombstone synchronously, so its synchronous part (the entry marked, its grants revoked) runs before this returns. */
   private tombstoneNow(ref: string): Promise<boolean> {

@@ -96,6 +96,15 @@ function failVaultDisk(vault: Vault): () => void {
   target.persist = async () => { throw new Error('EIO'); };
   return () => { delete target.persist; };
 }
+/** lstat fails with EBUSY for one path until the returned function runs. The node project runs files in one worker without isolation,
+ *  so no vi.mock: lstat is swapped on the builtin and synced to every importer, as tests/review-workspace-layers.test.ts:16-24 does. */
+function busyLstat(path: string): () => void {
+  const realLstat = fsp.lstat;
+  (fsp as { lstat: unknown }).lstat = (target: string) =>
+    target === path ? Promise.reject(Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' })) : realLstat(target);
+  syncBuiltinESMExports();
+  return () => { (fsp as { lstat: unknown }).lstat = realLstat; syncBuiltinESMExports(); };
+}
 
 const roots: string[] = [];
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -742,6 +751,56 @@ describe('startup checks (4.4)', () => {
     await vault.reconcile(new Set(store.references())); await store.finishStartup();
     expect(readFileSync(file, 'utf8')).toBe(before);                            // the valid file is kept
     await expectConsistent(dir, refsOf(a));
+  });
+
+  /** A start as restart() runs it, except that open() cannot read the account file (EBUSY). With keepBusy, lstat keeps failing for the
+   *  file until the caller runs `restore`, which it must do in a finally. */
+  async function unreadStart(dir: string, keepBusy = false) {
+    const file = join(dir, 'github', 'account.json');
+    const vault = new Vault(join(dir, 'vault'), cryptor); await vault.initialize('epoch-2');
+    const store = new GitHubAccountStore(file, vault, CLIENT, () => T0 + 3_600_000);
+    const restore = busyLstat(file);
+    try { await store.open(); } finally { if (!keepBusy) restore(); }
+    await vault.reconcile(new Set(store.references())); await store.finishStartup();
+    return { file, vault, store, restore };
+  }
+
+  // Such a start shows no account, so the next step is a sign-in in the same session. It re-reads the file under the lock, so the pair
+  // the file names is retired, not written over and left committed in the vault for good (the reconcile never deletes it) (U2-R13).
+  test('a sign-in after a start that could not read a valid file re-reads it, so the pair it names is retired, not left in the vault', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    const dir = h.copy(); const { file, vault, store } = await unreadStart(dir);
+    expect(store.current()).toBeNull();
+    const next = await store.replace(issued(), T0, 'sign-in', () => true);
+    expect(next).not.toBeNull(); expect(store.current()).toBe(next);
+    for (const ref of refsOf(a)) expect(await vault.has(ref)).toBe(false);     // retired at step 7, not left committed
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ revision: 3, account: { accessRef: next!.accessRef }, retiredRefs: [] });
+    await expectConsistent(dir, refsOf(next));
+  });
+
+  test('a sign-in while the file still cannot be read fails with ReplaceFailure(false): its staged pair is removed and the file is kept', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    const dir = h.copy(); const before = readFileSync(join(dir, 'github', 'account.json'), 'utf8');
+    const { file, store, restore } = await unreadStart(dir, true);
+    let failure: unknown;
+    try { failure = await store.replace(issued(), T0, 'sign-in', () => true).catch((error: unknown) => error); } finally { restore(); }
+    expect(failure).toBeInstanceOf(ReplaceFailure); expect(failure).toMatchObject({ written: false });
+    expect(store.current()).toBeNull();
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(await h.bins(dir)).toEqual(refsOf(a).map(ref => `${ref}.bin`).sort());
+    await expectConsistent(dir, refsOf(a));
+  });
+
+  // The re-read refuses only an I/O error: a file found invalid or missing by then holds no account, so the sign-in writes over it (U2-R13).
+  test.each([['invalid', '{"version":1,"account"'], ['missing', null]] as const)('a file unread at open and %s at the sign-in\'s re-read holds no account: the sign-in writes over it', async (_name, content) => {
+    const h = await harness(); const dir = h.copy(); const file = join(dir, 'github', 'account.json');
+    if (content !== null) { await mkdir(join(dir, 'github'), { recursive: true }); await writeFile(file, content); }
+    const { store } = await unreadStart(dir);
+    expect(existsSync(file) ? readFileSync(file, 'utf8') : null).toBe(content);   // not rewritten at startup (U2-R9)
+    const next = await store.replace(issued(), T0, 'sign-in', () => true);
+    expect(next).not.toBeNull(); expect(store.current()).toBe(next);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ revision: 1, account: { accessRef: next!.accessRef }, retiredRefs: [] });
+    await expectConsistent(dir, refsOf(next));
   });
 });
 
