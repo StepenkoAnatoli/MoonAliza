@@ -276,6 +276,15 @@ test.each([
   expect(await token(pollParams(m))).toEqual({ kind: 'tokens', receivedAt: NOW, tokens: { access: m.access, refresh: m.refresh, accessExpiresInS: 28_800, refreshExpiresInS: 15_897_600 } });
 });
 
+/** One JSON body that is a whole token answer and a whole step-1 answer, plus a member written as `literal`. JSON.parse reads a number
+ *  literal beyond a double's range as Infinity or -Infinity, a value the body never wrote, so parseBody's finite rule (5.3 row 4: a
+ *  flat object of strings and numbers) makes the body unparseable. Without that rule both halves would be read (tokens, a code), and an
+ *  expires_in written this way would be malformed, which clears the account on a refresh (6.5), where unparseable only holds it. */
+const overflowing = (m: Markers, literal: string) => ({
+  text: JSON.stringify({ ...tokenAnswer(m).json as object, ...codeAnswer(m).json as object, scope: 0 }).replace('"scope":0', `"scope":${literal}`),
+  headers: { 'content-type': 'application/json' },
+});
+
 test.each([
   ['no content type', (m: Markers) => ({ text: JSON.stringify(tokenAnswer(m).json) })],
   ['an unknown content type', (m: Markers) => ({ text: JSON.stringify(tokenAnswer(m).json), headers: { 'content-type': 'application/xml' } })],
@@ -290,6 +299,8 @@ test.each([
   ['a nested object', (m: Markers) => ({ json: { access_token: m.access, nested: { a: 1 } } })],
   ['a null member', (m: Markers) => ({ json: { access_token: m.access, scope: null } })],
   ['a boolean member', (m: Markers) => ({ json: { access_token: m.access, ok: true } })],
+  ['a JSON member that overflows to Infinity', (m: Markers) => overflowing(m, '1e400')],
+  ['a JSON member that overflows to -Infinity', (m: Markers) => overflowing(m, '-1e400')],
   ['an empty JSON body', () => ({ text: '', headers: { 'content-type': 'application/json' } })],
   ['a 500 with JSON and no error', () => ({ status: 500, json: { message: 'Server Error' } })],
   ['a 502 HTML page', () => ({ status: 502, text: '<html>bad gateway</html>', headers: { 'content-type': 'text/html' } })],
@@ -429,6 +440,10 @@ test.each([
   ['an invalid retry-after: over an hour', limited(429, { 'retry-after': '3601' }), 60_000],
   ['an invalid retry-after: an HTTP date', limited(429, { 'retry-after': 'Wed, 21 Oct 2026 07:28:00 GMT' }), 60_000],
   ['an invalid retry-after with a valid reset', limited(403, { 'retry-after': 'x', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(90) }), 90_000],
+  // Number() reads each reset below as 120 s away (120.5 s for the fraction); only 5.4's "a valid epoch" (digits alone) sends them to the floor.
+  ['a reset that is not an epoch: a fraction', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': `${resetIn(120)}.5` }), 60_000],
+  ['a reset that is not an epoch: hex', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': `0x${Number(resetIn(120)).toString(16)}` }), 60_000],
+  ['a reset that is not an epoch: an exponent', limited(403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': `${Number(resetIn(120)) / 10}e1` }), 60_000],
   ['a 403 with X-Accepted-GitHub-Permissions and rate-limit headers', limited(403, { 'x-accepted-github-permissions': 'contents=read', 'x-ratelimit-remaining': '0' }), 60_000],
 ] as const)('rateLimitWait: %s', (_name, response, waitMs) => {
   expect(rateLimitWait(response, NOW, limits)).toBe(waitMs);
@@ -539,6 +554,14 @@ test('an answer without access_token is unusable with its status: a 2xx, a 401 o
     fake.answer(ROUTES.token, { status, json });
     expect(await token(refreshParams(markers())), String(status)).toEqual({ kind: 'unusable', status });
   }
+});
+
+test('a 201 is a 2xx like 200 (5.3 row 6): a token answer gives the tokens, and a step-1 answer gives the code', async () => {
+  const m = markers(); fake.answer(ROUTES.token, tokenAnswer(m, {}, 201)); fake.answer(ROUTES.device, codeAnswer(m, {}, 201));
+  expect([await token(pollParams(m)), await deviceCode()]).toEqual([
+    { kind: 'tokens', receivedAt: NOW, tokens: { access: m.access, refresh: m.refresh, accessExpiresInS: 28_800, refreshExpiresInS: 15_897_600 } },
+    { kind: 'code', deviceCode: m.device, userCode: m.userCode, expiresInS: 900, intervalS: 5 },
+  ]);
 });
 
 test('a 3xx is never followed: unusable with its status for a token request, failed at step 1, and the Location receives nothing', async () => {
@@ -674,6 +697,7 @@ test.each([
   ['a JSON string, itself a valid login', { json: 'someone' }],
   ['a body that is not JSON', { text: 'login=someone', headers: { 'content-type': 'application/json' } }],
   ['a body over 64 KiB', { json: { login: 'someone', pad: 'p'.repeat(65_536) }, chunked: true }],
+  ['invalid UTF-8 outside the login', { text: Buffer.concat([Buffer.from('{"login":"someone","bio":"'), Buffer.from([0xff]), Buffer.from('"}')]), headers: { 'content-type': 'application/json' } }],
   ['a reset', { reset: true }],
 ] as const)('fetchLogin: %s gives null', async (_name, answer) => {
   // The 5 s limit, not `quick`: a timeout also gives null, so under a short limit a slow round trip would pass a row whose guard is gone.
