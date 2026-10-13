@@ -393,6 +393,13 @@ test('rate limits come first: a rate-limit 403 whose body says bad_refresh_token
   expect(unread.state.cancelled).toBe(true);
 });
 
+test('through the wire, x-ratelimit-reset is measured from the injected clock, not the wall clock (U5 runs far from real time)', async () => {
+  const limit = { status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': resetIn(120) }, json: { message: 'API rate limit exceeded' } };
+  fake.answer(ROUTES.token, limit); fake.answer(ROUTES.device, limit);
+  expect(await token(pollParams(markers()))).toEqual({ kind: 'rate-limited', waitMs: 120_000 });
+  expect(await deviceCode()).toEqual({ kind: 'rate-limited', waitMs: 120_000 });
+});
+
 // ---- Token shape (5.5, F-4, E-01 l.173-178, E-10). ----
 
 test.each([
