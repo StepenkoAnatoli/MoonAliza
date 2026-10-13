@@ -191,6 +191,25 @@ test('context recovery carries the request with its conversation privacy restric
   expect(screen.getByRole('button', { name: 'Send message' }).hasAttribute('disabled')).toBe(true);
 });
 
+test('a stored partial answer is labelled Incomplete answer beside its author; a whole answer is not (Stage 7 FX-1)', async () => {
+  // Guard: the label in MessageItem (mutation: drop it; the cut-off text then reads as a whole answer, GA-B1).
+  const bridge = api([project]);
+  const session = { id: 'cut', projectId: project.id, title: 'Cut-off answer', policy: { revision: 0, inference: 'local-only' }, createdAt: project.createdAt, updatedAt: project.createdAt };
+  const message = (id: string, role: string, content: string, partial?: true) => ({ id, sessionId: session.id, role, content, createdAt: project.createdAt, ...(partial ? { partial } : {}) });
+  render(<App api={{ ...bridge, async invoke(method, params) {
+    if (method === 'session.list') return { sessions: [session] };
+    if (method === 'session.read') return { session, messages: [message('q1', 'user', 'First question'), message('a1', 'assistant', 'A whole answer.'), message('q2', 'user', 'Second question'), message('a2', 'assistant', 'Here is the first half of the', true)], runs: [], context: null, usage: null, failure: { code: 'PROVIDER_ERROR', message: 'The model stopped before finishing.', retry: 'never' } };
+    return bridge.invoke(method, params);
+  } }} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Cut-off answer' }));
+  const cut = (await screen.findByText('Here is the first half of the')).closest('article')!;
+  expect(within(cut).getByText('Incomplete answer')).toBeTruthy();
+  expect(cut.querySelector('.message-author')!.textContent).toContain('Incomplete answer');
+  const whole = screen.getByText('A whole answer.').closest('article')!;
+  expect(within(whole).queryByText('Incomplete answer')).toBeNull();
+  expect(screen.getAllByText('Incomplete answer')).toHaveLength(1);
+});
+
 test('research opens per project from the details pane and is not requested before', async () => {
   const bridge = api([{ ...project, policy: { ...project.policy, research: 'public-technical' } }]); const calls: string[] = [];
   render(<App api={{ ...bridge, async invoke(method, params) {

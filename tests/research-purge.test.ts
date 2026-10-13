@@ -44,7 +44,7 @@ async function world(): Promise<World> {
   const folder = join(root, `w${++count}`); await mkdir(folder);
   const store = new Store(join(folder, 'state.sqlite')); stores.push(store);
   store.putProfile({ id: 'm', name: 'Local', kind: 'ollama', endpoint: 'http://localhost:11434', model: 'test', contextTokens: 8192, outputTokens: 512, locality: 'local', revision: 1, revisionId: 'pv', createdAt: at, updatedAt: at });
-  const app = new Application(store, { infer: async () => ({ content: '', outcome: 'complete' }), publish: () => {} });
+  const app = new Application(store, { infer: async () => ({ content: 'Answer.', outcome: 'complete' }), publish: () => {} });
   const dispatch = createControl(store, app);
   const storage = join(folder, 'storage');
   const w: World = { folder, store, control: control => dispatch(ControlSchema.parse(control)), kit: undefined as unknown as ResearchKit, storage, artifacts: join(storage, 'artifacts'), unlinks: [], codes: [] };

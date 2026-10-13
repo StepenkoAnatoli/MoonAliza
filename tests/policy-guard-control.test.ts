@@ -22,7 +22,7 @@ function fixture() {
   store.putProfile({ id: 'profile1', name: 'Local', kind: 'ollama', endpoint: 'http://127.0.0.1:11434', model: 'test', contextTokens: 8192, outputTokens: 512, locality: 'local', revision: 1, revisionId: 'v1', createdAt: at, updatedAt: at });
   store.putSession({ id: 's1', projectId: 'p1', policy: { revision: 0, inference: 'cloud-allowed' }, title: 'Work', createdAt: at, updatedAt: at });
   store.putSession({ id: 'chat', projectId: null, title: 'Chat', createdAt: at, updatedAt: at });
-  const app = new Application(store, { infer: async () => ({ content: '', outcome: 'complete' }), publish: () => {} });
+  const app = new Application(store, { infer: async () => ({ content: 'Answer.', outcome: 'complete' }), publish: () => {} });
   const dispatch = createControl(store, app);
   const control = (input: unknown) => dispatch(ControlSchema.parse(input));
   const run = (id: string, mode: Run['mode'], status: Run['status'], sessionId = 's1') => store.putRun({ id, projectId: 'p1', sessionId, mode, status, profileId: 'profile1', profileRevisionId: 'v1', policyRevision: 1, trustRevision: 1, createdAt: at });

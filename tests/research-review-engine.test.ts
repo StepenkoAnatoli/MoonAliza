@@ -329,6 +329,21 @@ describe('run end', () => {
     expect(h.store.researchEvents('j1').events.at(-1)).toMatchObject({ from: 'reviewing', to: 'not_ready', actor: 'engine' });
   });
 
+  test.each([
+    ['an answer cut off', { content: 'The map is half', outcome: 'incomplete' } as Completion, 'The model stopped before finishing: it reached its maximum response (thinking counts toward it) or the context window, or the answer was cut off. Raise Maximum response or Context window in Model profiles, or split the request.'],
+    ['a declined answer', { content: 'I will not do that.', outcome: 'blocked' } as Completion, 'The provider declined to answer this request. Rephrase it or try another model.'],
+    ['an empty answer', answer(' \n'), 'The model ended its turn without an answer. Send the request again or rephrase it.'],
+    ['nine tool calls in one step', { content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: 9 }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: {} })) } as Completion, 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Ask for fewer actions at a time.'],
+  ] as const)('%s ends the review REVIEW_RUN_FAILED and its message says why (Stage 7 FX-1)', async (_name, output, why) => {
+    // Guard: reviewEnd receives the step's own text (mutation: pass it only the `failures` table's entry; the run then
+    // reads only "The research review run failed. The research job is not ready.", which names no cause).
+    const h = harness(); h.script.push(() => output);
+    const { run } = await h.begin(); await finished(h, run.id);
+    const failed = h.runEvents(run.id).find(event => event.type === 'run.failed')!;
+    expect(failed.payload).toEqual({ error: { code: 'REVIEW_NOT_READY', message: `The research review run failed. The research job is not ready. ${why}`, retry: 'never' } });
+    expect(h.store.getResearch('j1')).toMatchObject({ status: 'not_ready', failure: 'REVIEW_RUN_FAILED' });
+  });
+
   test('the time limit ends the review REVIEW_BUDGET_EXCEEDED and the message names the time limit', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const h = harness();

@@ -7,9 +7,10 @@ import { Store } from '../src/engine/store';
 import { Application } from '../src/engine/application';
 import { estimateInput } from '../src/engine/context';
 import { reviewWorkspacePath } from '../src/engine/research-review';
-import type { Completion, InferenceMessage } from '../src/main/inference';
+import { complete, type Completion, type InferenceMessage, type InferenceProfile } from '../src/main/inference';
 import type { ProviderState } from '../src/engine/control';
 import type { Run } from '../src/shared';
+import { REFUSAL_SIGNATURE, builtStream, type BuiltBlock } from './fixtures/anthropic-state-refusals';
 
 const roots: string[] = []; const stores: Store[] = [];
 afterEach(() => { stores.splice(0).forEach(store => store.close()); roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })); });
@@ -52,7 +53,7 @@ test('large tool results remain saved and can be paged without overflowing the m
 
 test('an oversized prompt fails before inference and persists an actionable context report', async () => {
   const { store } = fixture(); let invoked = false;
-  const app = new Application(store, { publish() {}, async infer() { invoked = true; return { content: '', outcome: 'complete' }; } });
+  const app = new Application(store, { publish() {}, async infer() { invoked = true; return { content: 'Answer.', outcome: 'complete' }; } });
   const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
   await app.handle(request('run.start', { sessionId: session.id, profileId: 'profile1', mode: 'ask', prompt: '漢'.repeat(18000) }, 'start'));
   await app.whenIdle();
@@ -614,4 +615,97 @@ test('a frozen review run that overflows keeps REVIEW_CONTEXT_LIMIT and the revi
   expect(store.getResearch('j1')).toMatchObject({ status: 'not_ready', failure: 'REVIEW_CONTEXT_LIMIT' });
   const failed = store.events(run.id, 0, 1000).events.find(event => event.type === 'run.failed')!;
   expect(failed.payload).toEqual({ error: { code: 'REVIEW_NOT_READY', message: 'The research review exceeded the selected model’s context budget. The research job is not ready.', retry: 'never' } });
+});
+
+// Stage 7 FX-1 (docs/orchestration/2026-10-05-more-models/reports/stage7-gap-audit.json: GA-C1/GA-B1, GA-C2, GA-C4): a
+// step that ends without a usable answer keeps its public code (F-21) and says why, in a message chosen where run.failed
+// is built. Wherever the shape is an adapter's, the completion comes from the real complete() over a fake fetcher
+// (streams built from E-10 and OpenAI chat shapes, not captures), so the engine gets exactly what main hands it.
+const INCOMPLETE_TEXT = 'The model stopped before finishing: it reached its maximum response (thinking counts toward it) or the context window, or the answer was cut off. Raise Maximum response or Context window in Model profiles, or split the request.';
+const BLOCKED_TEXT = 'The provider declined to answer this request. Rephrase it or try another model.';
+const EMPTY_TEXT = 'The model ended its turn without an answer. Send the request again or rephrase it.';
+const TOO_MANY_CALLS_TEXT = 'The model asked for more than 8 tool calls in one step, which MoonAliza does not run. Nothing from that step was run. Ask for fewer actions at a time.';
+const WIDENED_TEXT = 'The provider returned a tool call or step MoonAliza could not use safely: a tool call that was invalid or not offered, or output that contained a saved credential. Nothing from that step was run or saved.';
+const ANTHROPIC: InferenceProfile = { kind: 'anthropic', endpoint: 'https://api.anthropic.com/v1', model: 'claude-built', outputTokens: 2048 };
+const CHAT: InferenceProfile = { kind: 'openai-compatible', endpoint: 'https://provider.example/v1', model: 'test', outputTokens: 2048 };
+const thinkingOnly: BuiltBlock = { start: { type: 'thinking', thinking: '', signature: '' }, deltas: [{ type: 'thinking_delta', thinking: 'Weighing the listing.' }, { type: 'signature_delta', signature: REFUSAL_SIGNATURE }] };
+const textBlock = (text: string): BuiltBlock => ({ start: { type: 'text', text: '' }, deltas: [{ type: 'text_delta', text }] });
+const chatStream = (...chunks: unknown[]) => [...chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`), 'data: [DONE]\n\n'].join('');
+const chatText = (content: string) => ({ choices: [{ index: 0, delta: { role: 'assistant', content } }] });
+const chatStop = (finish_reason: string) => ({ choices: [{ index: 0, delta: {}, finish_reason }] });
+/** What an adapter makes of a streamed body: the real complete() over a fake fetcher. */
+const adapted = (profile: InferenceProfile, body: string) => complete(profile, [{ role: 'user', content: 'Go on.' }], { signal: new AbortController().signal, fetcher: async () => new Response(body, { headers: { 'Content-Type': 'text/event-stream' } }) });
+const listStep = (count = 1): Completion => ({ content: '', outcome: 'tool_calls', toolCalls: Array.from({ length: count }, (_, n) => ({ id: `list-${n}`, name: 'list_files', input: { path: '.' } })) });
+/** One ask-mode task whose model steps are `steps`, in order; the stored run, its messages, failure and events. */
+async function taskEnding(steps: Completion[]) {
+  const { store } = fixture(); let calls = 0;
+  const app = new Application(store, { publish() {}, async infer() { const step = steps[calls++]; if (!step) throw new Error('unexpected step'); return step; } });
+  const { session } = await app.handle(request('session.create', { projectId: 'p1' }, 'create')) as { session: { id: string } };
+  const run = await runOnce(app, session.id, 'Look at the project.');
+  return { calls, status: store.getRun(run.id)?.status, messages: store.listMessages(session.id), failure: await failureOf(app, session.id), types: store.events(run.id, 0, 1000).events.map(event => event.type) };
+}
+
+test.each([
+  ['an Anthropic max_tokens stop while thinking', ANTHROPIC, builtStream([thinkingOnly], 'max_tokens'), ''],
+  ['an Anthropic max_tokens stop mid-answer', ANTHROPIC, builtStream([thinkingOnly, textBlock('Here is the first half of the')], 'max_tokens'), 'Here is the first half of the'],
+  ['an Anthropic context-window stop', ANTHROPIC, builtStream([textBlock('Here is the first half of the')], 'model_context_window_exceeded'), 'Here is the first half of the'],
+  ['a chat-kind length stop with no text', CHAT, chatStream(chatText(''), chatStop('length')), ''],
+  ['a chat-kind length stop mid-answer', CHAT, chatStream(chatText('Here is the first half of the'), chatStop('length')), 'Here is the first half of the'],
+] as const)('%s keeps the partial text and fails PROVIDER_ERROR with the incomplete message', async (_name, profile, body, text) => {
+  // Guard: the incomplete outcome's own message (mutation: drop it; the generic "Check the selected profile and project
+  // access" text returns). The text never says "continue": history drops partial answers (application.ts `!m.partial`).
+  const output = await adapted(profile, body);
+  expect(output).toMatchObject({ outcome: 'incomplete', content: text });
+  const end = await taskEnding([listStep(), output]);
+  expect(end.calls).toBe(2); expect(end.status).toBe('failed');
+  expect(end.failure).toEqual({ code: 'PROVIDER_ERROR', message: INCOMPLETE_TEXT, retry: 'never' });
+  expect(end.messages.at(-1)).toMatchObject({ role: 'assistant', content: text, partial: true });
+  expect(INCOMPLETE_TEXT.toLowerCase()).not.toContain('continue');
+});
+
+test.each([
+  ['an Anthropic refusal stop', ANTHROPIC, builtStream([textBlock('I will not help with that.')], 'refusal')],
+  ['a chat-kind content_filter stop', CHAT, chatStream(chatText('I will not help with that.'), chatStop('content_filter'))],
+] as const)('%s keeps the provider\'s text and fails PROVIDER_ERROR with the declined message', async (_name, profile, body) => {
+  // Guard: the blocked outcome's own message (mutation: drop it, or give blocked the incomplete text).
+  const output = await adapted(profile, body);
+  expect(output).toMatchObject({ outcome: 'blocked', content: 'I will not help with that.' });
+  const end = await taskEnding([output]);
+  expect(end.status).toBe('failed');
+  expect(end.failure).toEqual({ code: 'PROVIDER_ERROR', message: BLOCKED_TEXT, retry: 'never' });
+  expect(end.messages.at(-1)).toMatchObject({ role: 'assistant', content: 'I will not help with that.', partial: true });
+});
+
+test.each([
+  ['an empty Anthropic end_turn', ANTHROPIC, builtStream([], 'end_turn'), ''],
+  ['an Anthropic turn of thinking only, then end_turn', ANTHROPIC, builtStream([thinkingOnly], 'end_turn'), ''],
+  ['an Anthropic turn whose text is whitespace only', ANTHROPIC, builtStream([thinkingOnly, textBlock('\n \n')], 'end_turn'), '\n \n'],
+  ['a chat kind\'s empty stop', CHAT, chatStream(chatText(''), chatStop('stop')), ''],
+] as const)('%s after a tool result is no answer: nothing is stored and the run fails PROVIDER_ERROR', async (_name, profile, body, text) => {
+  // Guard: the empty-answer check before the answer is stored (mutation: drop it; the run then completes with an empty
+  // answer that the renderer shows as nothing, GA-C2). Anthropic documents empty end_turn answers "particularly after tool
+  // results" (wire E-11), so the empty answer follows a tool step here.
+  const output = await adapted(profile, body);
+  expect(output).toMatchObject({ outcome: 'complete', content: text }); expect(output.toolCalls).toBeUndefined();
+  const end = await taskEnding([listStep(), output]);
+  expect(end.calls).toBe(2); expect(end.status).toBe('failed');
+  expect(end.types).toContain('run.failed'); expect(end.types).not.toContain('run.completed');
+  expect(end.failure).toEqual({ code: 'PROVIDER_ERROR', message: EMPTY_TEXT, retry: 'never' });
+  // The tool step's own assistant message stays; no answer message is stored for the empty end.
+  expect(end.messages.filter(message => message.role === 'assistant').map(message => message.toolCalls?.length ?? 0)).toEqual([1]);
+});
+
+test('more than eight valid tool calls in one step fail PROVIDER_PROTOCOL_ERROR with their own message, and nothing runs', async () => {
+  // Guards: the over-limit message (mutation: drop it; the widened invalid-call text returns); the cap of eight itself
+  // (mutation: raise it; nine calls then run). Eight calls are within the cap; an invalid call among nine keeps the
+  // widened text, which names that cause (the count is checked after the calls' own validity).
+  const nine = await taskEnding([listStep(9)]);
+  expect(nine.status).toBe('failed');
+  expect(nine.failure).toEqual({ code: 'PROVIDER_PROTOCOL_ERROR', message: TOO_MANY_CALLS_TEXT, retry: 'never' });
+  expect(nine.types).not.toContain('tool.started');
+  expect(nine.messages.filter(message => message.role !== 'user')).toEqual([]);
+  const eight = await taskEnding([listStep(8), { content: 'Listed.', outcome: 'complete' }]);
+  expect(eight.status).toBe('completed'); expect(eight.messages.filter(message => message.role === 'tool')).toHaveLength(8);
+  const invalid = listStep(9); invalid.toolCalls![8] = { id: 'unoffered', name: 'not_a_tool', input: {} };
+  expect((await taskEnding([invalid])).failure).toEqual({ code: 'PROVIDER_PROTOCOL_ERROR', message: WIDENED_TEXT, retry: 'never' });
 });
