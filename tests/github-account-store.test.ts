@@ -99,12 +99,12 @@ function failVaultDisk(vault: Vault): () => void {
 const roots: string[] = [];
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
 
-async function harness(clientId = CLIENT) {
+async function harness(clientId = CLIENT, clock: () => number = () => T0) {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-github-store-')); roots.push(root);
   const data = join(root, 'data'); const file = join(data, 'github', 'account.json');
   const vault = new Vault(join(data, 'vault'), cryptor); await vault.initialize('epoch-1');
   const spy = new SpyVault(vault, file);
-  const store = new GitHubAccountStore(file, spy, clientId, () => T0); spy.store = store;
+  const store = new GitHubAccountStore(file, spy, clientId, clock); spy.store = store;
   await store.open();
   let signOuts = 0; let snapshots = 0;
   return {
@@ -633,6 +633,22 @@ describe('concurrency (L-6)', () => {
     const login = h.store.setLogin(a.signInId, 'octo-cat'); const clear = h.signOut();
     await login; await clear;
     expect(h.store.current()).toBeNull(); expect((await h.read())?.account).toBeNull();
+  });
+
+  test('a sign-out that lands while setLogin is writing is not undone: no account in memory, in the file or in the vault (GS-10)', async () => {
+    // The injected clock is read inside setLogin's write, before atomicJson, so the clear's prologue runs mid-write.
+    let midWrite: (() => void) | undefined;
+    const h = await harness(CLIENT, () => { const run = midWrite; midWrite = undefined; run?.(); return T0; });
+    const { account: a } = await h.signIn();
+    let clear: Promise<unknown> | undefined;
+    midWrite = () => { clear = h.signOut(); };
+    await h.store.setLogin(a.signInId, 'octo-cat');
+    expect(clear).toBeDefined();
+    expect(await clear).toBe('durable');
+    expect(h.store.current()).toBeNull();
+    expect(await h.read()).toMatchObject({ account: null, retiredRefs: [] });
+    expect(await h.bins()).toEqual([]);
+    await expectConsistent(h.copy(), null);
   });
 });
 
