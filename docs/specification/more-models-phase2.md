@@ -665,7 +665,9 @@ against it and the 600 s timeout.
   provider returned a tool call or step MoonAliza could not use safely: a tool call that was invalid or
   not offered, or output that contained a saved credential. Nothing from that step was run or saved."
   It is an existing public code (`src/shared/errors.ts:11`). The `failures` entry is shared, so the
-  widened text applies to every kind and every cause that raises the code: the engine's own check of an
+  widened text applies to every kind and every cause that raises the code, except a step asking for more
+  than 8 tool calls, which since Stage 7 FX-1 has its own text (`STEP_ENDINGS`, `application.ts`; gap
+  audit GA-C4): the engine's own check of an
   invalid or unoffered tool call (`application.ts:370`), which today's text describes, and the
   tool-call secret check in main, which until now crossed as PROVIDER_ERROR. A review run appends it to REVIEW_RUN_FAILED's text,
   as it does today for the engine's own protocol errors (`application.ts:411`).
@@ -710,6 +712,11 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
     have a 1M-token context window and up to 128K output tokens (SL-E01 l.22-23, the source's own
     figures). Haiku 4.5 is not named: it may retire before this merges ("Not sooner than October 15,
     2026", SL-E01 l.27);
+  - Context window and Maximum response need raising for these models (added by Stage 7 FX-3, gap audit
+    GA-B2/GA-C5; as built: "Raise Context window and Maximum response for these models: at the form's
+    defaults (8,192 and 2,048 tokens) a task that thinks can stop after a few steps. Each request is billed
+    for the input it sends, so a larger window costs more per step."). The values are still not prefilled
+    (below);
   - a step can take several minutes (the 600 s timeout, section 4);
   - the data-use sentence, word for word (U4's renderer test pins it whole; the README repeats it):
     "Data use: Anthropic's commercial terms say it may not train models on your prompts and outputs;
@@ -732,12 +739,12 @@ it is recorded for later and goes through F-21 and the stop-list review when it 
   No token values are prefilled: presets are Phase 4.
 - README: the kind, its endpoint, single-workspace keys, always cloud (refused in local-only
   conversations; an Ollama reached through this kind is treated as cloud, so local-only users use the
-  Ollama kind), thinking kept for the run but never shown or stored, a step can take several minutes, a
-  long task can end with the context-limit message, the same data-use sentence as the hint, and the
-  adapter built from Anthropic's documentation and not yet checked against the live API (as built: the
-  hint's sentence after the probes, above). If the D10
-  verdict keeps commit 3, the README also gets section 4's credentials sentence, which concerns every
-  kind.
+  Ollama kind), thinking kept for the run but never shown or stored, a step can take several minutes, the
+  hint's token sentence (Stage 7 FX-3, with the three models named, since that paragraph does not name
+  them before it), a long task can end with the context-limit message, the same data-use sentence as the
+  hint, and the adapter built from Anthropic's documentation and not yet checked against the live API (as
+  built: the hint's sentence after the probes, above). If the D10 verdict keeps commit 3, the README also
+  gets section 4's credentials sentence, which concerns every kind.
 - **Locality.** `validateEndpoint` labels every `anthropic` endpoint `external`, loopback included. A
   loopback server can implement this API and forward to a cloud, and MoonAliza cannot verify that it
   does not: Ollama serves `/v1/messages` (E-31 l.1987-1988) through `cloudPassthroughMiddleware` and
@@ -1164,9 +1171,10 @@ Recorded from the build, the unit reviews, the live probes and the integration r
 - Behaviour the breaker measured and left (P2-BRK-3, -4, -5, -6): the 600 s deadline, retries used up on
   a 529 and an Electron stream cut all reach the user as the generic PROVIDER_ERROR text; a stream that
   ends cleanly before any text block is an empty incomplete answer, stored and not shown (as for every
-  kind); a bare-CR stream fails (the Phase 1 `lines()` limit); the whole-replay estimate counts the
-  state's data as an escaped string, so thinking with many quotes or newlines is overestimated (the error
-  is conservative: a frozen run can stop early, never overflow).
+  kind), and since Stage 7 FX-1 the run's failure shows the incomplete text; a bare-CR stream fails (the
+  Phase 1 `lines()` limit); the whole-replay estimate counts the state's data as an escaped string, so
+  thinking with many quotes or newlines is overestimated (the error is conservative: a frozen run can
+  stop early, never overflow).
 - Mutation (P2-MUT-2, -3): 124 of 128 mutations killed. Equivalent survivors: `complete()` passing the
   joined signal as `stop` (unobservable: no wait can end at or after the deadline), and two early exits in
   `toolCallsOutcome` (an unsigned thinking block, no `tool_use` block) that `parseAnthropicState` and
