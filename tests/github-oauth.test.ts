@@ -626,9 +626,14 @@ test.each([
   ['a body that is not JSON', { text: 'login=someone', headers: { 'content-type': 'application/json' } }],
   ['a body over 64 KiB', { json: { login: 'someone', pad: 'p'.repeat(65_536) }, chunked: true }],
   ['a reset', { reset: true }],
-  ['a hang past the timeout', { hang: true }],
 ] as const)('fetchLogin: %s gives null', async (_name, answer) => {
+  // The 5 s limit, not `quick`: a timeout also gives null, so under a short limit a slow round trip would pass a row whose guard is gone.
   fake.answer(ROUTES.user, answer);
+  expect(await settle(fetchLogin(fetcher, `Bearer ${markers().access}`, live(), limits))).toEqual({ value: null });
+});
+
+test('fetchLogin: a hang past the timeout gives null (the one fetchLogin case run under the short limit)', async () => {
+  fake.answer(ROUTES.user, { hang: true });
   expect(await settle(fetchLogin(fetcher, `Bearer ${markers().access}`, live(), quick))).toEqual({ value: null });
 });
 
