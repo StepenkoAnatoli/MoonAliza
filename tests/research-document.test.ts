@@ -129,6 +129,12 @@ async function refusal(w: World, document: DocumentName = 'brief', overrides: Pa
 }
 const workspaceFile = (w: World, name = 'BRIEF.md') => join(w.project, 'research', name);
 let collectedBrief: string; let collectedEvidence: string; let approvedBrief: string;
+/**
+ * The file's setup and cleanup hooks get the same 60 s its tests do, not vitest's 10 s hook default: on a slow Windows
+ * runner the cleanup's recursive delete of this file's temp root timed out at 10 s after every test had passed
+ * (run 38336592498: the file took 55.5 s, against 25.6 s in run 38323269476).
+ */
+const HOOK_TIMEOUT = 60_000;
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), 'moonaliza-document-'));
@@ -140,11 +146,11 @@ beforeAll(async () => {
   collectedEvidence = await readFile(join(root, 'expected-collected', 'project', 'research', 'EVIDENCE.md'), 'utf8');
   approvedBrief = await readFile(join(root, 'expected-approved', 'project', 'research', 'BRIEF.md'), 'utf8');
   expect(approvedBrief).not.toBe(collectedBrief);
-});
+}, HOOK_TIMEOUT);
 /** FIFOs a test planted: a reader blocked on one is released by a non-blocking writer open, so no thread stays stuck. */
 const fifos: string[] = [];
-afterAll(async () => { for (const fifo of fifos) await open(fifo, constants.O_WRONLY | constants.O_NONBLOCK).then(handle => handle.close(), () => {}); });
-afterAll(async () => { for (const store of stores) store.close(); if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
+afterAll(async () => { for (const fifo of fifos) await open(fifo, constants.O_WRONLY | constants.O_NONBLOCK).then(handle => handle.close(), () => {}); }, HOOK_TIMEOUT);
+afterAll(async () => { for (const store of stores) store.close(); if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } }, HOOK_TIMEOUT);
 
 // ------------------------------------------------------------------ sources by status
 
