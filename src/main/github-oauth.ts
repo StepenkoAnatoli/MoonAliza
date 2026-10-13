@@ -115,6 +115,9 @@ async function readBounded(response: Response, maxBytes: number): Promise<Uint8A
   try {
     for (;;) {
       const part = await reader.read(); if (part.done) break;
+      // A chunk that is not bytes (an injected stream of strings) has no byteLength: the bound would read NaN and the concat would
+      // throw with the body's text in its message, so it is a failed read (U1-R11).
+      if (!(part.value instanceof Uint8Array)) return null;
       length += part.value.byteLength; if (length > maxBytes) return null;
       chunks.push(part.value);
     }

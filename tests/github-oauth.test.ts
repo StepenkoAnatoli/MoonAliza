@@ -277,6 +277,23 @@ test.each([
   expect(outcomes).toEqual([{ value: { kind: 'transient' } }, { value: { kind: 'failed' } }, { value: null }]);
 });
 
+test.each([
+  ['a string', (text: string) => text],
+  ['an ArrayBuffer', (text: string) => new TextEncoder().encode(text).buffer],
+] as const)('a body stream that yields %s instead of bytes is transient, failed at step 1, and null for fetchLogin, never a rejection (U1-R11)', async (_name, chunk) => {
+  // Node's fetch always yields Uint8Array chunks; an injected fetcher can build a Response over any stream. A chunk that is not
+  // bytes has no byteLength, so without the type check the 64 KiB bound reads NaN and the concat rejects.
+  const m = markers(); let pulls = 0;
+  const odd = (text: string): Fetcher => async () => new Response(new ReadableStream({
+    pull(controller) { pulls++; controller.enqueue(chunk(text)); controller.close(); },
+  }) as unknown as BodyInit, { status: 200, headers: { 'content-type': 'application/json' } });
+  const outcomes = [await settle(token(pollParams(m), limits, odd(JSON.stringify(tokenAnswer(m).json)))),
+    await settle(deviceCode(true, limits, odd(JSON.stringify(codeAnswer(m).json)))),
+    await settle(fetchLogin(odd(JSON.stringify({ login: 'someone' })), `Bearer ${m.access}`, live(), limits))];
+  expect(pulls).toBe(3);
+  expect(outcomes).toEqual([{ value: { kind: 'transient' } }, { value: { kind: 'failed' } }, { value: null }]);
+});
+
 test('a short delay inside the timeout still answers', async () => {
   const m = markers(); fake.answer(ROUTES.token, { ...tokenAnswer(m), delayMs: 20 });
   expect(await token(pollParams(m), { ...limits, requestTimeoutMs: 2_000 })).toMatchObject({ kind: 'tokens' });
