@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { DateTimeSchema, GitHubLoginSchema } from '../shared';
-import { atomicJson, boundedJson, missing, serialized } from '../models/artifact-files';
+import { atomicJson, boundedJson, serialized } from '../models/artifact-files';
 import type { Vault } from './vault';
 
 /**
@@ -69,12 +69,14 @@ export class GitHubAccountStore {
   constructor(private readonly file: string, private readonly vault: Pick<Vault, 'saveStaged' | 'commit' | 'tombstone' | 'remove' | 'has'>,
     private readonly clientId: string, private readonly clock: () => number = Date.now) {}
 
-  /** Never throws (4.4). A missing, invalid, oversized or extra-key file reads as no account. */
+  /** Never throws (4.4). A missing, invalid, oversized or extra-key file reads as no account, and so does one that could not be read. */
   async open(): Promise<void> {
     await serialized(this.file, async () => {
       this.disk = null; this.live = null; this.appChanged = false; this.startupWrite = false;
       try { this.disk = AccountFileSchema.parse(await boundedJson(this.file, 64 * 1024)); }
-      catch (error) { this.startupWrite = !missing(error); }
+      // finishStartup rewrites a file that was read and refused (JSON, schema, size or path: no errno code), never one that could not
+      // be read (missing, or an I/O error such as EBUSY or EACCES): that one may be valid, and a rewrite would sign the user out for good.
+      catch (error) { this.startupWrite = typeof (error as NodeJS.ErrnoException)?.code !== 'string'; }
       const disk = this.disk; if (!disk) return;
       const doomed = [...disk.retiredRefs];
       let account = disk.account;

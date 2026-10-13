@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import fsp, { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Vault } from '../src/main/vault';
@@ -639,6 +640,24 @@ describe('startup checks (4.4)', () => {
     await atomicJson(h.file, { ...(await h.read())!, retiredRefs: refsOf(a) });   // as if step 7's removals had not run
     const next = await expectConsistent(h.copy(), refsOf(r));
     expect(next.spy.ops('tombstone')).toEqual(refsOf(a).map(ref => `tombstone:${ref}`));
+  });
+
+  test('a valid file that could not be read (an I/O error) reads as no account and is not rewritten, so the next start signs in (U2-R9)', async () => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    const dir = h.copy(); const file = join(dir, 'github', 'account.json'); const before = readFileSync(file, 'utf8');
+    // The node project runs files in one worker without isolation, so no vi.mock: lstat is swapped on the builtin and synced to
+    // every importer, as tests/review-workspace-layers.test.ts:16-24 does. It fails for this file during open() only.
+    const realLstat = fsp.lstat;
+    (fsp as { lstat: unknown }).lstat = (path: string) =>
+      path === file ? Promise.reject(Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' })) : realLstat(path);
+    syncBuiltinESMExports();
+    const vault = new Vault(join(dir, 'vault'), cryptor); await vault.initialize('epoch-2');
+    const store = new GitHubAccountStore(file, vault, CLIENT, () => T0 + 3_600_000);
+    try { await store.open(); } finally { (fsp as { lstat: unknown }).lstat = realLstat; syncBuiltinESMExports(); }
+    expect(store.current()).toBeNull();                                         // this start reads no account
+    await vault.reconcile(new Set(store.references())); await store.finishStartup();
+    expect(readFileSync(file, 'utf8')).toBe(before);                            // the valid file is kept
+    await expectConsistent(dir, refsOf(a));
   });
 });
 
