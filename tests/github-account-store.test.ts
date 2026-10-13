@@ -265,14 +265,22 @@ describe('failure kinds', () => {
 });
 
 describe('a sign-in rolls back a failed commit under the same lock (DC-11, GS-3)', () => {
-  test.each([1, 2])('commit %i failing with the rollback written: ReplaceFailure(false), the previous account live and named, the new refs removed', async failing => {
-    const h = await harness(); const { account: a } = await h.signIn(); const before = await h.read();
-    h.spy.on('commit', (_ref, count) => count === 2 + failing ? 'fail' : undefined);
+  // 'two': a refresh whose step-7 removals failed left the previous pair named, so the rollback must write back the retired refs
+  // kept at step 4, not an empty list (U2-R11).
+  test.each([[1, 'none'], [2, 'none'], [1, 'two'], [2, 'two']] as const)('commit %i failing with the rollback written (%s retired refs before): ReplaceFailure(false), the previous account live and named, the new refs removed', async (failing, retired) => {
+    const h = await harness(); let { account: a } = await h.signIn(); let commits = 2;
+    if (retired === 'two') {
+      h.spy.on('remove', () => 'fail');                                       // the refresh's step 7 keeps the old pair named
+      const { account: r } = await h.refresh(a); h.spy.on('remove'); a = r!; commits = 4;
+    }
+    const before = await h.read();
+    expect(before?.retiredRefs).toHaveLength(retired === 'two' ? 2 : 0);
+    h.spy.on('commit', (_ref, count) => count === commits + failing ? 'fail' : undefined);
     const failure = await h.store.replace(issued(), T0, 'sign-in', h.signInAdmit()).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ReplaceFailure); expect(failure).toMatchObject({ written: false });
     expect(h.store.current()).toBe(a);
     expect(await h.read()).toMatchObject({ revision: before!.revision + 2, account: before!.account, retiredRefs: before!.retiredRefs });
-    expect(await h.bins()).toEqual(refsOf(a).map(ref => `${ref}.bin`).sort());
+    expect(await h.bins()).toEqual([...before!.retiredRefs, ...refsOf(a)].map(ref => `${ref}.bin`).sort());
     await expectConsistent(h.copy(), refsOf(a));
   });
 
