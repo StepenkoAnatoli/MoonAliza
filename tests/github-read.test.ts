@@ -82,3 +82,84 @@ test('a response for another path is rejected and sensitive paths cause no reque
   await expect(reader.read({ url, path: '.env' }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_PATH_EXCLUDED'); expect(calls).toBe(0);
   await expect(reader.read({ url, path: 'file.txt' }, allowed, new AbortController().signal)).rejects.toThrow('GITHUB_UNSUPPORTED_FILE');
 });
+
+// GitHub sign-in, U3 pins (docs/specification/github-sign-in.md 7.1, 7.2 and L-10; REQUIREMENTS F-13, F-14, T-5, DC-13),
+// committed on the unchanged reader before the credential seam. Fixtures are built from E-15 shapes, not a capture.
+// Two AbortSignals compare equal under toEqual, so the init pin compares everything but `signal` by deep equality, checks the
+// exact key list, and checks `signal` by behaviour: Stop must abort it.
+const TODAY_HEADERS = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'MoonAliza-public-repository-reader' };
+const TODAY_INIT = { method: 'GET', redirect: 'manual', credentials: 'omit', cache: 'no-store', headers: TODAY_HEADERS };
+const TODAY_KEYS = ['method', 'redirect', 'credentials', 'cache', 'signal', 'headers'];
+const sentinel = () => `sentinel-${crypto.randomUUID()}`;
+/** A body that records whether anything read it: with highWaterMark 0 the stream pulls only when a reader asks for bytes. */
+function trackedResponse(text: string, status: number, headers: Record<string, string> = {}) {
+  const bytes = new TextEncoder().encode(text); const state = { pulls: 0 }; let offset = 0;
+  const body = new ReadableStream<Uint8Array>({ pull(controller) {
+    state.pulls++; controller.enqueue(bytes.subarray(offset, offset + 16_384)); offset += 16_384; if (offset >= bytes.length) controller.close();
+  } }, { highWaterMark: 0 });
+  return { response: new Response(body, { status, headers }), state };
+}
+/** Every message and stack along an error's cause chain. */
+function errorTexts(error: unknown): string[] {
+  const texts: string[] = [];
+  for (let current = error, depth = 0; current instanceof Error && depth < 10; current = current.cause, depth++) texts.push(current.message, current.stack ?? '');
+  return texts;
+}
+async function rejection(promise: Promise<unknown>): Promise<Error> {
+  try { await promise; } catch (error) { expect(error).toBeInstanceOf(Error); return error as Error; }
+  throw new Error('expected a rejection');
+}
+function expectTodayInit(init: RequestInit) {
+  const { signal, ...rest } = init;
+  expect(rest).toStrictEqual(TODAY_INIT);
+  expect(Object.keys(init)).toEqual(TODAY_KEYS);
+  expect(Object.keys(init.headers as Record<string, string>)).toEqual(Object.keys(TODAY_HEADERS));
+  expect(signal).toBeInstanceOf(AbortSignal);
+}
+
+test('U3 pin: signed out, every request carries today\'s init, with the same keys and a signal that Stop aborts', async () => {
+  const inits: RequestInit[] = []; const targets: string[] = [];
+  const reader = new GitHubReader(async (target, init) => {
+    targets.push(target); inits.push(init);
+    return target.includes('/commits/') ? json({ sha }) : json([{ type: 'file', name: 'README.md', path: 'README.md', size: 13 }]);
+  });
+  const stop = new AbortController();
+  await reader.read({ url }, allowed, stop.signal);
+  expect(targets.map(target => new URL(target).hostname)).toEqual(['api.github.com', 'api.github.com']);
+  for (const init of inits) { expectTodayInit(init); expect(init.signal!.aborted).toBe(false); }
+  stop.abort();
+  for (const init of inits) expect(init.signal!.aborted).toBe(true);
+});
+
+test('U3 pin: Stop aborts the signal of a signed-out request while it is in flight', async () => {
+  const stop = new AbortController(); const seen: boolean[] = [];
+  const reader = new GitHubReader(async (_target, init) => {
+    expectTodayInit(init); seen.push(init.signal!.aborted); stop.abort(); seen.push(init.signal!.aborted);
+    return json({ sha });
+  });
+  await expect(reader.read({ url }, allowed, stop.signal)).rejects.toThrow('RUN_CANCELLED');
+  expect(seen).toEqual([false, true]);
+});
+
+test.each([
+  ['a 302 to another host', 302, { location: 'https://elsewhere.example/moved' }, 'GITHUB_REDIRECT'],
+  ['a 404', 404, {}, 'GITHUB_NOT_FOUND'],
+  ['a 401', 401, {}, 'GITHUB_FORBIDDEN'],
+  ['a 403', 403, {}, 'GITHUB_FORBIDDEN'],
+  ['a 403 naming permissions only', 403, { 'x-accepted-github-permissions': 'contents=read' }, 'GITHUB_FORBIDDEN'],
+  ['a 429', 429, {}, 'GITHUB_RATE_LIMIT'],
+  ['a 429 with retry-after', 429, { 'retry-after': '60' }, 'GITHUB_RATE_LIMIT'],
+  ['a 403 with x-ratelimit-remaining 0', 403, { 'x-ratelimit-remaining': '0' }, 'GITHUB_RATE_LIMIT'],
+  ['a 403 with retry-after', 403, { 'retry-after': '60' }, 'GITHUB_RATE_LIMIT'],
+  ['a rate-limit 403 that also names permissions', 403, { 'x-ratelimit-remaining': '0', 'x-accepted-github-permissions': 'contents=read' }, 'GITHUB_RATE_LIMIT'],
+  ['a 500', 500, {}, 'GITHUB_UNAVAILABLE'],
+] as const)('U3 pin: signed out, %s gives its reason after one request, with no body read and no body text in the error', async (_name, status, headers, code) => {
+  const marker = sentinel(); const targets: string[] = [];
+  const { response, state } = trackedResponse(JSON.stringify({ message: `Resource not accessible by integration ${marker}` }), status, headers);
+  const reader = new GitHubReader(async target => { targets.push(target); return response; });
+  const error = await rejection(reader.read({ url }, allowed, new AbortController().signal));
+  expect(error.message).toBe(code);
+  expect(targets).toHaveLength(1); expect(new URL(targets[0]!).hostname).toBe('api.github.com');
+  for (const text of errorTexts(error)) expect(text).not.toContain(marker);
+  expect(state.pulls).toBe(0);
+});
