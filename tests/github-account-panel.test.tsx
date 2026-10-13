@@ -607,6 +607,31 @@ test('a status read that fails after a later reply was shown is not reported', a
   expect(within(panelOf()).getByRole('status').textContent).toBe(OUTCOMES.cancelled);
 });
 
+test("the alert answers the user's click first: a refused action is shown over an earlier failed status read", async () => {
+  // Spec 8.1 shows invoke failures; the one alert gives the refusal of the click the user just made, not a poll's failure.
+  // Mutation that turns this red: render the failed read first (readError || error); the refusal of Open GitHub would then
+  // stay hidden behind the poll's failure until the next poll succeeds.
+  useFakeClock();
+  const GitHubAccountPanel = await loadPanel();
+  let reads = 0;
+  const fake = github(pending(), {
+    'github.account.read': () => {
+      if (++reads === 2) throw new Error('The engine is restarting. Try again when it is ready.');
+      return { account: fake.state.account };
+    },
+    'github.open': () => { throw new Error('This operation is no longer available.'); },
+  });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  await tick(1000);
+  expect(within(panelOf()).getByRole('alert').textContent).toBe('The engine is restarting. Try again when it is ready.');
+  fireEvent.click(within(panelOf()).getByRole('button', { name: 'Open GitHub' }));
+  await settle();
+  expect(reads).toBe(2);
+  expect(within(panelOf()).getByRole('alert').textContent).toBe('This operation is no longer available.');
+  expect(within(panelOf()).getByText(CODE)).toBeTruthy();
+});
+
 test('every outcome and every ended reason has its spec text, and no text says anything was revoked or erased', async () => {
   const texts = await loadTexts();
   expect(Object.keys(texts.GITHUB_OUTCOMES).sort()).toEqual([...GitHubAttemptOutcomeSchema.options].sort());
