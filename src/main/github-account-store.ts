@@ -144,7 +144,16 @@ export class GitHubAccountStore {
       catch {
         if (kind === 'refresh') throw new ReplaceFailure(true);
         if (!passes(admit, this.live)) return null;   // a sign-out has begun: its clear removes what the file names
-        if (await this.tryWrite(before?.account ?? null, before?.retiredRefs ?? [])) { await this.discard(staged); throw new ReplaceFailure(false); }
+        // The rollback names the new refs as retired until their removal succeeds (step 7's rule). A commit that landed left one committed
+        // on disk, and the reconcile deletes a committed entry only once open() has tombstoned it, which needs the name: a failed removal
+        // or a crash before it would otherwise leave that entry for good.
+        const named = await this.cap([...(before?.retiredRefs ?? []), ...staged], ref => this.retire(ref));
+        if (await this.tryWrite(before?.account ?? null, named)) {
+          const failed: string[] = [];
+          for (const ref of staged) if (!(await this.retire(ref))) failed.push(ref);
+          await this.tryWrite(before?.account ?? null, [...named.filter(ref => !staged.includes(ref)), ...failed]);
+          throw new ReplaceFailure(false);
+        }
         // The rollback write failed too: the file still names the new pair, so the store follows the file (step 6).
       }
       if (!passes(admit, this.live)) return null;                                                          // 6: a clear has begun; it removes what the file names

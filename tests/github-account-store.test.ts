@@ -279,9 +279,30 @@ describe('a sign-in rolls back a failed commit under the same lock (DC-11, GS-3)
     const failure = await h.store.replace(issued(), T0, 'sign-in', h.signInAdmit()).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ReplaceFailure); expect(failure).toMatchObject({ written: false });
     expect(h.store.current()).toBe(a);
-    expect(await h.read()).toMatchObject({ revision: before!.revision + 2, account: before!.account, retiredRefs: before!.retiredRefs });
+    // Three writes: step 4, the rollback naming the new refs as retired, and the write after their removal (U2-R11).
+    expect(await h.read()).toMatchObject({ revision: before!.revision + 3, account: before!.account, retiredRefs: before!.retiredRefs });
     expect(await h.bins()).toEqual([...before!.retiredRefs, ...refsOf(a)].map(ref => `${ref}.bin`).sort());
     await expectConsistent(h.copy(), refsOf(a));
+  });
+
+  // The sign-in's first commit landed, so the on-disk index holds the new access ref committed; its second commit's index write fails.
+  // 'index': the vault index keeps failing while the unlinks land, so a committed entry would be left without its file (vault.ts:187-188).
+  // 'locked': the removals fail outright too (a Windows lock), so a committed entry would be left with its file and nothing naming it.
+  // The rollback names the new refs as retired until their removal lands, as step 7 does, so the next start deletes them (U2-R11).
+  test.each(['index', 'locked'] as const)('a rollback after a landed first commit, on a failing vault index (%s), names the new refs until they are gone: the next start redacts and is consistent', async mode => {
+    const h = await harness(); const { account: a } = await h.signIn();
+    let restore: (() => void) | undefined;
+    h.spy.on('commit', (_ref, count) => { if (count === 4) { restore = failVaultDisk(h.vault); if (mode === 'locked') h.spy.on('remove', () => 'fail'); } });
+    const failure = await h.store.replace(issued(), T0, 'sign-in', h.signInAdmit()).catch((error: unknown) => error);
+    restore!(); h.spy.on('remove');
+    expect(failure).toBeInstanceOf(ReplaceFailure); expect(failure).toMatchObject({ written: false });   // the rollback write landed
+    expect(h.store.current()).toBe(a);
+    const file = await h.read(); const dir = h.copy();
+    const next = await restart(dir);
+    await expect(next.vault.redact('plain text')).resolves.toBe('plain text');   // no committed entry outlived its file
+    expect(refsOf(file?.account)).toEqual(refsOf(a));
+    expect(file?.retiredRefs).toHaveLength(2); expect(file?.retiredRefs.some(ref => refsOf(a).includes(ref))).toBe(false);   // the new pair
+    await expectConsistent(dir, refsOf(a));
   });
 
   test('a rollback whose write fails makes the new account live and returns it; a restart signs in with the same account', async () => {
@@ -744,9 +765,11 @@ describe('crash windows (S-7, 4.5)', () => {
     });
   }
 
-  test('a sign-in: a crash after its rollback write, before the new refs are removed', async () => {
+  // Commit 2 failing means commit 1 landed: the on-disk index holds the new access ref committed, which the reconcile never deletes
+  // unless the file names it (U2-R11).
+  test.each([[1, 'both new refs still staged'], [2, 'the first commit landed']] as const)('a sign-in: a crash after its rollback write, before the new refs are removed (commit %i failed: %s)', async (failing, _what) => {
     const h = await harness(); const { account: a } = await h.signIn();
-    h.spy.on('commit', (_ref, count) => count === 3 ? 'fail' : undefined);
+    h.spy.on('commit', (_ref, count) => count === 2 + failing ? 'fail' : undefined);
     let dir: string | undefined; h.spy.on('tombstone', (_ref, count) => { if (count === 1) dir = h.snapshot(); });
     await expect(h.store.replace(issued(), T0, 'sign-in', h.signInAdmit())).rejects.toBeInstanceOf(ReplaceFailure);
     await expectConsistent(dir!, refsOf(a));
