@@ -462,6 +462,29 @@ test.each(['Sign in', 'Sign in again'])('%s is disabled while a call is in fligh
   expect(fake.count('github.signIn.start')).toBe(1);
 });
 
+test.each([
+  ['Sign out', 'github.signOut'],
+  ['Install on repositories', 'github.open'],
+] as const)('Sign in again is also disabled while %s is in flight, and enabled once that call ends', async (other, method) => {
+  // Spec 8.1: Sign in again is disabled while any call is in flight. Mutation that turns this red: disable it only while a
+  // start is in flight (busy === 'github.signIn.start').
+  const GitHubAccountPanel = await loadPanel();
+  const reply = deferred<unknown>();
+  const fake = github(signedIn(), { [method]: () => reply.promise });
+  render(<GitHubAccountPanel api={fake.api} />);
+  await settle();
+  fireEvent.click(within(panelOf()).getByRole('button', { name: other }));
+  await settle();
+  const again = within(panelOf()).getByRole('button', { name: 'Sign in again' });
+  expect(again.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(again);
+  expect(fake.count('github.signIn.start')).toBe(0);
+  // Sign out is refused here, so the signed-in view stays; Install opens the page.
+  await act(async () => (method === 'github.open' ? reply.resolve({ opened: true }) : reply.reject(new Error('The engine is restarting. Try again when it is ready.'))));
+  await settle();
+  expect(within(panelOf()).getByRole('button', { name: 'Sign in again' }).hasAttribute('disabled')).toBe(false);
+});
+
 test('Open GitHub sends the device target and Install on repositories the install target, never a URL', async () => {
   const GitHubAccountPanel = await loadPanel();
   const fake = github(pending());
