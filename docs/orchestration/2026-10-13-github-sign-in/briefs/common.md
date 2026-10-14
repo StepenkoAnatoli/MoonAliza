@@ -34,7 +34,7 @@ You build one unit of the GitHub sign-in for MoonAliza, an Electron + TypeScript
   - Identity: `git -c user.name=StepenkoAnatoli -c user.email=318295322+StepenkoAnatoli@users.noreply.github.com commit`.
   - End every message with:
 
-        Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+        Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
         Claude-Session: https://claude.ai/code/session_01VdJ51CTnHT4Zet6eScsBBh
 
   - No other model identifiers anywhere.
