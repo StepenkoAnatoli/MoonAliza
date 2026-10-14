@@ -718,6 +718,17 @@ test('11. a read deadline mid-refresh ends only the wait (the reader maps it to 
   expect(h.refreshes()).toHaveLength(1); expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newAccess']);
 });
 
+test('11. Stop during the fresh-token pause (DC-2) releases the read at once, before any resend: the pause races the read\'s signal (2.5)', async () => {
+  const h = await harness(); await h.seed(markers(), { ageMs: 1_000 });
+  fake.always(RESOURCES, UNAUTHORIZED); h.clock.gated = true;
+  const stop = new AbortController();
+  const read = settle(h.read(stop.signal));
+  await until(() => h.clock.sleeping === 1, 'the pause');                     // the 401 on a 1 s old token: a 1 s pause before the resend
+  stop.abort();
+  expect((await within(read, 1_000)).error).toMatchObject({ name: 'AbortError' });
+  expect(fake.to(RESOURCE)).toHaveLength(1); expect(h.clock.sleeping).toBe(0);
+});
+
 test('12. sign-out mid-refresh: the waiter rejects at once with GITHUB_SIGN_IN_REQUIRED, the refresh result is discarded, the file holds account null, and no later request carries a marker', async () => {
   const h = await harness(); const next = markers(); const answer = gate();
   await h.seed(markers(), { accessLeftMs: 100_000 }); newPair(next);
@@ -757,6 +768,29 @@ test('12. the sign-out prologue is synchronous: a grant taken before sign-out is
   await expect(other.read()).rejects.toThrow(/^GITHUB_SIGN_IN_REQUIRED$/);
   expect(fake.to(RESOURCE)).toHaveLength(0);
   expect(await landed).toEqual({ state: 'signed-out', ended: null, signOutIncomplete: false, lastOutcome: null });
+});
+
+test('12. a sign-out during the fresh-token pause (DC-2) releases the read at once with GITHUB_SIGN_IN_REQUIRED, before any resend: the pause races accountChanged (2.5)', async () => {
+  const h = await harness(); await h.seed(markers(), { ageMs: 1_000 });
+  fake.always(RESOURCES, UNAUTHORIZED); h.clock.gated = true;
+  const read = settle(h.read());
+  await until(() => h.clock.sleeping === 1, 'the pause');
+  const signedOut = h.service.signOut();
+  expect((await within(read, 1_000)).error).toMatchObject({ message: 'GITHUB_SIGN_IN_REQUIRED' });
+  expect(fake.to(RESOURCE)).toHaveLength(1); expect(h.clock.sleeping).toBe(0);
+  expect(await signedOut).toEqual({ state: 'signed-out', ended: null, signOutIncomplete: false, lastOutcome: null });
+});
+
+test('12. an app clear by another call during the fresh-token pause releases the pausing read at once: clearIf aborts accountChanged (6.4, 2.5)', async () => {
+  const h = await harness(); await h.seed(markers(), { ageMs: 1_000, refreshLeftMs: 20_000 });
+  fake.always(RESOURCES, UNAUTHORIZED); h.clock.gated = true;
+  const a = settle(h.read());
+  await until(() => h.clock.sleeping === 1, 'the pause');
+  h.clock.t += 31_000;                                                           // the token 32 s old, its refresh token expired 11 s ago
+  await expect(h.read()).rejects.toThrow(/^GITHUB_SIGN_IN_REQUIRED$/);         // B: a 401 with no refresh possible clears the account
+  expect((await within(a, 1_000)).error).toMatchObject({ message: 'GITHUB_SIGN_IN_REQUIRED' });
+  expect(fake.to(RESOURCE)).toHaveLength(2); expect(h.refreshes()).toHaveLength(0); expect(h.clock.sleeping).toBe(0);
+  await reachesDisk(h); expect(h.service.status()).toEqual(ENDED);
 });
 
 test('13. a re-sign-in committing during a refresh: the refresh result is discarded, and its waiters continue with the new account', async () => {
