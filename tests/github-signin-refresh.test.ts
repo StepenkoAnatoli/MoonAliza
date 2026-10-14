@@ -397,6 +397,20 @@ test('5. holds: within the hold a call sends nothing at all; after it a refresh 
   expect(holds).toEqual([30_000, 60_000, 120_000, 240_000, 480_000, 960_000, 1_920_000, 3_600_000, 3_600_000]);
 });
 
+test('5. a successful refresh resets the failure count: a failure, a success, then a failure holds 30 s again, not 60 s (6.5 "Clearing the hold")', async () => {
+  const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
+  fake.always(RESOURCES, OK);
+  fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, tokenAnswer(next), { status: 500, json: { message: 'down' } }, tokenAnswer(markers()));
+  const t0 = h.clock.t;
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // failure 1: a 30 s hold
+  h.clock.t = t0 + 30_000; expect(await h.read()).toEqual({ status: 200, authenticated: true });   // the hold over: a refresh succeeds
+  const t1 = h.clock.t + 28_800_000 + 60_000; h.clock.t = t1;                   // the new token past expiry
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the first failure after a success: 30 s, not 60 s
+  h.clock.t = t1 + 30_000; expect(await h.read()).toEqual({ status: 200, authenticated: true });
+  expect(h.refreshes()).toHaveLength(4);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newAccess', null]);
+});
+
 test('5. (GS-4) with a hold active and the access token 200 s from expiry, a read is sent with that token and no refresh is made', async () => {
   const h = await harness(); const account = await h.seed(markers(), { accessLeftMs: 210_000 });
   fake.always(RESOURCES, OK); fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } });
