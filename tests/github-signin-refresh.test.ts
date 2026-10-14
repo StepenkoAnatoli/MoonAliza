@@ -542,6 +542,23 @@ test.each([[false], [true]])('10. a 401 after another call rotated the pair: no 
   else { expect(result.value).toEqual({ status: 200, authenticated: true }); expect(h.service.status()).toEqual(SIGNED_IN); }
 });
 
+test('10. a read whose access ref is rotated between its grant and its decrypt, by another call\'s 401 and refresh, retries with the current pair and spends no budget: 200 with one refresh (6.4 withAccess step 4, "stale")', async () => {
+  const h = await harness(); const next = markers(); const old = await h.seed(markers()); newPair(next);
+  fake.answer(ROUTES.token, tokenAnswer(next));
+  fake.always(RESOURCES, request => request.authorizationMarker === 'oldAccess' ? UNAUTHORIZED : OK);
+  let b: Promise<{ value?: { status: number; authenticated: boolean }; error?: unknown }> | undefined;
+  h.vault.on('withSecret', async ref => {
+    if (b || ref !== old.accessRef) return;                                     // A has its grant on the old ref: start B, and wait for B's rotation
+    b = settle(h.read());                                                       // B: a 401 on the old token, a refresh, a retry with the new one
+    await until(() => h.store.current()?.accessRef !== old.accessRef && h.index()[old.accessRef] === undefined, 'the rotation');
+  });
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // A: its grant was revoked with the old ref, so it never sent the old token
+  expect((await b!).value).toEqual({ status: 200, authenticated: true });
+  expect(h.refreshes()).toHaveLength(1);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker).sort()).toEqual(['newAccess', 'newAccess', 'oldAccess']);   // one 401 (B), two accepted
+  expect(h.service.status()).toEqual(SIGNED_IN);
+});
+
 test('10. a non-expiring token answered 401 clears the account, with no refresh', async () => {
   const h = await harness(); await h.seed(markers(), { nonExpiring: true });
   fake.always(RESOURCES, UNAUTHORIZED);
@@ -767,6 +784,31 @@ test('13. a re-sign-in committing during a refresh: the refresh result is discar
   expect(h.secretOf(live.accessRef)).toBe(signIn.access); expect(live.login).toBe(LOGIN);
   expect(Object.keys(h.index()).sort()).toEqual(refsOf(live).sort());
   for (const name of h.bins()) expect([refreshed.access, refreshed.refresh]).not.toContain(h.secretOf(name.slice(0, -4)));
+});
+
+test('13. a re-sign-in committing between the refresh\'s grant and its decrypt: the refresh sends nothing, its waiter continues with the new account, and no hold is put on it (6.5 withRefresh, "rotated meanwhile")', async () => {
+  const h = await harness(); const signIn = markers(); const old = await h.seed(markers(), { accessLeftMs: 100_000 });
+  fake.register({ access: signIn.access, refresh: signIn.refresh, device: signIn.device });
+  fake.always(RESOURCES, OK); fake.answer(ROUTES.user, USER);
+  const poll = gate();
+  fake.always(ROUTES.token, async request => {
+    if (request.body.grant_type === 'refresh_token') return tokenAnswer(markers());   // never reached: the refresh token is never decrypted
+    await poll.promise; return tokenAnswer(signIn);
+  });
+  fake.answer(ROUTES.device, codeAnswer(signIn));
+  expect(await h.service.start()).toMatchObject({ state: 'pending', committed: false });
+  await until(() => fake.to(ROUTES.token).length === 1, 'the poll');
+  h.vault.on('withSecret', async ref => {
+    if (ref !== old.refreshRef) return;
+    poll.open();                                                                // the refresh holds its grant: the sign-in commits now
+    await until(() => h.store.current()?.accessRef !== old.accessRef && h.index()[old.refreshRef!] === undefined, 'the commit');
+  });
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // the waiter left on accountChanged and sent with the new pair
+  expect(h.refreshes()).toHaveLength(0);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['access']);
+  await until(() => h.service.status().state === 'signed-in', 'the login read');
+  await h.service.close();                                                       // waits for the refresh in flight to settle (6.8)
+  expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
 });
 
 // ---- 14-19. no ambient traffic; clock step; close(); late binding; signed out; the copy check ----
