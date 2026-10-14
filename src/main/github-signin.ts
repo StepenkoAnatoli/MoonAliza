@@ -277,12 +277,13 @@ export class GitHubSignIn implements GitHubCredential {
     }
   }
 
-  /** 6.3: the commit point, then the login read. Never rejects. */
-  private async commitAndLogin(flow: Flow, tokens: IssuedTokens, receivedAt: number): Promise<void> {
-    try {
-      const account = await this.commitPoint(flow, tokens, receivedAt);         // the pair is the store's from here, and unused after this call
-      if (account) await this.readLogin(flow, account);
-    } catch { if (this.flow === flow) this.flow = null; }
+  /** 6.3: the commit point, then the login read. Never rejects. Not an async function: a suspended async frame keeps its `tokens`
+   *  parameter reachable for the whole login read (F5), so the pair is held only by commitPoint's frame, which ends with the store's
+   *  write (L-7). */
+  private commitAndLogin(flow: Flow, tokens: IssuedTokens, receivedAt: number): Promise<void> {
+    return this.commitPoint(flow, tokens, receivedAt)                           // the pair is the store's from here, and unused after this call
+      .then(account => account ? this.readLogin(flow, account) : undefined)
+      .catch(() => { if (this.flow === flow) this.flow = null; });
   }
 
   /** 6.3 step 1-2. Admitted against the sign-out count taken here, so only a user sign-out refuses it (DC-4). null: no account. */
