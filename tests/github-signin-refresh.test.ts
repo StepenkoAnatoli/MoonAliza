@@ -471,6 +471,31 @@ test('6. (DC-12, GS-9) after a 429 with retry-after 0 the refresh holds 30 s, no
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newAccess']);
 });
 
+const RATE_LIMITED: FakeReply = { status: 429, headers: { 'retry-after': '120' }, json: { message: 'slow down' } };
+const DOWN: FakeReply = { status: 500, json: { message: 'down' } };
+test.each([
+  ['one 1 s', 'a 429 with retry-after 120', RATE_LIMITED, 'GITHUB_RATE_LIMIT', 120_000, [1_000]],
+  ['one 5 s', 'a 500', DOWN, 'GITHUB_RENEWAL_UNAVAILABLE', 30_000, [5_000]],
+  ['five 1 ms', 'a 429 with retry-after 120', RATE_LIMITED, 'GITHUB_RATE_LIMIT', 120_000, [1, 1, 1, 1, 1]],
+])('6. (U5-R11) %s backward clock step(s) during the hold of %s: no refresh goes out while GitHub may still be limiting (%s); the hold restarts in the new time, its own %i ms, neither cancelled nor stretched (L-13, E-15 l.36)', async (_steps, _answer, reply, reason, holdMs, steps) => {
+  const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
+  fake.always(RESOURCES, OK); fake.answer(ROUTES.token, reply, tokenAnswer(next));
+  const held = new RegExp(`^${reason}$`);
+  await expect(h.read()).rejects.toThrow(held);
+  for (const step of steps) {
+    h.clock.t -= step;                                                          // the clock is now before the hold's start
+    await expect(h.read()).rejects.toThrow(held);                               // still held: nothing is sent
+    expect(h.refreshes()).toHaveLength(1); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+  }
+  const t1 = h.clock.t;                                                         // the last step, where the read just made restarted the hold
+  h.clock.t = t1 + holdMs - 1;
+  await expect(h.read()).rejects.toThrow(held); expect(h.refreshes()).toHaveLength(1);   // the restarted hold lasts its own length from there, not that plus the step
+  h.clock.t = t1 + holdMs;
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });
+  expect(h.refreshes()).toHaveLength(2);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newAccess']);
+});
+
 test.each([
   ['an access token with another prefix', (m: Markers) => tokenAnswer({ access: `gho_${m.access.slice(4)}`, refresh: m.refresh })],
   ['a refresh token holding a space', (m: Markers) => tokenAnswer({ access: m.access, refresh: `${m.refresh} x` })],
@@ -930,21 +955,21 @@ test.each([[301_000, 1], [299_000, 0]])('15. the local clock %i ms behind obtain
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual([count ? 'newAccess' : 'oldAccess']);
 });
 
-test('15. the clock steps back a day while a hold is active: the hold does not stretch over the step, the skew rule refreshes before use, holds run in the new time, and under one the expired token goes out once per read, with no resends (6.8)', async () => {
+test('15. the clock steps back a day while a hold is active: the hold restarts in the new time, neither cancelled nor stretched by the step; under it the token the clock calls valid goes out once per read, with no resends; once it ends the skew rule refreshes before use (6.8, U5-R11)', async () => {
   const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
   fake.always(RESOURCES, request => request.authorizationMarker === 'oldAccess' ? UNAUTHORIZED : OK);   // GitHub refuses the expired token
-  fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, { status: 500, json: { message: 'down' } }, tokenAnswer(next));
+  fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, tokenAnswer(next));
   await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the failing refresh holds for 30 s
   const t0 = h.clock.t - 86_400_000; h.clock.t = t0;                            // the local clock steps back a day: the hold was set in the future
-  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: false });
-  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the skew rule refreshes before use: a second refresh, failing, holds 60 s from now (DC-1: the second failure)
-  expect(fake.to(RESOURCE)).toHaveLength(0);
+  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });    // seen here, the hold restarts now, for its own 30 s: not a day and 30 s, and not dropped
   h.clock.t = t0 + 10_000;
-  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // inside that hold the clock calls the token valid (GS-4, the 6.8 known limit): one send, whose 401 refreshes nothing
-  expect(h.refreshes()).toHaveLength(2); expect(h.clock.waits).toEqual([]); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
-  h.clock.t = t0 + 61_000;
-  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // the hold over: a refresh succeeds
-  expect(h.refreshes()).toHaveLength(3);
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // inside the hold the clock calls the token valid (GS-4, the 6.8 known limit): one send, whose 401 refreshes nothing
+  expect(h.refreshes()).toHaveLength(1); expect(h.clock.waits).toEqual([]); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+  h.clock.t = t0 + 29_999;
+  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+  h.clock.t = t0 + 30_000;
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // the hold over: the skew rule refreshes before use, and the refresh succeeds
+  expect(h.refreshes()).toHaveLength(2);
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['oldAccess', 'newAccess']);
 });
 
