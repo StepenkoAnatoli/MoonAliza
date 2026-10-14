@@ -550,6 +550,26 @@ test('10. a non-expiring token answered 401 clears the account, with no refresh'
   expect(h.service.status()).toEqual(ENDED);
 });
 
+test('10. a 401 during a rate-limit hold, on a token sent because it was still valid (GS-4), starts no refresh: GITHUB_RATE_LIMIT, the account kept (L-13)', async () => {
+  const h = await harness(); const account = await h.seed(markers(), { accessLeftMs: 210_000 });
+  fake.always(RESOURCES, UNAUTHORIZED); fake.answer(ROUTES.token, { status: 429, headers: { 'retry-after': '120' } });
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RATE_LIMIT$/);               // the pre-check refresh is rate-limited: a 120 s hold
+  expect(fake.to(RESOURCE)).toHaveLength(0);
+  h.clock.t += 10_000;
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RATE_LIMIT$/);               // sent with the still-valid token, answered 401
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['oldAccess']);
+  expect(h.refreshes()).toHaveLength(1);
+  expect(h.store.current()).toBe(account); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+});
+
+test('10. a 401 on a token whose refresh token has expired clears the account with no refresh request (6.4, T-4)', async () => {
+  const h = await harness(); await h.seed(markers(), { refreshLeftMs: -1_000 });   // the access token valid for an hour more
+  fake.always(RESOURCES, UNAUTHORIZED);
+  await expect(h.read()).rejects.toThrow(/^GITHUB_SIGN_IN_REQUIRED$/);
+  expect(fake.to(RESOURCE)).toHaveLength(1); expect(fake.to(ROUTES.token)).toHaveLength(0);
+  expect(h.store.current()).toBeNull(); expect(h.service.status()).toEqual(ENDED);
+});
+
 test('10. a pre-check refresh followed by a 401 on its token, with the clock stepped past transientHoldMs, clears the account (C-6)', async () => {
   const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: 100_000 }); newPair(next);
   fake.answer(ROUTES.token, tokenAnswer(next));
