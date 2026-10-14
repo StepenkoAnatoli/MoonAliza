@@ -442,6 +442,19 @@ export class GitHubSignIn implements GitHubCredential {
     const timeout = AbortSignal.timeout(this.limits.requestTimeoutMs);
     const answer = await this.withRefresh(from, timeout);
     if (!('kind' in answer)) return answer;                                     // rotated meanwhile: the current account
+    if (answer.kind === 'tokens') return this.adopt(answer.tokens, answer.receivedAt, from, g0);   // a tail call: this frame, which held the pair, ends (L-7)
+    if (answer.kind === 'malformed') { await this.clearIf(from.accessRef); throw new Error('GITHUB_SIGN_IN_REQUIRED'); }   // GitHub issued a pair, so the old one is dead (E-02 l.36)
+    if (answer.kind === 'error' && (answer.code === 'bad_refresh_token' || answer.code === 'unsupported_grant_type')) {   // any status (F-7(a), R2-5, DC-1)
+      if (this.generation === g0) await this.clearIf(from.accessRef);
+      throw new Error('GITHUB_SIGN_IN_REQUIRED');
+    }
+    if (answer.kind === 'error' && answer.code === 'incorrect_client_credentials') {   // E-01 l.256; DC-1
+      if (this.generation === g0) await this.clearIf(from.accessRef, 'client-rejected');
+      throw new Error('GITHUB_SIGN_IN_REQUIRED');
+    }
+    // A sign-in commit, a sign-out or a clear won while GitHub answered: this answer is about an earlier account, so it holds nothing
+    // and counts nothing against the current one; its waiters have already left on accountChanged (U5-R10).
+    if (this.generation !== g0) throw new Error(answer.kind === 'rate-limited' ? 'GITHUB_RATE_LIMIT' : 'GITHUB_RENEWAL_UNAVAILABLE');
     if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;   // only consecutive identical answers count
     switch (answer.kind) {
       case 'rate-limited': {                                                     // R2-4, DC-12: at least transientHoldMs; the vault is kept
@@ -449,23 +462,11 @@ export class GitHubSignIn implements GitHubCredential {
         this.hold = { setAt: t, until: t + Math.max(answer.waitMs, this.limits.transientHoldMs), reason: 'GITHUB_RATE_LIMIT' };
         throw new Error('GITHUB_RATE_LIMIT');
       }
-      case 'error':
-        if (answer.code === 'bad_refresh_token' || answer.code === 'unsupported_grant_type') {   // any status (F-7(a), R2-5, DC-1)
-          if (this.generation === g0) await this.clearIf(from.accessRef);
-          throw new Error('GITHUB_SIGN_IN_REQUIRED');
-        }
-        if (answer.code === 'incorrect_client_credentials') {                    // E-01 l.256; DC-1
-          if (this.generation === g0) await this.clearIf(from.accessRef, 'client-rejected');
-          throw new Error('GITHUB_SIGN_IN_REQUIRED');
-        }
-        return this.sameOrFail(answer.code, from, g0);                          // DC-1
+      case 'error': return this.sameOrFail(answer.code, from, g0);              // DC-1
       case 'unusable':                                                           // GS-2: a 3xx is a captive portal or a proxy, not GitHub refusing
         if (answer.status >= 300 && answer.status < 400) return this.failed();
         return this.sameOrFail('status:' + answer.status, from, g0);
       case 'transient': return this.failed();                                    // F-7(b); the vault byte-identical
-      case 'malformed':                                                          // GitHub issued a pair, so the old one is dead (E-02 l.36)
-        await this.clearIf(from.accessRef); throw new Error('GITHUB_SIGN_IN_REQUIRED');
-      case 'tokens': return this.adopt(answer.tokens, answer.receivedAt, from, g0);   // a tail call: this frame, which held the pair, ends (L-7)
     }
   }
 
