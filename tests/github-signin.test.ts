@@ -5,6 +5,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { inspect } from 'node:util';
+import { setFlagsFromString } from 'node:v8';
+import { runInNewContext } from 'node:vm';
 import { Vault, type CredentialBinding } from '../src/main/vault';
 import { AccountFileSchema, GitHubAccountStore } from '../src/main/github-account-store';
 import { DEVICE_PAGE_URL, REQUEST_OFFLINE_ACCESS } from '../src/main/github-app';
@@ -417,6 +419,22 @@ test('8c. the status stays pending with committed true, and the account in it, u
   expect(GitHubAccountStatusSchema.parse(during)).toEqual(during);
   login.open(); await ended(h);
   expect(h.service.status()).toMatchObject({ state: 'signed-in', login: LOGIN });
+});
+
+test('8d. L-7 in memory: once the store has written the issued pair, no frame or closure holds it, while the login read (F5) is still pending', async () => {
+  setFlagsFromString('--expose-gc'); const gc = runInNewContext('gc') as () => void;   // a full collection on demand, in this process
+  const h = await harness(); const m = markers(); const login = gate();
+  register(m); fake.answer(ROUTES.device, codeAnswer(m)); fake.answer(ROUTES.token, tokenAnswer(m));
+  fake.answer(ROUTES.user, async () => { await login.promise; return USER; });
+  let issued: WeakRef<object> | undefined; const replace = h.store.replace.bind(h.store);
+  h.store.replace = (tokens, ...rest) => { issued ??= new WeakRef(tokens); return replace(tokens, ...rest); };   // the pair's object, weakly
+  await h.service.start();
+  await until(() => fake.to(ROUTES.user).length === 1, 'the login read');     // F5: the commit point is behind us, the pair is in the vault
+  for (let i = 0; i < 5; i++) { gc(); await tick(20); }
+  expect(issued!.deref()).toBeUndefined();
+  login.open(); await ended(h);
+  expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
+  expectNotHeld(h, m);
 });
 
 // ---- 9-11: Cancel, a new start, sign-out, Sign in again ----
