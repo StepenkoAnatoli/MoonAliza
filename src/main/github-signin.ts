@@ -112,7 +112,7 @@ export class GitHubSignIn implements GitHubCredential {
   // Account machine bookkeeping (6.4, 6.5). The account itself is the store's live account.
   private generation = 0;
   private signOuts = 0;
-  private hold: { setAt: number; until: number; reason: HoldReason } | null = null;   // setAt: a clock stepped back does not stretch it (6.8)
+  private hold: { setAt: number; until: number; reason: HoldReason } | null = null;   // setAt: a clock stepped back before it restarts the hold there (6.8, holdActive)
   private failures = 0;
   private sameError: { key: string; count: number } | null = null;
   private freshRejects = 0;
@@ -344,9 +344,16 @@ export class GitHubSignIn implements GitHubCredential {
   private current(): GitHubAccount {
     const live = this.store.current(); if (!live) throw new Error('GITHUB_SIGN_IN_REQUIRED'); return live;
   }
-  /** A hold is active from the time it was set until `until`. Before `setAt` the local clock has stepped back past the hold's start:
-   *  the step does not stretch the hold, and the skew rule of usable() refreshes before use (6.8). */
-  private holdActive(): boolean { const t = this.now(); return this.hold !== null && t >= this.hold.setAt && t < this.hold.until; }
+  /** A hold is active from the time it was set until `until`. A clock before `setAt` has stepped back past the hold's start: the hold
+   *  restarts at the new time for its own length, so the step neither stretches it (a day's step would otherwise hold a day) nor
+   *  cancels it (GitHub may still be limiting: E-15 l.36, L-13). The restart is the one memory write a projection makes (2.3), and
+   *  it changes only the hold's anchor, never its length or reason (U5-R7, U5-R11). */
+  private holdActive(): boolean {
+    const hold = this.hold; if (hold === null) return false;
+    const t = this.now();
+    if (t < hold.setAt) { hold.until = t + (hold.until - hold.setAt); hold.setAt = t; }
+    return t < hold.until;
+  }
   /** A refresh token that can still be used: present and unexpired, or the local clock stepped back past the skew bound (6.4). */
   private refreshPossible(account: GitHubAccount, t: number): boolean {
     return account.refreshRef !== null && account.refreshExpiresAt !== null && (account.refreshExpiresAt > t || t < account.obtainedAt - this.limits.clockSkewMs);
