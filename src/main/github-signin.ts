@@ -449,6 +449,11 @@ export class GitHubSignIn implements GitHubCredential {
     const timeout = AbortSignal.timeout(this.limits.requestTimeoutMs);
     const answer = await this.withRefresh(from, timeout);
     if (!('kind' in answer)) return answer;                                     // rotated meanwhile: the current account
+    // The answer is about `from`. If the store has moved on while GitHub answered, so has the account: a sign-in commit sets the new
+    // account live at its step 6, before the commit point moves the generation (U5-R12), so this check comes before the generation's.
+    const live = this.store.current();
+    if (!live) throw new Error('GITHUB_SIGN_IN_REQUIRED');                     // cleared meanwhile: its waiters have left on accountChanged
+    if (live.accessRef !== from.accessRef) return live;                        // rotated meanwhile: the waiter goes on with the current account; nothing is held or counted
     if (answer.kind === 'tokens') return this.adopt(answer.tokens, answer.receivedAt, from, g0);   // a tail call: this frame, which held the pair, ends (L-7)
     if (answer.kind === 'malformed') { await this.clearIf(from.accessRef); throw new Error('GITHUB_SIGN_IN_REQUIRED'); }   // GitHub issued a pair, so the old one is dead (E-02 l.36)
     if (answer.kind === 'error' && (answer.code === 'bad_refresh_token' || answer.code === 'unsupported_grant_type')) {   // any status (F-7(a), R2-5, DC-1)

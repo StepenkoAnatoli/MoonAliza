@@ -930,6 +930,38 @@ test('13. a refresh of the old account that answers after the re-sign-in commits
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['access', 'newAccess']);
 });
 
+test('13. (U5-R12) a refresh of the old account that answers (a 500) inside the sign-in commit\'s step 7, after the store set the new account live and before the commit point moved the generation: the waiter continues with the new account, nothing is held, one refresh in all', async () => {
+  const h = await harness(); const signIn = markers(); const old = await h.seed(markers(), { accessLeftMs: 100_000 });
+  fake.register({ access: signIn.access, refresh: signIn.refresh, device: signIn.device });
+  fake.always(RESOURCES, OK); fake.answer(ROUTES.user, USER);
+  const poll = gate(); const late = gate();
+  fake.always(ROUTES.token, async request => {
+    if (request.body.grant_type === 'refresh_token') { await late.promise; return { status: 500, json: { message: 'down' } }; }   // the old account's refresh, answered late
+    await poll.promise; return tokenAnswer(signIn);
+  });
+  fake.answer(ROUTES.device, codeAnswer(signIn));
+  expect(await h.service.start()).toMatchObject({ state: 'pending', committed: false });
+  await until(() => fake.to(ROUTES.token).length === 1, 'the poll');
+  const read = settle(h.read());
+  await until(() => h.refreshes().length === 1, 'the refresh');
+  // Step 7 of the sign-in's replace retires the old refs: its first vault.remove is the window. The store has set the new account
+  // live (step 6); the commit point's generation++ and accountChanged wait for replace to return. The refresh answers inside it.
+  const remove = h.vault.remove.bind(h.vault); let opened = false;
+  h.vault.remove = async (ref: string) => {
+    if (!opened) {
+      opened = true; expect(h.store.current()?.accessRef).not.toBe(old.accessRef); expect(ref).toBe(old.accessRef);
+      late.open(); await until(() => (h.service as unknown as { inflight: unknown }).inflight === null, 'the late answer to settle');
+    }
+    return remove(ref);
+  };
+  poll.open();
+  expect(outcomeOf(await within(read, 3_000))).toBe('200:signed-in');        // the waiter continued with the new account, inside the window
+  expect(opened).toBe(true); expect(h.refreshes()).toHaveLength(1);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['access']);
+  await until(() => h.service.status().state === 'signed-in', 'the login read');
+  expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
+});
+
 // ---- 14-19. no ambient traffic; clock step; close(); late binding; signed out; the copy check ----
 
 test('14. no ambient traffic: construct, open, reconcile, finishStartup, then ten simulated minutes and status reads send nothing (L-2)', async () => {
