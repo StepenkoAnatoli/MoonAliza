@@ -112,7 +112,7 @@ export class GitHubSignIn implements GitHubCredential {
   // Account machine bookkeeping (6.4, 6.5). The account itself is the store's live account.
   private generation = 0;
   private signOuts = 0;
-  private hold: { until: number; reason: HoldReason } | null = null;
+  private hold: { setAt: number; until: number; reason: HoldReason } | null = null;   // setAt: a clock stepped back does not stretch it (6.8)
   private failures = 0;
   private sameError: { key: string; count: number } | null = null;
   private freshRejects = 0;
@@ -223,12 +223,13 @@ export class GitHubSignIn implements GitHubCredential {
       if (sent === 'stale') { account = await this.usable(this.current(), signal, budget); continue; }
       if (sent.status !== 401) { this.freshRejects = 0; return { response: sent, authenticated: true }; }   // the token was accepted (GS-1)
       await sent.body?.cancel().catch(() => {});
-      if (this.now() - account.obtainedAt < this.limits.freshTokenMs && budget.fresh < 2) {             // DC-2: a just-issued token, until DO-16
+      const age = this.now() - account.obtainedAt;                              // negative when the clock stepped back past the issue time: not a fresh token (6.8)
+      if (age >= 0 && age < this.limits.freshTokenMs && budget.fresh < 2) {     // DC-2: a just-issued token, until DO-16
         account = await this.pause(this.limits.freshRetryMs * 2 ** budget.fresh++, account, signal); continue;   // the same token again: 1 s, then 2 s
       }
       const current = this.current();
       if (current.accessRef !== account.accessRef && !budget.retried) { budget.retried = true; account = current; continue; }   // rotated meanwhile (E-02 l.36)
-      if (this.now() - account.obtainedAt < this.limits.transientHoldMs) return this.freshRejected(account);   // GS-1: always throws
+      if (age >= 0 && age < this.limits.transientHoldMs) return this.freshRejected(account);   // GS-1: always throws
       if (budget.retried) { await this.clearIf(account.accessRef); throw new Error('GITHUB_SIGN_IN_REQUIRED'); }   // the retry still got 401
       if (account.accessExpiresAt === null || budget.refreshed || !this.refreshPossible(account, this.now())) {   // non-expiring 401; C-6
         await this.clearIf(account.accessRef); throw new Error('GITHUB_SIGN_IN_REQUIRED');
@@ -343,7 +344,9 @@ export class GitHubSignIn implements GitHubCredential {
   private current(): GitHubAccount {
     const live = this.store.current(); if (!live) throw new Error('GITHUB_SIGN_IN_REQUIRED'); return live;
   }
-  private holdActive(): boolean { return this.hold !== null && this.now() < this.hold.until; }
+  /** A hold is active from the time it was set until `until`. Before `setAt` the local clock has stepped back past the hold's start:
+   *  the step does not stretch the hold, and the skew rule of usable() refreshes before use (6.8). */
+  private holdActive(): boolean { const t = this.now(); return this.hold !== null && t >= this.hold.setAt && t < this.hold.until; }
   /** A refresh token that can still be used: present and unexpired, or the local clock stepped back past the skew bound (6.4). */
   private refreshPossible(account: GitHubAccount, t: number): boolean {
     return account.refreshRef !== null && account.refreshExpiresAt !== null && (account.refreshExpiresAt > t || t < account.obtainedAt - this.limits.clockSkewMs);
@@ -441,9 +444,11 @@ export class GitHubSignIn implements GitHubCredential {
     if (!('kind' in answer)) return answer;                                     // rotated meanwhile: the current account
     if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;   // only consecutive identical answers count
     switch (answer.kind) {
-      case 'rate-limited':                                                       // R2-4, DC-12: at least transientHoldMs; the vault is kept
-        this.hold = { until: this.now() + Math.max(answer.waitMs, this.limits.transientHoldMs), reason: 'GITHUB_RATE_LIMIT' };
+      case 'rate-limited': {                                                     // R2-4, DC-12: at least transientHoldMs; the vault is kept
+        const t = this.now();
+        this.hold = { setAt: t, until: t + Math.max(answer.waitMs, this.limits.transientHoldMs), reason: 'GITHUB_RATE_LIMIT' };
         throw new Error('GITHUB_RATE_LIMIT');
+      }
       case 'error':
         if (answer.code === 'bad_refresh_token' || answer.code === 'unsupported_grant_type') {   // any status (F-7(a), R2-5, DC-1)
           if (this.generation === g0) await this.clearIf(from.accessRef);
@@ -510,7 +515,8 @@ export class GitHubSignIn implements GitHubCredential {
   /** A refresh failure that keeps the account: a hold of 30 s, 60 s, 120 s, ... at most rateLimitCeilingMs (DC-1). */
   private failed(): never {
     this.failures++;
-    this.hold = { until: this.now() + Math.min(this.limits.transientHoldMs * 2 ** (this.failures - 1), this.limits.rateLimitCeilingMs), reason: 'GITHUB_RENEWAL_UNAVAILABLE' };
+    const t = this.now();
+    this.hold = { setAt: t, until: t + Math.min(this.limits.transientHoldMs * 2 ** (this.failures - 1), this.limits.rateLimitCeilingMs), reason: 'GITHUB_RENEWAL_UNAVAILABLE' };
     throw new Error('GITHUB_RENEWAL_UNAVAILABLE');
   }
 }

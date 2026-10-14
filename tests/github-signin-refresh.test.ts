@@ -901,6 +901,34 @@ test.each([[301_000, 1], [299_000, 0]])('15. the local clock %i ms behind obtain
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual([count ? 'newAccess' : 'oldAccess']);
 });
 
+test('15. the clock steps back a day while a hold is active: the hold does not stretch over the step, the skew rule refreshes before use, holds run in the new time, and under one the expired token goes out once per read, with no resends (6.8)', async () => {
+  const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
+  fake.always(RESOURCES, request => request.authorizationMarker === 'oldAccess' ? UNAUTHORIZED : OK);   // GitHub refuses the expired token
+  fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, { status: 500, json: { message: 'down' } }, tokenAnswer(next));
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the failing refresh holds for 30 s
+  const t0 = h.clock.t - 86_400_000; h.clock.t = t0;                            // the local clock steps back a day: the hold was set in the future
+  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: false });
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the skew rule refreshes before use: a second refresh, failing, holds 60 s from now (DC-1: the second failure)
+  expect(fake.to(RESOURCE)).toHaveLength(0);
+  h.clock.t = t0 + 10_000;
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // inside that hold the clock calls the token valid (GS-4, the 6.8 known limit): one send, whose 401 refreshes nothing
+  expect(h.refreshes()).toHaveLength(2); expect(h.clock.waits).toEqual([]); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+  h.clock.t = t0 + 61_000;
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // the hold over: a refresh succeeds
+  expect(h.refreshes()).toHaveLength(3);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['oldAccess', 'newAccess']);
+});
+
+test('15. the clock 100 s behind the token\'s issue time, under the skew bound, and a 401: a negative age is not a fresh token, so the 401 rule refreshes and retries once (6.4, 6.8)', async () => {
+  const h = await harness(); const next = markers(); await h.seed(markers(), { ageMs: -100_000 }); newPair(next);
+  fake.answer(ROUTES.token, tokenAnswer(next));
+  fake.always(RESOURCES, request => request.authorizationMarker === 'oldAccess' ? UNAUTHORIZED : OK);
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });
+  expect(h.refreshes()).toHaveLength(1); expect(h.clock.waits).toEqual([]);   // no fresh-token pause
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['oldAccess', 'newAccess']);
+  expect(h.service.status()).toEqual(SIGNED_IN);
+});
+
 test('16. close() aborts a pending flow synchronously, before its first await resolves', async () => {
   const h = await harness(); const m = markers();
   h.clock.gated = true; fake.answer(ROUTES.device, codeAnswer(m));
