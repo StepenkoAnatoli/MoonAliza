@@ -876,6 +876,35 @@ test('13. a re-sign-in committing between the refresh\'s grant and its decrypt: 
   expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
 });
 
+test('13. a refresh of the old account that answers after the re-sign-in commits (a 500) holds nothing against the new account: renewalHeld stays false and its own refresh, when due, is not held (6.5)', async () => {
+  const h = await harness(); const signIn = markers(); const refreshed = markers();
+  await h.seed(markers(), { accessLeftMs: 100_000 });
+  fake.register({ access: signIn.access, refresh: signIn.refresh, device: signIn.device }); newPair(refreshed);
+  fake.always(RESOURCES, OK); fake.answer(ROUTES.user, USER);
+  const poll = gate(); const late = gate(); let refreshes = 0;
+  fake.always(ROUTES.token, async request => {
+    if (request.body.grant_type === 'refresh_token') {
+      if (refreshes++ === 0) { await late.promise; return { status: 500, json: { message: 'down' } }; }   // the old account's refresh, answered late
+      return tokenAnswer(refreshed);                                             // the new account's refresh
+    }
+    await poll.promise; return tokenAnswer(signIn, { expires_in: 200 });        // the sign-in's pair, inside the margin from the start
+  });
+  fake.answer(ROUTES.device, codeAnswer(signIn));
+  expect(await h.service.start()).toMatchObject({ state: 'pending', committed: false });
+  await until(() => fake.to(ROUTES.token).length === 1, 'the poll');
+  const read = settle(h.read());
+  await until(() => h.refreshes().length === 1, 'the refresh');
+  poll.open();
+  expect((await within(read, 3_000)).value).toEqual({ status: 200, authenticated: true });   // the waiter continued with the new account
+  await until(() => h.service.status().state === 'signed-in', 'the login read');
+  late.open();
+  await until(() => (h.service as unknown as { inflight: unknown }).inflight === null, 'the late answer to settle');
+  expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // inside the margin: the new account's refresh runs, unheld
+  expect(h.refreshes()).toHaveLength(2);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['access', 'newAccess']);
+});
+
 // ---- 14-19. no ambient traffic; clock step; close(); late binding; signed out; the copy check ----
 
 test('14. no ambient traffic: construct, open, reconcile, finishStartup, then ten simulated minutes and status reads send nothing (L-2)', async () => {
