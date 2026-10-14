@@ -528,6 +528,20 @@ test('11. Sign in again: the old account is used during the flow and kept on can
   expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
 });
 
+test('11b. Sign in again clears the old account\'s hold: right after the commit renewalHeld is false, and the new account refreshes when due (6.3 step 2)', async () => {
+  const h = await harness(); const signIn = markers(); const refreshed = markers(); await h.seed(markers(), 100_000);   // inside the margin: a read refreshes
+  register(refreshed, 'new'); fake.always(RESOURCES, { json: { ok: true } }); fake.answer(ROUTES.user, USER);
+  fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, tokenAnswer(signIn, { expires_in: 200 }), tokenAnswer(refreshed));
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the old account's refresh fails: a 30 s hold
+  expect(h.service.status()).toMatchObject({ state: 'signed-in', renewalHeld: true });
+  await begin(h, signIn); await ended(h);
+  expect(h.secretOf(h.store.current()!.accessRef)).toBe(signIn.access);
+  expect(h.service.status()).toEqual({ state: 'signed-in', login: LOGIN, renewalHeld: false, lastOutcome: null });
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // the new token is inside the margin: its refresh is not held
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newaccess']);
+  expect(fake.to(ROUTES.token).filter(request => request.body.grant_type === 'refresh_token')).toHaveLength(2);
+});
+
 // ---- 12, 13: the status and the pages ----
 
 test('12. every status during a flow parses with the schema and carries no marker (F-21, S-1)', async () => {
