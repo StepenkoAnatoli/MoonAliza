@@ -573,6 +573,23 @@ test('10. a read whose access ref is rotated between its grant and its decrypt, 
   expect(h.service.status()).toEqual(SIGNED_IN);
 });
 
+test('10. a call never refreshes twice (L-14): a read that refreshed in its pre-check and then finds its ref rotated, by another call, onto a pair already inside the margin sends with that pair as it is', async () => {
+  const h = await harness(); const old = await h.seed(markers(), { accessLeftMs: 100_000 });
+  let n = 0;
+  fake.always(ROUTES.token, () => { const m = markers(); fake.register({ [`gen${++n}Access`]: m.access }); return tokenAnswer(m, { expires_in: 200 }); });   // every pair is issued inside the margin
+  fake.always(RESOURCES, OK);
+  let b: Promise<{ value?: { status: number; authenticated: boolean }; error?: unknown }> | undefined; let started = false;
+  h.vault.on('withSecret', async ref => {
+    if (started || ref === old.refreshRef) return;                              // A has its read grant on gen1: start B, and wait for B's rotation to gen2
+    started = true; b = settle(h.read());                                       // the flag first: B's pre-check reaches withSecret before this call returns
+    await until(() => h.store.current()?.accessRef !== ref && h.index()[ref] === undefined, 'the second rotation');
+  });
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });       // A: stale on gen1, then gen2 used under the margin
+  expect((await b!).value).toEqual({ status: 200, authenticated: true });
+  expect(h.refreshes()).toHaveLength(2);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['gen2Access', 'gen2Access']);
+});
+
 test('10. a non-expiring token answered 401 clears the account, with no refresh', async () => {
   const h = await harness(); await h.seed(markers(), { nonExpiring: true });
   fake.always(RESOURCES, UNAUTHORIZED);
@@ -916,6 +933,38 @@ test('16. a hung refresh releases close() at quitWaitMs', async () => {
   await until(() => h.refreshes().length === 1, 'the refresh');
   const started = Date.now(); await h.service.close(); const elapsed = Date.now() - started;
   expect(elapsed).toBeGreaterThanOrEqual(250); expect(elapsed).toBeLessThan(2_000);
+});
+
+test('16. close() during the commit point waits for the store\'s write: the pair ends committed and named, and the login read is skipped (6.8, L-8)', async () => {
+  const h = await harness(); const m = markers(); const held = gate(); let holding = false;
+  fake.register({ access: m.access, refresh: m.refresh, device: m.device });
+  fake.answer(ROUTES.device, codeAnswer(m)); fake.answer(ROUTES.token, tokenAnswer(m)); fake.answer(ROUTES.user, USER);
+  h.vault.on('commit', async () => { if (!holding) { holding = true; await held.promise; } });
+  expect(await h.service.start()).toMatchObject({ state: 'pending', committed: false });
+  await until(() => holding, 'the commit point');
+  let closed = false; const closing = h.service.close().then(() => { closed = true; });
+  await tick(200); expect(closed).toBe(false);                                  // the write has not ended, so neither has close()
+  held.open(); await closing;
+  const live = h.store.current()!;
+  expect(h.secretOf(live.accessRef)).toBe(m.access);
+  expect(h.fileJson()?.account?.accessRef).toBe(live.accessRef); expect(h.index()[live.accessRef]?.state).toBe('committed');
+  await until(() => h.service.status().state === 'signed-in', 'the flow to end');
+  expect(fake.to(ROUTES.user)).toHaveLength(0);                                 // F5 was aborted by close(): no login read
+  expect(h.service.status()).toEqual(SIGNED_IN);
+});
+
+test('16. a 401 that arrives after close() starts no refresh: the read gets GITHUB_RENEWAL_UNAVAILABLE and the account is kept (6.5)', async () => {
+  const h = await harness(); const next = markers(); const account = await h.seed(markers()); newPair(next);
+  fake.answer(ROUTES.token, tokenAnswer(next));
+  const answer = gate();
+  fake.always(RESOURCES, async request => { if (request.authorizationMarker === 'oldAccess') { await answer.promise; return UNAUTHORIZED; } return OK; });
+  const read = settle(h.read());
+  await until(() => fake.to(RESOURCE).length === 1, 'the read in flight');
+  await h.service.close();                                                       // nothing it waits for: no refresh, no commit point
+  answer.open();
+  expect((await within(read, 1_000)).error).toMatchObject({ message: 'GITHUB_RENEWAL_UNAVAILABLE' });
+  expect(h.refreshes()).toHaveLength(0); expect(fake.to(RESOURCE)).toHaveLength(1);
+  expect(h.store.current()).toBe(account);
 });
 
 test('16. start and send after close are refused without a request, signed in or out', async () => {
