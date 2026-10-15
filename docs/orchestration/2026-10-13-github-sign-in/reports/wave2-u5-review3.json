@@ -1,0 +1,218 @@
+{
+  "summary": "GitHub sign-in: fresh refute-first review of U5 after its two fix rounds; one fix round if blocking, then a fresh re-review",
+  "agentCount": 3,
+  "logs": [],
+  "result": {
+    "unit": "U5",
+    "rounds": [
+      {
+        "review": {
+          "verdict": "FIX",
+          "findings": [
+            {
+              "id": "U5-R13",
+              "severity": "S3",
+              "problem": "The U5-R11 hold restart (src/main/github-signin.ts:351-356) honours a rate-limit or transient hold only in the clock's own time: a backward step re-anchors the hold at the new time, and the forward correction that usually follows (NTP, Windows Time after resume, a user fixing the clock) then lands past the re-anchored `until`, so a refresh goes out while GitHub's retry-after is still running (E-15 l.36, L-13, pre-mortem 4). The hold is shortened by (step size - time elapsed since it was set); for a step larger than the hold the correction cancels it outright. 8749974's message and the ARCHITECTURE line claim a backward step 'neither cancels it nor stretches it'; that holds for one step alone, not for a step and its correction, and the R11 pins (refresh test 6, U5-R11 cases; test 15) never move the clock forward again after the step.",
+              "evidence": "Scratch tests in a private copy of HEAD (scratchpad/u5rev3/wt2/tests/zz-u5-review3.test.ts; the worktree untouched, sha256 828c3b81...550b6 before and after). P-A: token past expiry, the refresh answered 429 retry-after 120 (GITHUB_RATE_LIMIT, 1 refresh request); clock back a day, a read is held; clock set to t0 + 10 s (real time 10 s into the 120 s window): the read refreshed and succeeded - output `P-A {\"outcome\":\"200:signed-in\",\"refreshes\":2,...}`, assertion 'promise resolved \"{ status: 200, authenticated: true }\" instead of rejecting'. P-B: the same hold, a 30 s step back at t0 + 1 s, then the correction at t0 + 95 s (25 s of retry-after left): 'expected [ ...(2) ] to have a length of 1 but got 2' - a second refresh request inside the window. Both pass with holdActive in its R11 form only because no shipped test steps the clock forward after a backward step.",
+              "fix": "Give a hold a second anchor that a wall-clock step cannot move: a monotonic reading (performance.now(), injected as an optional `monotonic?()` dep beside now/sleep in GitHubSignInDeps, 3.7 is U5's own API) taken when the hold is set, and keep the hold active while EITHER now() < until OR monotonic() - monoSetAt < the hold's length. A system sleep can then over-hold by at most the hold's own length (<= 1 h), which is the bounded trade the fixer worried about, while no step pair can shorten it. Add P-A and P-B to refresh case 6 as pins (red on HEAD). If the lead prefers to keep the wall clock alone, record under 6.8 and Known limits that a backward step followed by a forward correction shortens a hold by the step, and correct 8749974's claim in As built."
+            },
+            {
+              "id": "U5-R14",
+              "severity": "S3",
+              "problem": "The U5-R10 guard is dead code after U5-R12. renew()'s generation throw (src/main/github-signin.ts:467-469) can no longer run: every path that moves `generation` (signOut, clearIf when admitted, commitPoint, adopt) leaves the store with no live account or a different access ref before any awaited continuation, and R12's live-account check at :454-456 now returns or throws first. The comment at :467-468 still describes that line as the mechanism, the fix-round-1 report records MR10 as a red proof, and 4884fd2's report does not say it retired R10's check. The same holds for the `this.generation === g0` conditions at :460, :464 and :522: nothing awaits between the live check and them.",
+              "evidence": "Mutation MR10 (the line at :469 deleted; scratchpad/u5rev3/proofs.json, results.json) on HEAD: `MR10 ran 86 red 0` - every refresh test stays green, including test 13 'a refresh of the old account that answers after the re-sign-in commits (a 500)', which was R10's red-first pin and which the fix-round-1 report shows red under the same mutation on 968852e ('MR10 ... red 1 (test 13, late 500)'). Mutation R12 (the three lines at :454-456 removed) is red 1 on its pin, so R12 now carries the rule R10 guarded. All 20 other mutations were red with the reported counts and the file restored to its sha256 after each.",
+              "fix": "Either delete :467-469 and the now-redundant `this.generation === g0` conditions at :460, :464 and :522 (keeping adopt's admit at :488, which runs later under the store lock where the generation can still move), reword the comment so the live-account check at :454 is named as the one guard, and say in the commit report that R12 subsumes R10 and retires its proof; or, if the lead wants the generation check kept as belt-and-braces, mark it as unreachable in the comment and drop MR10 from the recorded proofs. In both cases add nothing to As built beyond the R12 note already owed."
+            },
+            {
+              "id": "U5-R15",
+              "severity": "S4",
+              "problem": "The three U5-R11 test.each titles in tests/github-signin-refresh.test.ts:476-480 render the reply object and NaN: the third `%s` receives the FakeReply and the `%i` receives the reason string. 8749974's report says the first draft printed the reply object and was fixed by 'the reply named by a %s argument'; the committed title still prints it.",
+              "evidence": "vitest JSON of HEAD (scratchpad/u5rev3/u5files.json): '6. (U5-R11) one 1 s backward clock step(s) during the hold of a 429 with retry-after 120: no refresh goes out while GitHub may still be limiting ({ status: 429, headers: [Object], ...(1) }); the hold restarts in the new time, its own NaN ms, neither cancelled nor stretched (L-13, E-15 l.36)'. The row is ['one 1 s', 'a 429 with retry-after 120', RATE_LIMITED, 'GITHUB_RATE_LIMIT', 120_000, [1_000]] against a title with %s, %s, %s, %i.",
+              "fix": "Reorder the row to put `reason` and `holdMs` where the title's third `%s` and `%i` read them (for example [_steps, _answer, reason, holdMs, reply, steps]) and bind the parameters in that order, or drop the third `%s` and `%i` from the title."
+            }
+          ],
+          "checked": [
+            "Read briefs/unit-reviewer.md, briefs/common.md, briefs/u5-builder.md, the U5 BREAKDOWN row (nine pre-mortem items) and traceability rows, spec sections 2 (all), 3.4, 3.7, 3.8, 3.9, 6 (all), Known limits, Tests the builders owe and the guard table, As built; src/main/github-signin.ts (535 lines, sha256 828c3b81...550b6, matching the fix2 report), both test files in full (1155 and 785 lines), github-oauth.ts, github-account-store.ts, github-credential.ts, github-app.ts, shared/github-account.ts, vault.ts grant/withSecret/tombstone, the fake fixture, and the two report files in full.",
+            "Commits: git log dae1c65..HEAD is 12 commits (8e3ce77 build; a0ee47a R1; ec54491 R2; 600561d R3; 36fa75b R4; e2b51e6 R5; 847b438 R8; 655df78 R6; 73aeec5 R7; 968852e R10; 8749974 R11; 4884fd2 R12), not the 16 the task text names. The diff touches only src/main/github-signin.ts, the two test files and one docs/ARCHITECTURE.md line (2669 chars, one physical line); every src commit stages ARCHITECTURE.md; U0's frozen files have no diff since 8f86232 and github-oauth.ts, github-account-store.ts and the fixture none since dae1c65; identity StepenkoAnatoli on all; no --no-verify; grep of git log -p for token-shaped literals, sk- literals and client_secret: no hit; attribution lines present (Opus 5.5 on the first two, Fable 5.1 after the model switch, as the rereview1 noted).",
+            "Baseline in the worktree with a private TMPDIR: tests/github-signin-refresh.test.ts 86/86 and tests/github-signin.test.ts 56/56 (142/142), no PromiseRejectionHandledWarning or unhandled rejection from either file (0 warning lines in their own run); the device file's forced-GC test 8d green 10 runs out of 10 alone.",
+            "Re-ran the claimed proofs with the fixer's mutate.py on a private copy of HEAD (scratchpad/u5rev3/wt, node_modules and .build symlinked; the file restored and sha256-checked after each): X01 86/1, X07 86/1, X18 86/2, X20 86/2, X08 86/2, X09 86/1, X02 86/2, X03 86/1, X04 86/1, X06 86/1, X11 142/1, X22 142/1, X26 86/1, X25 86/1 (R1-R5, R8), MR6 56/1 (R6), MR7b 86/2 and MR7c 86/1 (R7), R11A (R7's form) 86/4 and R11B (re-anchor removed) 86/4 (R11), R12 (the three live-check lines removed) 86/1 (R12): all as the reports state. MR10 (R10's generation throw) 86/0: the guard is dead after R12 (U5-R14).",
+            "Static checks re-run in the worktree after 4884fd2: NODE_OPTIONS=--max-old-space-size=2048 npm run typecheck exit 0; npm run lint exit 0; npx eslint e2e exit 0; tests/github-token-literals.test.ts 2/2 and tests/github-app-constants.test.ts 4/4 (6/6). Verified.",
+            "Full suite on HEAD (the comparison the fix2 report left untested): npx vitest run --reporter=json in the worktree with a private TMPDIR, then compare.py: 2132 tests, 2052 passed, 74 failed, 6 skipped (Windows-only); failed in baseline 74 of 74; new failures []; baseline names not failing []; files without results []; no moonaliza-* temp directory left behind. Verified.",
+            "Pre-mortem 1-9 against code and tests: (1) the refresh on its own AbortSignal.timeout only (:449), refresh 11; (2) waiters race accountChanged in waitRefresh and pause (:80-93, :401, :410), refresh 12 (timed) and the three R4 pins; (3) every grant uses Date.now() + grantMs (:320, :385, :503) with the test clock in 2031; (4) L-13 in usable step 4/6 (:369, :373), the 401 path (:237) and freshRejected (:417), refresh 6 and the R2 pin, but see U5-R13 for a backward step with its correction; (5) one refresh per call (:369 `!budget.refreshed`, :234/:238), refresh 10 and the R8 stale-retry pin; (6) DC-2 resends (:227-228), refresh 10; (7) sameOrFail and the doubling failed() (:519-534), refresh 4/4b/5; (8) the sign-in admitted by the sign-out count only (:293-294), device 14/14b/14c; (9) GS-1 freshRejected with hold and count (:416-420), refresh 10 (refused and slow new token, three windows).",
+            "Spec match walked for 6.1-6.8 and 2.5 against the code: the departures are the ones already declared for the lead (R6's commitAndLogin shape, R7's setAt and signed age, R10's generation throw, R11's restart, R12's live check, R9's closing check before the signed-out branch and the spec's line 1241); status() now writes the hold's anchor under a backward step (disclosed in 8749974); no other behaviour beyond the spec found. Traceability: every U5 row (F-2/3/4/10, F-6/7/8/9, F-11/12, F-19/22, F-21, F-24, S-1/2/6, S-3, T-3/T-4) has its named test present.",
+            "Token invariant: every error the service originates is a bare code with no cause (every throw site read); the request's own rejection and a vault error pass through unchanged (refresh 18); signal.reason is the reader's AbortError; the DTO carries only userCode, codeExpiresAt, committed, login (device 12); the device code is dropped at the commit point and on every end (:292, :332, :338); no console., process.env or file write in the unit; refresh 19 and device 8d/expectNotHeld green.",
+            "Break attempts that found no defect: close() during F1/F3/F4/F5 and with a superseded inflight refresh; a 401 clear racing a sign-in's replace (14b); a refresh answer of any kind landing before step 6, inside step 7 (R12 pin) and after the commit point; a sign-out during a pause and during F4; a stale retry onto an expired account (held, not looped); a read whose signal is already aborted; a clock far ahead (fails closed, no request); grant expiry computed one tick before the vault's check (re-grant covers a backward tick); the join of a settled single-flight promise in the two microtasks before inflight clears; concurrent refreshes of two different sign-ins (the finally guard keeps the newer entry); a malformed-but-rotated tokens answer (discarded, nothing stored).",
+            "Worktree /home/user/task5-handoff/wt/gsi-u5 read-only throughout: git status shows only the untracked .build and node_modules symlinks; sha256 of src/main/github-signin.ts, tests/github-signin.test.ts and tests/github-signin-refresh.test.ts unchanged from the start of the review (828c3b81..., 09299f51..., b69d43b2...). All mutations and scratch tests ran in private copies under /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5rev3/ (wt, wt2; proofs.json, results.json, sweep.log, static.log, full.json, compare.log, u5files.json, wt2/tests/zz-u5-review3.test.ts). Nothing committed or pushed."
+          ]
+        }
+      },
+      {
+        "fix": {
+          "commits": [
+            "8cffebd test(github-sign-in): U5-R15 - the U5-R11 test.each rows put reason and holdMs where the title's third %s and %i read them (tests/github-signin-refresh.test.ts only)",
+            "1424d29 fix(github-sign-in): U5-R14 - renew()'s live-account check is the one guard against a late refresh answer; the generation checks it made unreachable are removed (src/main/github-signin.ts, docs/ARCHITECTURE.md)",
+            "d87f796 fix(github-sign-in): U5-R13 - a hold is timed on a monotonic clock, so a backward clock step and the forward correction that follows it cannot shorten it (src/main/github-signin.ts, tests/github-signin-refresh.test.ts, docs/ARCHITECTURE.md)",
+            "All three on branch build/gsi-u5 in /home/user/task5-handoff/wt/gsi-u5, after 4884fd2; identity StepenkoAnatoli; attribution 'Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' plus the Claude-Session line as printed in common.md; the research gate hook printed 'allow' on each; no --no-verify; nothing pushed (no remote branch exists); final tree clean apart from the untracked node_modules and .build symlinks. Final sha256: src/main/github-signin.ts 98e5c12118f9e7e543705d95ddae8e5ac8b43c14bd4a6ef2e3e7b0057cc0b7e7, tests/github-signin-refresh.test.ts 05006a536cf3e0ae9da5682476559e6ac0f3a2edc794190d6a60e19d978a0fea."
+          ],
+          "perFinding": [
+            {
+              "id": "U5-R13",
+              "done": "Fixed in d87f796 (S3, code change, red-first), with a disclosed departure from the finding's sketch. GitHubSignInDeps (3.7, U5's own API) gains `monotonic?(): number`, default `() => performance.now()`; a hold is `{ setAt: a monotonic reading, lengthMs, reason }`, set by one setHold() from renew()'s rate-limited branch and from failed(); holdActive() is `monotonic() - setAt < lengthMs`. The finding proposed keeping the U5-R11 restarted wall-clock anchor and OR-ing the monotonic one to it; the commit times the hold on the monotonic clock alone, because a disjunction can only extend the hold beyond its monotonic length, and its wall branch does so only after a backward step, by the real time elapsed before the step: an over-hold that protects nothing, while it would keep R11's restart write, the one impure write status() made (2.3). Mutation M13-or (the finding's OR form applied to the fixed code) ran 89 red 0: no test can reach that wall branch, the class U5-R14 retired. The system-sleep cost is the finding's own and identical in both forms (over-hold of at most the hold's length). Pins: a test.each of three under refresh case 6 (U5-R13): P-A (a day's step at 0 s into a 429/120 s hold, the correction at 10 s of real time), P-B (a 30 s step at 1 s, correction at 95 s) and a 500/30 s case (a 10 s step at 5 s, correction at 26 s); each read after the correction is still held with one refresh request, held at holdMs-1 of real time, refreshing at holdMs, 200 with the new token; after the day's step the clock calls the expired token valid, so it goes out once and its 401 refreshes nothing under the hold (GS-4, the 6.8 known limit, as test 15 models it). The test Clock gained a monotonic reading (`t` less a skew only `step(ms)` moves) and the harness injects it; the three R11 pins, test 15 and the 301 000 ms skew case now step with step() and the R11/15 titles say the hold runs on rather than restarts (assertions unchanged). ARCHITECTURE U5 line extended. For the lead (As built / 6.8): a hold is timed on a monotonic clock for its length of real time, superseding the 2.3 formula `now() < hold.until`, the R7 setAt and the R11 restart notes already owed; the 6.8 'System sleep' row may add the bounded over-hold; src/main/index.ts does not construct the service yet, so U6's wiring takes the default."
+            },
+            {
+              "id": "U5-R14",
+              "done": "Judged right and fixed in 1424d29 (S3). Confirmed the dead code first: mutation MR10 (the generation throw deleted) on 4884fd2 ran 86 red 0, test 13 (R10's red-first pin) included; mutation R12 (the three live-check lines removed) ran 86 red 1 (R12's pin). Then deleted the generation throw and the `this.generation === g0` conditions before the three clearIf calls (bad_refresh_token/unsupported_grant_type, incorrect_client_credentials, sameOrFail, which lost its g0 parameter); the comment above the live-account check names it as the one guard and says why no generation check can see anything it does not (signOut and an admitted clearIf null the live account synchronously in store.clear's prologue; commitPoint and adopt move the generation only after store.replace installed freshly staged refs; a ref is never staged twice; nothing awaits between the live check and the four conditions). adopt's admit is kept, with a comment saying why (it runs later under the store's lock). Behaviour unchanged: clearIf's own admit already refuses to remove a newer account. The commit report says R12 subsumes R10 and retires MR10 as a proof. Guard proof on the changed code: mutation R12 ran 86 red 2, both test 13 pins (R10's late 500 and R12's step-7 case), so the one remaining guard now visibly carries R10's rule. Nothing added to As built beyond the R12 note already owed."
+            },
+            {
+              "id": "U5-R15",
+              "done": "Judged plainly right and fixed in 8cffebd (S4, tests only). Rows reordered to [steps, answer, reason, holdMs, reply, steps] and the parameters bound in that order. Before (vitest JSON of 4884fd2): '... limiting ({ status: 429, headers: [Object], ...(1) }); the hold restarts in the new time, its own NaN ms ...'; after: '(GITHUB_RATE_LIMIT) ... its own 120000 ms' and '(GITHUB_RENEWAL_UNAVAILABLE) ... its own 30000 ms'; refresh file 86/86, so the body still reads reason, holdMs and reply from the right parameters."
+            }
+          ],
+          "proofs": [
+            "Runner: scratchpad/u5fix3/mutate.py (the reviewer's u5rev3 runner, unchanged): each mutation applied to src/main/github-signin.ts, the whole refresh file run with TMPDIR private, the file restored and its sha256 checked. All paths under /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5fix3/.",
+            "Baseline on 4884fd2 (verified): tests/github-signin-refresh.test.ts 86/86, tests/github-signin.test.ts 56/56 (base.json).",
+            "U5-R15 (verified): rendered titles before, from base.json: '6. (U5-R11) one 1 s backward clock step(s) during the hold of a 429 with retry-after 120: ... ({ status: 429, headers: [Object], ...(1) }); the hold restarts in the new time, its own NaN ms ...' (and the 500 row '({ status: 500, json: [Object] })'); after, from r15.json: '(GITHUB_RATE_LIMIT) ... its own 120000 ms' / '(GITHUB_RENEWAL_UNAVAILABLE) ... its own 30000 ms'; refresh file 86/86; eslint on the file 0.",
+            "U5-R14 dead-code proof on 4884fd2 (verified, results-head.json): MR10 (the generation throw deleted): `npx vitest run tests/github-signin-refresh.test.ts -t .` ran 86 red 0; R12 (the three live-check lines removed): ran 86 red 1, \"AssertionError: expected 'GITHUB_RENEWAL_UNAVAILABLE' to be '200:signed-in'\" on test 13 (U5-R12); restored, sha256 828c3b81...550b6 before and after.",
+            "U5-R14 green (verified): refresh 86/86, device 56/56 on 1424d29's service; guard proof on it (verified, results-r14.json): R12 ran 86 red 2, '13. a refresh of the old account that answers after the re-sign-in commits (a 500) ...' ('expected { state: signed-in, ...(3) } to deeply equal ...', renewalHeld true) and '13. (U5-R12) ...'; restored, sha256 531739e9...7ffc before and after.",
+            "U5-R13 red first (verified, r13-red.json): the three U5-R13 pins on 1424d29's service (src stashed, sha256 531739e9...7ffc during the run, 98e5c121...b7e7 restored after): refresh file 86 passed / 89, each red at the read after the correction, 'Error: promise resolved \"{ status: 200, authenticated: true }\" instead of rejecting' (a refresh went out inside the window), the reviewer's P-A message.",
+            "U5-R13 green (verified, r13-green.json): refresh 89/89, device 56/56 on d87f796's service.",
+            "U5-R13 guard proofs (verified, proofs-r13.json, results-r13.json; sha256 98e5c121...b7e7 before and after each): M13-wall (the monotonic anchor removed; the hold timed on the wall clock in R11's restart form): ran 89 red 3, exactly the three R13 pins, the red-first message; M13-stretch (the wall clock, no restart): ran 89 red 4, the three R11 pins and test 15, 'Error: GITHUB_RATE_LIMIT' / 'GITHUB_RENEWAL_UNAVAILABLE' at the read that should refresh (the step stretched the hold); M13-or (the finding's sketch: the restarted wall anchor OR the monotonic one): ran 89 red 0, the evidence that the OR form's wall branch is unreachable."
+          ],
+          "checks": [
+            "NODE_OPTIONS=--max-old-space-size=2048 npm run typecheck: exit 0 (verified, after d87f796; also after 1424d29)",
+            "npm run lint (eslint src tests scripts): exit 0 (verified, after d87f796)",
+            "npx eslint e2e: exit 0 (verified, after d87f796)",
+            "tests/github-signin.test.ts alone, TMPDIR private: 56/56 (verified, after d87f796; also 56/56 after 1424d29)",
+            "tests/github-signin-refresh.test.ts alone, TMPDIR private: 89/89 (verified, after d87f796; 86/86 after 8cffebd and 1424d29)",
+            "tests/github-token-literals.test.ts: 2/2 (verified); tests/github-app-constants.test.ts: 4/4 (verified)",
+            "npx eslint on the changed TypeScript files: 0 after each commit (verified)",
+            "The round's diff (4884fd2..HEAD, src and tests) holds no token-shaped literal and no client_secret; the three commit messages carry no model name other than the mandated attribution line (grep, verified)",
+            "Every src commit (1424d29, d87f796) stages docs/ARCHITECTURE.md with the U5 line extended; 8cffebd is tests-only (verified via git show --stat)"
+          ],
+          "fullSuite": "Run after d87f796 in /home/user/task5-handoff/wt/gsi-u5 with PATH=/versions/node/v24.21.0/bin and TMPDIR private: `npx vitest run --reporter=json --outputFile=<scratchpad>/u5fix3/full.json` (vitest exit 1, from the baseline failures), then `python3 <scratchpad>/compare.py full.json /home/user/task5-handoff/wt/gsi-u5` (verified): numTotalTests 2135, passed 2055, failed 74, pending 6; failed in baseline: 74 of 74; new failures: []; baseline names not failing: []; files without results: []; skipped: the 6 Windows-only cases. Output in <scratchpad>/u5fix3/compare.log.",
+          "mistakes": [
+            "Mistake: the first draft of the R13 pins modelled the forward correction as `h.clock.t = t0 + correctionAt`, which in the new Clock is real time passing on both clocks, so the monotonic reading advanced by the correction plus the step (a day, in P-A) and the fixed service refreshed. Where: tests/github-signin-refresh.test.ts, the U5-R13 test.each, the correction line. Impact: the pins stayed red on the fixed service; nothing committed was affected. Cause: a correction is itself a wall-clock step, and I wrote it as an assignment. Fix: real time passes to correctionAt, then `step(stepMs)`, with `t` asserted equal to t0 + correctionAt. Verified: two rows green, the day-step row still red for the next reason.",
+            "Mistake: the day-step row answered every resource request OK, so the read right after the step, which sends the expired token the stepped clock calls valid (GS-4, the 6.8 known limit), resolved 200 instead of being held. Where: the same test.each, the fake's resource answer and the row's expected tokens. Impact: red on the fixed service; nothing committed was affected. Cause: I took the reviewer's P-A sketch (RESOURCES always OK) without re-reading usable() step 5 for a day's step. Fix: the fake refuses 'oldAccess' with a 401 as test 15 does, and the row expects ['oldAccess', 'newAccess']. Verified: red first repeated on the unfixed service (3 red, same message), 89/89 on the fixed one, and the three mutations as reported.",
+            "Nothing else to report for U5-R14 and U5-R15."
+          ],
+          "notes": [
+            "Design departure for the lead to confirm (U5-R13): the finding sketched 'the restarted wall anchor OR a monotonic anchor'; the commit uses the monotonic anchor alone, with the reason in its Why and the M13-or mutation (ran 89 red 0) as evidence that the wall branch would be dead code. If the lead prefers the OR form, it is the M13-or mutation text in <scratchpad>/u5fix3/proofs-r13.json applied verbatim (the pins pass under both), but the R11 restart write in status() would come back with it.",
+            "Spec text owed by the lead (the builder owns no spec text): As built should record that a hold is timed on a monotonic clock (`monotonic` dep, default performance.now()) for its length of real time, superseding 2.3's `renewalHeld: now() < hold.until`, the R7 setAt note and the R11 restart note; the 6.8 'System sleep' row may add 'a hold set before the sleep over-holds by at most its own length'; the R12 As-built note already owed covers R14 (the live-account check is the one guard against a late answer).",
+            "No frozen contract changed: GitHubSignInDeps is in src/main/github-signin.ts (3.7, owned by U5). src/main/index.ts does not construct GitHubSignIn yet (grep), so U6's wiring takes the default monotonic clock; tests/github-signin.test.ts also runs on the default, 56/56.",
+            "The two relayed user lines ('The usage rule doesn't apply here' / the git-token remark) concern something outside this task; nothing here asked anyone to sign up, and no network or token was used beyond the local git worktree.",
+            "Scratch artefacts (not committed): <scratchpad>/u5fix3/{base.json, r15.json, r14.json, r13-red.json, r13-green.json, proofs-head.json, results-head.json, results-r14.json, proofs-r13.json, results-r13.json, full.json, compare.log, msg-r13.txt, msg-r14.txt, msg-r15.txt}; the worktree's reviewer scratch (scratchpad/u5rev3) was read, not changed."
+          ]
+        },
+        "review": {
+          "verdict": "FIX",
+          "findings": [
+            {
+              "id": "U5-R16",
+              "severity": "S2",
+              "problem": "A successful refresh no longer resets the consecutive-error count `sameError`, so the account is cleared (ended: sign-in-ended, both vault entries gone) by ONE identical refresh error that follows a success, instead of three in a row. Spec 6.5 pseudo-code resets `sameError` for every answer that is not `error`/`unusable` BEFORE the kinds are dispatched, `tokens` included, and 6.5 'Clearing the hold' says `sameError` is cleared by a successful refresh; L-12 (2.4) allows a clear only for the same unknown `error` code, or the same `unusable` status (GS-2), maxSameRefreshError (3) times IN A ROW. On HEAD, renew() returns at the `tokens` branch (src/main/github-signin.ts:466, `return this.adopt(...)`) before the reset at :474, and adopt() (:494) resets `hold` and `failures` only. This is a regression from fix round 1: at 8e3ce77 the reset (line 441) ran before the whole switch including `case 'tokens'`; 968852e (U5-R10) hoisted the `tokens` branch above it, and R11-R14 kept that order. No shipped test covers an identical answer on either side of a successful refresh (the 'only consecutive identical answers count' pin at tests/github-signin-refresh.test.ts:338 puts a 500 between the errors, which still reaches :474), so the rule has no guard.",
+              "evidence": "Scratch test P-C in a private copy of HEAD (scratchpad/u5rev4/wt/tests/zz-u5-review4.test.ts; the worktree untouched: git status clean, src/main/github-signin.ts sha256 98e5c121...b7e7 before and after). Expired access token, valid refresh token; the token endpoint answers bad, bad, tokens(newPair), bad, where bad is errorAnswer('some_new_code', 200) in row 1 and a 401 JSON-message reply (unusable, GS-2) in row 2; reads at t0 (held), t0+30 s (held), t0+90 s (200 signed-in, renewalHeld false), then at the new token's accessExpiresAt + 1 s with its refresh token still valid. Both rows red: output `P-C {\"outcome\":\"GITHUB_SIGN_IN_REQUIRED\",\"refreshes\":4,\"status\":{\"state\":\"signed-out\",\"ended\":\"sign-in-ended\",...},\"live\":false}`, assertion \"expected 'GITHUB_SIGN_IN_REQUIRED' to be 'GITHUB_RENEWAL_UNAVAILABLE'\". History: `git show 8e3ce77:src/main/github-signin.ts` lines 441-466 (reset before the switch, `case 'tokens'` last); `git show 968852e:src/main/github-signin.ts` lines 445 (tokens) and 458 (reset). With the one-line move applied in the private copy (the reset placed right after the live-account check at :465 and before the tokens branch; diff: `465a466 / 474d474`), the scratch test is 2/2 and the shipped files stay green: refresh 89/89, device 56/56 (scratchpad/u5rev4/fixcheck.json).",
+              "fix": "Move `if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;` from src/main/github-signin.ts:474 to directly after the live-account check (:465) and before `if (answer.kind === 'tokens') return this.adopt(...)` (:466), i.e. the spec's 6.5 order, placed after the live check so a late answer about another account still counts and resets nothing (U5-R10/R12). Alternative: `this.sameError = null` beside `this.hold = null; this.failures = 0` in adopt() (:494), which resets only on an admitted persist; either satisfies the test. Add P-C's two rows as a red-first pin under refresh test 4 (red on HEAD with the message above; green with the move), record the guard proof (the moved line deleted: the new pin red; the existing :338 pin stays green only because its separator is a 500, so name both), and in the commit report say 968852e introduced the regression. Nothing is owed to As built beyond the 6.5 note already owed for R12/R14."
+            },
+            {
+              "id": "U5-R17",
+              "severity": "S4",
+              "problem": "The device harness does not inject `monotonic`, so in tests/github-signin.test.ts a hold now runs on real `performance.now()` while `now`/`sleep` run on the injected clock: advancing `h.clock.t` there can never end a hold, and a hold set in that file is active for 30 s of wall time whatever the test clock says. Nothing fails today (device 56/56) because the only device case touching a hold, 11b (:549), expects the hold to be cleared by the commit, not by time, but a future device test that steps the clock past a hold would be wrong silently, and the two U5 harnesses now model different clocks for the same dependency.",
+              "evidence": "tests/github-signin.test.ts:140-142: `new GitHubSignIn({ store, vault, epoch: ..., fetcher: ..., config, now: clock.now, sleep: clock.sleep, limits: ... })` with no `monotonic`; its Clock (:63-75) has no monotonic reading. src/main/github-signin.ts:132 defaults it to `performance.now()`. tests/github-signin-refresh.test.ts:146-148 injects `monotonic: clock.monotonic`. grep 'renewalHeld: true|hold' in the device file: only 11b (:549-554) relies on a hold, and it asserts `renewalHeld: false` right after the commit, which commitPoint's `this.hold = null` (:310) gives regardless of the clock.",
+              "fix": "Give the device Clock the same `monotonic` reading and `step()` as the refresh Clock (or a shared helper) and pass `monotonic: clock.monotonic` in the device harness, tests only, no src change; or add one comment at the device harness saying holds there run on real time and no device case may time one out."
+            }
+          ],
+          "checked": [
+            "Read briefs/unit-reviewer.md, briefs/common.md, briefs/u5-builder.md, the U5 BREAKDOWN row and traceability, spec sections 2, 3.7, 6, Known limits and As built, src/main/github-signin.ts (534 lines, sha256 98e5c121...b7e7, matching the fixer's report), both test files' harnesses and every hold/refresh case, the store's clear() and replace(), the fix-round reports (wave2-u5-fix-rounds.json stages fix1/rereview1/fix2), and the three commits' full messages and diffs (8cffebd, 1424d29, d87f796). git log dae1c65..HEAD: 16 commits; git diff --stat dae1c65..HEAD touches only src/main/github-signin.ts, the two U5 test files and docs/ARCHITECTURE.md; the frozen U0 files, github-oauth.ts, github-account-store.ts and the fake fixture are byte-unchanged; all three round-3 commits by StepenkoAnatoli with the Fable 5.1 attribution and session line; no token-shaped literal or client_secret in the owned files (grep exit 1); the ARCHITECTURE U5 paragraph is one physical line carrying R10..R14 once each.",
+            "Baseline on HEAD in the worktree (TMPDIR private): tests/github-signin-refresh.test.ts 89/89, tests/github-signin.test.ts 56/56 (scratchpad/u5rev4/base.json); NODE_OPTIONS=--max-old-space-size=2048 npm run typecheck exit 0; npm run lint exit 0; tests/github-token-literals.test.ts and tests/github-app-constants.test.ts 6/6.",
+            "U5-R15 verified fixed: base.json renders the three U5-R11 titles with '(GITHUB_RATE_LIMIT) ... its own 120000 ms' and '(GITHUB_RENEWAL_UNAVAILABLE) ... its own 30000 ms'; rows are [steps, answer, reason, holdMs, reply, steps] bound in that order (tests/github-signin-refresh.test.ts:482-486).",
+            "U5-R14 verified fixed: src/main/github-signin.ts:463-473 has no generation check and no await between the live-account check and the four clearIf/sameOrFail sites; adopt's admit (:491) still reads the generation under the store lock; the store's clear() admits and nulls `live` synchronously before any await (github-account-store.ts:191-196) and replace() stages fresh refs then installs live under the lock (:131-169), so the fixer's 'a live from is still the answer's account' premise holds. Mutation R12 (the three live-check lines removed) on HEAD with my copy of the runner (scratchpad/u5rev4/mutate.py, proofs.json, results.json): ran 89, red 2, both test 13 pins ('expected { state: signed-in, ...(3) } to deeply equal ...'), file restored, sha256 98e5c121...b7e7 before and after. MR10's target no longer exists; the dead-code evidence was my round-3 finding's own.",
+            "U5-R13 verified fixed: holdActive() is `monotonic() - setAt < lengthMs` with one setHold() from the rate-limited branch and failed(); status() writes nothing. Red-first re-run: 1424d29's service (sha256 531739e9...7ffc) under HEAD's refresh tests in a private copy (scratchpad/u5rev4/wt-red): 86 passed / 3 failed, the three U5-R13 pins, 'Error: promise resolved \"{ status: 200, authenticated: true }\" instead of rejecting' (r13-red.json). Mutations on HEAD (results.json, file restored each time): M13-wall (wall clock, R11 restart form) ran 89 red 3, the three R13 pins; M13-stretch (wall clock, no restart) ran 89 red 4, the three R11 pins and test 15; M13-or (the finding's OR form) ran 89 red 0, so no test reaches the wall branch and the fixer's mono-only reasoning (a disjunction can only over-hold) stands; sanity M13-mono-drop (hold ignored) ran 89 red 28. Traced the P-A row by hand through usable() steps 2-6 and the 401 rule: ['oldAccess','newAccess'] is right (GS-4 known limit). The bounded over-hold after a system sleep (at most the hold's length) is real, disclosed in the commit and the map, and owed to the lead's As built / 6.8 rows together with the 2.3 formula, spec 3.7's GitHubSignInDeps block (no `monotonic?()`) and 6.5's `if generation === g0` clauses: documentation for the lead, not U5 findings. The wire caps a rate-limit wait at rateLimitCeilingMs (github-oauth.ts:68), so a hold's length is bounded.",
+            "Full-suite comparison: the fixer's run on the final tree (scratchpad/u5fix3/compare.log: 2135 tests, 74 failed, all in the baseline, no new failures, no file without results, compare exit 0) read; my own re-run of the full suite on a private copy of HEAD (scratchpad/u5rev4/wt-red, full.json/compare.log) was started in the background but had not finished when this report was forced out, so that claim is re-run by the fixer's evidence only, not by mine.",
+            "Not re-run: MR10 on 4884fd2 (its target is deleted; the round-3 evidence stands); the device file on 1424d29 and 8cffebd (HEAD is 56/56). The worktree was never modified: git status shows only the untracked node_modules and .build symlinks, and src/main/github-signin.ts kept sha256 98e5c121...b7e7 through every run."
+          ]
+        }
+      }
+    ],
+    "final": "FIX"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Review"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Fix"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "review3:U5",
+      "phaseIndex": 1,
+      "phaseTitle": "Review",
+      "agentId": "a9c86fa7916158e6a",
+      "model": "claude-fable-5-1",
+      "state": "done",
+      "startedAt": 1792071089780,
+      "queuedAt": 1792071089723,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "FIX",
+      "promptPreview": "You are a fresh refute-first unit reviewer of GitHub sign-in unit U5 for MoonAliza. Read /home/user/task5-handoff/wt/gsi-u5/docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md in full first; the builder brief is docs/orchestration/2026-10-13-github-sign-in/briefs/u5-builder.md and its BREAKDOWN row lists a nine-item pre-mortem, check each. Context: unit U5 (the lifecycle service, …",
+      "promptFramed": true,
+      "lastProgressAt": 1792072079962,
+      "tokens": 351422,
+      "toolCalls": 47,
+      "durationMs": 990180,
+      "resultPreview": "{\"verdict\":\"FIX\",\"findings\":[{\"id\":\"U5-R13\",\"severity\":\"S3\",\"problem\":\"The U5-R11 hold restart (src/main/github-signin.ts:351-356) honours a rate-limit or transient hold only in the clock's own time: a backward step re-anchors the hold at the new time, and the forward correction that usually follows (NTP, Windows Time after resume, a user fixing the clock) then lands past the re-anchored `until`, …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "fix3:U5",
+      "phaseIndex": 2,
+      "phaseTitle": "Fix",
+      "agentId": "a3186eeee4d4b2b43",
+      "model": "claude-fable-5-1",
+      "state": "done",
+      "startedAt": 1792072083702,
+      "queuedAt": 1792072083663,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Run after d87f796 in /home/user/task5-handoff/wt/gsi-u5 wit…",
+      "promptPreview": "You are the builder of GitHub sign-in unit U5 (the lifecycle service), fix round 3. Worktree /home/user/task5-handoff/wt/gsi-u5 (branch build/gsi-u5); work only there; never push. Read /home/user/task5-handoff/wt/gsi-u5/docs/orchestration/2026-10-13-github-sign-in/briefs/common.md and docs/orchestration/2026-10-13-github-sign-in/briefs/u5-builder.md first. The commit attribution line is `Co-Author…",
+      "promptFramed": true,
+      "lastProgressAt": 1792073848942,
+      "tokens": 257147,
+      "toolCalls": 57,
+      "durationMs": 1765239,
+      "resultPreview": "{\"commits\":[\"8cffebd test(github-sign-in): U5-R15 - the U5-R11 test.each rows put reason and holdMs where the title's third %s and %i read them (tests/github-signin-refresh.test.ts only)\",\"1424d29 fix(github-sign-in): U5-R14 - renew()'s live-account check is the one guard against a late refresh answer; the generation checks it made unreachable are removed (src/main/github-signin.ts, docs/ARCHITECT…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "rereview3:U5",
+      "phaseIndex": 2,
+      "phaseTitle": "Fix",
+      "agentId": "a8bebbd9c3bf67488",
+      "model": "claude-fable-5-1",
+      "state": "done",
+      "startedAt": 1792073850398,
+      "queuedAt": 1792073850388,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "FIX",
+      "promptPreview": "You are a fresh refute-first reviewer of GitHub sign-in unit U5 after fix round 3. Read /home/user/task5-handoff/wt/gsi-u5/docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md first. Context: unit U5 (the lifecycle service, src/main/github-signin.ts with tests/github-signin.test.ts and tests/github-signin-refresh.test.ts) was built and then fixed in two rounds: the original review'…",
+      "promptFramed": true,
+      "lastProgressAt": 1792074484559,
+      "tokens": 247056,
+      "toolCalls": 47,
+      "durationMs": 634160,
+      "resultPreview": "{\"verdict\":\"FIX\",\"findings\":[{\"id\":\"U5-R16\",\"severity\":\"S2\",\"problem\":\"A successful refresh no longer resets the consecutive-error count `sameError`, so the account is cleared (ended: sign-in-ended, both vault entries gone) by ONE identical refresh error that follows a success, instead of three in a row. Spec 6.5 pseudo-code resets `sameError` for every answer that is not `error`/`unusable` BEFORE…"
+    }
+  ],
+  "totalTokens": 855625,
+  "totalToolCalls": 151
+}
