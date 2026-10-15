@@ -473,11 +473,11 @@ test('6. (DC-12, GS-9) after a 429 with retry-after 0 the refresh holds 30 s, no
 
 const RATE_LIMITED: FakeReply = { status: 429, headers: { 'retry-after': '120' }, json: { message: 'slow down' } };
 const DOWN: FakeReply = { status: 500, json: { message: 'down' } };
-test.each([
-  ['one 1 s', 'a 429 with retry-after 120', RATE_LIMITED, 'GITHUB_RATE_LIMIT', 120_000, [1_000]],
-  ['one 5 s', 'a 500', DOWN, 'GITHUB_RENEWAL_UNAVAILABLE', 30_000, [5_000]],
-  ['five 1 ms', 'a 429 with retry-after 120', RATE_LIMITED, 'GITHUB_RATE_LIMIT', 120_000, [1, 1, 1, 1, 1]],
-])('6. (U5-R11) %s backward clock step(s) during the hold of %s: no refresh goes out while GitHub may still be limiting (%s); the hold restarts in the new time, its own %i ms, neither cancelled nor stretched (L-13, E-15 l.36)', async (_steps, _answer, reply, reason, holdMs, steps) => {
+test.each([   // the title reads its %s and %i arguments in row order: steps, answer, reason, holdMs (U5-R15)
+  ['one 1 s', 'a 429 with retry-after 120', 'GITHUB_RATE_LIMIT', 120_000, RATE_LIMITED, [1_000]],
+  ['one 5 s', 'a 500', 'GITHUB_RENEWAL_UNAVAILABLE', 30_000, DOWN, [5_000]],
+  ['five 1 ms', 'a 429 with retry-after 120', 'GITHUB_RATE_LIMIT', 120_000, RATE_LIMITED, [1, 1, 1, 1, 1]],
+])('6. (U5-R11) %s backward clock step(s) during the hold of %s: no refresh goes out while GitHub may still be limiting (%s); the hold restarts in the new time, its own %i ms, neither cancelled nor stretched (L-13, E-15 l.36)', async (_steps, _answer, reason, holdMs, reply, steps) => {
   const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
   fake.always(RESOURCES, OK); fake.answer(ROUTES.token, reply, tokenAnswer(next));
   const held = new RegExp(`^${reason}$`);
