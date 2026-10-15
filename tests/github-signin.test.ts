@@ -58,20 +58,29 @@ async function until(check: () => boolean | Promise<boolean>, what = 'the condit
 const settle = <T>(promise: Promise<T>) => promise.then(value => ({ value, error: undefined }), (error: unknown) => ({ value: undefined, error }));
 const pending = (status: GitHubAccountStatus) => status.state === 'pending';
 
-/** The injected clock and sleep (3.7). A sleep advances the clock by step(ms) (the wait itself by default) and returns at once; while
- *  `gated`, it parks until wake() or its signal. Every wait and every signal is recorded. */
+/** The injected clocks and sleep (3.7), the same model as tests/github-signin-refresh.test.ts's (U5-R13, U5-R17). `t` is the wall
+ *  clock; the monotonic reading is `t` less a skew that only step() moves, so assigning `t` is real time passing on both clocks, and
+ *  step() is a wall-clock step with which no real time passes. A sleep is its wait of real time: the monotonic reading advances by
+ *  the wait, the wall clock by advance(ms) (the wait itself by default; a case may make it a jump or a run backwards), and it returns
+ *  at once; while `gated`, it parks until wake() or its signal. Every wait and every signal is recorded. */
 class Clock {
-  t: number; gated = false; step: (ms: number) => number = ms => ms;
+  t: number; gated = false; advance: (ms: number) => number = ms => ms;
+  private skew = 0;
   readonly waits: number[] = []; readonly signals: AbortSignal[] = [];
   private readonly parked: Array<{ wake: () => void }> = [];
   constructor(t0: number) { this.t = t0; }
   readonly now = () => this.t;
+  readonly monotonic = () => this.t - this.skew;
+  /** The wall clock steps by ms; the monotonic reading does not move. */
+  step(ms: number): void { this.t += ms; this.skew += ms; }
+  /** A wait of ms passed: ms of real time, and the wall clock moved by advance(ms). */
+  private slept(ms: number): void { const wall = this.advance(ms); this.t += wall; this.skew += wall - ms; }
   readonly sleep = (ms: number, signal: AbortSignal): Promise<void> => {
     this.waits.push(ms); this.signals.push(signal);
-    if (!this.gated) { this.t += this.step(ms); return Promise.resolve(); }
+    if (!this.gated) { this.slept(ms); return Promise.resolve(); }
     return new Promise<void>(resolve => {
       const remove = () => { const index = this.parked.indexOf(entry); if (index >= 0) this.parked.splice(index, 1); };
-      const entry = { wake: () => { remove(); this.t += this.step(ms); resolve(); } };
+      const entry = { wake: () => { remove(); this.slept(ms); resolve(); } };
       this.parked.push(entry);
       signal.addEventListener('abort', () => { remove(); resolve(); }, { once: true });
     });
@@ -138,7 +147,7 @@ async function harness(o: Options = {}) {
   let epoch = 'epoch-1';
   const config = o.config === null ? undefined : o.config ?? { clientId: CLIENT, installUrl: INSTALL };
   const service = new GitHubSignIn({ store, vault, epoch: () => epoch, encryptionAvailable: () => o.encryption ?? true,
-    fetcher: o.fetcher ? o.fetcher(counted) : counted, config, now: clock.now, sleep: clock.sleep,
+    fetcher: o.fetcher ? o.fetcher(counted) : counted, config, now: clock.now, monotonic: clock.monotonic, sleep: clock.sleep,
     limits: { requestTimeoutMs: 2_000, quitWaitMs: 2_000, ...o.limits } });
   opened.push({ root, service });
   const h = {
@@ -334,13 +343,13 @@ test('5. a rate-limited poll waits, then resumes; a wait that would pass the dea
 
 test('6. a forward clock jump during a wait ends expired with no poll sent; a clock running backwards ends at maxPolls; the lifetime is capped', async () => {
   const h = await harness(); const m = markers();
-  h.clock.step = ms => ms + 3_600_000;
+  h.clock.advance = ms => ms + 3_600_000;
   await begin(h, m, { expires_in: 900, interval: 5 }); await ended(h);
   expect(h.service.status()).toMatchObject({ state: 'signed-out', lastOutcome: 'expired' });
   expect(fake.to(ROUTES.token)).toHaveLength(0);
 
   const back = await harness(); const m2 = markers();
-  back.clock.step = () => -1_000;
+  back.clock.advance = () => -1_000;
   fake.always(ROUTES.token, errorAnswer('authorization_pending'));
   await begin(back, m2, { expires_in: 60, interval: 5 }); await ended(back);
   expect(back.service.status()).toMatchObject({ state: 'signed-out', lastOutcome: 'expired' });
@@ -558,6 +567,20 @@ test('11b. Sign in again clears the old account\'s hold: right after the commit 
   expect(await h.read()).toEqual({ status: 200, authenticated: true });       // the new token is inside the margin: its refresh is not held
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newaccess']);
   expect(fake.to(ROUTES.token).filter(request => request.body.grant_type === 'refresh_token')).toHaveLength(2);
+});
+
+test('11c. (U5-R17) a hold in this file runs on the injected clock: after a failed refresh a read 29 999 ms later sends nothing, and one at 30 000 ms refreshes', async () => {
+  const h = await harness(); const refreshed = markers(); await h.seed(markers(), -60_000);   // past expiry: every read needs a refresh
+  register(refreshed, 'new'); fake.always(RESOURCES, { json: { ok: true } });
+  fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, tokenAnswer(refreshed));
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // a 30 s hold
+  expect(h.service.status()).toMatchObject({ state: 'signed-in', renewalHeld: true });
+  h.clock.t += 29_999; await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);
+  expect(fake.to(ROUTES.token)).toHaveLength(1); expect(fake.to(RESOURCE)).toHaveLength(0);
+  h.clock.t += 1; expect(await h.read()).toEqual({ status: 200, authenticated: true });   // the hold ended on the injected clock, not on real time
+  expect(h.service.status()).toMatchObject({ state: 'signed-in', renewalHeld: false });
+  expect(fake.to(ROUTES.token)).toHaveLength(2);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newaccess']);
 });
 
 // ---- 12, 13: the status and the pages ----
