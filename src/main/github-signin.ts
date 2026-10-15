@@ -35,6 +35,7 @@ export interface GitHubSignInDeps {
   config?: { clientId: string; installUrl: string; offlineAccess?: boolean };   // default GITHUB_APP; tests inject; never a setting, environment variable or file
                                                          // offlineAccess defaults to REQUEST_OFFLINE_ACCESS: a test seam, not a setting (GS-5)
   now?(): number; sleep?(ms: number, signal: AbortSignal): Promise<void>; limits?: Partial<GitHubLimits>;
+  monotonic?(): number;                                  // a reading in ms that no clock step moves; default performance.now(). Holds are timed on it (U5-R13)
 }
 
 type Outcome = NonNullable<Extract<GitHubAccountStatus, { state: 'signed-out' }>['lastOutcome']>;
@@ -102,6 +103,7 @@ export class GitHubSignIn implements GitHubCredential {
   private readonly offlineAccess: boolean;
   private readonly limits: Readonly<GitHubLimits>;
   private readonly now: () => number;
+  private readonly monotonic: () => number;
   private readonly sleep: (ms: number, signal: AbortSignal) => Promise<void>;
 
   // Flow machine (2.2) and the projection's memory-only fields (2.3).
@@ -112,7 +114,7 @@ export class GitHubSignIn implements GitHubCredential {
   // Account machine bookkeeping (6.4, 6.5). The account itself is the store's live account.
   private generation = 0;
   private signOuts = 0;
-  private hold: { setAt: number; until: number; reason: HoldReason } | null = null;   // setAt: a clock stepped back before it restarts the hold there (6.8, holdActive)
+  private hold: { setAt: number; lengthMs: number; reason: HoldReason } | null = null;   // setAt: a monotonic reading, so no wall-clock step moves the hold (holdActive)
   private failures = 0;
   private sameError: { key: string; count: number } | null = null;
   private freshRejects = 0;
@@ -127,6 +129,7 @@ export class GitHubSignIn implements GitHubCredential {
     this.offlineAccess = deps.config?.offlineAccess ?? REQUEST_OFFLINE_ACCESS;   // GS-5
     this.limits = { ...GITHUB_LIMITS, ...deps.limits };
     this.now = deps.now ?? Date.now;
+    this.monotonic = deps.monotonic ?? (() => performance.now());
     this.sleep = deps.sleep ?? realSleep;
     if (this.store.openedAppChanged()) this.endedReason = 'app-changed';         // 4.4, DC-15
   }
@@ -344,15 +347,19 @@ export class GitHubSignIn implements GitHubCredential {
   private current(): GitHubAccount {
     const live = this.store.current(); if (!live) throw new Error('GITHUB_SIGN_IN_REQUIRED'); return live;
   }
-  /** A hold is active from the time it was set until `until`. A clock before `setAt` has stepped back past the hold's start: the hold
-   *  restarts at the new time for its own length, so the step neither stretches it (a day's step would otherwise hold a day) nor
-   *  cancels it (GitHub may still be limiting: E-15 l.36, L-13). The restart is the one memory write a projection makes (2.3), and
-   *  it changes only the hold's anchor, never its length or reason (U5-R7, U5-R11). */
+  /** A hold is active for its length of real time from when it was set, measured on the monotonic clock, which no wall-clock step
+   *  moves: a backward step neither stretches a hold (a day's step would otherwise hold a day) nor cancels it (GitHub may still be
+   *  limiting: E-15 l.36, L-13), and the forward correction that usually follows a step cannot shorten it either, as it could a
+   *  hold re-anchored on the wall clock (U5-R7, U5-R11, U5-R13). The one cost: a system sleep, through which the monotonic clock may
+   *  stand still, over-holds by at most the hold's own length, an hour at the ceiling (6.8). Nothing here writes, so status() stays
+   *  a pure projection (2.3). */
   private holdActive(): boolean {
-    const hold = this.hold; if (hold === null) return false;
-    const t = this.now();
-    if (t < hold.setAt) { hold.until = t + (hold.until - hold.setAt); hold.setAt = t; }
-    return t < hold.until;
+    const hold = this.hold;
+    return hold !== null && this.monotonic() - hold.setAt < hold.lengthMs;
+  }
+  /** Starts a hold of lengthMs of real time now (6.5). */
+  private setHold(lengthMs: number, reason: HoldReason): void {
+    this.hold = { setAt: this.monotonic(), lengthMs, reason };
   }
   /** A refresh token that can still be used: present and unexpired, or the local clock stepped back past the skew bound (6.4). */
   private refreshPossible(account: GitHubAccount, t: number): boolean {
@@ -466,11 +473,9 @@ export class GitHubSignIn implements GitHubCredential {
     }
     if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;   // only consecutive identical answers count
     switch (answer.kind) {
-      case 'rate-limited': {                                                     // R2-4, DC-12: at least transientHoldMs; the vault is kept
-        const t = this.now();
-        this.hold = { setAt: t, until: t + Math.max(answer.waitMs, this.limits.transientHoldMs), reason: 'GITHUB_RATE_LIMIT' };
+      case 'rate-limited':                                                       // R2-4, DC-12: at least transientHoldMs; the vault is kept
+        this.setHold(Math.max(answer.waitMs, this.limits.transientHoldMs), 'GITHUB_RATE_LIMIT');
         throw new Error('GITHUB_RATE_LIMIT');
-      }
       case 'error': return this.sameOrFail(answer.code, from);                  // DC-1
       case 'unusable':                                                           // GS-2: a 3xx is a captive portal or a proxy, not GitHub refusing
         if (answer.status >= 300 && answer.status < 400) return this.failed();
@@ -523,8 +528,7 @@ export class GitHubSignIn implements GitHubCredential {
   /** A refresh failure that keeps the account: a hold of 30 s, 60 s, 120 s, ... at most rateLimitCeilingMs (DC-1). */
   private failed(): never {
     this.failures++;
-    const t = this.now();
-    this.hold = { setAt: t, until: t + Math.min(this.limits.transientHoldMs * 2 ** (this.failures - 1), this.limits.rateLimitCeilingMs), reason: 'GITHUB_RENEWAL_UNAVAILABLE' };
+    this.setHold(Math.min(this.limits.transientHoldMs * 2 ** (this.failures - 1), this.limits.rateLimitCeilingMs), 'GITHUB_RENEWAL_UNAVAILABLE');
     throw new Error('GITHUB_RENEWAL_UNAVAILABLE');
   }
 }

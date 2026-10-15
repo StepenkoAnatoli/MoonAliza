@@ -66,14 +66,20 @@ async function within<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 const refsOf = (account: { accessRef: string; refreshRef: string | null } | null | undefined) => !account ? [] : account.refreshRef === null ? [account.accessRef] : [account.accessRef, account.refreshRef];
 
-/** The injected clock and sleep (3.7). A sleep advances the clock by the wait and returns at once; while `gated`, it parks until
+/** The injected clocks and sleep (3.7). `t` is the wall clock; the monotonic reading is `t` less a skew that only step() moves, so
+ *  assigning `t` or sleeping is real time passing on both clocks, and step() is a wall-clock step (a time service, the user) with
+ *  which no real time passes (U5-R13). A sleep advances the clock by the wait and returns at once; while `gated`, it parks until
  *  wake() or its signal. Every wait and every signal is recorded. */
 class Clock {
   t: number; gated = false;
+  private skew = 0;
   readonly waits: number[] = []; readonly signals: AbortSignal[] = [];
   private readonly parked: Array<{ wake: () => void }> = [];
   constructor(t0: number) { this.t = t0; }
   readonly now = () => this.t;
+  readonly monotonic = () => this.t - this.skew;
+  /** The wall clock steps by ms; the monotonic reading does not move. */
+  step(ms: number): void { this.t += ms; this.skew += ms; }
   readonly sleep = (ms: number, signal: AbortSignal): Promise<void> => {
     this.waits.push(ms); this.signals.push(signal);
     if (!this.gated) { this.t += ms; return Promise.resolve(); }
@@ -140,7 +146,7 @@ async function harness(o: Options = {}) {
   let epoch = 'epoch-1';
   const config = o.config === null ? undefined : o.config ?? { clientId: CLIENT, installUrl: INSTALL };
   const service = new GitHubSignIn({ store, vault, epoch: () => epoch, encryptionAvailable: () => true,
-    fetcher: o.fetcher ? o.fetcher(counted) : counted, config, now: clock.now, sleep: clock.sleep,
+    fetcher: o.fetcher ? o.fetcher(counted) : counted, config, now: clock.now, monotonic: clock.monotonic, sleep: clock.sleep,
     limits: { requestTimeoutMs: 2_000, quitWaitMs: 2_000, ...o.limits } });
   opened.push({ root, service });
   return {
@@ -477,23 +483,47 @@ test.each([   // the title reads its %s and %i arguments in row order: steps, an
   ['one 1 s', 'a 429 with retry-after 120', 'GITHUB_RATE_LIMIT', 120_000, RATE_LIMITED, [1_000]],
   ['one 5 s', 'a 500', 'GITHUB_RENEWAL_UNAVAILABLE', 30_000, DOWN, [5_000]],
   ['five 1 ms', 'a 429 with retry-after 120', 'GITHUB_RATE_LIMIT', 120_000, RATE_LIMITED, [1, 1, 1, 1, 1]],
-])('6. (U5-R11) %s backward clock step(s) during the hold of %s: no refresh goes out while GitHub may still be limiting (%s); the hold restarts in the new time, its own %i ms, neither cancelled nor stretched (L-13, E-15 l.36)', async (_steps, _answer, reason, holdMs, reply, steps) => {
+])('6. (U5-R11) %s backward clock step(s) during the hold of %s: no refresh goes out while GitHub may still be limiting (%s); the hold runs on for its own %i ms, neither cancelled nor stretched (L-13, E-15 l.36)', async (_steps, _answer, reason, holdMs, reply, steps) => {
   const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
   fake.always(RESOURCES, OK); fake.answer(ROUTES.token, reply, tokenAnswer(next));
   const held = new RegExp(`^${reason}$`);
   await expect(h.read()).rejects.toThrow(held);
   for (const step of steps) {
-    h.clock.t -= step;                                                          // the clock is now before the hold's start
+    h.clock.step(-step);                                                        // the wall clock is now before the hold's start; no real time has passed
     await expect(h.read()).rejects.toThrow(held);                               // still held: nothing is sent
     expect(h.refreshes()).toHaveLength(1); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
   }
-  const t1 = h.clock.t;                                                         // the last step, where the read just made restarted the hold
+  const t1 = h.clock.t;                                                         // the wall clock after the last step; the hold's length of real time runs from when it was set
   h.clock.t = t1 + holdMs - 1;
-  await expect(h.read()).rejects.toThrow(held); expect(h.refreshes()).toHaveLength(1);   // the restarted hold lasts its own length from there, not that plus the step
+  await expect(h.read()).rejects.toThrow(held); expect(h.refreshes()).toHaveLength(1);   // the hold lasts its own length, not that plus the steps
   h.clock.t = t1 + holdMs;
   expect(await h.read()).toEqual({ status: 200, authenticated: true });
   expect(h.refreshes()).toHaveLength(2);
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newAccess']);
+});
+
+test.each([   // the title reads: stepAt, answer, step, correctionAt, reason; then reply, holdMs, the three times in ms, and the tokens sent
+  ['0 s', 'a 429 with retry-after 120', 'a day', '10 s', 'GITHUB_RATE_LIMIT', RATE_LIMITED, 120_000, 0, 86_400_000, 10_000, ['oldAccess', 'newAccess']],
+  ['1 s', 'a 429 with retry-after 120', '30 s', '95 s', 'GITHUB_RATE_LIMIT', RATE_LIMITED, 120_000, 1_000, 30_000, 95_000, ['newAccess']],
+  ['5 s', 'a 500', '10 s', '26 s', 'GITHUB_RENEWAL_UNAVAILABLE', DOWN, 30_000, 5_000, 10_000, 26_000, ['newAccess']],
+])('6. (U5-R13) %s into the hold of %s the clock steps back %s, and its forward correction lands at %s of real time, past where a hold re-anchored on the wall clock would end: the read is still held (%s), since the hold is timed on the monotonic clock, which no step moves; the refresh goes out only once the hold has really elapsed (L-13, E-15 l.36)', async (_stepAt, _answer, _step, _correctionAt, reason, reply, holdMs, stepAt, stepMs, correctionAt, sent) => {
+  const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
+  fake.always(RESOURCES, request => request.authorizationMarker === 'oldAccess' ? UNAUTHORIZED : OK);   // GitHub refuses the expired token
+  fake.answer(ROUTES.token, reply, tokenAnswer(next));
+  const held = new RegExp(`^${reason}$`); const t0 = h.clock.t;
+  await expect(h.read()).rejects.toThrow(held);                                 // the hold: holdMs of real time from t0
+  h.clock.t = t0 + stepAt; h.clock.step(-stepMs);                               // real time passes, then the wall clock steps back
+  await expect(h.read()).rejects.toThrow(held);                                 // held, as the U5-R11 pins say; after a day's step the clock calls the expired token valid, so it goes out once and its 401 refreshes nothing under the hold (GS-4, the 6.8 known limit, test 15)
+  h.clock.t += correctionAt - stepAt; h.clock.step(stepMs);                      // real time passes, then the correction (a time service, the user) steps the wall clock forward again
+  expect(h.clock.t).toBe(t0 + correctionAt);                                    // the wall clock is right again, correctionAt of real time into the hold
+  await expect(h.read()).rejects.toThrow(held);                                 // still held: GitHub's retry-after is still running in real time
+  expect(h.refreshes()).toHaveLength(1); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+  h.clock.t = t0 + holdMs - 1;
+  await expect(h.read()).rejects.toThrow(held); expect(h.refreshes()).toHaveLength(1);
+  h.clock.t = t0 + holdMs;                                                      // the hold has elapsed in real time
+  expect(await h.read()).toEqual({ status: 200, authenticated: true });
+  expect(h.refreshes()).toHaveLength(2); expect(h.service.status()).toEqual(SIGNED_IN);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(sent);
 });
 
 test.each([
@@ -981,19 +1011,19 @@ test('14. no ambient traffic: construct, open, reconcile, finishStartup, then te
 test.each([[301_000, 1], [299_000, 0]])('15. the local clock %i ms behind obtainedAt makes %i refreshes before use', async (behind, count) => {
   const h = await harness(); const next = markers(); await h.seed(markers(), { ageMs: 0 }); newPair(next);
   fake.always(RESOURCES, OK); fake.answer(ROUTES.token, tokenAnswer(next));
-  h.clock.t -= behind;
+  h.clock.step(-behind);
   expect(await h.read()).toEqual({ status: 200, authenticated: true });
   expect(h.refreshes()).toHaveLength(count);
   expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual([count ? 'newAccess' : 'oldAccess']);
 });
 
-test('15. the clock steps back a day while a hold is active: the hold restarts in the new time, neither cancelled nor stretched by the step; under it the token the clock calls valid goes out once per read, with no resends; once it ends the skew rule refreshes before use (6.8, U5-R11)', async () => {
+test('15. the clock steps back a day while a hold is active: the hold runs on for its own length, neither cancelled nor stretched by the step; under it the token the clock calls valid goes out once per read, with no resends; once it ends the skew rule refreshes before use (6.8, U5-R11, U5-R13)', async () => {
   const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
   fake.always(RESOURCES, request => request.authorizationMarker === 'oldAccess' ? UNAUTHORIZED : OK);   // GitHub refuses the expired token
   fake.answer(ROUTES.token, { status: 500, json: { message: 'down' } }, tokenAnswer(next));
   await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the failing refresh holds for 30 s
-  const t0 = h.clock.t - 86_400_000; h.clock.t = t0;                            // the local clock steps back a day: the hold was set in the future
-  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });    // seen here, the hold restarts now, for its own 30 s: not a day and 30 s, and not dropped
+  h.clock.step(-86_400_000); const t0 = h.clock.t;                              // the local clock steps back a day: the hold was set in the wall clock's future
+  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });    // the hold is 30 s of real time from when it was set: not a day and 30 s, and not dropped
   h.clock.t = t0 + 10_000;
   await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // inside the hold the clock calls the token valid (GS-4, the 6.8 known limit): one send, whose 401 refreshes nothing
   expect(h.refreshes()).toHaveLength(1); expect(h.clock.waits).toEqual([]); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
