@@ -463,6 +463,7 @@ export class GitHubSignIn implements GitHubCredential {
     const live = this.store.current();
     if (!live) throw new Error('GITHUB_SIGN_IN_REQUIRED');                     // cleared meanwhile: its waiters have left on accountChanged
     if (live.accessRef !== from.accessRef) return live;                        // rotated meanwhile: the waiter goes on with the current account; nothing is held or counted
+    if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;   // only consecutive identical answers count: before the kinds are dispatched, so a success resets it too (6.5, U5-R16)
     if (answer.kind === 'tokens') return this.adopt(answer.tokens, answer.receivedAt, from, g0);   // a tail call: this frame, which held the pair, ends (L-7)
     if (answer.kind === 'malformed') { await this.clearIf(from.accessRef); throw new Error('GITHUB_SIGN_IN_REQUIRED'); }   // GitHub issued a pair, so the old one is dead (E-02 l.36)
     if (answer.kind === 'error' && (answer.code === 'bad_refresh_token' || answer.code === 'unsupported_grant_type')) {   // any status (F-7(a), R2-5, DC-1)
@@ -471,7 +472,6 @@ export class GitHubSignIn implements GitHubCredential {
     if (answer.kind === 'error' && answer.code === 'incorrect_client_credentials') {   // E-01 l.256; DC-1
       await this.clearIf(from.accessRef, 'client-rejected'); throw new Error('GITHUB_SIGN_IN_REQUIRED');
     }
-    if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;   // only consecutive identical answers count
     switch (answer.kind) {
       case 'rate-limited':                                                       // R2-4, DC-12: at least transientHoldMs; the vault is kept
         this.setHold(Math.max(answer.waitMs, this.limits.transientHoldMs), 'GITHUB_RATE_LIMIT');

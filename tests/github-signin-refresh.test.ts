@@ -349,6 +349,29 @@ test('4. only consecutive identical answers count: one unknown code, a 500, then
   expect(h.store.current()).toBe(account); expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
 });
 
+test.each([
+  ['an unknown error code', errorAnswer('some_new_code', 200)],
+  ['a 401 with a JSON message (unusable, GS-2)', UNAUTHORIZED],
+])('4. (U5-R16) %s twice, then a successful refresh, then the same answer once: the count restarted at the success, so the account is held, not cleared (6.5 "Clearing the hold", L-12 "in a row")', async (_name, bad) => {
+  const h = await harness(); const next = markers(); await h.seed(markers(), { accessLeftMs: -60_000 }); newPair(next);
+  fake.always(RESOURCES, OK);
+  fake.answer(ROUTES.token, bad, bad, tokenAnswer(next), bad);
+  const t0 = h.clock.t;
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/); expect(h.refreshes()).toHaveLength(1);   // the answer once: a 30 s hold
+  h.clock.t = t0 + 30_000;
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/); expect(h.refreshes()).toHaveLength(2);   // twice in a row: a 60 s hold
+  h.clock.t = t0 + 90_000;
+  expect(await h.read()).toEqual({ status: 200, authenticated: true }); expect(h.refreshes()).toHaveLength(3);        // a successful refresh: the hold and the count are cleared
+  expect(h.service.status()).toEqual(SIGNED_IN);
+  const fresh = h.store.current()!;
+  h.clock.t = fresh.accessExpiresAt! + 1_000; expect(fresh.refreshExpiresAt).toBeGreaterThan(h.clock.t);   // the new token past expiry, its refresh token still valid
+  await expect(h.read()).rejects.toThrow(/^GITHUB_RENEWAL_UNAVAILABLE$/);      // the first identical answer after the success: the count is 1 again, so held and kept
+  expect(h.refreshes()).toHaveLength(4);
+  expect(h.service.status()).toEqual({ ...SIGNED_IN, renewalHeld: true });
+  expect(h.store.current()).toBe(fresh);
+  expect(fake.to(RESOURCE).map(request => request.authorizationMarker)).toEqual(['newAccess']);
+});
+
 const NO_CODE: Array<[string, boolean, FakeReply]> = [
   ['a 401 with a JSON message', true, UNAUTHORIZED],
   ['a 2xx without access_token', true, { json: { token_type: 'bearer', scope: '' } }],
