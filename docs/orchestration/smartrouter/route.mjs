@@ -962,7 +962,8 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     ['MaxNestingDepth', String(maxDepth)], ['Reservations', reservations],
     ['Calls', `${st.callsUsed} / ${st.callsLimit}`], ['Deadline', deadlineLine], ['Uncertainty', uncertainty.join('; ')]
   ].map(([k, v]) => `${`${k}:`.padEnd(19)}${v}`);
-  const walk = results.map((r) => `  ${r.id.padEnd(16)}${r.kind.padEnd(10)}${r.eligible ? `eligible, all-in ${usd(r._allIn)}` : `gate ${r['first-failing-gate']}: ${r.reason}`}`);
+  const idWidth = Math.max(16, ...results.map((r) => r.id.length + 1));   // a space after the longest id (P2-4)
+  const walk = results.map((r) => `  ${r.id.padEnd(idWidth)}${r.kind.padEnd(10)}${r.eligible ? `eligible, all-in ${usd(r._allIn)}` : `gate ${r['first-failing-gate']}: ${r.reason}`}`);
   let text = `${lines.join('\n')}\n${ADVISORY}\nGate walk (${route === 'blocked' ? 'first failing gate and reason per candidate' : 'per candidate'}):\n${walk.join('\n')}\n`;
   if (specSet) text += `SpeculativeSet:\n${JSON.stringify(specSet, null, 2)}\n`;
   if (brief) text += `Brief:\n${JSON.stringify(brief, null, 2)}\n`;

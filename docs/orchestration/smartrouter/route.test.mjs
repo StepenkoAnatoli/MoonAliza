@@ -1070,6 +1070,16 @@ function rateLimitInfo(at, { five = 0.2, seven = 0.05, fiveResetMs = 4 * HOUR, s
 }
 const usageCli = (trace, reading, now, policy = COMMITTED_POLICY_PATH) => cli(['usage', writeJson(reading), '--trace', trace, '--now', now, '--policy', policy]);
 const decideOn = (r, trace, policyPath = COMMITTED_POLICY_PATH) => decide(r, { traceDir: trace, policyPath });
+test('P2-4: the gate walk keeps a space between every profile id and its route kind, whatever the longest id is (cc-sonnet-medium is 16 characters)', () => {
+  const trace = tmp();
+  usageCli(trace, rateLimitInfo(NOW), NOW);
+  const d = decideOn(req({ taskId: 'gw-1' }), trace);
+  const walk = d.text.split('\n').filter((l) => /^ {2}cc-/.test(l));
+  assert.equal(walk.length, COMMITTED_POLICY.profiles.length, `walk lines: ${walk.length}`);   // one line per policy profile
+  for (const line of walk) assert.match(line, /^ {2}(\S+) +(direct|delegate) +\S/, line);
+  assert.match(d.text, /^ {2}cc-sonnet-medium +delegate +gate 2: /m);
+});
+
 // the committed block in a feature-off copy, mutated
 const usagePolicy = (mutate = () => {}) => policyWith((p) => { p['usage-windows'] = structuredClone(COMMITTED_POLICY['usage-windows']); mutate(p['usage-windows'], p); });
 
@@ -2021,7 +2031,7 @@ test('rate: calibration passes and fails never make a proposal; proposals stay o
     const nul = cli(['rate', '--trace', t, '--now', NOW, '--policy', LIVE_OFF_PATH]);
     assert.equal(nul.code, 4, `${obs}: ${nul.stderr}`);
     assert.match(nul.stderr, /calibration-1\/observations\.json: observation "haiku-low" is not an object/, obs);
-    assert.ok(!/TypeError|    at /.test(nul.stderr), nul.stderr);
+    assert.ok(!/TypeError| {4}at /.test(nul.stderr), nul.stderr);
     assert.equal(existsSync(join(t, 'qualification-stats.json')), false, obs);
   }
   // an observations.json that cannot be read (here a directory) is exit 4, not an EISDIR stack trace (P2-1)
@@ -2030,6 +2040,6 @@ test('rate: calibration passes and fails never make a proposal; proposals stay o
   const dir = cli(['rate', '--trace', td, '--now', NOW, '--policy', LIVE_OFF_PATH]);
   assert.equal(dir.code, 4, dir.stderr);
   assert.match(dir.stderr, /calibration-1\/observations\.json is unreadable/);
-  assert.ok(!/    at /.test(dir.stderr), dir.stderr);
+  assert.ok(!/ {4}at /.test(dir.stderr), dir.stderr);
   assert.equal(existsSync(join(td, 'qualification-stats.json')), false);
 });
