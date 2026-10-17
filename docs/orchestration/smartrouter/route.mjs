@@ -442,20 +442,24 @@ function fingerprintProblem(nowMs, pr) {
   return null;
 }
 
-function gate2(ctx, pr, id) {
+// the capability walk for one role: the work itself, or the required review (category 'review', its median, its tools)
+function capabilities(ctx, pr, id, { category, tokens, tools }) {
   // collect every capability reason, then fail once (run_gates in the fixture runner)
   const reasons = [];
   const fp = fingerprintProblem(ctx.nowMs, pr);
   if (fp) reasons.push(fp);
-  if (!pr['qualified-for'].includes(ctx.req.category)) reasons.push(`${id} not qualified for ${ctx.req.category}`);
-  const tools = ctx.requiredTools;
+  if (!pr['qualified-for'].includes(category)) reasons.push(`${id} not qualified for ${category}`);
   const missing = pr.tools === true ? [] : Array.isArray(pr.tools) ? tools.filter((t) => !pr.tools.includes(t)) : tools;
   if (missing.length) reasons.push(`required tools missing on ${id}: ${missing.join(', ')}`);
   if (ctx.req.needsVision && pr.vision !== true) reasons.push(`vision required, ${id} lacks it`);
   const h = pr['headroom-tested'];
   if (!isInt(h, 1)) reasons.push(`context headroom untested on ${id}`);
-  else if (!(ctx.tokens < h)) reasons.push(`context: ${ctx.tokens} tokens not below headroom-tested ${h} on ${id}`);
+  else if (!(tokens < h)) reasons.push(`context: ${tokens} tokens not below headroom-tested ${h} on ${id}`);
   return reasons.length ? reasons.join('; ') : null;
+}
+
+function gate2(ctx, pr, id) {
+  return capabilities(ctx, pr, id, { category: ctx.req.category, tokens: ctx.tokens, tools: ctx.requiredTools });
 }
 
 function gate3(ctx) {
@@ -463,7 +467,10 @@ function gate3(ctx) {
   const has = (name) => checks.some((c) => c.command.toLowerCase().includes(name.toLowerCase()) || c.expect.toLowerCase().includes(name.toLowerCase()));
   const missing = ctx.category.verification.filter((n) => !has(n));
   if (missing.length) return `verification prerequisite missing: ${missing.join(', ')} (blocked before start)`;
-  if (ctx.reviewName && !ctx.reviewer) return `verification prerequisite missing: no review-qualified profile with a fresh fingerprint for '${ctx.reviewName}' (blocked before start)`;
+  if (ctx.reviewName && !ctx.reviewer) {
+    const why = Object.entries(ctx.reviewWalk).map(([rid, r]) => `${rid}: ${r}`).join('; ') || 'no candidate other than the lead';
+    return `verification prerequisite missing: no candidate passes Gates 1-2 as reviewer for '${ctx.reviewName}' (${why}) (blocked before start)`;
+  }
   return null;
 }
 
@@ -531,15 +538,26 @@ function evaluate(ctx, id, kind) {
 
 const byEconomics = (a, b) => a._allIn - b._allIn || a._rate - b._rate || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-function reviewerFor(policy, nowMs, leadId) {
-  const rev = policy.categories.review;
-  if (!rev) return null;
-  const pool = policy.profiles
-    .filter((p) => p.id !== leadId && p['qualified-for'].includes('review') && outRate(policy, p) !== null)
-    .filter((p) => !fingerprintProblem(nowMs, p))
-    .sort((a, b) => outRate(policy, a) - outRate(policy, b) || (a.id < b.id ? -1 : 1));
-  if (!pool.length) return null;
-  return { id: pool[0].id, bound: (rev['median-tokens'] * outRate(policy, pool[0])) / 1e6 };
+// gates.md: the gates apply to every profile under consideration, the reviewer included. The required reviewer is
+// drawn from the request's candidates (never the lead-direct profile) and walked through Gate 1 and Gate 2 for the
+// review category, with headroom against the review median; an unpriced reviewer cannot bound the review.
+function reviewerFor(ctx, ids, leadId) {
+  const rev = ctx.policy.categories.review;
+  const walk = {};
+  const pool = [];
+  for (const id of ids) {
+    if (id === leadId) continue;
+    const pr = ctx.policy.profiles.find((p) => p.id === id);
+    if (!pr) continue;
+    const g1 = gate1(ctx, pr, id, 'delegate');
+    const g2 = g1 || !rev ? null : capabilities(ctx, pr, id, { category: 'review', tokens: rev['median-tokens'], tools: rev['required-tools'] });
+    const why = g1 ? `gate 1: ${g1}` : !rev ? 'gate 2: the policy has no review category' : g2 ? `gate 2: ${g2}` : outRate(ctx.policy, pr) === null ? `gate 4: unknown price for ${pr.model}` : null;
+    walk[id] = why;
+    if (!why) pool.push(pr);
+  }
+  pool.sort((a, b) => outRate(ctx.policy, a) - outRate(ctx.policy, b) || (a.id < b.id ? -1 : 1));
+  const reviewer = pool.length ? { id: pool[0].id, bound: (rev['median-tokens'] * outRate(ctx.policy, pool[0])) / 1e6 } : null;
+  return { reviewer, walk };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -565,9 +583,10 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     req, policy, category, st, nowMs, deadlineMs, deadlineIso, leadRate, reviewName,
     tokens: req.estimatedTokens ?? category?.['median-tokens'] ?? 0,
     requiredTools: req.requiredTools ?? category?.['required-tools'] ?? [],
-    reviewer: reviewName ? reviewerFor(policy, nowMs, leadId) : null
+    reviewer: null, reviewWalk: {}
   };
   const ids = req.candidates ?? policy.profiles.map((p) => p.id);
+  if (reviewName) ({ reviewer: ctx.reviewer, walk: ctx.reviewWalk } = reviewerFor(ctx, ids, leadId));
   const results = ids.map((id) => evaluate(ctx, id, id === leadId ? 'direct' : 'delegate'));
   // a profile walked as a delegate without joining the route choice (the pre-dispatch recheck of a host deviation)
   const probed = probe ? evaluate(ctx, probe, 'delegate') : null;
@@ -687,7 +706,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     'all-in-bound-usd': allIn, candidates: Object.fromEntries(results.map((r) => [r.id, strip(r)])),
     'eligible-ordered': eligible.map((r) => r.id), 'eligible-outside-candidates': outside, 'speculative-set': specSet, uncertainty,
     advisory: ADVISORY_TEXT, 'pending-proposals': pending, deadline: deadlineIso, 'deadline-capped': capped,
-    'review-profile': ctx.reviewer?.id ?? null, brief, 'brief-fingerprint': fingerprint, text,
+    'review-profile': ctx.reviewer?.id ?? null, 'review-candidates': ctx.reviewWalk, brief, 'brief-fingerprint': fingerprint, text,
     counters: counters(st), ...(probed ? { probe: strip(probed) } : {})
   };
 }

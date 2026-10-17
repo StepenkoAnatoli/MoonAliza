@@ -56,7 +56,7 @@ Request fields: `taskId`, `objective`, `category`, `unit`, `permittedEffects`, `
 `acceptanceChecks` ([{command, expect}]), `estimatedTokens` (default: the category median), `requiredTools`
 (default: the category's), `needsVision`, `dataClasses`, `projectStop` ({redSuite, gateOff, researchGateFailing}),
 `previousResult`, `deadline`, `now` (both ISO-8601; `now` is injected for determinism), `candidates` (default: every
-profile), `allowDirect` (default true), `hostOptIns`. Three optional additions are accepted: `uncertainty: "high"`
+profile; it also bounds who may review), `allowDirect` (default true), `hostOptIns`. Three optional additions are accepted: `uncertainty: "high"`
 (the only way to reach `speculative`, and only with the host opt-in) and `requiredIsolation` (a lower bound on the
 §6 lattice). Every command takes `--trace <dir>` and `--policy <file>`. `dispatch`, `outcome` and `rate` also take
 `--now <iso>`.
@@ -73,7 +73,7 @@ it, and the fix is to add the missing newline, which changes no record.
 |---|---|---|
 | Permissions, data classes, project stops | **enforced**: Gate 1 denies before anything else; a forbidden data class never reaches Gate 2 | `decide` |
 | Capability qualification and fingerprint freshness | **enforced**: declared `qualified-for`, `qualified-at`, `expires`, `headroom-tested`; equality with `expires` is expiry | `decide` |
-| Verification prerequisites | **enforced**: every category check must be named in `acceptanceChecks`; a required review needs a fresh review-qualified profile | `decide` |
+| Verification prerequisites | **enforced**: every category check must be named in `acceptanceChecks`; a required review needs a reviewer drawn from the request's `candidates` (never the lead-direct profile) that passes Gate 1 and Gate 2 for the `review` category, with headroom checked against the review median, and has a price. The decision file lists each would-be reviewer's first failing gate under `review-candidates` | `decide` |
 | Call slots (6 per task) | **enforced**: `used + 1 <= limit` in `decide` and again in `dispatch` | `decide`, `dispatch` |
 | Same-profile repairs (1 per task) | **enforced**: counted from the ledger by identity (harness, provider, model, effort, config); renaming a profile in the policy does not reset them | `decide`, `dispatch` |
 | Deadline | **enforced**: `now` strictly before; capped at 12 h from the task's first ledger event | `decide`, `dispatch` |

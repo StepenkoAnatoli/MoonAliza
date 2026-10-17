@@ -187,7 +187,7 @@ test('S10/S15c: a missing required verification check blocks at Gate 3 before st
   const noReviewer = loadPolicy(policyWith((p) => { for (const x of p.profiles) x['qualified-for'] = x['qualified-for'].filter((c) => c !== 'review'); }));
   const r = computeDecision(req({ category: 'build-core' }), noReviewer, []);
   assert.equal(r.route, 'blocked');
-  assert.match(r.candidates['cc-opus-high'].reason, /verification prerequisite missing: no review-qualified profile with a fresh fingerprint for 'refute-first review'/);
+  assert.match(r.candidates['cc-opus-high'].reason, /verification prerequisite missing: no candidate passes Gates 1-2 as reviewer for 'refute-first review'/);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -781,4 +781,34 @@ test('F7: an unpriced model is a deliberate Gate 4 reject in this host (no silen
   assert.equal(d.route, 'delegate');
   assert.equal(d.profile, 'cc-fable-high');
   assert.ok(d['all-in-bound-usd'] > 0);
+});
+
+test('F8: the required reviewer is drawn from the candidates and gate-walked (Gates 1-2 against the review median)', () => {
+  const policy = loadPolicy(POLICY_PATH);
+  // the host offered only cc-fable-high: the review is priced at cc-fable-high, not at a profile outside the list
+  const only = computeDecision(req({ category: 'fix', candidates: ['cc-fable-high'] }), policy, []);
+  assert.equal(only.route, 'delegate');
+  assert.equal(only['review-profile'], 'cc-fable-high');
+  assert.equal(only.candidates['cc-fable-high']['review-bound-usd'], 10.45);
+  assert.equal(only['all-in-bound-usd'], 21.1);
+  // a reviewer whose tested headroom is below the review median fails Gate 2 as a reviewer; the next one reviews
+  const tight = loadPolicy(policyWith((p) => { p.profiles.find((x) => x.id === 'cc-opus-high')['headroom-tested'] = 200000; }));
+  const t = computeDecision(req({ category: 'fix' }), tight, []);
+  assert.equal(t.profile, 'cc-opus-high'); // 193000 fix tokens still fit as the worker
+  assert.equal(t['review-profile'], 'cc-fable-high');
+  assert.match(t['review-candidates']['cc-opus-high'], /^gate 2: context: 209000 tokens not below headroom-tested 200000 on cc-opus-high/);
+  // no candidate can review: blocked at Gate 3 before start, naming why
+  const none = computeDecision(req({ category: 'fix', candidates: ['cc-opus-high'] }), loadPolicy(policyWith((p) => { p.profiles.find((x) => x.id === 'cc-opus-high')['qualified-for'] = ['fix']; })), []);
+  assert.equal(none.route, 'blocked');
+  assert.equal(none.candidates['cc-opus-high']['first-failing-gate'], 3);
+  assert.match(none.candidates['cc-opus-high'].reason, /verification prerequisite missing: no candidate passes Gates 1-2 as reviewer for 'fresh re-review' \(cc-opus-high: gate 2: .*cc-opus-high not qualified for review\)/);
+  // Gate 1 applies to the reviewer too: a delegated review needs worktree+branch even when the work itself is direct
+  const dirOnly = loadPolicy(policyWith((p) => {
+    p.isolation.capability = 'directory';
+    p.categories['docs-mechanical'].verification = ['review the diff'];
+  }));
+  const tiny = computeDecision(req({ category: 'docs-mechanical', estimatedTokens: 1000 }), dirOnly, []);
+  assert.equal(tiny.route, 'blocked');
+  assert.equal(tiny.candidates['cc-fable-xhigh']['first-failing-gate'], 3);
+  assert.match(tiny['review-candidates']['cc-opus-high'], /^gate 1: isolation worktree\+branch required; host provides at most directory/);
 });
