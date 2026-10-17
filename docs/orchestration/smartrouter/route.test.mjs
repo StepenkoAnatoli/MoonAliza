@@ -1984,4 +1984,21 @@ test('rate: calibration passes and fails never make a proposal; proposals stay o
   const bad = cli(['rate', '--trace', calibrationTrace(['{ not json']), '--now', NOW, '--policy', LIVE_OFF_PATH]);
   assert.equal(bad.code, 4, bad.stdout);
   assert.match(bad.stderr, /calibration-1\/observations\.json is unparseable/);
+  // parseable, but an observation that is not a plain object (null, a string, an array) is refused too, not a crash (P2-1)
+  for (const obs of ['{"haiku-low": null}', '{"haiku-low": "PASS"}', '{"haiku-low": []}']) {
+    const t = calibrationTrace([obs]);
+    const nul = cli(['rate', '--trace', t, '--now', NOW, '--policy', LIVE_OFF_PATH]);
+    assert.equal(nul.code, 4, `${obs}: ${nul.stderr}`);
+    assert.match(nul.stderr, /calibration-1\/observations\.json: observation "haiku-low" is not an object/, obs);
+    assert.ok(!/TypeError|    at /.test(nul.stderr), nul.stderr);
+    assert.equal(existsSync(join(t, 'qualification-stats.json')), false, obs);
+  }
+  // an observations.json that cannot be read (here a directory) is exit 4, not an EISDIR stack trace (P2-1)
+  const td = tmp();
+  mkdirSync(join(td, 'calibration-1', 'observations.json'), { recursive: true });
+  const dir = cli(['rate', '--trace', td, '--now', NOW, '--policy', LIVE_OFF_PATH]);
+  assert.equal(dir.code, 4, dir.stderr);
+  assert.match(dir.stderr, /calibration-1\/observations\.json is unreadable/);
+  assert.ok(!/    at /.test(dir.stderr), dir.stderr);
+  assert.equal(existsSync(join(td, 'qualification-stats.json')), false);
 });

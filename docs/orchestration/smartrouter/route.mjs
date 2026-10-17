@@ -1267,7 +1267,7 @@ function usageLearning(cfg, readings, records) {
 // (profile, category) apart from the outcomes. They never enter the ledger and never make a proposal: proposals stay
 // outcome-based, and qualification from calibration is the lead's, under the qualification rules (README).
 // The tasks and the categories they represent: the pin task is pin-tests (rule 4), the fix task fix, the review task review
-const CALIBRATION_TASKS = [['pin-tests', (o) => o.pin?.score], ['fix', (o) => o.fix?.score], ['review', (o) => o['review-grade']?.score]];
+const CALIBRATION_TASKS = [['pin-tests', (o) => o?.pin?.score], ['fix', (o) => o?.fix?.score], ['review', (o) => o?.['review-grade']?.score]];
 
 function calibrationEvidence(policy, traceDir) {
   if (!existsSync(traceDir)) return null;
@@ -1279,10 +1279,15 @@ function calibrationEvidence(policy, traceDir) {
   const seen = {};
   for (const run of dirs) {
     const path = join(traceDir, run, 'observations.json');
-    const bytes = readFileSync(path);
+    // a read error (a directory, no permission) refuses the run like an unparseable file: exit 4, never a stack trace (P2-1)
+    let bytes;
+    try { bytes = readFileSync(path); } catch (e) { throw new RouterError(4, `${run}/observations.json is unreadable (${e.code ?? e.message}); refusing to rate (${path})`); }
     let obs;
     try { obs = JSON.parse(bytes); } catch { throw new RouterError(4, `${run}/observations.json is unparseable; refusing to rate (${path})`); }
     if (!obs || typeof obs !== 'object' || Array.isArray(obs)) throw new RouterError(4, `${run}/observations.json is not an object of observations (${path})`);
+    for (const [key, o] of Object.entries(obs)) {
+      if (!o || typeof o !== 'object' || Array.isArray(o)) throw new RouterError(4, `${run}/observations.json: observation ${JSON.stringify(key)} is not an object; refusing to rate (${path})`);
+    }
     runs.push({ run, 'observations-sha256': sha256(bytes) });
     for (const [key, o] of Object.entries(obs)) {
       // an observation is a profile's model (any task's usage) at the effort its name ends in
