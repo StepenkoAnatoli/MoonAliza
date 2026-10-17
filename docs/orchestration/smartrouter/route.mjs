@@ -29,6 +29,7 @@ const OUTCOMES = ['accepted', 'verification-failed', 'partial', 'cost-overrun', 
 const KINDS = ['decision', 'dispatch', 'outcome', 'spend', 'escalation'];
 const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const FINGERPRINT = /^[0-9a-f]{64}$/;
+const TUPLE = /^\([^,()]+(, [^,()]+){5}\)$/;
 const EXPIRY_WARN_DAYS = 14;
 
 export class RouterError extends Error {
@@ -117,6 +118,11 @@ function validatePolicy(p) {
 
 function profileTuple(policy, pr) {
   return `(${pr.id}, ${policy.harness.id}, ${PROVIDER}, ${pr.model}, ${pr.effort}, ${pr.config})`;
+}
+// same-profile identity for repairs: the tuple without the host id, so a renamed profile with the same
+// harness, provider, model, effort and config is still the same profile (spec-v2 §11.9, brief-and-result.md)
+function sameKey(tuple) {
+  return typeof tuple === 'string' ? tuple.replace(/^\([^,]+, /, '(') : null;
 }
 function tupleId(tuple) {
   if (typeof tuple !== 'string') return null;
@@ -218,7 +224,8 @@ function validateRequest(r, policy) {
   if (r.previousResult !== null && r.previousResult !== undefined) {
     validateOutcome(r.previousResult);
     if (r.previousResult['task-id'] !== r.taskId) fail('previousResult.task-id differs from taskId');
-    if (!policy.profiles.some((p) => p.id === tupleId(r.previousResult['owner-profile']))) fail('previousResult.owner-profile is not a policy profile');
+    const owner = r.previousResult['owner-profile'];
+    if (!TUPLE.test(owner) && !policy.profiles.some((p) => p.id === owner)) fail('previousResult.owner-profile is neither a policy profile id nor an identity tuple');
   }
   if (isoMs(r.deadline) === null) fail('deadline must be ISO-8601');
   if (isoMs(r.now) === null) fail('now must be ISO-8601');
@@ -268,7 +275,7 @@ function taskState(records, taskId, policy) {
   const st = {
     records: recs, lastSeq: recs.length ? recs[recs.length - 1].seq : 0, callsUsed: 0, repairsUsed: 0,
     callsLimit: strict['calls-per-task'], repairsAllowed: strict['same-profile-repairs-per-task'],
-    dispatched: new Map(), startMs: null, latestMs: null, latestTs: null, lastDecision: null, lastOutcomeSeq: 0, fingerprints: new Set()
+    dispatched: new Map(), dispatchedKeys: new Map(), startMs: null, latestMs: null, latestTs: null, lastDecision: null, lastOutcomeSeq: 0, fingerprints: new Set()
   };
   for (const r of recs) {
     const ms = isoMs(r.ts);
@@ -279,9 +286,10 @@ function taskState(records, taskId, policy) {
     if (r.kind === 'outcome') st.lastOutcomeSeq = r.seq;
     if (r.kind === 'dispatch') {
       st.callsUsed += 1;
-      const id = tupleId(r.profile);
-      if (st.dispatched.has(id)) st.repairsUsed += 1;
-      st.dispatched.set(id, r);
+      const key = sameKey(r.profile);
+      if (st.dispatchedKeys.has(key)) st.repairsUsed += 1;
+      st.dispatchedKeys.set(key, r);
+      st.dispatched.set(tupleId(r.profile), r);
     }
   }
   return st;
@@ -454,15 +462,18 @@ function bounds(ctx, pr, kind) {
   return { work, review, overhead, allIn: work + review + overhead, rate };
 }
 
-function isRepair(ctx, id) {
-  const prev = ctx.req.previousResult;
-  return Boolean(prev && tupleId(prev['owner-profile']) === id) || ctx.st.dispatched.has(id);
+function isRepair(ctx, pr) {
+  const key = sameKey(profileTuple(ctx.policy, pr));
+  const owner = ctx.req.previousResult?.['owner-profile'];
+  const ownerPr = owner && ctx.policy.profiles.find((p) => p.id === owner);
+  const ownerKey = owner ? (TUPLE.test(owner) ? sameKey(owner) : ownerPr ? sameKey(profileTuple(ctx.policy, ownerPr)) : null) : null;
+  return ownerKey === key || ctx.st.dispatchedKeys.has(key);
 }
 
 function gate4(ctx, pr, id, kind, out) {
   const st = ctx.st;
   if (!(st.callsUsed + 1 <= st.callsLimit)) return `call slots exhausted: ${st.callsUsed} used + 1 > ${st.callsLimit} calls-per-task`;
-  if (isRepair(ctx, id) && !(st.repairsUsed + 1 <= st.repairsAllowed)) return `same-profile repairs exhausted: ${st.repairsUsed} used + 1 > ${st.repairsAllowed} allowed (R01-R03); a different profile needs a fresh decision`;
+  if (isRepair(ctx, pr) && !(st.repairsUsed + 1 <= st.repairsAllowed)) return `same-profile repairs exhausted: ${st.repairsUsed} used + 1 > ${st.repairsAllowed} allowed (R01-R03); a different profile needs a fresh decision`;
   if (!(ctx.nowMs < ctx.deadlineMs)) return `deadline expired: now ${ctx.req.now} not strictly before ${ctx.deadlineIso}`;
   const b = bounds(ctx, pr, kind);
   if (!b) return `unknown price for ${pr.model}: the bound cannot be computed (no silent zero)`;
@@ -598,7 +609,7 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
   let brief = null;
   let fingerprint = null;
   if (route === 'delegate' || route === 'speculative') {
-    const repair = isRepair(ctx, chosen.id) ? 1 : 0;
+    const repair = isRepair(ctx, pr) ? 1 : 0;
     const nonGoals = [...req.nonGoals];
     if (!nonGoals.some((g) => /nest|recursive/i.test(g))) nonGoals.push('no recursive delegation (nested-allowed: false)');
     brief = {
@@ -733,10 +744,11 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   if (!asDecided && !isStr(deviation)) throw refused(`decided ${decided.join(', ')}; dispatching ${profileId} is a host deviation: pass --deviation <reason> to record it`);
   if (!(isoMs(now) < isoMs(dec.deadline))) throw refused(`deadline ${dec.deadline} reached: now ${now} is not strictly before it`);
   if (!(st.callsUsed + 1 <= st.callsLimit)) throw refused(`call slots exhausted: ${st.callsUsed} used + 1 > ${st.callsLimit} calls-per-task`);
-  const prior = st.dispatched.get(profileId);
+  const key = sameKey(profileTuple(policy, pr));
+  const prior = st.dispatchedKeys.get(key);
   const repair = Boolean(prior);
   if (repair && !(st.repairsUsed + 1 <= st.repairsAllowed)) throw refused(`same-profile repairs exhausted for ${taskId}: ${st.repairsUsed} used + 1 > ${st.repairsAllowed} allowed (R01-R03)`);
-  if (repair && !st.records.some((r) => r.kind === 'outcome' && r.seq > prior.seq && tupleId(r.profile) === profileId)) {
+  if (repair && !st.records.some((r) => r.kind === 'outcome' && r.seq > prior.seq && sameKey(r.profile) === key)) {
     throw refused(`previous dispatch of ${profileId} (seq ${prior.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
   }
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;

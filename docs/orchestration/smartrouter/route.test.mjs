@@ -556,3 +556,22 @@ test('S08-shaped dispatch: with calls-per-task dispatches already recorded, disp
   assert.match(out.stderr, /call slots exhausted: 6 used \+ 1 > 6 calls-per-task/);
   assert.equal(readFileSync(join(trace, 'ledger.jsonl'), 'utf8'), before);
 });
+
+test('R01-R03 under a profile rename: the same model, effort and config under a new id is still the same profile', () => {
+  const trace = tmp();
+  const fixReq = (over) => req({ taskId: 'rn-1', category: 'fix', ...over });
+  const first = run(fixReq(), { traceDir: trace });
+  dispatch('rn-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const prev = outcome({ 'task-id': 'rn-1', 'original-brief-fingerprint': first.briefFingerprint });
+  recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const second = run(fixReq({ previousResult: prev }), { traceDir: trace });
+  dispatch('rn-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  recordOutcome({ ...prev, 'original-brief-fingerprint': second.briefFingerprint }, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const renamed = policyWith((p) => { p.profiles.find((x) => x.id === 'cc-opus-high').id = 'cc-opus-renamed'; });
+  const third = decide(fixReq({ previousResult: { ...prev, 'owner-profile': OPUS_TUPLE } }), { traceDir: trace, policyPath: renamed });
+  assert.equal(third.decision.candidates['cc-opus-renamed']['first-failing-gate'], 4);
+  assert.match(third.decision.candidates['cc-opus-renamed'].reason, /same-profile repairs exhausted/);
+  const out = cli(['dispatch', 'rn-1', 'cc-opus-renamed', '--trace', trace, '--policy', renamed, '--now', NOW, '--deviation', 'rename']);
+  assert.equal(out.code, 3);
+  assert.match(out.stderr, /same-profile repairs exhausted/);
+});
