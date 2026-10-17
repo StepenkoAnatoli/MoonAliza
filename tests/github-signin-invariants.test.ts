@@ -499,8 +499,11 @@ test('L-7, DC-9: oauth parse failures holding markers reject nothing and leave n
 /** S-1's static guard (spec 11). */
 const NEW_MODULES = ['src/main/github-account-store.ts', 'src/main/github-app.ts', 'src/main/github-credential.ts', 'src/main/github-oauth.ts', 'src/main/github-signin.ts'];
 const PANEL = 'src/renderer/GitHubAccountPanel.tsx';
+// Any destructuring from process (env among it, at any nesting) and any import or require of process itself (U7-R7), beside
+// process.env and process['env'];
+// writev(Sync) and a handle's writev() beside write(Sync).
 const moduleFindings = (source: string) => [...source.matchAll(
-  /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bcopyFile(?:Sync)?\b/g)].map(match => match[0]);
+  /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\}\s*=\s*process\b|(?:\bfrom\s*|\b(?:require|import)\s*\(\s*)['"](?:node:)?process['"]|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bwritev(?:Sync)?\(|\bcopyFile(?:Sync)?\b/g)].map(match => match[0]);
 const panelFindings = (source: string) => [...source.matchAll(/localStorage|sessionStorage|clipboard/g)].map(match => match[0]);
 
 test('S-1 static guard: the new src/main/github-*.ts modules have no console, process.env or direct file write, and the panel no web storage or clipboard', () => {
@@ -515,7 +518,11 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
   // atomicJson (the one write S-1 allows), are not findings.
   expect(moduleFindings(['console.info(x);', "console['log'](x);", 'const { log } = console;', 'const a = process.env.X;', "const b = process[ 'env' ].Y;",
     'await writeFile(p, b);', 'appendFileSync(p, b);', 'createWriteStream(p);', 'fs.writeSync(fd, b);', 'await fh.write(b);', 'await copyFile(p, q);',
-    'copyFileSync(p, q);', 'written = await this.write(account, retired);', 'private async write(account, retiredRefs) {', 'private write(a) {'].join(' ')))
-    .toEqual(['console', 'console', 'console', 'process.env', "process[ 'env", 'writeFile', 'appendFileSync', 'createWriteStream', 'writeSync(', 'write(', 'copyFile', 'copyFileSync']);
+    'copyFileSync(p, q);', 'written = await this.write(account, retired);', 'private async write(account, retiredRefs) {', 'private write(a) {',
+    // The destructured and imported env, any import of process, and the gathered writes (U7-R7).
+    'const { env } = process;', 'const { argv, env: e } = process;', 'const { env: { HOME } } = process;', "import { env } from 'node:process';", 'import * as p from "process";',
+    "const q = require('node:process');", "const r = await import('process');", 'fs.writevSync(fd, bufs);', 'await fh.writev(bufs);'].join(' ')))
+    .toEqual(['console', 'console', 'console', 'process.env', "process[ 'env", 'writeFile', 'appendFileSync', 'createWriteStream', 'writeSync(', 'write(', 'copyFile', 'copyFileSync',
+      '} = process', '} = process', '} = process', "from 'node:process'", 'from "process"', "require('node:process'", "import('process'", 'writevSync(', 'writev(']);
   expect(panelFindings('localStorage.setItem(); sessionStorage.x; navigator.clipboard.writeText(code);')).toEqual(['localStorage', 'sessionStorage', 'clipboard']);
 });
