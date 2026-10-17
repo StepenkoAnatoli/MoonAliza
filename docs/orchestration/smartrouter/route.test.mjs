@@ -1433,11 +1433,13 @@ test('rate: observed coefficients from consecutive readings and the outcome toke
   assert.deepEqual(r.stats.usage, {
     five_hour: {
       observed: [{ from: at(0), to: at(60), delta: 0.12, tokens: 400000, coefficient: 0.3 }],
-      'max-observed': 0.3, current: 0.24, skipped: { reset: 1, 'unknown-tokens': 1, 'zero-tokens': 1, 'negative-delta': 0 }
+      considered: 1, 'ratified-at': null,
+      'max-observed': 0.3, current: 0.24, skipped: { reset: 1, spanning: 0, 'unknown-tokens': 1, 'zero-tokens': 1, 'negative-delta': 0 }
     },
     seven_day: {
       observed: [{ from: at(0), to: at(60), delta: 0.03, tokens: 400000, coefficient: 0.075 }, { from: at(120), to: at(150), delta: 0.0015, tokens: 100000, coefficient: 0.015 }],
-      'max-observed': 0.075, current: 0.06, skipped: { reset: 0, 'unknown-tokens': 1, 'zero-tokens': 1, 'negative-delta': 0 }
+      considered: 2, 'ratified-at': null,
+      'max-observed': 0.075, current: 0.06, skipped: { reset: 0, spanning: 0, 'unknown-tokens': 1, 'zero-tokens': 1, 'negative-delta': 0 }
     }
   });
   assert.match(r.text, /^PROPOSAL usage-windows\.windows\.five_hour\.utilization-per-mtok: 0\.24 -> 0\.3 \(max observed exceeds the current by more than 10 %; upward at once\); not applied — the lead ratifies by editing host-policy\.json$/m);
@@ -1484,6 +1486,80 @@ test('rate: a lower coefficient is proposed only after three consecutive observa
   // 0.15, 0.18, 0.19: three consecutive below 0.216 -> propose the highest of the three (downward slowly)
   assert.deepEqual(seen[5].map((p) => [p.window, p.from, p.to, p.direction]), [['five_hour', 0.24, 0.19, 'down']]);
   assert.match(r.text, /^PROPOSAL usage-windows\.windows\.five_hour\.utilization-per-mtok: 0\.24 -> 0\.19 \(the last three observations are all below 90 % of the current; downward slowly\); not applied/m);
+});
+
+// the committed policy with its usage-windows block mutated, written to a tmp file
+function policyWithUsage(mutate) {
+  const p = JSON.parse(JSON.stringify(COMMITTED_POLICY));
+  mutate(p['usage-windows']);
+  const path = join(tmp(), 'host-policy.json');
+  writeFileSync(path, JSON.stringify(p, null, 2));
+  return path;
+}
+
+// a unit decided and dispatched at `start` (feature-off fixture) and closed at `end` with `tokens`
+function spanAt(trace, taskId, start, end, tokens) {
+  const d = run(req({ taskId, now: start }), { traceDir: trace });
+  dispatch(taskId, 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: start });
+  recordOutcome(withTokens({ 'task-id': taskId, outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }, tokens), { traceDir: trace, policyPath: POLICY_PATH, now: end });
+}
+
+test('SW-8: rate skips a pair of readings with a unit in flight at either end (its tokens cannot be split across the pairs it spans) and counts it as skipped.spanning', () => {
+  const trace = tmp();
+  readingAt(trace, at(0), 0.10, 0.05);
+  // a 500000-token unit runs from minute 10 to minute 50: in flight at the minute-30 reading, so neither
+  // pair around that reading says what its tokens cost; crediting all of them to (30, 60] would halve the rate
+  spanAt(trace, 'sp-1', at(10), at(50), 500000);
+  readingAt(trace, at(30), 0.16, 0.065);
+  readingAt(trace, at(60), 0.22, 0.08);
+  let r = rateOn(trace);
+  assert.deepEqual(r.stats.usage.five_hour.observed, []);
+  assert.equal(r.stats.usage.five_hour.skipped.spanning, 2);
+  assert.deepEqual(r.usageProposals, []);
+  // a unit that starts after one reading and closes before the next is a clean observation
+  spanAt(trace, 'sp-2', at(70), at(80), 500000);
+  readingAt(trace, at(90), 0.34, 0.11);
+  r = rateOn(trace);
+  assert.deepEqual(r.stats.usage.five_hour.observed.map((o) => [o.from, o.to, o.coefficient]), [[at(60), at(90), 0.24]]);
+  assert.equal(r.stats.usage.five_hour.skipped.spanning, 2);
+  // a unit still open (no outcome) at the latest reading keeps that pair out too
+  const d = run(req({ taskId: 'sp-3', now: at(100) }), { traceDir: trace });
+  dispatch('sp-3', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: at(100) });
+  readingAt(trace, at(120), 0.40, 0.125);
+  r = rateOn(trace);
+  assert.equal(r.stats.usage.five_hour.observed.length, 1);
+  assert.equal(r.stats.usage.five_hour.skipped.spanning, 3);
+  assert.ok(d.briefFingerprint);
+});
+
+test('SW-5: a window\'s ratified-at marks the last ratified coefficient; rate considers only observations after it, so a ratified downward proposal is not followed by an upward one from older history', () => {
+  const trace = tmp();
+  // five_hour coefficients per pair (0.5 Mtok each): 0.23, 0.15, 0.18, 0.19 -> a downward proposal to 0.19
+  const five = [0.1, 0.215, 0.29, 0.38, 0.475];
+  const seven = [0.05, 0.08, 0.11, 0.14, 0.17];
+  readingAt(trace, at(0), five[0], seven[0]);
+  for (let n = 1; n <= 4; n += 1) { unitAt(trace, `rf-${n}`, at(30 * n - 15), 500000); readingAt(trace, at(30 * n), five[n], seven[n]); }
+  const before = rateOn(trace);
+  assert.deepEqual(before.usageProposals.map((p) => [p.window, p.from, p.to, p.direction]), [['five_hour', 0.24, 0.19, 'down']]);
+  // the lead ratifies 0.19 at the time of the last reading; without the marker the all-history maximum (0.23)
+  // would propose going straight back up (the reviewer's flip-flop probe)
+  const ratified = policyWithUsage((u) => { u.windows.five_hour['utilization-per-mtok'] = 0.19; u.windows.five_hour['ratified-at'] = at(120); });
+  const after = rate({ traceDir: trace, policyPath: ratified, now: at(600) });
+  assert.deepEqual(after.usageProposals, []);
+  assert.equal(after.stats.usage.five_hour['ratified-at'], at(120));
+  assert.equal(after.stats.usage.five_hour.considered, 0);
+  assert.equal(after.stats.usage.five_hour.observed.length, 4);
+  // an observation after the marker counts again: 0.25 > 0.19 x 1.1 -> upward
+  unitAt(trace, 'rf-5', at(135), 500000);
+  readingAt(trace, at(150), five[4] + 0.125, seven[4] + 0.03);
+  const later = rate({ traceDir: trace, policyPath: ratified, now: at(600) });
+  assert.deepEqual(later.usageProposals.map((p) => [p.window, p.from, p.to, p.direction]), [['five_hour', 0.19, 0.25, 'up']]);
+  assert.equal(later.stats.usage.five_hour.considered, 1);
+  // a malformed marker is a policy error
+  const bad = policyWithUsage((u) => { u.windows.five_hour['ratified-at'] = 'yesterday'; });
+  const r = cli(['rate', '--trace', trace, '--policy', bad, '--now', at(600)]);
+  assert.equal(r.code, 2, r.stdout);
+  assert.match(r.stderr, /usage-windows\.windows\.five_hour\.ratified-at must be ISO-8601 when present/);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -1587,7 +1663,7 @@ test('SW-3: rate skips a pair whose utilization fell (counted as negative-delta)
     readingAt(trace, at(30 * n), five[n], seven[n]);
   }
   const r = rateOn(trace);
-  assert.deepEqual(r.stats.usage.five_hour, { observed: [], 'max-observed': null, current: 0.24, skipped: { reset: 0, 'unknown-tokens': 0, 'zero-tokens': 0, 'negative-delta': 3 } });
+  assert.deepEqual(r.stats.usage.five_hour, { observed: [], considered: 0, 'ratified-at': null, 'max-observed': null, current: 0.24, skipped: { reset: 0, spanning: 0, 'unknown-tokens': 0, 'zero-tokens': 0, 'negative-delta': 3 } });
   assert.deepEqual(r.stats.usage.seven_day.observed.map((o) => o.coefficient), [0.06, 0.06, 0.06]);
   assert.deepEqual(r.usageProposals, []);
   // an unchanged utilization is an observation of 0, and three of them never propose 0

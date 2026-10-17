@@ -141,6 +141,7 @@ function validateUsageWindows(u, fail) {
     if (!(isNum(w['stop-at']) && w['stop-at'] > 0 && w['stop-at'] <= 1)) fail(`${at}.stop-at must be in (0, 1]`);
     if (!(isNum(w['lead-reserve']) && w['lead-reserve'] >= 0 && w['lead-reserve'] < w['stop-at'])) fail(`${at}.lead-reserve must be in [0, stop-at) (lead-reserve ${w['lead-reserve']}, stop-at ${w['stop-at']})`);
     if (!(isNum(w['utilization-per-mtok']) && w['utilization-per-mtok'] > 0)) fail(`${at}.utilization-per-mtok must be a finite number > 0 (a window with no coefficient cannot be projected; declare one with its basis)`);
+    if (w['ratified-at'] !== undefined && w['ratified-at'] !== null && isoMs(w['ratified-at']) === null) fail(`${at}.ratified-at must be ISO-8601 when present (the time the current coefficient was ratified; rate considers only observations after it)`);
   }
 }
 
@@ -1195,17 +1196,24 @@ export function status(taskId, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT
 // downward only when the last three observations are all below 90 % of the current, to the highest of the three.
 function usageLearning(cfg, readings, records) {
   const outs = latestOutcomes(records).map((r) => ({ ms: isoMs(r.ts), tokens: isInt(r.tokens) ? r.tokens : null }));
+  // a unit's tokens are recorded whole at its outcome, so a pair of readings says what they cost only when
+  // no unit was in flight at either reading: a dispatch at or before the reading whose first outcome is
+  // absent or later than it (SW-8); such pairs are skipped and counted
+  const dispatches = records.filter((r) => r.kind === 'dispatch');
+  const firstOutcome = (d) => records.find((o) => o.kind === 'outcome' && o['task-id'] === d['task-id'] && o.seq > d.seq && o['dispatch-seq'] === d.seq);
+  const inFlightAt = (ms) => dispatches.some((d) => isoMs(d.ts) <= ms && (() => { const o = firstOutcome(d); return !o || isoMs(o.ts) > ms; })());
   const usage = {};
   const proposals = [];
   for (const [name, w] of Object.entries(cfg.windows)) {
     const observed = [];
-    const skipped = { reset: 0, 'unknown-tokens': 0, 'zero-tokens': 0, 'negative-delta': 0 };
+    const skipped = { reset: 0, spanning: 0, 'unknown-tokens': 0, 'zero-tokens': 0, 'negative-delta': 0 };
     for (let i = 1; i < readings.length; i += 1) {
       const a = readings[i - 1];
       const b = readings[i];
       const ra = a.windows[name];
       const rb = b.windows[name];
       if (!ra || !rb || ra['resets-at'] !== rb['resets-at'] || isoMs(ra['resets-at']) <= isoMs(b.ts)) { skipped.reset += 1; continue; }
+      if (inFlightAt(isoMs(a.ts)) || inFlightAt(isoMs(b.ts))) { skipped.spanning += 1; continue; }
       const inside = outs.filter((o) => o.ms > isoMs(a.ts) && o.ms <= isoMs(b.ts));
       if (inside.some((o) => o.tokens === null)) { skipped['unknown-tokens'] += 1; continue; }
       const tokens = inside.reduce((sum, o) => sum + o.tokens, 0);
@@ -1217,9 +1225,13 @@ function usageLearning(cfg, readings, records) {
       observed.push({ from: a.ts, to: b.ts, delta: round6(delta), tokens, coefficient: round6(delta / (tokens / 1e6)) });
     }
     const current = w['utilization-per-mtok'];
-    const max = observed.length ? Math.max(...observed.map((o) => o.coefficient)) : null;
-    usage[name] = { observed, 'max-observed': max, current, skipped };
-    const last = observed.slice(-3);
+    // only observations after the last ratification bear on the current coefficient: the all-history maximum
+    // would propose going straight back up after a ratified downward change (SW-5)
+    const ratMs = w['ratified-at'] ? isoMs(w['ratified-at']) : null;
+    const considered = ratMs === null ? observed : observed.filter((o) => isoMs(o.to) > ratMs);
+    const max = considered.length ? Math.max(...considered.map((o) => o.coefficient)) : null;
+    usage[name] = { observed, considered: considered.length, 'ratified-at': w['ratified-at'] ?? null, 'max-observed': max, current, skipped };
+    const last = considered.slice(-3);
     if (max !== null && max > current * 1.1) {
       proposals.push({ window: name, from: current, to: max, direction: 'up', reason: 'max observed exceeds the current by more than 10 %; upward at once' });
     } else if (last.length === 3 && last.every((o) => o.coefficient < current * 0.9) && Math.max(...last.map((o) => o.coefficient)) > 0) {
