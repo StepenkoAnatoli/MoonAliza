@@ -1,0 +1,138 @@
+{
+  "summary": "GitHub sign-in: U5 fix round 4 (U5-R16 S2 regression, U5-R17 S4) then a fresh scoped re-review",
+  "agentCount": 2,
+  "logs": [],
+  "result": {
+    "unit": "U5",
+    "round": 4,
+    "fix": {
+      "commits": [
+        "4151a25 fix(github-sign-in): U5-R16 - a successful refresh resets the consecutive-identical-answer count again, so one identical error after a success holds the account instead of clearing it (src/main/github-signin.ts, tests/github-signin-refresh.test.ts, docs/ARCHITECTURE.md; full five-part report, names 968852e as the commit that introduced the regression)",
+        "ff08f69 test(github-sign-in): U5-R17 - the device harness injects the same monotonic clock as the refresh harness, so a hold in that file runs on the injected clock, and 11c pins it (tests/github-signin.test.ts only; short-form report)",
+        "Both on branch build/gsi-u5 in /home/user/task5-handoff/wt/gsi-u5, after d87f796 (17 commits above base dae1c65); identity StepenkoAnatoli; attribution 'Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' plus the Claude-Session line as printed; no --no-verify; nothing pushed. This session found both commits already on the branch from the interrupted earlier run of this task (same session id) with the tree clean, oriented from the commits and the scratchpad proofs, re-proved every claim on HEAD rather than restarting, and re-ran every check and the full suite. Final sha256: src/main/github-signin.ts d56119d7209e49472684537386a84d4a48fdc6aad4771d940e0074899f067e4c, tests/github-signin.test.ts f6641b1eb5a525431c0739651e424439564654d68307e50dafa3c4284ed92dd1, tests/github-signin-refresh.test.ts 8d777defec60355e2d67d634098ea2450aba9fb4cc62e9c90d2b80d1386ade29."
+      ],
+      "perFinding": [
+        {
+          "id": "U5-R16",
+          "done": "Judged right and fixed in 4151a25 (S2, red-first). The one line `if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;` moved in renew() from after the two clearing error branches (old :474) to directly after the live-account check (:465) and before `if (answer.kind === 'tokens') return this.adopt(...)`, the spec's 6.5 order, so a successful refresh resets the count again, while a late answer about another account still resets nothing (U5-R10/R12). adopt() unchanged; the adopt() alternative was set aside in the commit's Why (observably the same, the 6.5 form reads as the spec line). Pin: a test.each of the reviewer's two P-C rows under refresh test 4 (errorAnswer('some_new_code', 200) and the 401 JSON-message UNAUTHORIZED answer): bad, bad, tokens, bad; reads at t0 (held, 1 refresh), t0+30 s (held, 2), t0+90 s (200 signed in, 3, status SIGNED_IN with renewalHeld false), then at the new token's accessExpiresAt + 1 s with refreshExpiresAt still ahead: GITHUB_RENEWAL_UNAVAILABLE, 4 refreshes, renewalHeld true, store.current() the same object, one resource request with the new access marker. Red on the unfixed service (src at d87f796, sha256 98e5c121...b7e7): ran 2, red 2, both 'expected [Function] to throw error matching /^GITHUB_RENEWAL_UNAVAILABLE$/ but got GITHUB_SIGN_IN_REQUIRED' (the P-C outcome); green with the move. Guard proof M16-del (the moved line deleted, whole refresh file): ran 91, red 3: the two U5-R16 rows and the existing '4. only consecutive identical answers count: one unknown code, a 500, then the same code twice keeps the account' pin at :338, all with the same message, so both pins now carry the rule; that :338 pin was green on the unfixed HEAD only because its 500 separator reached the reset's old position. The commit report says 968852e (U5-R10) introduced the regression by hoisting the tokens branch above the reset, and R11-R14 kept that order. docs/ARCHITECTURE.md U5 line extended on its one physical line (U5-R16 clause). Nothing owed to As built beyond the 6.5 note already owed for R12/R14."
+        },
+        {
+          "id": "U5-R17",
+          "done": "Judged right; tests only, ff08f69 (S4). Chose the clock, not the comment: the device Clock in tests/github-signin.test.ts gets the refresh Clock's model (U5-R13): a `monotonic` reading (`t` less a skew only step(ms) moves), `step()`, and the harness passes `monotonic: clock.monotonic`. The old sleep hook that the name `step` held (test 6: a forward jump of an hour during a wait, a clock running backwards) is renamed `advance`, and a sleep now passes its wait of real time on the monotonic reading while the wall clock moves by advance(ms), so test 6's two cases model wall-clock steps during a wait, as their titles say. Why the clock rather than the comment: the harm the finding names is a future device test that steps past a hold and is wrong silently; a comment stops no test from being written, while the injection plus a pin makes the harness's clock contract fail loudly if the injection is ever dropped, and the two U5 harnesses model one clock for one dependency. Pin 11c (U5-R17): expired token, a 500 (30 s hold), a read at +29 999 ms on the injected clock held with no request, one at +30 000 ms refreshes and reads 200 with the new token, renewalHeld false, 2 token requests. Mutation M17-noinject (the `monotonic:` injection removed from the harness, whole device file): ran 57, red 1, exactly 11c, 'Error: GITHUB_RENEWAL_UNAVAILABLE' at the 30 000 ms read (the hold ran on real time), the other 56 green, so no existing device case depends on what the injection changed (consistent with the finding's reading of 11b). No src change."
+        }
+      ],
+      "proofs": [
+        "U5-R16 red-first (verified, re-run this session on HEAD): `git checkout d87f796 -- src/main/github-signin.ts` (sha256 98e5c121...b7e7), then `TMPDIR=<private> npx vitest run tests/github-signin-refresh.test.ts -t U5-R16 --reporter=json`: ran 2, passed 0, red 2, both 'Error: expected [Function] to throw error matching /^GITHUB_RENEWAL_UNAVAILABLE$/ but got 'GITHUB_SIGN_IN_REQUIRED''; restored with `git checkout HEAD -- src/main/github-signin.ts`, sha256 d56119d7...e4c. JSON: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5fix4/rerun/r16-red.json (the earlier run's copy at ../r16-red.json, same result).",
+        "U5-R16 guard removal M16-del (verified, re-run this session): the moved reset line deleted from src/main/github-signin.ts on HEAD, `npx vitest run tests/github-signin-refresh.test.ts --reporter=json`: ran 91, passed 88, red 3 = '4. only consecutive identical answers count: one unknown code, a 500, then the same code twice keeps the account (DC-1, 6.5)' and the two '4. (U5-R16) ...' rows, all 'expected ... /^GITHUB_RENEWAL_UNAVAILABLE$/ but got GITHUB_SIGN_IN_REQUIRED'; file restored, sha256 d56119d7...e4c before and after. JSON: .../u5fix4/rerun/m16.json.",
+        "U5-R17 pin mutation M17-noinject (verified, re-run this session): `monotonic: clock.monotonic,` removed from the device harness, `npx vitest run tests/github-signin.test.ts --reporter=json`: ran 57, passed 56, red 1 = '11c. (U5-R17) a hold in this file runs on the injected clock ...', 'Error: GITHUB_RENEWAL_UNAVAILABLE'; file restored, sha256 f6641b1e...2dd1 before and after. JSON: .../u5fix4/rerun/m17.json.",
+        "Green on HEAD (verified): tests/github-signin-refresh.test.ts 91/91 and tests/github-signin.test.ts 57/57 with TMPDIR private (.../u5fix4/rerun/chk-github-signin-refresh.json, chk-github-signin.json). The earlier run's artifacts from the interrupted session (.../u5fix4/proofs.json, results.json, proof-summary.json, r16-red.json, r16-green-*.json, r17-green.json) show the same numbers."
+      ],
+      "checks": [
+        "NODE_OPTIONS=--max-old-space-size=2048 npm run typecheck: exit 0, no output beyond the tsc line (verified; .../u5fix4/rerun/tc.log)",
+        "npm run lint (eslint src tests scripts): exit 0, no findings (verified; rerun/lint.log)",
+        "npx eslint e2e: exit 0, empty output (verified; rerun/eslint-e2e.log)",
+        "tests/github-signin.test.ts alone, TMPDIR private: 57/57 (verified; rerun/chk-github-signin.json)",
+        "tests/github-signin-refresh.test.ts alone, TMPDIR private: 91/91 (verified; rerun/chk-github-signin-refresh.json)",
+        "tests/github-token-literals.test.ts: 2/2 (verified); tests/github-app-constants.test.ts: 4/4 (verified)",
+        "git status after every proof: clean apart from the untracked node_modules and .build symlinks (verified)",
+        "Node v24.21.0 via PATH=/versions/node/v24.21.0/bin (verified)"
+      ],
+      "fullSuite": "Verified, run this session on HEAD ff08f69 with TMPDIR private: `npx vitest run --reporter=json --outputFile=/tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5fix4/rerun/full.json` (vitest exit 1, as the 74 baseline failures make it), then `python3 -I .../scratchpad/compare.py <json> /home/user/task5-handoff/wt/gsi-u5`: numTotalTests 2138, passed 2058, failed 74, pending 6; failed in baseline 74 of 74; new failures: []; baseline names not failing: []; files without results: []; skipped 6 (the Windows-only guarded-fs, research-purge and research-review-native cases). The interrupted session's own run (.../u5fix4/full.json, compare.log, 2026-10-15 14:49) shows the identical totals.",
+      "mistakes": [
+        "Nothing to report for the code or the tests. Process note: this task's earlier run (same session) made both commits and ran every check and the full suite but was cut off before returning the report; this session oriented from the branch and the scratchpad artifacts, re-proved the red-first, both mutations, every check and the full suite on HEAD instead of redoing the commits, and reports the re-run results above as verified."
+      ],
+      "notes": [
+        "Nothing in the design or the frozen contracts judged wrong; no stop. Spec text owed to the lead: the 6.5 note already owed for R12/R14 (a hold timed on the monotonic clock; renew's order with the sameError reset before the kinds are dispatched, as 6.5's pseudo-code already says, so no new As built entry for R16).",
+        "The device harness change renames the sleep hook `step` to `advance` (test 6 only uses it); `step(ms)` is now the wall-clock step, the same name and meaning as in the refresh harness. Reviewers reading test 6 should note `advance`, not `step`, is the per-sleep hook.",
+        "The user's relayed request (Gate 2 fingerprints, smartrouter, 'build moonaliza') was not part of this unit's step; this subagent did only the assigned U5 fix round 4 and leaves routing to the lead.",
+        "Worktree /home/user/task5-handoff/wt/gsi-u5, branch build/gsi-u5, HEAD ff08f69, clean, nothing pushed. Proof artifacts: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5fix4/ (earlier run) and .../u5fix4/rerun/ (this session)."
+      ]
+    },
+    "review": {
+      "verdict": "ACCEPT",
+      "findings": [
+        {
+          "id": "U5-R18",
+          "severity": "S4",
+          "problem": "The round-4 commit (4151a25) claims a property no test pins: that the moved reset sits AFTER renew()'s live-account check, 'so a late answer about another account still resets nothing (U5-R10, U5-R12)'. Hoisting the reset above the live check keeps both U5 files green, so the ordering is carried by the comment alone. The shipped order is right (and the stricter reading of R10's 'counts nothing against the current account'; a misplaced reset could only lower a count, never clear wrongly, and commitPoint resets sameError at the commit anyway, so the window is the old refresh's 20 s timeout with two identical errors on the new account inside it). No behaviour ships wrong; this is a nit for a later tests-only commit, not a fix round.",
+          "evidence": "Mutation M16-above in a private copy of HEAD (/tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5rev5/wt-m16b/src/main/github-signin.ts): the line `if (answer.kind !== 'error' && answer.kind !== 'unusable') this.sameError = null;` moved from after `if (live.accessRef !== from.accessRef) return live;` (HEAD :465) to before `const live = this.store.current();` (:462) (diff `462a463 / 466d466`). `npx vitest run tests/github-signin-refresh.test.ts tests/github-signin.test.ts --reporter=json`: ran 148, passed 148, failed 0 (JSON: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5rev5/out/m16b.json). The existing test 13 pins ('a refresh of the old account that answers after the re-sign-in commits (a 500) holds nothing against the new account', and the U5-R12 row) assert the hold and the status, not sameError, so a 500 (transient, which resets) landing late cannot be told from one that does not reset.",
+          "fix": "Tests only, no src change, at the lead's discretion: one pin under refresh test 13 that gives the NEW account one identical refresh error (an unknown code at 200) before the old account's late answer (a 500, or tokens) lands after the re-sign-in commit, then the same code twice more at the hold boundaries: on HEAD the third identical answer clears (GITHUB_SIGN_IN_REQUIRED, ended sign-in-ended), with the reset hoisted above the live check it stays held (GITHUB_RENEWAL_UNAVAILABLE). Record M16-above as its guard proof. Alternatively, drop the 'resets nothing' clause from the comment at src/main/github-signin.ts:466 and leave R10's 'holds nothing and counts nothing' as the only claim."
+        }
+      ],
+      "checked": [
+        "Brief read first: /home/user/task5-handoff/wt/gsi-u5/docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md; the review3 record result.rounds[1] (R13-R15 fix, R16-R17 re-review) read from /home/user/task5-handoff/wt/gsi-build/docs/orchestration/2026-10-13-github-sign-in/reports/wave2-u5-review3.json; spec sections 2.4 L-12, 6.4 and 6.5 (renew pseudo-code, sameOrFail, failed, 'Clearing the hold') read from docs/specification/github-sign-in.md.",
+        "Worktree untouched: /home/user/task5-handoff/wt/gsi-u5 at ff08f69 (17 commits above base dae1c65), git status clean apart from the untracked node_modules and .build symlinks; sha256 before and after every proof: src/main/github-signin.ts d56119d7209e49472684537386a84d4a48fdc6aad4771d940e0074899f067e4c, tests/github-signin.test.ts f6641b1eb5a525431c0739651e424439564654d68307e50dafa3c4284ed92dd1, tests/github-signin-refresh.test.ts 8d777defec60355e2d67d634098ea2450aba9fb4cc62e9c90d2b80d1386ade29 (all match the fixer's report). All proofs ran in private copies under /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5rev5/ (git archive of ff08f69, node_modules and .build symlinked to /home/user/moonaliza), each with its own TMPDIR, PATH=/versions/node/v24.21.0/bin.",
+        "U5-R16 red-first re-run (verified): wt-red with `git show d87f796:src/main/github-signin.ts` as the service (sha256 98e5c12118f9e7e543705d95ddae8e5ac8b43c14bd4a6ef2e3e7b0057cc0b7e7), `npx vitest run tests/github-signin-refresh.test.ts -t U5-R16 --reporter=json`: ran 2, passed 0, failed 2, both 'Error: expected [Function] to throw error matching /^GITHUB_RENEWAL_UNAVAILABLE$/ but got 'GITHUB_SIGN_IN_REQUIRED'' (out/r16-red.json). Green on HEAD copy: 91/91.",
+        "U5-R16 guard-removal M16-del re-run (verified): wt-m16 with the moved reset line deleted (diff `466d465`), whole refresh file: ran 91, passed 88, failed 3 = '4. only consecutive identical answers count: one unknown code, a 500, then the same code twice keeps the account (DC-1, 6.5)' and the two '4. (U5-R16) ...' rows, all with the red-first message (out/m16.json). Matches the fixer's M16-del.",
+        "U5-R17 harness-clock mutation M17-noinject re-run (verified): wt-m17 with `monotonic: clock.monotonic,` removed from the device harness (diff at :150), whole device file: ran 57, passed 56, failed 1 = '11c. (U5-R17) a hold in this file runs on the injected clock ...', 'Error: GITHUB_RENEWAL_UNAVAILABLE at GitHubSignIn.usable (...github-signin.ts:380:28)' (out/m17.json). Matches the fixer's M17-noinject; the other 56 device cases depend on nothing the injection changed.",
+        "Device harness Clock after ff08f69 read in full (tests/github-signin.test.ts:63-90): monotonic = t - skew, step(ms) moves t and skew together, slept(ms) advances monotonic by exactly the wait while the wall clock moves by advance(ms); test 6's two cases (an hour's forward jump, a clock running backwards) now use `advance`, and the poll loop reads only now()/sleep, so their behaviour is unchanged; typecheck exit 0 confirms no leftover assignment to the old `step` hook.",
+        "Round-4 src diff reviewed in place (src/main/github-signin.ts:458-533): the reset is after `if (!live) throw` and `if (live.accessRef !== from.accessRef) return live` and before the tokens tail call, the spec 6.5 order; the only kinds that newly reach the reset are `tokens` and `malformed`; `malformed` clears the account; a `tokens` answer whose adopt() admit fails (next === null) can only be a sign-in commit or a sign-out, each of which resets sameError itself (commitPoint :310, signOut :186), and a ReplaceFailure clears via clearIf (X-9), so the reset-on-answer and reset-on-admitted-persist forms are observably the same, as the commit's Why says; `rate-limited` and `transient` reset as before; `unusable` 3xx neither resets nor counts, as the spec line reads; adopt() still resets only hold and failures (freshRejects kept, GS-1); sameOrFail/failed unchanged; the hold check in usable() step 4/6 and the 401 rule's L-13 check unchanged. No regression found in the late-answer rule (U5-R10/R12), the hold reset, or L-12.",
+        "Regression attribution verified: `git show 8e3ce77:src/main/github-signin.ts` has the reset at :441 before `case 'tokens'` at :462; `git show 968852e:src/main/github-signin.ts` has `if (answer.kind === 'tokens') return this.adopt(...)` at :445 above the reset at :458, so 968852e (U5-R10) introduced it, as the commit report states.",
+        "Commits: 4151a25 stages src/main/github-signin.ts, tests/github-signin-refresh.test.ts and docs/ARCHITECTURE.md (the U5 line still one physical line, extended with the U5-R16 clause), full five-part report; ff08f69 is tests-only (tests/github-signin.test.ts), short-form report; both carry the Co-Authored-By and Claude-Session lines; the round-4 diff (d87f796..HEAD, 4 files, all U5-owned, U0 untouched) holds no token-shaped literal and no client_secret (grep: none).",
+        "Checks on the HEAD copy (verified): `NODE_OPTIONS=--max-old-space-size=2048 npm run typecheck` exit 0 (out/tc.log), `npm run lint` (eslint src tests scripts) exit 0 (out/lint.log); `npx vitest run` of tests/github-signin-refresh.test.ts 91/91, tests/github-signin.test.ts 57/57, tests/github-token-literals.test.ts 2/2, tests/github-app-constants.test.ts 4/4 (out/head.json, exit 0).",
+        "The fixer's full-suite comparison read (not re-run): /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad/u5fix4/rerun/full.json, started 2026-10-17 18:25 UTC, rooted at /home/user/task5-handoff/wt/gsi-u5, contains the HEAD-only names (11c (U5-R17) present, 2 U5-R16 rows), refresh 91/91 and device 57/57; numTotalTests 2138, passed 2058, failed 74, pending 6; compare.log against /home/user/task5-handoff/baseline-failing.json (74 names): failed in baseline 74 of 74, new failures [], baseline names not failing [], files without results [], skipped the 6 Windows-only cases; vitest exit 1 from the baseline failures only; rerun/tc.log and lint.log clean. Totals are +3 tests over round 3 (2135), consistent with the three pins added.",
+        "Extra refute probe M16-above (the reset hoisted above the live-account check) in wt-m16b: refresh + device 148/148 green (out/m16b.json), reported as U5-R18 (S4), not blocking.",
+        "Nothing modified in the worktree; nothing committed or pushed."
+      ]
+    },
+    "final": "ACCEPT"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Fix"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Re-review"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "fix4:U5",
+      "phaseIndex": 1,
+      "phaseTitle": "Fix",
+      "agentId": "a58b09600ba6dd9c3",
+      "model": "claude-fable-5-1",
+      "state": "done",
+      "startedAt": 1792261308778,
+      "queuedAt": 1792261308720,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Verified, run this session on HEAD ff08f69 with TMPDIR priv…",
+      "promptPreview": "You are the builder of GitHub sign-in unit U5 (the lifecycle service), fix round 4. Worktree /home/user/task5-handoff/wt/gsi-u5 (branch build/gsi-u5); work only there; never push. Read /home/user/task5-handoff/wt/gsi-u5/docs/orchestration/2026-10-13-github-sign-in/briefs/common.md and docs/orchestration/2026-10-13-github-sign-in/briefs/u5-builder.md first. The commit attribution line is `Co-Author…",
+      "promptFramed": true,
+      "lastProgressAt": 1792262347866,
+      "tokens": 133006,
+      "toolCalls": 22,
+      "durationMs": 1039086,
+      "resultPreview": "{\"commits\":[\"4151a25 fix(github-sign-in): U5-R16 - a successful refresh resets the consecutive-identical-answer count again, so one identical error after a success holds the account instead of clearing it (src/main/github-signin.ts, tests/github-signin-refresh.test.ts, docs/ARCHITECTURE.md; full five-part report, names 968852e as the commit that introduced the regression)\",\"ff08f69 test(github-sig…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "rereview4:U5",
+      "phaseIndex": 2,
+      "phaseTitle": "Re-review",
+      "agentId": "a810398f07b3a8e20",
+      "model": "claude-fable-5-1",
+      "state": "done",
+      "startedAt": 1792262350200,
+      "queuedAt": 1792262350163,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "ACCEPT",
+      "promptPreview": "You are a fresh refute-first reviewer of GitHub sign-in unit U5 after fix round 4. Read /home/user/task5-handoff/wt/gsi-u5/docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md first. Context: unit U5 (the lifecycle service, src/main/github-signin.ts with tests/github-signin.test.ts and tests/github-signin-refresh.test.ts) was built and fixed in three rounds on branch build/gsi-u5 (…",
+      "promptFramed": true,
+      "lastProgressAt": 1792262693904,
+      "tokens": 173604,
+      "toolCalls": 24,
+      "durationMs": 343702,
+      "resultPreview": "{\"verdict\":\"ACCEPT\",\"findings\":[{\"id\":\"U5-R18\",\"severity\":\"S4\",\"problem\":\"The round-4 commit (4151a25) claims a property no test pins: that the moved reset sits AFTER renew()'s live-account check, 'so a late answer about another account still resets nothing (U5-R10, U5-R12)'. Hoisting the reset above the live check keeps both U5 files green, so the ordering is carried by the comment alone. The shi…"
+    }
+  ],
+  "totalTokens": 306610,
+  "totalToolCalls": 46
+}
