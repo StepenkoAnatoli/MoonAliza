@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
-import { appendFileSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
@@ -150,8 +150,10 @@ afterEach(async () => {
   for (const { root, service, store } of opened.splice(0)) { service.cancel(); await service.close(); store.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-/** Builds the stack, runs the journey and returns everything it saw. */
-async function journey() {
+/** Builds the stack, runs the journey and returns everything it saw. `pendingPlant`: the mutation test's plant for the pending window
+ *  (U7-R5), written in clear to a file under userData as the device-code poll goes out and removed when its answer is back, so it
+ *  is gone before the commit point and before any checkpoint snapshot. */
+async function journey(options: { pendingPlant?: string } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-github-invariants-'));
   const vaultDir = join(root, 'vault'); const accountFile = join(root, 'github', 'account.json'); const database = join(root, 'state.sqlite');
   const vault = new Vault(vaultDir, cryptor); await vault.initialize('epoch-1');
@@ -194,11 +196,21 @@ async function journey() {
   });
 
   const routed = fetcherFor(fake);
+  const pendingFile = join(root, 'github', 'account.json.pending.json');
+  let pendingPlanted = false;
+  // Every GitHub request also snapshots every file under userData (U7-R5): a device code exists only while the poll is out, and a
+  // token is live only around its requests, so the checkpoints alone, all after the commit point, would miss a file that is written
+  // in clear and removed again inside such a window. Bound to snapshot() once that is defined.
+  let snapshotAt: (label: string) => void = () => {};
   const fetcher: Fetcher = (url, init) => {
     // While a request carries a token, the token is live: process.env and argv must not hold it now either.
     const values = [...Object.values(process.env), ...process.argv, ...process.execArgv].join('\n');
     for (const [name, value] of Object.entries(secrets)) if (values.includes(value)) envDuringRequests.push(name);
-    return routed(url, init);
+    const poll = options.pendingPlant !== undefined && !pendingPlanted && url.includes(ROUTES.token);
+    if (poll) { pendingPlanted = true; mkdirSync(join(root, 'github'), { recursive: true }); writeFileSync(pendingFile, JSON.stringify({ deviceCode: options.pendingPlant })); }
+    snapshotAt('request');
+    const answer = routed(url, init);
+    return poll ? answer.finally(() => rm(pendingFile, { force: true })) : answer;
   };
   const service = new GitHubSignIn({ store: accountStore, vault, epoch: () => 'epoch-1', encryptionAvailable: () => true, fetcher,
     config: { clientId: CLIENT, installUrl: INSTALL }, now: clock.now, monotonic: clock.monotonic, sleep: clock.sleep,
@@ -245,8 +257,15 @@ async function journey() {
     return entry.isDirectory() ? filesUnder(path) : entry.isFile() ? [path] : [];
   });
   const snapshot = (label: string) => {
-    for (const file of filesUnder(root)) captured.push({ target: targetOf(file), label: `${label}: ${relative(root, file).split(sep).join('/')}`, bytes: readFileSync(file) });
+    for (const file of filesUnder(root)) {
+      // A request's snapshot can run while an atomic write's rename is in flight: a file gone between the listing and the read is
+      // no longer on disk, so it is skipped rather than failing the run.
+      let bytes: Buffer;
+      try { bytes = readFileSync(file); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
+      captured.push({ target: targetOf(file), label: `${label}: ${relative(root, file).split(sep).join('/')}`, bytes });
+    }
   };
+  snapshotAt = snapshot;
   const status = () => handle('github.account.read', () => ({ account: service.status() }));
 
   // 1. Sign in (6.1-6.3): the code, one poll, the commit point, GET /user.
@@ -367,7 +386,8 @@ test('T-6: through sign-in, a read, an expiry refresh, a 401 refresh, a parse fa
 });
 
 test('T-6 mutation: each scan turns red when a marker is written where it scans', async () => {
-  const j = await journey();
+  const pendingPlant = markers().device;   // device-code shaped (U7-R5)
+  const j = await journey({ pendingPlant });
   expect(scan(j.all(), j.secrets)).toEqual(none());
   const plant = () => 'ghu_' + randomBytes(24).toString('hex');
   const planted: Record<Target, string> = Object.fromEntries(TARGETS.map(target => [target, plant()])) as Record<Target, string>;
@@ -414,6 +434,10 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
     expect(scan([{ target: 'vault directory', label: 'encoded', bytes: Buffer.from(text, 'latin1') }], { plant: planted['vault directory'] })['vault directory'], `${encoding} at ${shift}`)
       .toContain(`plant in encoded (${encoding})`);
   }
+  // The pending window (U7-R5): a device code in clear on disk only while the poll is out, removed before the commit point, is found
+  // by the snapshot each request takes, though no checkpoint snapshot ever sees the file.
+  expect(scan(j.captured, { pending: pendingPlant })['other userData files']).toContain('pending in request: github/account.json.pending.json (UTF-8)');
+  expect(j.captured.filter(item => item.label.endsWith('account.json.pending.json')).map(item => item.label)).toEqual(['request: github/account.json.pending.json']);
   // File targets are scanned per file, the WAL apart from the database (pre-mortem 2).
   for (const target of FILE_TARGETS) expect(j.all().some(item => item.target === target && item.label.startsWith('planted'))).toBe(true);
   // The journey's own markers are still absent: the plants are what turned each scan red.
