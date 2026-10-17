@@ -786,6 +786,8 @@ function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now
     // a deviation is allowed only to a profile that passes Gates 1-4 on the same request (spec-v2 §11.2, §11.10, §12)
     const p = again.probe;
     if (!p.eligible) throw refused(`pre-dispatch recheck refused deviation ${profileId} (decision seq ${dec.seq}): gate ${p['first-failing-gate']}: ${p.reason}; a host deviation must still pass Gates 1-4 (spec-v2 §11.2)`);
+    // the deviating worker is handed the decided Brief too (README step 2), so it is bound the same way (R3-1)
+    assertBriefUnchanged(stored, again, dec);
     return;
   }
   const c = again.candidates[profileId];
@@ -799,8 +801,12 @@ function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now
   if (!choice.includes(profileId)) {
     throw refused(`pre-dispatch recheck: the route changed since decision seq ${dec.seq} (now ${again.route}${again.profile ? ` ${again.profile}` : ''}); decide again`);
   }
-  // gates.md binding item 3: the worker is handed the decided Brief, so its allowance (calls, deadline, attempts,
-  // cash) must still be what the current policy, ledger and clock give; a changed Brief invalidates the route
+  assertBriefUnchanged(stored, again, dec);
+}
+
+// gates.md binding item 3: the worker is handed the decided Brief, so its allowance (calls, deadline, attempts,
+// cash) must still be what the current policy, ledger and clock give; a changed Brief invalidates the route
+function assertBriefUnchanged(stored, again, dec) {
   if (again['brief-fingerprint'] !== stored['brief-fingerprint']) {
     const changed = Object.keys({ ...stored.brief, ...again.brief }).sort()
       .filter((k) => canonicalJson(stored.brief?.[k] ?? null) !== canonicalJson(again.brief?.[k] ?? null));
@@ -848,6 +854,17 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   const prior = st.dispatchedKeys.get(key);
   const repair = Boolean(prior);
   if (repair && !(st.repairsUsed + 1 <= st.repairsAllowed)) throw refused(`same-profile repairs exhausted for ${taskId}: ${st.repairsUsed} used + 1 > ${st.repairsAllowed} allowed (R01-R03)`);
+  // the decided Brief's attempts assume the decided profile's repair status; a deviation that would be a repair
+  // under a Brief decided for a fresh profile (or the reverse) hands the worker the wrong attempts (R3-1)
+  if (!asDecided) {
+    const decidedRepair = decided.some((id) => { const dp = policy.profiles.find((p) => p.id === id); return dp ? st.dispatchedKeys.has(sameKey(profileTuple(policy, dp))) : false; });
+    if (repair !== decidedRepair) {
+      const attempts = st.repairsAllowed - st.repairsUsed - (decidedRepair ? 1 : 0);
+      throw refused(repair
+        ? `deviation to ${profileId} would be a same-profile repair under a Brief decided for a fresh profile (attempts ${attempts}); decide again with ${profileId} among the candidates`
+        : `deviation to ${profileId} would be a fresh dispatch under a Brief decided for a same-profile repair (attempts ${attempts}); decide again with ${profileId} among the candidates`);
+    }
+  }
   // reconcile first (SKILL.md 'Hard prohibitions', spec-v2 §7 and §12): any earlier dispatch of the task, of any
   // profile, whose acceptance is unknown (no later outcome naming its dispatch-seq) holds every further dispatch;
   // the one exception is the other members of the same speculative decision, which run side by side by design
@@ -860,7 +877,7 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   return appendRecord(traceDir, {
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),
     counters: counters(st, st.callsUsed + 1, st.repairsUsed + (repair ? 1 : 0)), deadline: dec.deadline,
-    'brief-fingerprint': asDecided ? dec['brief-fingerprint'] : null, detail, 'outcome-ref': null,
+    'brief-fingerprint': dec['brief-fingerprint'], detail, 'outcome-ref': null,
     'decision-seq': dec.seq, repair, deviation: !asDecided
   });
 }

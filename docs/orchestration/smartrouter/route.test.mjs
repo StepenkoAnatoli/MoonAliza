@@ -972,6 +972,41 @@ test('N5: a deviation to the lead-direct profile is refused; the lead works dire
   assert.equal(readFileSync(ledger, 'utf8'), before);
 });
 
+test('R3-1: a host deviation is held to the decided Brief too: a changed allowance refuses it, and a deviation whose repair status differs from the decided profile\'s is refused', () => {
+  // (A) the re-review's probe: calls-per-task lowered between decide and a deviation dispatch on a delegate route
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  const d = run(req({ taskId: 'dv-1', category: 'fix' }), { traceDir: trace });
+  assert.equal(d.decision.profile, 'cc-opus-high');
+  assert.equal(d.brief.allowance.calls, 6);
+  const before = readFileSync(ledger, 'utf8');
+  const three = policyWith((p) => { p.accounting.strict['calls-per-task'] = 3; });
+  const r = cli(['dispatch', 'dv-1', 'cc-fable-high', '--deviation', 'second opinion', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', three, '--now', NOW]);
+  assert.equal(r.code, 3, r.stdout);
+  assert.match(r.stderr, /pre-dispatch recheck: the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // unchanged inputs: the deviation goes through, and its record carries the decided Brief's fingerprint - the one
+  // Brief the worker is handed (README step 2), which recordOutcome will look for
+  const ok = dispatch('dv-1', 'cc-fable-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'second opinion' });
+  assert.equal(ok['brief-fingerprint'], d.briefFingerprint);
+  // (B) the decided Brief assumed a fresh profile (attempts 1); a deviation back to the profile that already failed
+  // would be a same-profile repair under that Brief, so it is refused: a fresh decision must list the profile
+  const t2 = tmp();
+  const l2 = join(t2, 'ledger.jsonl');
+  const first = run(req({ taskId: 'dv-2', candidates: ['cc-fable-high'] }), { traceDir: t2 });
+  assert.equal(first.decision.profile, 'cc-fable-high');
+  dispatch('dv-2', 'cc-fable-high', { projectStop: CLEAR, traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  const failed = outcome({ 'task-id': 'dv-2', 'owner-profile': 'cc-fable-high', 'original-brief-fingerprint': first.briefFingerprint });
+  recordOutcome(failed, { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  const second = run(req({ taskId: 'dv-2', previousResult: failed }), { traceDir: t2 });
+  assert.equal(second.decision.profile, 'cc-opus-high');
+  assert.equal(second.brief.attempts, 1);
+  const b2 = readFileSync(l2, 'utf8');
+  assert.throws(() => dispatch('dv-2', 'cc-fable-high', { projectStop: CLEAR, traceDir: t2, policyPath: POLICY_PATH, now: NOW, deviation: 'retry the same profile' }),
+    (e) => e instanceof RouterError && e.code === 3 && /deviation to cc-fable-high would be a same-profile repair under a Brief decided for a fresh profile \(attempts 1\); decide again with cc-fable-high among the candidates/.test(e.message));
+  assert.equal(readFileSync(l2, 'utf8'), b2);
+});
+
 test('N6: a request that declares no data class is invalid (exit 2) and is never routed', () => {
   // the review's probe: dataClasses [] used to pass Gate 1 and route to cc-opus-high
   assert.throws(() => computeDecision(req({ dataClasses: [] }), loadPolicy(POLICY_PATH), []),
