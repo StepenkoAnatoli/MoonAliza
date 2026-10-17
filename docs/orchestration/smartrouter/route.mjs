@@ -744,7 +744,8 @@ export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TR
   const record = appendRecord(traceDir, {
     'task-id': req.taskId, seq, kind: 'decision', ts: req.now, profile: d['profile-tuple'], counters: ctr,
     deadline: d.deadline, 'brief-fingerprint': fp, detail: `route ${d.route}`,
-    'outcome-ref': null, ...(d['speculative-set'] ? { 'speculative-profiles': d['speculative-set'].candidates.map((c) => c.profile) } : {})
+    'outcome-ref': null,
+    ...(d['speculative-set'] ? { 'speculative-profiles': d['speculative-set'].candidates.map((c) => c.profile), 'speculative-calls': d['speculative-set']['shared-budget'].calls } : {})
   });
   return { route: d.route, text, decision: d, brief, briefFingerprint: fp, decisionPath, record };
 }
@@ -809,6 +810,13 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   if (route === 'delegate' && after.length) throw refused(`decision seq ${dec.seq} for ${taskId} was already dispatched (seq ${after[0].seq}); decide again`);
   if (after.some((r) => tupleId(r.profile) === profileId)) throw refused(`decision seq ${dec.seq} already dispatched ${profileId}`);
   const asDecided = decided.includes(profileId);
+  if (route === 'speculative') {
+    // spec-v2 §8.4: the shared budget is a hard ceiling across the entire set; a record without the ceiling
+    // (written before it was stored) is held to the set's size, which is what the adapter emits as calls
+    const ceiling = isInt(dec['speculative-calls'], 1) ? dec['speculative-calls'] : decided.length;
+    if (after.length >= ceiling) throw refused(`speculative set of decision seq ${dec.seq} has used its shared budget: ${after.length} of ${ceiling} calls dispatched; the shared budget is a hard ceiling across the set (spec-v2 §8.4); decide again`);
+    if (!asDecided) throw refused(`decision seq ${dec.seq} is speculative: dispatching ${profileId} outside its set (${decided.join(', ')}) is refused; a speculative route admits no host deviation (its shared budget is a hard ceiling, spec-v2 §8.4); decide again`);
+  }
   if (!asDecided && !isStr(deviation)) throw refused(`decided ${decided.join(', ')}; dispatching ${profileId} is a host deviation: pass --deviation <reason> to record it`);
   if (!(isoMs(now) < isoMs(dec.deadline))) throw refused(`deadline ${dec.deadline} reached: now ${now} is not strictly before it`);
   if (!(st.callsUsed + 1 <= st.callsLimit)) throw refused(`call slots exhausted: ${st.callsUsed} used + 1 > ${st.callsLimit} calls-per-task`);

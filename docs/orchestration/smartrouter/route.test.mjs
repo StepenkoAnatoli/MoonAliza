@@ -812,3 +812,48 @@ test('F8: the required reviewer is drawn from the candidates and gate-walked (Ga
   assert.equal(tiny.candidates['cc-fable-xhigh']['first-failing-gate'], 3);
   assert.match(tiny['review-candidates']['cc-opus-high'], /^gate 1: isolation worktree\+branch required; host provides at most directory/);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Fix round 2 (N1-N6)
+// ---------------------------------------------------------------------------------------------
+// a policy copy in which cc-sonnet-high is qualified for review, so a speculative review set is
+// [cc-sonnet-high, cc-opus-high] and cc-fable-high is an eligible profile outside the set
+const sonnetReviewPolicy = () => policyWith((p) => {
+  Object.assign(p.profiles.find((x) => x.id === 'cc-sonnet-high'), { 'qualified-for': ['review'], 'qualified-at': '2026-10-17', expires: '2027-01-15', 'context-tested': 1000000, 'headroom-tested': 352000 });
+});
+
+test('N1: a speculative set is capped at its shared-budget calls, and a speculative route admits no host deviation', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  const pol = sonnetReviewPolicy();
+  const d = decide(req({ taskId: 'sc-1', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: trace, policyPath: pol });
+  assert.equal(d.route, 'speculative');
+  assert.deepEqual(d.decision['speculative-set'].candidates.map((c) => c.profile), ['cc-sonnet-high', 'cc-opus-high']);
+  assert.equal(d.record['speculative-calls'], 2); // the set's hard ceiling travels with the decision record
+  // (a) a deviation outside the set is refused before any member is dispatched, with or without --deviation
+  let before = readFileSync(ledger, 'utf8');
+  const dev = cli(['dispatch', 'sc-1', 'cc-fable-high', '--trace', trace, '--policy', pol, '--now', NOW, '--deviation', 'a third opinion']);
+  assert.equal(dev.code, 3, dev.stdout);
+  assert.match(dev.stderr, /decision seq 1 is speculative: dispatching cc-fable-high outside its set \(cc-sonnet-high, cc-opus-high\) is refused; a speculative route admits no host deviation/);
+  const bare = cli(['dispatch', 'sc-1', 'cc-fable-high', '--trace', trace, '--policy', pol, '--now', NOW]);
+  assert.equal(bare.code, 3, bare.stdout);
+  assert.match(bare.stderr, /a speculative route admits no host deviation/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // (b) both members dispatch as decided
+  assert.equal(dispatch('sc-1', 'cc-sonnet-high', { traceDir: trace, policyPath: pol, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+  assert.equal(dispatch('sc-1', 'cc-opus-high', { traceDir: trace, policyPath: pol, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+  // (c) the set has spent its shared budget: a third dispatch is refused at the ceiling
+  before = readFileSync(ledger, 'utf8');
+  const third = cli(['dispatch', 'sc-1', 'cc-fable-high', '--trace', trace, '--policy', pol, '--now', NOW, '--deviation', 'a third opinion']);
+  assert.equal(third.code, 3, third.stdout);
+  assert.match(third.stderr, /speculative set of decision seq 1 has used its shared budget: 2 of 2 calls dispatched; the shared budget is a hard ceiling across the set \(spec-v2 §8\.4\); decide again/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // (d) the review finding's probe on host-policy-1: the lead profile as a third member is refused too
+  const t2 = tmp();
+  decide(req({ taskId: 'sc-2', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: t2, policyPath: POLICY_PATH });
+  dispatch('sc-2', 'cc-opus-high', { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  dispatch('sc-2', 'cc-fable-high', { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  const lead = cli(['dispatch', 'sc-2', 'cc-fable-xhigh', '--trace', t2, '--now', NOW, '--deviation', 'one more']);
+  assert.equal(lead.code, 3, lead.stdout);
+  assert.deepEqual(readLedger(t2).map((r) => r.kind), ['decision', 'dispatch', 'dispatch']);
+});

@@ -40,7 +40,9 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    another profile since the decision refuses the dispatch, and the lead decides again. Dispatching any other
    profile than the decided one is a host deviation: it needs `--deviation "<reason>"`, the ledger marks it, and it
    is allowed only to a profile that passes Gates 1-4 on the same request. An unqualified profile, or one with no
-   capability fingerprint, is refused even as a deviation (spec-v2 §11.2, §11.10, §12).
+   capability fingerprint, is refused even as a deviation (spec-v2 §11.2, §11.10, §12). A `speculative` decision
+   admits no deviation at all: only the members of its set are dispatched, and at most its `shared-budget.calls`
+   of them (a hard ceiling, spec-v2 §8.4).
 4. **Launch** the sub-agent in its own worktree and branch (`build/<unit-slug>`, the host convention; the Brief's
    `branch-hint`).
 5. **Record the outcome** when the unit ends, from observed evidence, never from the agent's self-report:
@@ -82,6 +84,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
 | Speculative and nested delegation | **off**: speculative needs the opt-in plus `uncertainty: "high"`; a nested opt-in is refused with a note, because this host cannot produce or enforce a NestedBrief (§14) | `decide` |
+| Speculative shared budget | **enforced** when opted in: the decision record stores the set's `shared-budget.calls` as `speculative-calls`; `dispatch` refuses once the decision has that many dispatches, and refuses any profile outside the set, `--deviation` or not (spec-v2 §8.4) | `decide`, `dispatch` |
 | Counters across task-id renames | **the lead's duty**: the adapter keys every counter by `taskId`, so a renamed task would start from zero. Never rename a task to get slots back (spec-v2 §11.9) | lead |
 
 ## Qualification table
