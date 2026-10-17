@@ -772,3 +772,13 @@ test('F6 Brief attempts: the first decision allows one repair, the repair decisi
   assert.equal(repair.decision.profile, 'cc-opus-high');
   assert.equal(repair.brief.attempts, 0);
 });
+
+test('F7: an unpriced model is a deliberate Gate 4 reject in this host (no silent zero, no unranked bound); the route moves to the next priced candidate', () => {
+  const unpriced = loadPolicy(policyWith((p) => { delete p.prices[OPUS.model]; }));
+  const d = computeDecision(req({ category: 'fix' }), unpriced, []);
+  assert.equal(d.candidates['cc-opus-high']['first-failing-gate'], 4);
+  assert.equal(d.candidates['cc-opus-high'].reason, `unknown price for ${OPUS.model}: the bound cannot be computed (no silent zero)`);
+  assert.equal(d.route, 'delegate');
+  assert.equal(d.profile, 'cc-fable-high');
+  assert.ok(d['all-in-bound-usd'] > 0);
+});

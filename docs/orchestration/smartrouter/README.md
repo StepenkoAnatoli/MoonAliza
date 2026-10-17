@@ -80,6 +80,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy and `now`; the decided profile must still be eligible and still the route's choice (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
+| Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
 | Speculative and nested delegation | **off**: speculative needs the opt-in plus `uncertainty: "high"`; a nested opt-in is refused with a note, because this host cannot produce or enforce a NestedBrief (§14) | `decide` |
 | Counters across task-id renames | **the lead's duty**: the adapter keys every counter by `taskId`, so a renamed task would start from zero. Never rename a task to get slots back (spec-v2 §11.9) | lead |
 
@@ -244,3 +245,14 @@ Every point where the spec was ambiguous or did not fit a subscription host. Cit
     enforced. So a host cannot route the first runs that would produce the evidence. The builder brief asked for a
     "qualification run" deviation; the adapter refuses it (review finding F3). Upstream could define a
     qualification mode, for example shadow runs whose output is never merged, with its own ledger kind.
+15. **Unknown price without a strict cap.** gates.md Gate 4 says "Unknown or unbounded fees block a strict cap".
+    The fixture runner checks price and accounting only under `if ctx.strict_cap is not None`. spec-v2 §12 reads
+    "No dispatch on unknown permissions, identity, destination, capability, price or accounting under a strict
+    cap", which can be read either way. This host has no strict cash cap, so the fixtures would let an unpriced
+    profile through. The adapter still rejects it at Gate 4, as a deliberate host choice: Gate 5 ranks candidates
+    by their all-in bound, and an unknown bound can neither be ranked honestly nor reported in Reservations. The
+    other option, eligible but ranked after every priced candidate with 'unpriced' in Uncertainty, was set aside.
+    It never matters while every profile is priced, and it would let a profile be chosen on a bound nobody can
+    state. Every profile in host-policy-1 is priced. `validatePolicy` requires a price only for the lead-direct
+    profile, so the reject is what keeps an unpriced profile out of routing. Upstream could say whether an unknown
+    price blocks only a strict cap.
