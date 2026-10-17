@@ -1,0 +1,61 @@
+{
+  "_comment": "derived by route.mjs rate from ledger.jsonl and the decision files; regenerated on every run, never hand-edited",
+  "ledger-sha256": "c380d84c704c9771496122c9b9316d2dec9a83cc9d8dceb08348deb3b94cf86e",
+  "outcome-records": 7,
+  "outcomes-counted": 7,
+  "policy-revision": "host-policy-1",
+  "proposals": [
+    {
+      "category": "fix",
+      "kind": "demote",
+      "profile": "cc-opus-high",
+      "reason": "2 consecutive verification-failed (sr-host-fix1, sr-host-fix2)"
+    }
+  ],
+  "stats": {
+    "cc-fable-high": {
+      "review": {
+        "accepted": 1,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 1,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      }
+    },
+    "cc-opus-high": {
+      "build-ui": {
+        "accepted": 0,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 1
+      },
+      "fix": {
+        "accepted": 0,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 2
+      },
+      "review": {
+        "accepted": 3,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      }
+    }
+  }
+}
