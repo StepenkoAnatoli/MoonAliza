@@ -123,3 +123,35 @@ No change to the five gates' order or to any existing reason text; no cash cap; 
 reading fabricated (the tests use synthetic readings and say so); no edit to `ledger.jsonl` or
 `decisions/` by hand. Stop and report (do not guess) if the Outcome or LedgerRecord shape would need a
 non-additive change, or if a base test cannot stay green without changing its expectations.
+
+## Lead's rulings after the first attempt (2026-10-17, review W-1..W-5)
+
+The first builder stopped correctly on the stop trigger: the brief contradicted itself. Rulings, which amend
+A, C and H above:
+
+- **W-2 → R1(b), ratified.** The three golden tests compare `uncertainty` after dropping every line that
+  starts with `usage windows:`. The hand-walked decisions predate the feature and are never hand-edited;
+  the filter is the one expectation change, and it is the lead's. Everything else in the goldens
+  (route, profile, bounds, candidates, walkthrough) stays an exact comparison.
+- **W-3 → R1(a), ratified.** The base tests run against a feature-off fixture: the committed policy with
+  `usage-windows` deleted, written to a tmp file by the test harness; `cli()` passes `--policy <fixture>`
+  unless the call already passes one; no base assertion changes. Two compensating tests on the committed
+  policy (block present): (i) a fresh tmp trace with no reading → `decide` on the stored request
+  `hand-gsi-u6-build.json` is `blocked`, every candidate's first failing gate 4 with reason
+  `usage reading missing` (the fail-closed default on the real policy); (ii) the same request after
+  `route.mjs usage` with a synthetic fresh reading (five_hour 0.20 resetting in 4 h, seven_day 0.05
+  resetting in 6 d, both relative to `--now`) → `delegate` on `cc-opus-high` with the decision's `usage`
+  block filled and `projected` below `stop-at - lead-reserve` for both windows.
+- **W-4 → the brief's lines stand.** The two trailer lines are the session's attribution and are used on
+  every commit of this build whichever model ran the sub-agent; the dispatching model is recorded in the
+  ledger and RUN.md, not in the trailer.
+- **W-5 → base = the adapter's head after its review**, named in the relaunch prompt (the branch
+  `build/sr-windows` is recreated from that head and this brief commit is carried over). Read the adapter's
+  review-round commits (`git log 958fce3..HEAD`) before building: reason texts or helpers may have moved.
+- **Design notes ratified:** (1) the decision LedgerRecord carries the additive field `usage-tokens` (the
+  token count Gate 4 projected for the chosen profile) and the decision file carries the `usage` block, so
+  `dispatch` re-checks against the decided count; (2) the outcome record's additive `tokens` as in E;
+  (3) `rate` pairs readings by `ts`, outcomes by their record `ts` in `(ts1, ts2]`.
+
+With these rulings the stop trigger "a base test cannot stay green without changing its expectations" is
+satisfied by the ratified filter alone; any other expectation change still stops the unit.
