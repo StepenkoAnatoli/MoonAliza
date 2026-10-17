@@ -275,7 +275,7 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 0,
-        "spanning": 1,
+        "spanning": 2,
         "unknown-tokens": 0,
         "zero-tokens": 0
       }
@@ -289,12 +289,12 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 0,
-        "spanning": 1,
+        "spanning": 2,
         "unknown-tokens": 0,
         "zero-tokens": 0
       }
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "cf07f6a3a3f425e92f6ca5f88b9fa9c9310b4d97171c8b56c76db42c88c2e55b"
+  "usage-sha256": "6563d15fb08ef33539ba23305434ce78b277b69f88cbe5230c21493af7ec37c1"
 }
