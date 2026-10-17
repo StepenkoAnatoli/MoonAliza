@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
 import Database from 'better-sqlite3';
@@ -74,11 +74,14 @@ class Clock {
   readonly sleep = (ms: number): Promise<void> => { this.t += ms; return Promise.resolve(); };
 }
 
-/** The ten places S-1 names that a test can observe (spec "Tests the builders owe", the scan). */
-const TARGETS = ['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm', 'account file', 'vault directory', 'IPC results and DTOs',
-  'engine messages and events', 'infer messages', 'tool output', 'process.env'] as const;
+/** The places S-1 names that a test can observe (spec "Tests the builders owe", the scan): the ten it lists, plus every other file
+ *  under userData, since S-1 also forbids "any file in clear" and the guard allows atomicJson to any path (U7-R1). */
+const TARGETS = ['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm', 'account file', 'vault directory', 'other userData files',
+  'IPC results and DTOs', 'engine messages and events', 'infer messages', 'tool output', 'process.env'] as const;
 type Target = (typeof TARGETS)[number];
-const FILE_TARGETS = new Set<Target>(['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm', 'account file', 'vault directory']);
+const FILE_TARGETS = new Set<Target>(['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm', 'account file', 'vault directory', 'other userData files']);
+/** Targets the journey need not fill: the journey writes no file beyond the named ones, so this one is shown by its plant alone. */
+const OPTIONAL_TARGETS = new Set<Target>(['other userData files']);
 interface Captured { target: Target; label: string; bytes: Buffer }
 
 /** Every marker's hits in the captured bytes, as UTF-8 and as UTF-16LE (e2e/anthropic.spec.ts:98-110). */
@@ -208,11 +211,15 @@ async function journey() {
     ipc.push({ method, result: value });
     return value;
   };
+  // Every file under userData (root), walked recursively, so a clear token in any file is found, not only in the named ones (U7-R1).
+  const named = new Map<string, Target>([[database, 'state.sqlite'], [`${database}-wal`, 'state.sqlite-wal'], [`${database}-shm`, 'state.sqlite-shm'], [accountFile, 'account file']]);
+  const targetOf = (file: string): Target => named.get(file) ?? (file.startsWith(vaultDir + sep) ? 'vault directory' : 'other userData files');
+  const filesUnder = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? filesUnder(path) : entry.isFile() ? [path] : [];
+  });
   const snapshot = (label: string) => {
-    for (const [target, file] of [['state.sqlite', database], ['state.sqlite-wal', `${database}-wal`], ['state.sqlite-shm', `${database}-shm`], ['account file', accountFile]] as const) {
-      if (existsSync(file)) captured.push({ target, label: `${label}: ${file.slice(root.length + 1)}`, bytes: readFileSync(file) });
-    }
-    for (const name of existsSync(vaultDir) ? readdirSync(vaultDir) : []) captured.push({ target: 'vault directory', label: `${label}: vault/${name}`, bytes: readFileSync(join(vaultDir, name)) });
+    for (const file of filesUnder(root)) captured.push({ target: targetOf(file), label: `${label}: ${relative(root, file).split(sep).join('/')}`, bytes: readFileSync(file) });
   };
   const status = () => handle('github.account.read', () => ({ account: service.status() }));
 
@@ -298,7 +305,7 @@ test('T-6: through sign-in, a read, an expiry refresh, a 401 refresh, a parse fa
   expect(scan(j.all(), j.secrets)).toEqual(none());
   expect(j.envDuringRequests).toEqual([]);
   // Every target was observed, so no scan passes for want of input (pre-mortem 1, 2): both WAL files existed with content.
-  for (const target of TARGETS) expect(j.all().filter(item => item.target === target && item.bytes.length > 0).length, target).toBeGreaterThan(0);
+  for (const target of TARGETS.filter(t => !OPTIONAL_TARGETS.has(t))) expect(j.all().filter(item => item.target === target && item.bytes.length > 0).length, target).toBeGreaterThan(0);
 
   // Positive controls: escaping cannot hide a hex marker, and the same scan finds text that is meant to persist.
   const files = (target: Target) => j.captured.filter(item => item.target === target);
@@ -349,6 +356,7 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   } finally { db.close(); }
   appendFileSync(`${j.database}-shm`, planted['state.sqlite-shm']);   // SQLite keeps no row text there: a raw write is the only plant
   appendFileSync(j.accountFile, planted['account file']);
+  writeFileSync(join(j.root, 'github', 'planted.json'), JSON.stringify({ access: planted['other userData files'] }));   // a second atomicJson path (U7-R1)
   writeFileSync(join(j.vaultDir, 'planted.bin'), Buffer.from(planted['vault directory'], 'utf16le'));   // and the UTF-16LE scan
   j.ipc.push({ method: 'github.account.read', result: { account: { state: 'signed-in', login: planted['IPC results and DTOs'], renewalHeld: false, lastOutcome: null } } });
   // Through the engine's own channels: a prompt reaches the engine's messages, events and infer(); a file text not in the vault
