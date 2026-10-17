@@ -239,14 +239,21 @@ requires, in this order:
    Otherwise: `usage window <w>: projected P > S (stop-at X - lead-reserve Y); resets <iso>`, followed by
    `; defer until the reset` when the window resets before the task deadline.
 
-A candidate that fails step 3 is ineligible, and Gate 5 ranks the remaining candidates. Every delegate projects
-the same tokens, so only direct and delegate candidates can differ here. In host-policy-1, direct is the cheaper
-of the two whenever it is eligible. `blocked` and every other route come out of the existing flow unchanged.
+A candidate that fails step 3 is ineligible, and Gate 5 ranks the remaining candidates. Every single delegate
+projects the same tokens, so among single candidates only direct and delegate can differ here. In host-policy-1,
+direct is the cheaper of the two whenever it is eligible. `blocked` and every other route come out of the existing
+flow unchanged.
+
+A speculative set is the exception: both members are dispatched and run at once, so the set projects the **sum** of
+its members' tokens (two delegates: twice one delegate's tokens), as its shared cash budget sums their cash. When the
+sum does not fit, the route is not speculative: the best single candidate is chosen, and Uncertainty says
+`uncertainty high; speculative not used (the set's summed usage projection, N tokens, does not fit: <step-3 reason>)`.
+A speculative decision's `usage-tokens` is that sum, so `dispatch` re-checks the sum for each member.
 
 The decision file carries
 `usage: { reading-ts, reading-age-minutes, windows: { <w>: { utilization, resets-at, projected, headroom-mtok } } }`.
-`projected` is the chosen profile's projection, `null` when the route is blocked. It also carries `usage-tokens`,
-the tokens projected for the chosen profile. The decision ledger record carries `usage-tokens` as an additive
+`projected` is the chosen profile's projection (the set's, for speculative), `null` when the route is blocked. It
+also carries `usage-tokens`, the tokens projected for the chosen profile (the set's sum, for speculative). The decision ledger record carries `usage-tokens` as an additive
 field. The Gate 4 note in the walkthrough names the binding window (`usage window five_hour binds: projected
 0.3308 <= 0.85` for a default `build-core` unit against the reading above). Uncertainty says
 `usage windows: coefficients host-declared (<coefficient-basis>)`.

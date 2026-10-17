@@ -788,6 +788,10 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   let route;
   let chosen = null;
   let specSet = null;
+  // the speculative set's members run at once, so Gate 4 projects their summed tokens, as the shared cash bound
+  // sums their cash (SW-1); a set that does not fit is not routed speculative
+  let specUsage = null;
+  let specMiss = null;
   // no eligible candidate => blocked (SKILL.md decision flow step 3, 'No empty-set resurrection'; fixture E01).
   // A profile outside the candidates that would pass is named in Uncertainty as a hint, never routed to.
   let outside = [];
@@ -798,9 +802,16 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   } else {
     const delegates = eligible.filter((r) => r.kind === 'delegate');
     const slots = st.callsLimit - st.callsUsed;
-    if (optIns.speculative && req.uncertainty === 'high' && delegates.length >= 2 && slots >= 2) {
+    const speculate = optIns.speculative && req.uncertainty === 'high' && delegates.length >= 2 && slots >= 2;
+    const set = delegates.slice(0, 2);
+    if (speculate && ctx.usage) {
+      const sum = set.reduce((s, r) => s + r._usage.tokens, 0);
+      const u = usageWalk(ctx.usage.cfg, ctx.usage.reading, nowMs, sum, deadlineMs);
+      if (u.reason) specMiss = `the set's summed usage projection, ${sum} tokens, does not fit: ${u.reason}`;
+      else specUsage = { tokens: sum, projected: u.projected };
+    }
+    if (speculate && !specMiss) {
       route = 'speculative';
-      const set = delegates.slice(0, 2);
       chosen = set[0];
       specSet = {
         candidates: set.map((r) => ({ profile: r.id, weight: 1.0 })), 'max-parallel': set.length,
@@ -818,7 +829,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   const uncertainty = [CASH_UNCERTAINTY];
   uncertainty.push(ctx.usage ? `usage windows: coefficients host-declared (${ctx.usage.cfg['coefficient-basis']})` : USAGE_OFF);
   if (optIns['nested-allowed']) uncertainty.push('nested-allowed opt-in refused: this host cannot produce or enforce a NestedBrief (spec-v2 §14)');
-  if (req.uncertainty === 'high' && route !== 'speculative') uncertainty.push(`uncertainty high; speculative not used (${optIns.speculative ? 'fewer than two eligible delegates or call slots' : 'no host opt-in'})`);
+  if (req.uncertainty === 'high' && route !== 'speculative') uncertainty.push(`uncertainty high; speculative not used (${specMiss ?? (optIns.speculative ? 'fewer than two eligible delegates or call slots' : 'no host opt-in')})`);
   if (outside.length) uncertainty.push(`not among candidates: ${outside.join(', ')} would pass all five gates (hint only; the route stays blocked, and a fresh decision must list it as a candidate)`);
   const { proposals } = learn(policy, records, catMap);
   const pending = [...proposals, ...expiryFlags(policy, nowMs)].filter((p) => chosen && p.profile === chosen.id);
@@ -893,8 +904,9 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   if (brief) text += `Brief:\n${JSON.stringify(brief, null, 2)}\n`;
 
   const strip = (r) => Object.fromEntries(Object.entries(r).filter(([k]) => !k.startsWith('_') && k !== 'id'));
-  const usage = ctx.usage ? usageBlock(ctx.usage.cfg, ctx.usage.reading, nowMs, chosen?._usage?.projected ?? null) : null;
-  const usageFields = ctx.usage ? { 'usage-tokens': chosen?._usage?.tokens ?? null } : {};
+  const chosenUsage = route === 'speculative' ? specUsage : chosen?._usage;
+  const usage = ctx.usage ? usageBlock(ctx.usage.cfg, ctx.usage.reading, nowMs, chosenUsage?.projected ?? null) : null;
+  const usageFields = ctx.usage ? { 'usage-tokens': chosenUsage?.tokens ?? null } : {};
   return {
     route, profile: route === 'blocked' ? null : chosen.id, 'profile-tuple': route === 'blocked' ? null : profileTuple(policy, pr),
     isolation, 'isolation-reason': isolationReason, owner, 'human-gate': optIns['human-gate'], 'nested-allowed': false,

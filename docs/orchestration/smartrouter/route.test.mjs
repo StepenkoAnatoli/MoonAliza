@@ -1485,3 +1485,38 @@ test('rate: a lower coefficient is proposed only after three consecutive observa
   assert.deepEqual(seen[5].map((p) => [p.window, p.from, p.to, p.direction]), [['five_hour', 0.24, 0.19, 'down']]);
   assert.match(r.text, /^PROPOSAL usage-windows\.windows\.five_hour\.utilization-per-mtok: 0\.24 -> 0\.19 \(the last three observations are all below 90 % of the current; downward slowly\); not applied/m);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Review round 1 of the usage-windows unit (SW-1..SW-4)
+// ---------------------------------------------------------------------------------------------
+test('SW-1: a speculative set projects its summed tokens (both members run at once); a set that does not fit is not routed speculative, and dispatch re-checks the sum', () => {
+  const spec = (taskId) => req({ taskId, uncertainty: 'high', hostOptIns: { speculative: true } });
+  // review: 229000 tokens per delegate. One member fits, the pair does not:
+  // 0.79 + 0.229 x 0.24 = 0.84496 <= 0.85, 0.79 + 0.458 x 0.24 = 0.89992 > 0.85
+  const tight = tmp();
+  usageCli(tight, rateLimitInfo(NOW, { five: 0.79 }), NOW);
+  const d = decideOn(spec('sw1-1'), tight);
+  assert.equal(d.route, 'delegate');
+  assert.equal(d.decision.profile, 'cc-opus-high');
+  assert.equal(d.decision['usage-tokens'], 229000);
+  assert.equal(d.decision['speculative-set'], null);
+  assert.ok(d.decision.uncertainty.includes('uncertainty high; speculative not used (the set\'s summed usage projection, 458000 tokens, does not fit: usage window five_hour: projected 0.8999 > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:00:00Z; defer until the reset)'), d.decision.uncertainty.join('|'));
+  // the pair fits: speculative, with the set's sum projected and recorded
+  const roomy = tmp();
+  usageCli(roomy, rateLimitInfo(NOW, { five: 0.2 }), NOW);
+  const s = decideOn(spec('sw1-2'), roomy);
+  assert.equal(s.route, 'speculative');
+  assert.deepEqual(s.decision['speculative-set'].candidates.map((c) => c.profile), ['cc-opus-high', 'cc-fable-high']);
+  assert.equal(s.decision['usage-tokens'], 458000);
+  assert.equal(s.record['usage-tokens'], 458000);
+  assert.equal(s.decision.usage.windows.five_hour.projected, 0.3099); // 0.2 + 0.458 x 0.24
+  // dispatch re-checks the sum: a new reading in which one member still fits and the pair does not refuses
+  // (0.75 + 0.229 x 0.24 = 0.805 fits, 0.75 + 0.458 x 0.24 = 0.8599 does not)
+  usageCli(roomy, rateLimitInfo(at(1), { five: 0.75 }), at(1));
+  const ledger = join(roomy, 'ledger.jsonl');
+  const before = readFileSync(ledger, 'utf8');
+  const out = cli(['dispatch', 'sw1-2', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', roomy, '--now', at(2), '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(out.code, 3, out.stdout);
+  assert.match(out.stderr, /usage check refused cc-opus-high \(decision seq 1, usage-tokens 458000\): usage window five_hour: projected 0\.8599 > 0\.85/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+});
