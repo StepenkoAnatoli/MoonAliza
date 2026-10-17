@@ -102,7 +102,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Lead-direct profile | **enforced**: the lead profile is walked only as `direct`, eligible up to `direct-max-tokens` (Gate 5); `dispatch` refuses it as a delegated worker, `--deviation` or not | `decide`, `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
-| Usage windows | **enforced when configured**: fresh reading required; projection against stop-at - lead-reserve in decide and dispatch. Gate 4 fails a candidate with no reading at or before `now`, a reading older than `reading-max-age-minutes`, a window reset since the reading, or a projection over any window's limit. `dispatch` re-checks at its `--now` against the decision's `usage-tokens` (section 'Usage windows') | `decide`, `dispatch` |
+| Usage windows | **enforced when configured**: fresh reading required; projection against stop-at - lead-reserve in decide and dispatch. Gate 4 fails a candidate with no reading at or before `now`, a reading older than `reading-max-age-minutes`, a window reset since the reading, or a projection over any window's limit, counting the `usage-tokens` of every dispatch recorded since the reading. `dispatch` re-checks at its `--now` against the decision's `usage-tokens` and those dispatches (section 'Usage windows') | `decide`, `dispatch` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
 | Speculative and nested delegation | **off**: speculative needs the opt-in plus `uncertainty: "high"`; a nested opt-in is refused with a note, because this host cannot produce or enforce a NestedBrief (§14) | `decide` |
 | Speculative shared budget | **enforced** when opted in: the decision record stores the set's `shared-budget.calls` as `speculative-calls`; `dispatch` refuses once the decision has that many dispatches, and refuses any profile outside the set, `--deviation` or not (spec-v2 §8.4) | `decide`, `dispatch` |
@@ -233,11 +233,18 @@ requires, in this order:
    `usage reading missing`, or `usage reading stale: age N min > 30; refresh with route.mjs usage`;
 2. no window has reset since the reading (`now < resets-at` for each window). Otherwise:
    `usage window <w> reset at <iso> after the reading; refresh with route.mjs usage`;
-3. for each window, `projected = utilization + (tokens / 1e6) x utilization-per-mtok <= stop-at - lead-reserve`.
+3. for each window,
+   `projected = utilization + ((dispatched + tokens) / 1e6) x utilization-per-mtok <= stop-at - lead-reserve`.
    `tokens` is the count the cash bound uses: the work alone for direct, and work + the required reviewer's
    median (for categories whose verification names a review) + `delegate-overhead-tokens` for a delegate.
-   Otherwise: `usage window <w>: projected P > S (stop-at X - lead-reserve Y); resets <iso>`, followed by
-   `; defer until the reset` when the window resets before the task deadline.
+   `dispatched` is the sum of the `usage-tokens` of every dispatch, of any task, recorded after the reading's `ts`
+   (and at or before `now`): a reading cannot contain work dispatched after it, finished or not, so those tokens
+   are committed but not yet in the reading. A newer reading takes them in, and they stop counting. Otherwise:
+   `usage window <w>: projected P > S (stop-at X - lead-reserve Y); resets <iso>`, with
+   ` (with N tokens dispatched since the reading)` after `P` when `dispatched` is not zero, followed by
+   `; defer until the reset` when the window resets before the task deadline. A dispatch since the reading with no
+   `usage-tokens` (recorded while the feature was off) is unknown, and Gate 4 fails closed:
+   `usage reading <ts> predates dispatch seq S of <task>, whose usage-tokens are unknown; refresh with route.mjs usage`.
 
 A candidate that fails step 3 is ineligible, and Gate 5 ranks the remaining candidates. Every single delegate
 projects the same tokens, so among single candidates only direct and delegate can differ here. In host-policy-1,
@@ -251,23 +258,31 @@ sum does not fit, the route is not speculative: the best single candidate is cho
 A speculative decision's `usage-tokens` is that sum, so `dispatch` re-checks the sum for each member.
 
 The decision file carries
-`usage: { reading-ts, reading-age-minutes, windows: { <w>: { utilization, resets-at, projected, headroom-mtok } } }`.
+`usage: { reading-ts, reading-age-minutes, dispatched-since-reading-tokens, windows: { <w>: { utilization, resets-at, projected, headroom-mtok } } }`.
 `projected` is the chosen profile's projection (the set's, for speculative), `null` when the route is blocked. It
 also carries `usage-tokens`, the tokens projected for the chosen profile (the set's sum, for speculative). The decision ledger record carries `usage-tokens` as an additive
 field. The Gate 4 note in the walkthrough names the binding window (`usage window five_hour binds: projected
 0.3308 <= 0.85` for a default `build-core` unit against the reading above). Uncertainty says
 `usage windows: coefficients host-declared (<coefficient-basis>)`.
 
-`dispatch` re-checks steps 1-3 at its `--now`, against the decision's `usage-tokens`. A decision taken 25 minutes
-before can be stale by dispatch time, and the window can fill up in between. A failing step refuses the dispatch
+`dispatch` re-checks steps 1-3 at its `--now`, against the decision's `usage-tokens` plus every dispatch recorded
+since the reading (other than the other members of the same speculative decision, which the decision's sum already
+covers). A decision taken 25 minutes before can be stale by dispatch time, and the window can fill up in between:
+two decisions taken against one reading cannot both be dispatched when only one fits. Each dispatch record carries
+the additive field `usage-tokens` it commits (a speculative member: its share of the set's sum). A failing step refuses the dispatch
 with exit 3 and the same reason text, e.g.
 `usage check refused cc-opus-high (decision seq 1, usage-tokens 229000): usage reading stale: age 31 min > 30; refresh with route.mjs usage`.
 The pre-dispatch recheck walks Gate 4 with the readings as well, so a host deviation is held to the windows too.
 
-**Headroom.** `headroom-mtok = (stop-at - lead-reserve - utilization) / utilization-per-mtok`: the million
-sub-agent tokens the window still admits. Against the reading above, five_hour admits (0.90 - 0.05 - 0.20) / 0.24 =
-2.71 Mtok, about five default `build-core` delegations (545k tokens each: 316k work + 209k review + 20k overhead).
-seven_day admits (0.90 - 0.05 - 0.05) / 0.06 = 13.3 Mtok.
+**Headroom.** `headroom-mtok = (stop-at - lead-reserve - utilization) / utilization-per-mtok - dispatched / 1e6`:
+the million sub-agent tokens the window still admits after the dispatches recorded since the reading. Against the
+reading above, five_hour admits (0.90 - 0.05 - 0.20) / 0.24 = 2.71 Mtok: four default `build-core` delegations (545k
+tokens each: 316k work + 209k review + 20k overhead; a fifth would bring the total to 2.725). Gate 4 counts them: each dispatch since the reading
+lowers the headroom the next decision and dispatch see. seven_day admits (0.90 - 0.05 - 0.05) / 0.06 = 13.3 Mtok.
+`route.mjs usage` with no file prints `dispatched since the reading: N tokens` and subtracts them from each
+window's headroom. What the gate cannot see: a unit dispatched before the reading and still running keeps
+consuming after it, and the lead's own work is not dispatched. The `lead-reserve` is the margin for both, and a
+fresh reading after an outcome closes the first.
 
 **The coefficients and their basis.** `utilization-per-mtok` is host-declared from two coarse observations:
 

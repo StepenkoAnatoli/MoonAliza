@@ -56,6 +56,7 @@ export function canonicalJson(v) { return JSON.stringify(sortKeys(v)); }
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 export function briefFingerprint(brief) { return sha256(canonicalJson(brief)); }
 const round4 = (x) => Math.round(x * 1e4) / 1e4;
+const round6 = (x) => Math.round(x * 1e6) / 1e6;
 const usd = (x) => `$${x.toFixed(2)}`;
 const isStr = (v) => typeof v === 'string' && v.length > 0;
 const isStrArray = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
@@ -387,11 +388,30 @@ function latestReading(readings, nowMs) {
 }
 
 const usageLimit = (w) => w['stop-at'] - w['lead-reserve'];
-const headroomMtok = (w, u) => round4((usageLimit(w) - u) / w['utilization-per-mtok']);
+const headroomMtok = (w, u, since = 0) => round4((usageLimit(w) - u) / w['utilization-per-mtok'] - since / 1e6);
+
+// the tokens committed since the reading (SW-2): every dispatch, of any task, recorded after the reading's ts and at
+// or before `now`. A reading cannot contain work dispatched after it, finished or not, so each such dispatch's
+// usage-tokens are added to the reading. `exclude` drops the dispatches a decision's own sum already covers (the other
+// members of a speculative set). A dispatch with no usage-tokens (recorded with the feature off) is unknown.
+function dispatchedSince(records, reading, nowMs, exclude = () => false) {
+  const since = { tokens: 0, unknown: null };
+  if (!reading) return since;
+  const fromMs = isoMs(reading.ts);
+  for (const r of records) {
+    if (r.kind !== 'dispatch' || exclude(r)) continue;
+    const ms = isoMs(r.ts);
+    if (!(ms > fromMs && ms <= nowMs)) continue;
+    if (!isInt(r['usage-tokens'])) { since.unknown ??= r; continue; }
+    since.tokens += r['usage-tokens'];
+  }
+  return since;
+}
 
 // Gate 4's usage steps, in order: (1) a fresh reading, (2) no window reset since it, (3) every window's projection
-// within stop-at - lead-reserve. Returns { reason } on the first failure, else each window's projection and the binding one
-function usageWalk(cfg, reading, nowMs, tokens, deadlineMs) {
+// within stop-at - lead-reserve, counting the tokens dispatched since the reading. Returns { reason } on the first
+// failure, else each window's projection and the binding one
+function usageWalk(cfg, reading, nowMs, tokens, deadlineMs, since = { tokens: 0, unknown: null }) {
   if (!reading) return { reason: 'usage reading missing' };
   const age = nowMs - isoMs(reading.ts);
   if (age > cfg['reading-max-age-minutes'] * 60000) return { reason: `usage reading stale: age ${minutesOf(age)} min > ${cfg['reading-max-age-minutes']}; ${USAGE_REFRESH}` };
@@ -400,15 +420,17 @@ function usageWalk(cfg, reading, nowMs, tokens, deadlineMs) {
     if (!r) return { reason: `usage reading has no window ${name}; ${USAGE_REFRESH}` };
     if (!(nowMs < isoMs(r['resets-at']))) return { reason: `usage window ${name} reset at ${r['resets-at']} after the reading; ${USAGE_REFRESH}` };
   }
+  if (since.unknown) return { reason: `usage reading ${reading.ts} predates dispatch seq ${since.unknown.seq} of ${since.unknown['task-id']}, whose usage-tokens are unknown; ${USAGE_REFRESH}` };
   const projected = {};
   let binding = null;
   for (const [name, w] of Object.entries(cfg.windows)) {
     const r = reading.windows[name];
-    const p = r.utilization + (tokens / 1e6) * w['utilization-per-mtok'];
+    const p = r.utilization + ((since.tokens + tokens) / 1e6) * w['utilization-per-mtok'];
     const limit = usageLimit(w);
     if (p - limit > 1e-12) {
       const defer = isoMs(r['resets-at']) < deadlineMs ? '; defer until the reset' : '';
-      return { reason: `usage window ${name}: projected ${round4(p)} > ${round4(limit)} (stop-at ${w['stop-at']} - lead-reserve ${w['lead-reserve']}); resets ${r['resets-at']}${defer}` };
+      const with_ = since.tokens ? ` (with ${since.tokens} tokens dispatched since the reading)` : '';
+      return { reason: `usage window ${name}: projected ${round4(p)}${with_} > ${round4(limit)} (stop-at ${w['stop-at']} - lead-reserve ${w['lead-reserve']}); resets ${r['resets-at']}${defer}` };
     }
     projected[name] = p;
     if (!binding || limit - p < binding.slack) binding = { name, slack: limit - p, projected: p, limit };
@@ -417,15 +439,15 @@ function usageWalk(cfg, reading, nowMs, tokens, deadlineMs) {
 }
 
 // the decision's usage block: the reading, its age, and per window the projection for the chosen profile (null if blocked)
-function usageBlock(cfg, reading, nowMs, chosenProjected) {
-  if (!reading) return { 'reading-ts': null, 'reading-age-minutes': null, windows: {} };
+function usageBlock(cfg, reading, nowMs, chosenProjected, since) {
+  if (!reading) return { 'reading-ts': null, 'reading-age-minutes': null, 'dispatched-since-reading-tokens': null, windows: {} };
   const windows = {};
   for (const [name, w] of Object.entries(cfg.windows)) {
     const r = reading.windows[name];
     if (!r) continue;
-    windows[name] = { utilization: r.utilization, 'resets-at': r['resets-at'], projected: chosenProjected ? round4(chosenProjected[name]) : null, 'headroom-mtok': headroomMtok(w, r.utilization) };
+    windows[name] = { utilization: r.utilization, 'resets-at': r['resets-at'], projected: chosenProjected ? round4(chosenProjected[name]) : null, 'headroom-mtok': headroomMtok(w, r.utilization, since.tokens) };
   }
-  return { 'reading-ts': reading.ts, 'reading-age-minutes': minutesOf(nowMs - isoMs(reading.ts)), windows };
+  return { 'reading-ts': reading.ts, 'reading-age-minutes': minutesOf(nowMs - isoMs(reading.ts)), 'dispatched-since-reading-tokens': since.unknown ? null : since.tokens, windows };
 }
 
 export function usageSummary({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString() } = {}) {
@@ -438,11 +460,15 @@ export function usageSummary({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_T
   const age = nowMs - isoMs(r.ts);
   const max = cfg['reading-max-age-minutes'];
   const lines = [`latest usage reading ${r.ts} (age ${minutesOf(age)} min, max ${max})${age > max * 60000 ? `: stale; ${USAGE_REFRESH}` : ''}`];
+  const since = dispatchedSince(readLedger(traceDir), r, nowMs);
+  if (since.unknown) lines.push(`  dispatched since the reading: unknown (dispatch seq ${since.unknown.seq} of ${since.unknown['task-id']} has no usage-tokens); ${USAGE_REFRESH}`);
+  else if (since.tokens) lines.push(`  dispatched since the reading: ${since.tokens} tokens`);
+  const minus = since.tokens ? ` - ${round6(since.tokens / 1e6)} dispatched since the reading` : '';
   for (const [name, w] of Object.entries(cfg.windows)) {
     const x = r.windows[name];
     if (!x) { lines.push(`  ${name}: not in the reading; ${USAGE_REFRESH}`); continue; }
     if (!(nowMs < isoMs(x['resets-at']))) { lines.push(`  ${name}: utilization ${x.utilization}, resets ${x['resets-at']}: reset since the reading; ${USAGE_REFRESH}`); continue; }
-    lines.push(`  ${name}: utilization ${x.utilization}, resets ${x['resets-at']}, headroom ${headroomMtok(w, x.utilization)} Mtok ((${w['stop-at']} - ${w['lead-reserve']} - ${x.utilization}) / ${w['utilization-per-mtok']})`);
+    lines.push(`  ${name}: utilization ${x.utilization}, resets ${x['resets-at']}, headroom ${headroomMtok(w, x.utilization, since.tokens)} Mtok ((${w['stop-at']} - ${w['lead-reserve']} - ${x.utilization}) / ${w['utilization-per-mtok']}${minus})`);
   }
   return { reading: r, text: `${lines.join('\n')}\n` };
 }
@@ -680,7 +706,7 @@ function gate4(ctx, pr, id, kind, out) {
     // the usage windows are this host's finite resource: a fresh reading, no reset since, and a projection within
     // stop-at - lead-reserve for every window, over the same tokens the cash bound counts
     const tokens = usageTokens(ctx, kind);
-    const u = usageWalk(ctx.usage.cfg, ctx.usage.reading, ctx.nowMs, tokens, ctx.deadlineMs);
+    const u = usageWalk(ctx.usage.cfg, ctx.usage.reading, ctx.nowMs, tokens, ctx.deadlineMs, ctx.usage.since);
     if (u.reason) return u.reason;
     out.usage = { tokens, projected: u.projected };
     out.note += `; usage window ${u.binding.name} binds: projected ${round4(u.binding.projected)} <= ${round4(u.binding.limit)}`;
@@ -776,8 +802,12 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     tokens: req.estimatedTokens ?? category?.['median-tokens'] ?? 0,
     requiredTools: req.requiredTools ?? category?.['required-tools'] ?? [],
     reviewer: null, reviewWalk: {},
-    usage: policy['usage-windows'] ? { cfg: policy['usage-windows'], reading: latestReading(readings, nowMs) } : null
+    usage: null
   };
+  if (policy['usage-windows']) {
+    const reading = latestReading(readings, nowMs);
+    ctx.usage = { cfg: policy['usage-windows'], reading, since: dispatchedSince(records, reading, nowMs) };
+  }
   const ids = req.candidates ?? policy.profiles.map((p) => p.id);
   if (reviewName) ({ reviewer: ctx.reviewer, walk: ctx.reviewWalk } = reviewerFor(ctx, ids, leadId));
   const results = ids.map((id) => evaluate(ctx, id, id === leadId ? 'direct' : 'delegate'));
@@ -806,7 +836,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     const set = delegates.slice(0, 2);
     if (speculate && ctx.usage) {
       const sum = set.reduce((s, r) => s + r._usage.tokens, 0);
-      const u = usageWalk(ctx.usage.cfg, ctx.usage.reading, nowMs, sum, deadlineMs);
+      const u = usageWalk(ctx.usage.cfg, ctx.usage.reading, nowMs, sum, deadlineMs, ctx.usage.since);
       if (u.reason) specMiss = `the set's summed usage projection, ${sum} tokens, does not fit: ${u.reason}`;
       else specUsage = { tokens: sum, projected: u.projected };
     }
@@ -905,7 +935,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
 
   const strip = (r) => Object.fromEntries(Object.entries(r).filter(([k]) => !k.startsWith('_') && k !== 'id'));
   const chosenUsage = route === 'speculative' ? specUsage : chosen?._usage;
-  const usage = ctx.usage ? usageBlock(ctx.usage.cfg, ctx.usage.reading, nowMs, chosenUsage?.projected ?? null) : null;
+  const usage = ctx.usage ? usageBlock(ctx.usage.cfg, ctx.usage.reading, nowMs, chosenUsage?.projected ?? null, ctx.usage.since) : null;
   const usageFields = ctx.usage ? { 'usage-tokens': chosenUsage?.tokens ?? null } : {};
   return {
     route, profile: route === 'blocked' ? null : chosen.id, 'profile-tuple': route === 'blocked' ? null : profileTuple(policy, pr),
@@ -1079,8 +1109,17 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   // the usage windows at dispatch time, against the token count the decision projected: a decision taken minutes
   // earlier can be stale by now, or the window can have filled since (the recheck below walks Gate 4 again too)
   const readings = policy['usage-windows'] ? readUsage(traceDir) : [];
+  let usageFields = {};
+  if (policy['usage-windows']) {
+    // each dispatch records the tokens it commits, so later decisions and dispatches count it until a reading
+    // follows it (SW-2): a speculative member commits its share of the set's sum
+    usageFields = { 'usage-tokens': isInt(dec['usage-tokens']) ? dec['usage-tokens'] / decided.length : null };
+  }
   if (policy['usage-windows'] && isInt(dec['usage-tokens'])) {
-    const u = usageWalk(policy['usage-windows'], latestReading(readings, isoMs(now)), isoMs(now), dec['usage-tokens'], isoMs(dec.deadline));
+    const reading = latestReading(readings, isoMs(now));
+    // the decision's own sum covers the other members of its speculative set; every other dispatch since the reading counts
+    const since = dispatchedSince(records, reading, isoMs(now), (r) => r['task-id'] === taskId && r['decision-seq'] === dec.seq);
+    const u = usageWalk(policy['usage-windows'], reading, isoMs(now), dec['usage-tokens'], isoMs(dec.deadline), since);
     if (u.reason) throw refused(`usage check refused ${profileId} (decision seq ${dec.seq}, usage-tokens ${dec['usage-tokens']}): ${u.reason}`);
   }
   recheck({ traceDir, policy, records, readings, taskId, dec, route, profileId, now, projectStop, deviation: !asDecided });
@@ -1089,7 +1128,7 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),
     counters: counters(st, st.callsUsed + 1, st.repairsUsed + (repair ? 1 : 0)), deadline: dec.deadline,
     'brief-fingerprint': dec['brief-fingerprint'], detail, 'outcome-ref': null,
-    'decision-seq': dec.seq, repair, deviation: !asDecided
+    'decision-seq': dec.seq, repair, deviation: !asDecided, ...usageFields
   });
 }
 
@@ -1136,7 +1175,6 @@ export function status(taskId, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT
   return { text: `${text}\n`, counters: counters(st) };
 }
 
-const round6 = (x) => Math.round(x * 1e6) / 1e6;
 
 // observed coefficients: for consecutive readings with no reset of the window between them (same resets-at, not
 // passed by the later reading), (u2 - u1) / (T / 1e6) where T sums the outcome tokens recorded in (ts1, ts2] - one
