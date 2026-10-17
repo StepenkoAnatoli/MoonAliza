@@ -84,13 +84,29 @@ const FILE_TARGETS = new Set<Target>(['state.sqlite', 'state.sqlite-wal', 'state
 const OPTIONAL_TARGETS = new Set<Target>(['other userData files']);
 interface Captured { target: Target; label: string; bytes: Buffer }
 
-/** Every marker's hits in the captured bytes, as UTF-8 and as UTF-16LE (e2e/anthropic.spec.ts:98-110). */
+/** A marker's base64 (or base64url) as it appears inside any longer encoded stream: one form per byte alignment, each cut to the
+ *  characters that encode the marker's bytes alone, since the characters at either end also carry the neighbouring bytes. */
+function base64Forms(value: string, encoding: 'base64' | 'base64url'): string[] {
+  const bytes = Buffer.from(value, 'utf8');
+  return [0, 1, 2].map(shift => Buffer.concat([Buffer.alloc(shift), bytes]).toString(encoding).slice(shift === 0 ? 0 : 4, Math.floor((shift + bytes.length) / 3) * 4));
+}
+
+/** Every marker's hits in the captured bytes, as UTF-8 and as UTF-16LE (e2e/anthropic.spec.ts:98-110), and in the reversible
+ *  encodings a clear token could also take: base64, base64url and hex (U7-R3). */
 function scan(captured: readonly Captured[], secrets: Readonly<Record<string, string>>): Record<Target, string[]> {
   const hits = Object.fromEntries(TARGETS.map(target => [target, [] as string[]])) as Record<Target, string[]>;
+  const forms = Object.entries(secrets).map(([name, value]) => {
+    const hex = Buffer.from(value, 'utf8').toString('hex');
+    return { name, encoded: [
+      { how: 'UTF-8', bytes: Buffer.from(value, 'utf8') },
+      { how: 'UTF-16LE', bytes: Buffer.from(value, 'utf16le') },
+      ...(['base64', 'base64url'] as const).flatMap(encoding => base64Forms(value, encoding).map(text => ({ how: encoding, bytes: Buffer.from(text, 'latin1') }))),
+      ...[hex, hex.toUpperCase()].map(text => ({ how: 'hex', bytes: Buffer.from(text, 'latin1') })),
+    ] };
+  });
   for (const { target, label, bytes } of captured) {
-    for (const [name, value] of Object.entries(secrets)) {
-      if (bytes.includes(Buffer.from(value, 'utf8'))) hits[target].push(`${name} in ${label} (UTF-8)`);
-      if (bytes.includes(Buffer.from(value, 'utf16le'))) hits[target].push(`${name} in ${label} (UTF-16LE)`);
+    for (const { name, encoded } of forms) {
+      for (const how of new Set(encoded.filter(form => bytes.includes(form.bytes)).map(form => form.how))) hits[target].push(`${name} in ${label} (${how})`);
     }
   }
   return hits;
@@ -366,6 +382,12 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   appendFileSync(j.accountFile, planted['account file']);
   writeFileSync(join(j.root, 'github', 'planted.json'), JSON.stringify({ access: planted['other userData files'] }));   // a second atomicJson path (U7-R1)
   writeFileSync(join(j.vaultDir, 'planted.bin'), Buffer.from(planted['vault directory'], 'utf16le'));   // and the UTF-16LE scan
+  // And the reversible encodings (U7-R3): base64 and base64url at the two byte alignments a lone encoding of the marker would miss,
+  // and hex.
+  const vaultPlant = Buffer.from(planted['vault directory'], 'utf8');
+  writeFileSync(join(j.vaultDir, 'planted.b64'), Buffer.concat([randomBytes(1), vaultPlant, randomBytes(1)]).toString('base64'));
+  writeFileSync(join(j.vaultDir, 'planted.b64url'), Buffer.concat([randomBytes(2), vaultPlant, randomBytes(2)]).toString('base64url'));
+  writeFileSync(join(j.vaultDir, 'planted.hex'), vaultPlant.toString('hex'));
   j.ipc.push({ method: 'github.account.read', result: { account: { state: 'signed-in', login: planted['IPC results and DTOs'], renewalHeld: false, lastOutcome: null } } });
   // Through the engine's own channels: a prompt reaches the engine's messages, events and infer(); a file text not in the vault
   // (so not redacted) reaches the tool output.
@@ -381,6 +403,13 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
     expect(hits[target].filter(hit => hit.startsWith(`${target} in `)).length, `${target} is red under its plant`).toBeGreaterThan(0);
   }
   expect(hits['vault directory'].some(hit => hit.endsWith('(UTF-16LE)'))).toBe(true);
+  expect(['base64', 'base64url', 'hex'].map(encoding => hits['vault directory'].some(hit => hit.endsWith(`(${encoding})`)))).toEqual([true, true, true]);
+  // Every alignment, in both alphabets, between random neighbours: the cut forms find the marker wherever in the stream it starts.
+  for (const shift of [0, 1, 2]) for (const encoding of ['base64', 'base64url'] as const) {
+    const text = Buffer.concat([randomBytes(shift), vaultPlant, randomBytes(3)]).toString(encoding);
+    expect(scan([{ target: 'vault directory', label: 'encoded', bytes: Buffer.from(text, 'latin1') }], { plant: planted['vault directory'] })['vault directory'], `${encoding} at ${shift}`)
+      .toContain(`plant in encoded (${encoding})`);
+  }
   // File targets are scanned per file, the WAL apart from the database (pre-mortem 2).
   for (const target of FILE_TARGETS) expect(j.all().some(item => item.target === target && item.label.startsWith('planted'))).toBe(true);
   // The journey's own markers are still absent: the plants are what turned each scan red.
