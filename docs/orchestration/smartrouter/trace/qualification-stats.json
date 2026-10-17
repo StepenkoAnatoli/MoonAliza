@@ -274,7 +274,7 @@
       "ratified-at": null,
       "skipped": {
         "negative-delta": 0,
-        "reset": 0,
+        "reset": 1,
         "spanning": 2,
         "unknown-tokens": 0,
         "zero-tokens": 0
@@ -291,10 +291,10 @@
         "reset": 0,
         "spanning": 2,
         "unknown-tokens": 0,
-        "zero-tokens": 0
+        "zero-tokens": 1
       }
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "6563d15fb08ef33539ba23305434ce78b277b69f88cbe5230c21493af7ec37c1"
+  "usage-sha256": "b8e0df100e7cca39d20c960bce70ae6aaf18757cd007da82340f0f90e66c8495"
 }
