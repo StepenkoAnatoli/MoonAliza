@@ -1263,6 +1263,52 @@ function usageLearning(cfg, readings, records) {
   return { usage, proposals };
 }
 
+// calibration evidence (host-policy-2): graded calibration runs in <trace>/calibration-<n>/observations.json, counted per
+// (profile, category) apart from the outcomes. They never enter the ledger and never make a proposal: proposals stay
+// outcome-based, and qualification from calibration is the lead's, under the qualification rules (README).
+// The tasks and the categories they represent: the pin task is pin-tests (rule 4), the fix task fix, the review task review
+const CALIBRATION_TASKS = [['pin-tests', (o) => o.pin?.score], ['fix', (o) => o.fix?.score], ['review', (o) => o['review-grade']?.score]];
+
+function calibrationEvidence(policy, traceDir) {
+  if (!existsSync(traceDir)) return null;
+  const dirs = readdirSync(traceDir).map((d) => [d, /^calibration-([1-9]\d*)$/.exec(d)]).filter(([d, m]) => m && existsSync(join(traceDir, d, 'observations.json')))
+    .sort((a, b) => Number(a[1][1]) - Number(b[1][1])).map(([d]) => d);
+  if (!dirs.length) return null;
+  const runs = [];
+  const profiles = {};
+  const seen = {};
+  for (const run of dirs) {
+    const path = join(traceDir, run, 'observations.json');
+    const bytes = readFileSync(path);
+    let obs;
+    try { obs = JSON.parse(bytes); } catch { throw new RouterError(4, `${run}/observations.json is unparseable; refusing to rate (${path})`); }
+    if (!obs || typeof obs !== 'object' || Array.isArray(obs)) throw new RouterError(4, `${run}/observations.json is not an object of observations (${path})`);
+    runs.push({ run, 'observations-sha256': sha256(bytes) });
+    for (const [key, o] of Object.entries(obs)) {
+      // an observation is a profile's model (any task's usage) at the effort its name ends in
+      const model = Object.values(o?.usage ?? {}).find((u) => isStr(u?.model))?.model;
+      const name = isStr(o?.profile) ? o.profile : key;
+      const pr = policy.profiles.find((p) => p.model === model && p.effort === name.split('-').pop());
+      const label = pr ? pr.id : `${name} (no policy profile)`;
+      for (const [cat, score] of CALIBRATION_TASKS) {
+        const c = ((profiles[label] ??= {})[cat] ??= { pass: 0, fail: 0, ungraded: 0 });
+        const s = score(o);
+        if (s === true) c.pass += 1; else if (s === false) c.fail += 1; else c.ungraded += 1;
+        const r = ((seen[label] ??= {})[cat] ??= []);
+        if (!r.includes(run)) r.push(run);
+      }
+    }
+  }
+  const lines = [];
+  for (const label of Object.keys(profiles).sort()) {
+    for (const [cat] of CALIBRATION_TASKS) {
+      const c = profiles[label][cat];
+      lines.push(`CALIBRATION ${label} ${cat}: ${c.pass} pass, ${c.fail} fail${c.ungraded ? `, ${c.ungraded} ungraded` : ''} (${seen[label][cat].join(', ')})`);
+    }
+  }
+  return { doc: { runs, profiles }, lines };
+}
+
 export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString() } = {}) {
   if (isoMs(now) === null) throw invalid('--now must be ISO-8601');
   const policy = loadPolicy(policyPath);
@@ -1270,6 +1316,7 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const { stats, proposals } = learn(policy, records, categoryMap(traceDir));
   const learned = policy['usage-windows'] ? usageLearning(policy['usage-windows'], readUsage(traceDir), records) : null;
   const usageProposals = learned ? learned.proposals : [];
+  const calibration = calibrationEvidence(policy, traceDir);
   const path = ledgerPath(traceDir);
   const doc = {
     _comment: 'derived by route.mjs rate from ledger.jsonl and the decision files; regenerated on every run, never hand-edited',
@@ -1279,13 +1326,15 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
     'outcome-records': records.filter((r) => r.kind === 'outcome').length,
     stats,
     proposals,
-    ...(learned ? { usage: learned.usage, 'usage-proposals': usageProposals, 'usage-sha256': existsSync(usagePath(traceDir)) ? sha256(readFileSync(usagePath(traceDir))) : null } : {})
+    ...(learned ? { usage: learned.usage, 'usage-proposals': usageProposals, 'usage-sha256': existsSync(usagePath(traceDir)) ? sha256(readFileSync(usagePath(traceDir))) : null } : {}),
+    ...(calibration ? { calibration: calibration.doc } : {})
   };
   mkdirSync(traceDir, { recursive: true });
   const statsPath = join(traceDir, 'qualification-stats.json');
   writeFileSync(statsPath, `${JSON.stringify(sortKeys(doc), null, 2)}\n`);
   const flags = expiryFlags(policy, isoMs(now));
   const lines = [`${statsPath} regenerated (${doc['outcomes-counted']} outcomes)`];
+  if (calibration) lines.push(...calibration.lines);
   for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json`);
   for (const p of usageProposals) lines.push(`PROPOSAL usage-windows.windows.${p.window}.utilization-per-mtok: ${p.from} -> ${p.to} (${p.reason}); not applied — the lead ratifies by editing host-policy.json`);
   for (const f of flags) lines.push(`FLAG ${f.profile}: ${f.reason}`);

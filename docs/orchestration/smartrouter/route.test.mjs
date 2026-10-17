@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1908,4 +1908,80 @@ test('host-policy-2 routing: a pin-tests request routes to cc-haiku-low at the o
   // the id still breaks a tie of rate and effort (S02/D01 twin)
   const twin = loadPolicy(livePolicyWith((p) => { p.profiles.push({ ...p.profiles.find((x) => x.id === 'cc-haiku-low'), id: 'cc-aaa-haiku' }); }));
   assert.equal(computeDecision(pinReq(), twin, []).profile, 'cc-aaa-haiku');
+});
+
+// calibration evidence in rate: counted apart from the outcomes, printed as CALIBRATION lines, never a proposal
+function calibrationTrace(runs) {
+  const trace = tmp();
+  runs.forEach((obs, i) => {
+    mkdirSync(join(trace, `calibration-${i + 1}`));
+    writeFileSync(join(trace, `calibration-${i + 1}`, 'observations.json'), typeof obs === 'string' ? obs : JSON.stringify(obs, null, 1));
+  });
+  return trace;
+}
+
+test('rate: a CALIBRATION line per profile and category from trace/calibration-1/observations.json, counted apart from the outcomes', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const trace = calibrationTrace([CAL1]);
+  const r = rate({ traceDir: trace, policyPath: LIVE_OFF_PATH, now: NOW });
+  const lines = r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  assert.equal(lines.length, Object.keys(CAL1).length * CAL_TASKS.length, r.text);
+  for (const o of Object.values(CAL1)) {
+    const label = calProfile(live, o)?.id ?? `${o.profile} (no policy profile)`;
+    for (const [cat, , score] of CAL_TASKS) {
+      assert.ok(lines.includes(`CALIBRATION ${label} ${cat}: ${score(o) ? '1 pass, 0 fail' : '0 pass, 1 fail'} (calibration-1)`), `${label} ${cat}`);
+    }
+  }
+  assert.equal(Object.values(CAL1).filter((o) => !calProfile(live, o)).length, 1, 'one calibrated profile is not in host-policy-2');
+  assert.ok(r.text.indexOf('CALIBRATION ') > r.text.indexOf('regenerated'), 'next to the outcome stats');
+  // the derived stats keep calibration apart: no outcome counted, no outcome stats, the observations pinned by digest
+  const doc = JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'));
+  assert.equal(doc['outcomes-counted'], 0);
+  assert.deepEqual(doc.stats, {});
+  assert.deepEqual(doc.calibration.profiles['cc-haiku-low'], { fix: { fail: 0, pass: 1, ungraded: 0 }, 'pin-tests': { fail: 0, pass: 1, ungraded: 0 }, review: { fail: 1, pass: 0, ungraded: 0 } });
+  assert.deepEqual(doc.calibration.runs, [{ run: 'calibration-1', 'observations-sha256': createHash('sha256').update(readFileSync(join(trace, 'calibration-1', 'observations.json'))).digest('hex') }]);
+  assert.deepEqual(r.proposals, []);
+  // regenerated identically, and the CLI prints the same lines
+  const cliRate = cli(['rate', '--trace', trace, '--now', NOW, '--policy', LIVE_OFF_PATH]);
+  assert.equal(cliRate.code, 0, cliRate.stderr);
+  assert.deepEqual(cliRate.stdout.split('\n').filter((l) => l.startsWith('CALIBRATION ')), lines);
+  assert.equal(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'), `${JSON.stringify(doc, null, 2)}\n`);
+  // no calibration directory: no lines and no calibration block (the stats are what they were)
+  const none = rate({ traceDir: tmp(), policyPath: LIVE_OFF_PATH, now: NOW });
+  assert.ok(!none.text.includes('CALIBRATION'), none.text);
+  assert.equal('calibration' in none.stats, false);
+});
+
+test('rate: calibration passes and fails never make a proposal; proposals stay outcome-based; an unreadable observations file is exit 4', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const of = (id) => structuredClone(Object.values(CAL1).find((o) => calProfile(live, o)?.id === id));
+  // three review passes for a profile not qualified for review (the outcome rule would propose qualification), and
+  // three fix fails for a profile qualified for fix (the outcome rule would propose demotion)
+  const oneRun = () => {
+    const passer = of('cc-sonnet-high');
+    passer['review-grade'].score = true;
+    const failer = of('cc-opus-high');
+    failer.fix.score = false;
+    return { a: passer, b: failer };
+  };
+  const third = oneRun();
+  third.b.fix.score = null; // not graded
+  const trace = calibrationTrace([oneRun(), oneRun(), third]);
+  const r = rate({ traceDir: trace, policyPath: LIVE_OFF_PATH, now: NOW });
+  assert.match(r.text, /^CALIBRATION cc-sonnet-high review: 3 pass, 0 fail \(calibration-1, calibration-2, calibration-3\)$/m);
+  assert.match(r.text, /^CALIBRATION cc-opus-high fix: 0 pass, 2 fail, 1 ungraded \(calibration-1, calibration-2, calibration-3\)$/m);
+  assert.deepEqual(r.proposals, []);
+  assert.ok(!/PROPOSAL/.test(r.text), r.text);
+  assert.match(r.text, /^no proposals$/m);
+  // the outcome loop is untouched next to them: two failed fixes still propose the demotion
+  const both = calibrationTrace([oneRun()]);
+  failedFix(both, 'f-1');
+  failedFix(both, 'f-2');
+  const r2 = rate({ traceDir: both, policyPath: POLICY_PATH, now: NOW });
+  assert.deepEqual(r2.proposals.map((p) => `${p.kind} ${p.profile} ${p.category}`), ['demote cc-opus-high fix']);
+  assert.match(r2.text, /^CALIBRATION cc-opus-high fix: 0 pass, 1 fail \(calibration-1\)$/m);
+  // an unreadable observations file refuses the run, as an unreadable decision file does
+  const bad = cli(['rate', '--trace', calibrationTrace(['{ not json']), '--now', NOW, '--policy', LIVE_OFF_PATH]);
+  assert.equal(bad.code, 4, bad.stdout);
+  assert.match(bad.stderr, /calibration-1\/observations\.json is unparseable/);
 });
