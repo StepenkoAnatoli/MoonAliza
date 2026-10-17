@@ -1910,6 +1910,21 @@ test('host-policy-2 routing: a pin-tests request routes to cc-haiku-low at the o
   assert.equal(computeDecision(pinReq(), twin, []).profile, 'cc-aaa-haiku');
 });
 
+// the README's qualification table is generated from host-policy.json: every row is the policy verbatim, in policy order (P2-2)
+test('README: the host-policy-2 qualification table matches host-policy.json row for row, qualified-for in policy order', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const section = readme.slice(readme.indexOf('### The table (host-policy-2'));
+  const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
+  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of COMMITTED_POLICY.profiles) {
+    const [, , qual, headroom, grades] = rows.find((r) => r[0] === `\`${p.id}\``);
+    assert.equal(qual, p['qualified-for'].join(', '), `${p.id} qualified-for`);
+    assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
+    const grade = (cat) => (p.evidence.find((e) => e.startsWith(`calibration-1: ${cat} `)) ?? '').split(' ')[2] ?? '';
+    assert.equal(grades, ['pin-tests', 'fix', 'review'].map(grade).join(' / '), `${p.id} calibration-1 grades`);
+  }
+});
+
 // calibration evidence in rate: counted apart from the outcomes, printed as CALIBRATION lines, never a proposal
 function calibrationTrace(runs) {
   const trace = tmp();

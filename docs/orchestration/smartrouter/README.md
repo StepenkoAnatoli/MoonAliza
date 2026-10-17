@@ -146,7 +146,7 @@ the lead when editing the policy. The adapter checks only the form of the entrie
 
 | Profile | Effort | Qualified for | Headroom tested | calibration-1 pin / fix / review | Basis |
 |---|---|---|---|---|---|
-| `cc-fable-xhigh` | xhigh, **direct only** (the lead), up to 15k tokens | build-core, build-ui, build-tests, review, fix, research-collect, docs-mechanical, pin-tests | 460k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
+| `cc-fable-xhigh` | xhigh, **direct only** (the lead), up to 15k tokens | build-core, build-ui, build-tests, review, fix, docs-mechanical, research-collect, pin-tests | 460k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
 | `cc-fable-high` | high | review, fix, pin-tests | 352k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
 | `cc-fable-medium` | medium | pin-tests | 139k | PASS / PASS / PASS | calibration-1 only |
 | `cc-opus-high` | high | build-core, build-ui, build-tests, review, fix, research-collect, pin-tests | 514k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
