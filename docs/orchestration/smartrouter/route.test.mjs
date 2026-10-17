@@ -1175,7 +1175,7 @@ test('Gate 4 usage step 1: no reading, or a reading older than reading-max-age-m
     assert.equal(missing.decision.candidates[id].reason, 'usage reading missing', id);
   }
   assert.equal(missing.decision.candidates['cc-sonnet-high']['first-failing-gate'], 2); // earlier gates keep their reasons
-  assert.deepEqual(missing.decision.usage, { 'reading-ts': null, 'reading-age-minutes': null, 'dispatched-since-reading-tokens': null, windows: {} });
+  assert.deepEqual(missing.decision.usage, { 'reading-ts': null, 'reading-age-minutes': null, 'dispatched-not-in-reading-tokens': null, windows: {} });
   assert.equal(missing.record['usage-tokens'], null);
   usageCli(trace, rateLimitInfo(NOW), NOW);
   const atLimit = decideOn(req({ taskId: 'g4-2', now: isoAt(NOW_MS + 30 * MIN) }), trace);
@@ -1231,7 +1231,7 @@ test('Gate 4 usage step 3: under the limit the decision carries the usage block,
   assert.equal(core.decision['usage-tokens'], 545000);
   assert.equal(core.record['usage-tokens'], 545000);
   assert.deepEqual(core.decision.usage, {
-    'reading-ts': NOW, 'reading-age-minutes': 6, 'dispatched-since-reading-tokens': 0,
+    'reading-ts': NOW, 'reading-age-minutes': 6, 'dispatched-not-in-reading-tokens': 0,
     windows: {
       five_hour: { utilization: 0.2, 'resets-at': '2026-10-17T23:00:00Z', projected: 0.3308, 'headroom-mtok': 2.7083 },
       seven_day: { utilization: 0.05, 'resets-at': '2026-10-23T19:00:00Z', projected: 0.0827, 'headroom-mtok': 13.3333 }
@@ -1528,7 +1528,8 @@ test('SW-2: Gate 4 counts the usage-tokens of every dispatch made since the read
   usageCli(trace, rateLimitInfo(NOW, { five: 0.70 }), NOW);
   const core = (taskId, now) => req({ taskId, category: 'build-core', now });
   const dispatchAt = (taskId, now, profile = 'cc-opus-high') => cli(['dispatch', taskId, profile, '--project-stop', CLEAR_JSON, '--trace', trace, '--now', now, '--policy', COMMITTED_POLICY_PATH]);
-  assert.equal(decideOn(core('cum-a', at(1)), trace).route, 'delegate');
+  const da = decideOn(core('cum-a', at(1)), trace);
+  assert.equal(da.route, 'delegate');
   assert.equal(decideOn(core('cum-c', at(1)), trace).route, 'delegate'); // decided before cum-a's dispatch
   const a = dispatchAt('cum-a', at(2));
   assert.equal(a.code, 0, a.stderr);
@@ -1536,20 +1537,22 @@ test('SW-2: Gate 4 counts the usage-tokens of every dispatch made since the read
   // decide: 0.70 + (545000 dispatched since the reading + 545000) x 0.24 = 0.9616 > 0.85
   const b = decideOn(core('cum-b', at(3)), trace);
   assert.equal(b.route, 'blocked');
-  assert.equal(b.decision.candidates['cc-opus-high'].reason, 'usage window five_hour: projected 0.9616 (with 545000 tokens dispatched since the reading) > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:00:00Z; defer until the reset');
-  assert.equal(b.decision.usage['dispatched-since-reading-tokens'], 545000);
+  assert.equal(b.decision.candidates['cc-opus-high'].reason, 'usage window five_hour: projected 0.9616 (with 545000 tokens dispatched and not in the reading) > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:00:00Z; defer until the reset');
+  assert.equal(b.decision.usage['dispatched-not-in-reading-tokens'], 545000);
   assert.equal(b.decision.usage.windows.five_hour['headroom-mtok'], 0.08); // (0.85 - 0.70) / 0.24 - 0.545
   // dispatch: cum-c was decided before cum-a was dispatched; its dispatch counts cum-a now
   const before = readFileSync(ledger, 'utf8');
   const c = dispatchAt('cum-c', at(4));
   assert.equal(c.code, 3, c.stdout);
-  assert.match(c.stderr, /usage check refused cc-opus-high \(decision seq 1, usage-tokens 545000\): usage window five_hour: projected 0\.9616 \(with 545000 tokens dispatched since the reading\) > 0\.85/);
+  assert.match(c.stderr, /usage check refused cc-opus-high \(decision seq 1, usage-tokens 545000\): usage window five_hour: projected 0\.9616 \(with 545000 tokens dispatched and not in the reading\) > 0\.85/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // the summary shows the dispatched tokens and the headroom after them
   const s = cli(['usage', '--trace', trace, '--now', at(4), '--policy', COMMITTED_POLICY_PATH]);
-  assert.match(s.stdout, /^ {2}dispatched since the reading: 545000 tokens$/m);
-  assert.match(s.stdout, /^ {2}five_hour: utilization 0\.7, resets 2026-10-17T23:00:00Z, headroom 0\.08 Mtok \(\(0\.9 - 0\.05 - 0\.7\) \/ 0\.24 - 0\.545 dispatched since the reading\)$/m);
-  // a reading taken after a dispatch already reflects it: cum-a no longer counts
+  assert.match(s.stdout, /^ {2}dispatched and not in the reading: 545000 tokens \(545000 since the reading, 0 in flight from before it\)$/m);
+  assert.match(s.stdout, /^ {2}five_hour: utilization 0\.7, resets 2026-10-17T23:00:00Z, headroom 0\.08 Mtok \(\(0\.9 - 0\.05 - 0\.7\) \/ 0\.24 - 0\.545 dispatched and not in the reading\)$/m);
+  // a reading taken at or after a dispatch's outcome holds all of it: cum-a no longer counts (SW-7: before its
+  // outcome, a reading taken while it runs does not close it)
+  recordOutcome(outcome({ 'task-id': 'cum-a', outcome: 'accepted', 'original-brief-fingerprint': da.briefFingerprint }), { traceDir: trace, policyPath: COMMITTED_POLICY_PATH, now: at(5) });
   usageCli(trace, rateLimitInfo(at(5), { five: 0.71 }), at(5));
   assert.equal(decideOn(core('cum-d', at(6)), trace).route, 'delegate'); // 0.71 + 0.1308 = 0.8408
   // a speculative set: its sum covers its own members, so the second member is not counted twice
@@ -1615,4 +1618,46 @@ test('SW-4: a reading\'s ts is when the platform observed it: pasted with its ev
   const live = cli(['usage', writeJson(rateLimitInfo(new Date().toISOString())), '--trace', t2, '--policy', COMMITTED_POLICY_PATH]);
   assert.equal(live.code, 0, live.stderr);
   assert.match(live.stderr, /^route\.mjs: note: no --now, so the reading's ts is the clock \(\S+\); pass --now <the rate_limit_event's own timestamp>, because staleness is measured from ts$/m);
+});
+
+test('SW-7: a unit dispatched before the reading and still running counts at its full usage-tokens until a reading taken at or after its outcome; two such delegations cannot both pass Gate 4', () => {
+  // the reviewer's trace: build-core, 545000 tokens per delegate = 0.1308 of five_hour; limit 0.85
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  const core = (taskId, now) => req({ taskId, category: 'build-core', now });
+  const dispatchAt = (taskId, now) => cli(['dispatch', taskId, 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', now, '--policy', COMMITTED_POLICY_PATH]);
+  usageCli(trace, rateLimitInfo(NOW, { five: 0.70 }), NOW);
+  const a = decideOn(core('inf-a', at(1)), trace);
+  assert.equal(a.route, 'delegate');
+  assert.equal(decideOn(core('inf-c', at(1)), trace).route, 'delegate'); // decided before inf-a's dispatch
+  assert.equal(dispatchAt('inf-a', at(6)).code, 0);
+  // the staleness rule forces a refresh while inf-a runs; the reading holds almost none of it
+  usageCli(trace, rateLimitInfo(at(31), { five: 0.71 }), at(31));
+  // decide: 0.71 + (545000 in flight + 545000) x 0.24 = 0.9716 > 0.85
+  const b = decideOn(core('inf-b', at(32)), trace);
+  assert.equal(b.route, 'blocked');
+  assert.equal(b.decision.candidates['cc-opus-high'].reason, 'usage window five_hour: projected 0.9716 (with 545000 tokens dispatched and not in the reading) > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:31:00Z; defer until the reset');
+  assert.equal(b.decision.usage['dispatched-not-in-reading-tokens'], 545000);
+  // dispatch: inf-c was decided against the first reading; at its dispatch inf-a is still in flight
+  const before = readFileSync(ledger, 'utf8');
+  const c = dispatchAt('inf-c', at(33));
+  assert.equal(c.code, 3, c.stdout);
+  assert.match(c.stderr, /usage check refused cc-opus-high \(decision seq 1, usage-tokens 545000\): usage window five_hour: projected 0\.9716 \(with 545000 tokens dispatched and not in the reading\) > 0\.85/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  const s = cli(['usage', '--trace', trace, '--now', at(33), '--policy', COMMITTED_POLICY_PATH]);
+  assert.match(s.stdout, /^ {2}dispatched and not in the reading: 545000 tokens \(0 since the reading, 545000 in flight from before it\)$/m);
+  // an outcome alone does not close it: the reading still predates the work inf-a did after 19:31
+  recordOutcome({ ...outcome({ 'task-id': 'inf-a', outcome: 'accepted', 'original-brief-fingerprint': a.briefFingerprint }), evidence: { ...outcome().evidence, 'actual-tokens': 540000 } }, { traceDir: trace, policyPath: COMMITTED_POLICY_PATH, now: at(40) });
+  assert.equal(decideOn(core('inf-d', at(41)), trace).route, 'blocked');
+  // a reading taken at or after the outcome holds all of inf-a: it stops counting
+  usageCli(trace, rateLimitInfo(at(42), { five: 0.83 - 0.1308 }), at(42));
+  assert.equal(decideOn(core('inf-e', at(43)), trace).route, 'delegate'); // 0.6992 + 0.1308 = 0.83
+  // a unit in flight from before the reading with no usage-tokens (dispatched with the feature off) is unknown: fail closed
+  const t3 = tmp();
+  run(req({ taskId: 'unk-a', now: at(1) }), { traceDir: t3 });
+  dispatch('unk-a', 'cc-opus-high', { projectStop: CLEAR, traceDir: t3, policyPath: POLICY_PATH, now: at(1) });
+  usageCli(t3, rateLimitInfo(at(2)), at(2));
+  const u = decideOn(req({ taskId: 'unk-b', now: at(3) }), t3);
+  assert.equal(u.route, 'blocked');
+  assert.equal(u.decision.candidates['cc-opus-high'].reason, 'usage reading 2026-10-17T19:02:00Z does not hold dispatch seq 2 of unk-a (in flight since 2026-10-17T19:01:00Z, no outcome before the reading), whose usage-tokens are unknown; record its outcome, then refresh with route.mjs usage');
 });

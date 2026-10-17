@@ -104,7 +104,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Lead-direct profile | **enforced**: the lead profile is walked only as `direct`, eligible up to `direct-max-tokens` (Gate 5); `dispatch` refuses it as a delegated worker, `--deviation` or not | `decide`, `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
-| Usage windows | **enforced when configured**: fresh reading required; projection against stop-at - lead-reserve in decide and dispatch. Gate 4 fails a candidate with no reading at or before `now`, a reading older than `reading-max-age-minutes`, a window reset since the reading, or a projection over any window's limit, counting the `usage-tokens` of every dispatch recorded since the reading. `dispatch` re-checks at its `--now` against the decision's `usage-tokens` and those dispatches (section 'Usage windows') | `decide`, `dispatch` |
+| Usage windows | **enforced when configured**: fresh reading required; projection against stop-at - lead-reserve in decide and dispatch. Gate 4 fails a candidate with no reading at or before `now`, a reading older than `reading-max-age-minutes`, a window reset since the reading, or a projection over any window's limit, counting the `usage-tokens` of every dispatch the reading does not hold (recorded after it, or in flight from before it). `dispatch` re-checks at its `--now` against the decision's `usage-tokens` and those dispatches (section 'Usage windows') | `decide`, `dispatch` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
 | Speculative and nested delegation | **off**: speculative needs the opt-in plus `uncertainty: "high"`; a nested opt-in is refused with a note, because this host cannot produce or enforce a NestedBrief (§14) | `decide` |
 | Speculative shared budget | **enforced** when opted in: the decision record stores the set's `shared-budget.calls` as `speculative-calls`; `dispatch` refuses once the decision has that many dispatches, and refuses any profile outside the set, `--deviation` or not (spec-v2 §8.4) | `decide`, `dispatch` |
@@ -243,14 +243,24 @@ requires, in this order:
    `projected = utilization + ((dispatched + tokens) / 1e6) x utilization-per-mtok <= stop-at - lead-reserve`.
    `tokens` is the count the cash bound uses: the work alone for direct, and work + the required reviewer's
    median (for categories whose verification names a review) + `delegate-overhead-tokens` for a delegate.
-   `dispatched` is the sum of the `usage-tokens` of every dispatch, of any task, recorded after the reading's `ts`
-   (and at or before `now`): a reading cannot contain work dispatched after it, finished or not, so those tokens
-   are committed but not yet in the reading. A newer reading takes them in, and they stop counting. Otherwise:
+   `dispatched` is the sum of the `usage-tokens` of every dispatch, of any task, recorded at or before `now` that
+   the reading cannot hold in full:
+   - a dispatch recorded after the reading's `ts`, finished or not: the reading cannot contain work dispatched
+     after it;
+   - a dispatch recorded at or before the reading's `ts` with no outcome at or before it: the unit was in flight
+     when the reading was taken and keeps consuming after it. It counts at its **full** `usage-tokens`, which
+     over-counts the part the reading already holds (the safe direction).
+   A dispatch stops counting only at a reading taken at or after its outcome. A newer reading alone does not
+   release a unit still running, and neither does an outcome alone. So record the outcome, then paste a fresh
+   reading. Otherwise:
    `usage window <w>: projected P > S (stop-at X - lead-reserve Y); resets <iso>`, with
-   ` (with N tokens dispatched since the reading)` after `P` when `dispatched` is not zero, followed by
-   `; defer until the reset` when the window resets before the task deadline. A dispatch since the reading with no
+   ` (with N tokens dispatched and not in the reading)` after `P` when `dispatched` is not zero, followed by
+   `; defer until the reset` when the window resets before the task deadline. A dispatch counted here with no
    `usage-tokens` (recorded while the feature was off) is unknown, and Gate 4 fails closed:
-   `usage reading <ts> predates dispatch seq S of <task>, whose usage-tokens are unknown; refresh with route.mjs usage`.
+   `usage reading <ts> predates dispatch seq S of <task>, whose usage-tokens are unknown; refresh with route.mjs usage`
+   for one recorded after the reading, and
+   `usage reading <ts> does not hold dispatch seq S of <task> (in flight since <iso>, no outcome before the reading), whose usage-tokens are unknown; record its outcome, then refresh with route.mjs usage`
+   for one in flight from before it.
 
 A candidate that fails step 3 is ineligible, and Gate 5 ranks the remaining candidates. Every single delegate
 projects the same tokens, so among single candidates only direct and delegate can differ here. In host-policy-1,
@@ -264,15 +274,15 @@ sum does not fit, the route is not speculative: the best single candidate is cho
 A speculative decision's `usage-tokens` is that sum, so `dispatch` re-checks the sum for each member.
 
 The decision file carries
-`usage: { reading-ts, reading-age-minutes, dispatched-since-reading-tokens, windows: { <w>: { utilization, resets-at, projected, headroom-mtok } } }`.
+`usage: { reading-ts, reading-age-minutes, dispatched-not-in-reading-tokens, windows: { <w>: { utilization, resets-at, projected, headroom-mtok } } }`.
 `projected` is the chosen profile's projection (the set's, for speculative), `null` when the route is blocked. It
 also carries `usage-tokens`, the tokens projected for the chosen profile (the set's sum, for speculative). The decision ledger record carries `usage-tokens` as an additive
 field. The Gate 4 note in the walkthrough names the binding window (`usage window five_hour binds: projected
 0.3308 <= 0.85` for a default `build-core` unit against the reading above). Uncertainty says
 `usage windows: coefficients host-declared (<coefficient-basis>)`.
 
-`dispatch` re-checks steps 1-3 at its `--now`, against the decision's `usage-tokens` plus every dispatch recorded
-since the reading (other than the other members of the same speculative decision, which the decision's sum already
+`dispatch` re-checks steps 1-3 at its `--now`, against the decision's `usage-tokens` plus every dispatch the
+reading does not hold, as in step 3 (other than the other members of the same speculative decision, which the decision's sum already
 covers). A decision taken 25 minutes before can be stale by dispatch time, and the window can fill up in between:
 two decisions taken against one reading cannot both be dispatched when only one fits. Each dispatch record carries
 the additive field `usage-tokens` it commits (a speculative member: its share of the set's sum). A failing step refuses the dispatch
@@ -281,14 +291,19 @@ with exit 3 and the same reason text, e.g.
 The pre-dispatch recheck walks Gate 4 with the readings as well, so a host deviation is held to the windows too.
 
 **Headroom.** `headroom-mtok = (stop-at - lead-reserve - utilization) / utilization-per-mtok - dispatched / 1e6`:
-the million sub-agent tokens the window still admits after the dispatches recorded since the reading. Against the
-reading above, five_hour admits (0.90 - 0.05 - 0.20) / 0.24 = 2.71 Mtok: four default `build-core` delegations (545k
-tokens each: 316k work + 209k review + 20k overhead; a fifth would bring the total to 2.725). Gate 4 counts them: each dispatch since the reading
-lowers the headroom the next decision and dispatch see. seven_day admits (0.90 - 0.05 - 0.05) / 0.06 = 13.3 Mtok.
-`route.mjs usage` with no file prints `dispatched since the reading: N tokens` and subtracts them from each
-window's headroom. What the gate cannot see: a unit dispatched before the reading and still running keeps
-consuming after it, and the lead's own work is not dispatched. The `lead-reserve` is the margin for both, and a
-fresh reading after an outcome closes the first.
+the million sub-agent tokens the window still admits after the dispatches the reading does not hold (step 3).
+Against the reading above, five_hour admits (0.90 - 0.05 - 0.20) / 0.24 = 2.71 Mtok: four default `build-core`
+delegations (545k tokens each: 316k work + 209k review + 20k overhead; a fifth would bring the total to 2.725).
+Gate 4 counts them: each dispatch lowers the headroom the next decision and dispatch see, and keeps lowering it
+while it runs, across any number of newer readings, until a reading taken at or after its outcome. A delegation
+that runs longer than `reading-max-age-minutes` therefore stays in the accounting through the refreshes the
+staleness rule forces. seven_day admits (0.90 - 0.05 - 0.05) / 0.06 = 13.3 Mtok. `route.mjs usage` with no file
+prints `dispatched and not in the reading: N tokens (A since the reading, B in flight from before it)` and
+subtracts N from each window's headroom.
+
+What the gate cannot see is the lead's own work, which is never dispatched. The `lead-reserve` is the margin for
+that alone. It is not a margin for sub-agent work: on five_hour, 0.05 / 0.24 = 0.208 Mtok, less than one default
+`build-core` delegation (545k tokens = 0.1308 of the window).
 
 **The coefficients and their basis.** `utilization-per-mtok` is host-declared from two coarse observations:
 

@@ -390,26 +390,38 @@ function latestReading(readings, nowMs) {
 const usageLimit = (w) => w['stop-at'] - w['lead-reserve'];
 const headroomMtok = (w, u, since = 0) => round4((usageLimit(w) - u) / w['utilization-per-mtok'] - since / 1e6);
 
-// the tokens committed since the reading (SW-2): every dispatch, of any task, recorded after the reading's ts and at
-// or before `now`. A reading cannot contain work dispatched after it, finished or not, so each such dispatch's
-// usage-tokens are added to the reading. `exclude` drops the dispatches a decision's own sum already covers (the other
-// members of a speculative set). A dispatch with no usage-tokens (recorded with the feature off) is unknown.
+// the tokens committed and not in the reading (SW-2, SW-7): every dispatch, of any task, recorded at or before `now`
+// that the reading cannot hold in full. That is (a) a dispatch recorded after the reading's ts, finished or not, and
+// (b) a dispatch recorded at or before it with no outcome at or before it: a unit in flight when the reading was
+// taken keeps consuming after it, so it counts at its full usage-tokens (an over-count of the part the reading
+// already holds, the safe direction) until a reading taken at or after its outcome. `exclude` drops the dispatches a
+// decision's own sum already covers (the other members of a speculative set). A dispatch with no usage-tokens
+// (recorded with the feature off) is unknown.
 function dispatchedSince(records, reading, nowMs, exclude = () => false) {
-  const since = { tokens: 0, unknown: null };
+  const since = { tokens: 0, after: 0, inFlight: 0, unknown: null };
   if (!reading) return since;
   const fromMs = isoMs(reading.ts);
+  const closedBy = (d) => records.some((o) => o.kind === 'outcome' && o['task-id'] === d['task-id'] && o.seq > d.seq
+    && o['dispatch-seq'] === d.seq && isoMs(o.ts) <= fromMs);
   for (const r of records) {
     if (r.kind !== 'dispatch' || exclude(r)) continue;
     const ms = isoMs(r.ts);
-    if (!(ms > fromMs && ms <= nowMs)) continue;
-    if (!isInt(r['usage-tokens'])) { since.unknown ??= r; continue; }
+    if (!(ms <= nowMs)) continue;
+    const after = ms > fromMs;
+    if (!after && closedBy(r)) continue;
+    if (!isInt(r['usage-tokens'])) { since.unknown ??= { ...r, inFlight: !after }; continue; }
     since.tokens += r['usage-tokens'];
+    if (after) since.after += r['usage-tokens']; else since.inFlight += r['usage-tokens'];
   }
   return since;
 }
 
+const unknownReason = (reading, d) => (d.inFlight
+  ? `usage reading ${reading.ts} does not hold dispatch seq ${d.seq} of ${d['task-id']} (in flight since ${d.ts}, no outcome before the reading), whose usage-tokens are unknown; record its outcome, then ${USAGE_REFRESH}`
+  : `usage reading ${reading.ts} predates dispatch seq ${d.seq} of ${d['task-id']}, whose usage-tokens are unknown; ${USAGE_REFRESH}`);
+
 // Gate 4's usage steps, in order: (1) a fresh reading, (2) no window reset since it, (3) every window's projection
-// within stop-at - lead-reserve, counting the tokens dispatched since the reading. Returns { reason } on the first
+// within stop-at - lead-reserve, counting the tokens dispatched and not in the reading. Returns { reason } on the first
 // failure, else each window's projection and the binding one
 function usageWalk(cfg, reading, nowMs, tokens, deadlineMs, since = { tokens: 0, unknown: null }) {
   if (!reading) return { reason: 'usage reading missing' };
@@ -420,7 +432,7 @@ function usageWalk(cfg, reading, nowMs, tokens, deadlineMs, since = { tokens: 0,
     if (!r) return { reason: `usage reading has no window ${name}; ${USAGE_REFRESH}` };
     if (!(nowMs < isoMs(r['resets-at']))) return { reason: `usage window ${name} reset at ${r['resets-at']} after the reading; ${USAGE_REFRESH}` };
   }
-  if (since.unknown) return { reason: `usage reading ${reading.ts} predates dispatch seq ${since.unknown.seq} of ${since.unknown['task-id']}, whose usage-tokens are unknown; ${USAGE_REFRESH}` };
+  if (since.unknown) return { reason: unknownReason(reading, since.unknown) };
   const projected = {};
   let binding = null;
   for (const [name, w] of Object.entries(cfg.windows)) {
@@ -429,7 +441,7 @@ function usageWalk(cfg, reading, nowMs, tokens, deadlineMs, since = { tokens: 0,
     const limit = usageLimit(w);
     if (p - limit > 1e-12) {
       const defer = isoMs(r['resets-at']) < deadlineMs ? '; defer until the reset' : '';
-      const with_ = since.tokens ? ` (with ${since.tokens} tokens dispatched since the reading)` : '';
+      const with_ = since.tokens ? ` (with ${since.tokens} tokens dispatched and not in the reading)` : '';
       return { reason: `usage window ${name}: projected ${round4(p)}${with_} > ${round4(limit)} (stop-at ${w['stop-at']} - lead-reserve ${w['lead-reserve']}); resets ${r['resets-at']}${defer}` };
     }
     projected[name] = p;
@@ -440,14 +452,14 @@ function usageWalk(cfg, reading, nowMs, tokens, deadlineMs, since = { tokens: 0,
 
 // the decision's usage block: the reading, its age, and per window the projection for the chosen profile (null if blocked)
 function usageBlock(cfg, reading, nowMs, chosenProjected, since) {
-  if (!reading) return { 'reading-ts': null, 'reading-age-minutes': null, 'dispatched-since-reading-tokens': null, windows: {} };
+  if (!reading) return { 'reading-ts': null, 'reading-age-minutes': null, 'dispatched-not-in-reading-tokens': null, windows: {} };
   const windows = {};
   for (const [name, w] of Object.entries(cfg.windows)) {
     const r = reading.windows[name];
     if (!r) continue;
     windows[name] = { utilization: r.utilization, 'resets-at': r['resets-at'], projected: chosenProjected ? round4(chosenProjected[name]) : null, 'headroom-mtok': headroomMtok(w, r.utilization, since.tokens) };
   }
-  return { 'reading-ts': reading.ts, 'reading-age-minutes': minutesOf(nowMs - isoMs(reading.ts)), 'dispatched-since-reading-tokens': since.unknown ? null : since.tokens, windows };
+  return { 'reading-ts': reading.ts, 'reading-age-minutes': minutesOf(nowMs - isoMs(reading.ts)), 'dispatched-not-in-reading-tokens': since.unknown ? null : since.tokens, windows };
 }
 
 export function usageSummary({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString() } = {}) {
@@ -461,9 +473,9 @@ export function usageSummary({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_T
   const max = cfg['reading-max-age-minutes'];
   const lines = [`latest usage reading ${r.ts} (age ${minutesOf(age)} min, max ${max})${age > max * 60000 ? `: stale; ${USAGE_REFRESH}` : ''}`];
   const since = dispatchedSince(readLedger(traceDir), r, nowMs);
-  if (since.unknown) lines.push(`  dispatched since the reading: unknown (dispatch seq ${since.unknown.seq} of ${since.unknown['task-id']} has no usage-tokens); ${USAGE_REFRESH}`);
-  else if (since.tokens) lines.push(`  dispatched since the reading: ${since.tokens} tokens`);
-  const minus = since.tokens ? ` - ${round6(since.tokens / 1e6)} dispatched since the reading` : '';
+  if (since.unknown) lines.push(`  dispatched and not in the reading: unknown (${unknownReason(r, since.unknown)})`);
+  else if (since.tokens) lines.push(`  dispatched and not in the reading: ${since.tokens} tokens (${since.after} since the reading, ${since.inFlight} in flight from before it)`);
+  const minus = since.tokens ? ` - ${round6(since.tokens / 1e6)} dispatched and not in the reading` : '';
   for (const [name, w] of Object.entries(cfg.windows)) {
     const x = r.windows[name];
     if (!x) { lines.push(`  ${name}: not in the reading; ${USAGE_REFRESH}`); continue; }
@@ -1111,13 +1123,13 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   const readings = policy['usage-windows'] ? readUsage(traceDir) : [];
   let usageFields = {};
   if (policy['usage-windows']) {
-    // each dispatch records the tokens it commits, so later decisions and dispatches count it until a reading
-    // follows it (SW-2): a speculative member commits its share of the set's sum
+    // each dispatch records the tokens it commits, so later decisions and dispatches count it until a reading taken
+    // at or after its outcome (SW-2, SW-7): a speculative member commits its share of the set's sum
     usageFields = { 'usage-tokens': isInt(dec['usage-tokens']) ? dec['usage-tokens'] / decided.length : null };
   }
   if (policy['usage-windows'] && isInt(dec['usage-tokens'])) {
     const reading = latestReading(readings, isoMs(now));
-    // the decision's own sum covers the other members of its speculative set; every other dispatch since the reading counts
+    // the decision's own sum covers the other members of its speculative set; every other dispatch the reading does not hold counts
     const since = dispatchedSince(records, reading, isoMs(now), (r) => r['task-id'] === taskId && r['decision-seq'] === dec.seq);
     const u = usageWalk(policy['usage-windows'], reading, isoMs(now), dec['usage-tokens'], isoMs(dec.deadline), since);
     if (u.reason) throw refused(`usage check refused ${profileId} (decision seq ${dec.seq}, usage-tokens ${dec['usage-tokens']}): ${u.reason}`);
