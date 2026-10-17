@@ -331,6 +331,13 @@ observed exceeds the current by more than 10 % (upward at once: the conservative
 value only when the last three observations are all below 90 % of the current, and then proposes the highest of
 those three (downward slowly), and never a value <= 0, which the policy refuses. The lead ratifies by editing the policy, as for every other proposal.
 
+**`ratified-at`.** Each window may carry `ratified-at` (ISO-8601): the time the lead last ratified its
+coefficient. `rate` considers only observations whose later reading is after it for the upward maximum and
+the three-in-a-row downward rule, so a ratified downward change is not followed by an upward proposal from
+older history (re-review finding SW-5). Ratify by editing the coefficient and `ratified-at` together. Pairs
+of readings with a unit in flight at either reading are skipped as `spanning` (SW-8): a unit's tokens are
+recorded whole at its outcome, so such a pair cannot say what they cost.
+
 ## Policy findings (host-policy-1)
 
 These were found while building the adapter. The policy file is unchanged; the lead decides.

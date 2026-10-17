@@ -155,3 +155,16 @@ A, C and H above:
 
 With these rulings the stop trigger "a base test cannot stay green without changing its expectations" is
 satisfied by the ratified filter alone; any other expectation change still stops the unit.
+## Lead's rulings after review 1 of the second attempt (2026-10-17 20:35 UTC)
+
+- **SW-5 (coefficient proposals oscillate) → option (a), ratified.** Each window carries `ratified-at`
+  (ISO) in the policy next to `utilization-per-mtok`; `rate` compares only observations whose `to`
+  reading is after `ratified-at` (the upward rule's max and the downward rule's three-in-a-row alike).
+  Ratifying a proposal means editing the coefficient and `ratified-at` together; a missing `ratified-at`
+  means "consider everything" (the first revision). Red-first test: the reviewer's flip-flop probe
+  sequence, with `ratified-at` set after each ratification, produces no second proposal.
+- **SW-6 / W-4 re-ruled.** Per-commit attribution of the model that wrote the commit is the accepted
+  practice of this build (the integration branch carries 460 `Claude Opus 5.5` and 37 `Claude Fable 5.1`
+  trailers); the brief's "two lines" wording in router-builder.md and common.md is stale and the lead
+  docs unit rewords it to "the session's attribution lines for the model that writes the commit, plus
+  the Claude-Session line". No commit is rewritten.
