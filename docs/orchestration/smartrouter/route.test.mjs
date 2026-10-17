@@ -677,3 +677,16 @@ test('F4: a superseding outcome for the same dispatch replaces the first in the 
   assert.equal(r2.stats.stats['cc-opus-high'].fix['verification-failed'], 0);
   assert.equal(r2.stats.stats['cc-opus-high'].fix.accepted, 1);
 });
+
+test('F5: a ledger whose last line has no trailing newline is refused (exit 4) before anything is appended', () => {
+  const trace = tmp();
+  run(req({ taskId: 'nl-1' }), { traceDir: trace });
+  const path = join(trace, 'ledger.jsonl');
+  const stripped = readFileSync(path, 'utf8').replace(/\n$/, '');
+  writeFileSync(path, stripped);
+  const out = cli(['dispatch', 'nl-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  assert.equal(out.code, 4, out.stdout);
+  assert.match(out.stderr, /ledger does not end with a newline/);
+  assert.equal(readFileSync(path, 'utf8'), stripped);
+  assert.equal(cli(['status', 'nl-1', '--trace', trace]).code, 4);
+});

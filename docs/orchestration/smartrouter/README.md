@@ -62,8 +62,10 @@ profile), `allowDirect` (default true), `hostOptIns`. Three optional additions a
 `--now <iso>`.
 
 Exit codes: 0 done; 2 invalid input, including a `now` earlier than the task's latest ledger event (the task clock
-is monotonic); 3 refused; 4 ledger integrity (an unparseable or non-§10.5 line, or a seq gap). The adapter refuses
-to append to a ledger it cannot read; it never skips a line.
+is monotonic); 3 refused; 4 ledger integrity (an unparseable or non-§10.5 line, a seq gap, or a last line with no
+trailing newline). The adapter refuses to append to a ledger it cannot read; it never skips a line. When writing a
+ledger line by hand, end it with a newline: the adapter refuses an unterminated last line rather than append onto
+it, and the fix is to add the missing newline, which changes no record.
 
 ## Enforced vs advisory in this host
 

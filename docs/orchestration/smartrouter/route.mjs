@@ -244,8 +244,11 @@ const ledgerPath = (traceDir) => join(traceDir, 'ledger.jsonl');
 export function readLedger(traceDir = DEFAULT_TRACE) {
   const path = ledgerPath(traceDir);
   if (!existsSync(path)) return [];
-  const lines = readFileSync(path, 'utf8').split('\n');
-  if (lines[lines.length - 1] === '') lines.pop();
+  const text = readFileSync(path, 'utf8');
+  // an append onto an unterminated last line would itself write an unparseable line, repairable only by a rewrite
+  if (text.length && !text.endsWith('\n')) throw new RouterError(4, `ledger does not end with a newline (last line unterminated, probably hand-written); refusing to read or append (${path}); the lead terminates the last line, which changes no record`);
+  const lines = text.split('\n');
+  lines.pop();
   const lastSeq = new Map();
   return lines.map((line, i) => {
     let rec;
