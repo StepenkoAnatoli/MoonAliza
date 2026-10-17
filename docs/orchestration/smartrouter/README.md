@@ -15,12 +15,17 @@ itself. Every output it prints carries `Advisory: recommendation only — no dis
 | `trace/ledger.jsonl` | The Outcome Ledger: spec-v2 §10.5 records, append-only, never rewritten. |
 | `trace/decisions/<task>-<seq>.json` | One file per decision: the request, input and policy digests, the per-candidate gate walkthrough with reasons, the chosen profile, estimates vs accounting, the Brief. `hand-*.json` are the lead's hand-walked decisions from before the adapter existed. |
 | `trace/outcomes/<task>-<seq>.json` | The §10.3 Outcome objects that outcome records point at. |
+| `trace/usage.jsonl` | The usage readings (the subscription's five-hour and seven-day windows) pasted by the lead with `route.mjs usage`. Append-only, never rewritten, separate from the ledger. |
 | `trace/qualification-stats.json` | Derived by `rate`. Regenerated on every run, never hand-edited. |
 
 ## The lead's per-dispatch procedure
 
 Run every command from the repository root. Node 24 must be on `PATH`.
 
+0. **Refresh the usage reading** when the latest one is older than 30 minutes, or a window has reset since it
+   (`route.mjs usage` with no file says which): paste the platform's latest `rate_limit_event` with
+   `node docs/orchestration/smartrouter/route.mjs usage <reading.json>` (section 'Usage windows'). Without a fresh
+   reading every candidate that reaches Gate 4 fails it, and `decide` returns `blocked`.
 1. **Decide.** Write the request JSON (fields below) and run
    `node docs/orchestration/smartrouter/route.mjs decide <request.json>`.
    It prints the Required output format block, the Advisory line, a gate walk per candidate and, for `delegate`,
@@ -58,7 +63,9 @@ Run every command from the repository root. Node 24 must be on `PATH`.
 5. **Record the outcome** when the unit ends, from observed evidence, never from the agent's self-report:
    `node docs/orchestration/smartrouter/route.mjs outcome <outcome.json>`. This takes a §10.3 Outcome. Its
    `original-brief-fingerprint` must be the decision's, `actual-spend` is `null` in this host, and `owner-profile`
-   is the profile id or its exact identity tuple.
+   is the profile id or its exact identity tuple. Put the unit's total tokens in the additive
+   `evidence.actual-tokens` (an integer, or `null` when unknown). The outcome record carries it as `tokens`, and
+   `rate` uses it to check the usage coefficients.
 6. **Re-route on failure.** Decide again with `previousResult` set to that Outcome. One same-profile repair is
    allowed per task. After that, the same profile is refused at Gate 4 and the decision falls to another
    qualified profile, which is a fresh decision.
@@ -70,12 +77,13 @@ Request fields: `taskId`, `objective`, `category`, `unit`, `permittedEffects`, `
 `previousResult`, `deadline`, `now` (both ISO-8601; `now` is injected for determinism), `candidates` (default: every
 profile; it also bounds who may review), `allowDirect` (default true), `hostOptIns`. Three optional additions are accepted: `uncertainty: "high"`
 (the only way to reach `speculative`, and only with the host opt-in) and `requiredIsolation` (a lower bound on the
-§6 lattice). Every command takes `--trace <dir>` and `--policy <file>`. `dispatch`, `outcome` and `rate` also take
-`--now <iso>`. `dispatch` requires `--project-stop <json>` and takes `--deviation <reason>`.
+§6 lattice). Every command takes `--trace <dir>` and `--policy <file>`. `dispatch`, `outcome`, `rate` and `usage`
+also take `--now <iso>`. `dispatch` requires `--project-stop <json>` and takes `--deviation <reason>`.
 
 Exit codes: 0 done; 2 invalid input, including a `now` earlier than the task's latest ledger event (the task clock
-is monotonic); 3 refused; 4 ledger integrity (an unparseable or non-§10.5 line, a seq gap, or a last line with no
-trailing newline). The adapter refuses to append to a ledger it cannot read; it never skips a line. When writing a
+is monotonic) and a usage reading `usage` refuses; 3 refused; 4 ledger integrity (an unparseable or non-§10.5 line,
+a seq gap, or a last line with no trailing newline; the same for an unparseable or unterminated `usage.jsonl`).
+The adapter refuses to append to a ledger it cannot read; it never skips a line. When writing a
 ledger line by hand, end it with a newline: the adapter refuses an unterminated last line rather than append onto
 it, and the fix is to add the missing newline, which changes no record.
 
@@ -94,6 +102,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Lead-direct profile | **enforced**: the lead profile is walked only as `direct`, eligible up to `direct-max-tokens` (Gate 5); `dispatch` refuses it as a delegated worker, `--deviation` or not | `decide`, `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
+| Usage windows | **enforced when configured**: fresh reading required; projection against stop-at - lead-reserve in decide and dispatch. Gate 4 fails a candidate with no reading at or before `now`, a reading older than `reading-max-age-minutes`, a window reset since the reading, or a projection over any window's limit. `dispatch` re-checks at its `--now` against the decision's `usage-tokens` (section 'Usage windows') | `decide`, `dispatch` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
 | Speculative and nested delegation | **off**: speculative needs the opt-in plus `uncertainty: "high"`; a nested opt-in is refused with a note, because this host cannot produce or enforce a NestedBrief (§14) | `decide` |
 | Speculative shared budget | **enforced** when opted in: the decision record stores the set's `shared-budget.calls` as `speculative-calls`; `dispatch` refuses once the decision has that many dispatches, and refuses any profile outside the set, `--deviation` or not (spec-v2 §8.4) | `decide`, `dispatch` |
@@ -159,8 +168,123 @@ writes the policy.
   stands, and its Uncertainty line names every pending proposal for the chosen profile, e.g.
   `pending proposal (not applied): demote cc-opus-high from fix: 2 consecutive verification-failed (f-1, f-2)`.
 
+- With usage windows configured, `rate` also derives **observed usage coefficients** from paired readings and
+  proposes coefficient changes (section 'Usage windows').
+
 MoonAliza the product gets the same loop later, through its Phase 6 advisory UI. That is out of scope here; this
 adapter serves the build process only.
+
+## Usage windows
+
+This host runs on a Claude subscription. Its finite resource is not cash. It is two rolling usage windows, which
+the platform reports on every turn as a `rate_limit_event`:
+
+```
+rate_limit_info.unifiedWindows = {
+  "five_hour": { "resetsAt": 1792278000, "utilization": 0.2 },     // epoch seconds; 0..1
+  "seven_day": { "resetsAt": 1792864800, "utilization": 0.05 }
+}
+```
+
+(observed 2026-10-17T19:00:22Z: `five_hour` resets 2026-10-17T23:00:00Z, `seven_day` 2026-10-24T18:00:00Z). The
+`usage-windows` block in `host-policy.json` turns the feature on. Without the block every decision says
+`usage windows: not configured` in Uncertainty, and nothing here applies.
+
+**The reading.** The lead reads the latest event with the `claude-code-remote` tool
+`list_events(kinds=["rate_limit_event"])`. The adapter cannot call that tool. The lead pastes the event's
+`rate_limit_info`, its bare `unifiedWindows`, or the normalised form
+`{ "windows": { "<w>": { "utilization", "resets-at" } }, "note" }` into a file, then runs:
+
+```
+node docs/orchestration/smartrouter/route.mjs usage <reading.json> --now 2026-10-17T19:00:22Z
+usage reading recorded: 2026-10-17T19:00:22Z five_hour 0.2 (resets 2026-10-17T23:00:00Z), seven_day 0.05 (resets 2026-10-24T18:00:00Z)
+```
+
+This appends `{ ts, windows: { <w>: { utilization, resets-at } }, source: "rate_limit_event", note }` to
+`trace/usage.jsonl`. `ts` is `--now`, or the clock when `--now` is omitted. Only the windows the policy names are
+recorded. Exit 2, with nothing appended, when:
+
+- a policy window is missing from the reading;
+- a utilization is not a number in [0, 1];
+- a `resets-at` is not strictly after `ts`, or is more than one window length (`length-seconds`) after it. A rolling
+  window cannot reset later than that, and the check catches epoch milliseconds pasted as seconds;
+- `ts` is not after the previous reading's `ts` (readings are monotonic, like the ledger clock).
+
+`route.mjs usage` with no file prints the latest reading, its age, and each window's headroom:
+
+```
+latest usage reading 2026-10-17T19:00:22Z (age 9.63 min, max 30)
+  five_hour: utilization 0.2, resets 2026-10-17T23:00:00Z, headroom 2.7083 Mtok ((0.9 - 0.05 - 0.2) / 0.24)
+  seven_day: utilization 0.05, resets 2026-10-24T18:00:00Z, headroom 13.3333 Mtok ((0.9 - 0.05 - 0.05) / 0.06)
+```
+
+**What refreshes a reading.** Only a new `route.mjs usage <reading.json>`. A reading is used by decisions whose `now`
+is at most `reading-max-age-minutes` (30) after it. It stops counting for a window the moment that window's
+`resets-at` passes: a reading from before a reset says nothing about the new window (fail-closed). When either
+happens, `route.mjs usage` with no file reports it (`stale; refresh with route.mjs usage`, or
+`reset since the reading`). A decision uses the latest reading at or before its own `now`, never a later one.
+
+**The rule.** The standing rule (user, 2026-10-14) stops work at 0.90 of the weekly window, and this host applies
+the same threshold to the five-hour window. Each window also keeps a `lead-reserve` of 0.05 for the lead's own
+work, which no recorded sub-agent token counts. Gate 4 runs after its call, repair, deadline and price checks, and
+requires, in this order:
+
+1. a reading exists at or before `now`, and `now - ts <= reading-max-age-minutes`. Otherwise it fails with
+   `usage reading missing`, or `usage reading stale: age N min > 30; refresh with route.mjs usage`;
+2. no window has reset since the reading (`now < resets-at` for each window). Otherwise:
+   `usage window <w> reset at <iso> after the reading; refresh with route.mjs usage`;
+3. for each window, `projected = utilization + (tokens / 1e6) x utilization-per-mtok <= stop-at - lead-reserve`.
+   `tokens` is the count the cash bound uses: the work alone for direct, and work + the required reviewer's
+   median (for categories whose verification names a review) + `delegate-overhead-tokens` for a delegate.
+   Otherwise: `usage window <w>: projected P > S (stop-at X - lead-reserve Y); resets <iso>`, followed by
+   `; defer until the reset` when the window resets before the task deadline.
+
+A candidate that fails step 3 is ineligible, and Gate 5 ranks the remaining candidates. Every delegate projects
+the same tokens, so only direct and delegate candidates can differ here. In host-policy-1, direct is the cheaper
+of the two whenever it is eligible. `blocked` and every other route come out of the existing flow unchanged.
+
+The decision file carries
+`usage: { reading-ts, reading-age-minutes, windows: { <w>: { utilization, resets-at, projected, headroom-mtok } } }`.
+`projected` is the chosen profile's projection, `null` when the route is blocked. It also carries `usage-tokens`,
+the tokens projected for the chosen profile. The decision ledger record carries `usage-tokens` as an additive
+field. The Gate 4 note in the walkthrough names the binding window (`usage window five_hour binds: projected
+0.3308 <= 0.85` for a default `build-core` unit against the reading above). Uncertainty says
+`usage windows: coefficients host-declared (<coefficient-basis>)`.
+
+`dispatch` re-checks steps 1-3 at its `--now`, against the decision's `usage-tokens`. A decision taken 25 minutes
+before can be stale by dispatch time, and the window can fill up in between. A failing step refuses the dispatch
+with exit 3 and the same reason text, e.g.
+`usage check refused cc-opus-high (decision seq 1, usage-tokens 229000): usage reading stale: age 31 min > 30; refresh with route.mjs usage`.
+The pre-dispatch recheck walks Gate 4 with the readings as well, so a host deviation is held to the windows too.
+
+**Headroom.** `headroom-mtok = (stop-at - lead-reserve - utilization) / utilization-per-mtok`: the million
+sub-agent tokens the window still admits. Against the reading above, five_hour admits (0.90 - 0.05 - 0.20) / 0.24 =
+2.71 Mtok, about five default `build-core` delegations (545k tokens each: 316k work + 209k review + 20k overhead).
+seven_day admits (0.90 - 0.05 - 0.05) / 0.06 = 13.3 Mtok.
+
+**The coefficients and their basis.** `utilization-per-mtok` is host-declared from two coarse observations:
+
+- 2026-10-14 17:01 to 18:18: the weekly window went from 0.82 to 0.88 while about 1.06M recorded sub-agent tokens
+  ran (the lead's own tokens unrecorded). That is 0.06 / 1.06 = 0.057 per Mtok, declared as **0.06** for
+  `seven_day`.
+- 2026-10-17 18:00 to 19:00 (both windows fresh at 18:00): `five_hour` reached 0.20 while `seven_day` reached 0.05,
+  so the five-hour window moves about four times as fast. That gives **0.24** for `five_hour`.
+
+The first observation divides by recorded sub-agent tokens only, while the lead's own unrecorded tokens moved the
+window too, so it overstates the coefficient, which is the safe direction. The second fixes only the ratio between
+the windows. A coefficient must be a finite number > 0: unknown is not allowed, because a window with no coefficient
+cannot be projected.
+
+**Learning the coefficients.** `rate` pairs consecutive readings. For each pair with no reset of the window between
+them (same `resets-at`, not passed by the later reading), it computes
+`observed = (u2 - u1) / (T / 1e6)`, where `T` sums the `tokens` of the outcome records with `ts` in `(ts1, ts2]`
+(one outcome per dispatch). A pair is skipped and counted under `skipped` when any outcome in it has unknown tokens,
+or when `T` = 0 (only unrecorded tokens moved the window). `qualification-stats.json` gets
+`usage: { <w>: { observed: [{ from, to, delta, tokens, coefficient }], max-observed, current, skipped } }`. `rate`
+prints `PROPOSAL usage-windows.windows.<w>.utilization-per-mtok: <current> -> <max-observed>` when the maximum
+observed exceeds the current by more than 10 % (upward at once: the conservative direction). It proposes a lower
+value only when the last three observations are all below 90 % of the current, and then proposes the highest of
+those three (downward slowly). The lead ratifies by editing the policy, as for every other proposal.
 
 ## Policy findings (host-policy-1)
 
@@ -271,3 +395,11 @@ Every point where the spec was ambiguous or did not fit a subscription host. Cit
     state. Every profile in host-policy-1 is priced. `validatePolicy` requires a price only for the lead-direct
     profile, so the reject is what keeps an unpriced profile out of routing. Upstream could say whether an unknown
     price blocks only a strict cap.
+16. **Gate 4's budget has no place for a usage window.** gates.md Gate 4 and spec-v2 §10.1 type the budget as cash,
+    calls and a deadline (`allowance: { cash, calls, deadline }`), and §10.5's `counters` carry cash, calls and
+    repairs. On a subscription host the finite resource is a set of rolling usage windows (here five-hour and
+    seven-day). Each has a utilization, a reset time and a host-learned tokens-to-utilization coefficient. Nothing
+    in §10.1 or §10.5 carries a window, so this host enforces the windows in Gate 4 as a host check. It records
+    them in additive fields: the decision's `usage` block, `usage-tokens` on the decision record, and `tokens` on
+    the outcome record. Upstream could type a `windows` allowance, or a window counter in §10.5, next to cash.
+    (The brief named this item 13. Item 13 was already taken, so it is 16.)
