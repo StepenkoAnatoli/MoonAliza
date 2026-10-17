@@ -263,7 +263,7 @@ test('R01-R03: a second same-profile repair is refused by dispatch (exit 3) and 
   assert.equal(fresh.counters['calls-used'], 3);
 });
 
-test('dispatch refuses without a decision, against a blocked decision, on an unrecorded profile switch, and before reconciling', () => {
+test('dispatch refuses without a decision, against a blocked decision, on an unrecorded profile switch, and on a second dispatch of one decision', () => {
   const trace = tmp();
   const none = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
   assert.equal(none.code, 3);
@@ -282,7 +282,7 @@ test('dispatch refuses without a decision, against a blocked decision, on an unr
   assert.equal(again.code, 3);
   assert.match(again.stderr, /already dispatched/);
   const late = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', DEADLINE]);
-  assert.equal(late.code, 3);
+  assert.equal(late.code, 3); // refused as already dispatched; the deadline refusal is pinned by 'F6 dispatch deadline'
   const unknown = cli(['dispatch', 'd-1', 'cc-ghost', '--trace', trace, '--now', NOW]);
   assert.equal(unknown.code, 2);
   // a recorded deviation is allowed and marked
@@ -689,4 +689,86 @@ test('F5: a ledger whose last line has no trailing newline is refused (exit 4) b
   assert.match(out.stderr, /ledger does not end with a newline/);
   assert.equal(readFileSync(path, 'utf8'), stripped);
   assert.equal(cli(['status', 'nl-1', '--trace', trace]).code, 4);
+});
+
+// ---------------------------------------------------------------------------------------------
+// F6: enforced duties the README claims, each pinned by its own refusal
+// ---------------------------------------------------------------------------------------------
+test('F6 dispatch deadline: a fresh decision dispatched at now == deadline is refused by dispatch\'s own deadline check', () => {
+  const trace = tmp();
+  run(req({ taskId: 'dl-1' }), { traceDir: trace });
+  const before = readFileSync(join(trace, 'ledger.jsonl'), 'utf8');
+  const out = cli(['dispatch', 'dl-1', 'cc-opus-high', '--trace', trace, '--now', DEADLINE]);
+  assert.equal(out.code, 3, out.stdout);
+  assert.match(out.stderr, /deadline 2026-10-18T06:00:00Z reached: now 2026-10-18T06:00:00Z is not strictly before it/);
+  assert.equal(readFileSync(join(trace, 'ledger.jsonl'), 'utf8'), before);
+});
+
+test('F6 reconcile first: a same-profile re-dispatch with no outcome for the earlier dispatch is refused', () => {
+  const trace = tmp();
+  run(req({ taskId: 'rc-1' }), { traceDir: trace });
+  dispatch('rc-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  run(req({ taskId: 'rc-1' }), { traceDir: trace }); // decided again without recording an outcome
+  const out = cli(['dispatch', 'rc-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  assert.equal(out.code, 3, out.stdout);
+  assert.match(out.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch/);
+});
+
+test('F6 one dispatch per delegate decision: a different profile after the decision was dispatched is refused, deviation or not', () => {
+  const trace = tmp();
+  run(req({ taskId: 'ad-1' }), { traceDir: trace });
+  dispatch('ad-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const out = cli(['dispatch', 'ad-1', 'cc-fable-high', '--trace', trace, '--now', NOW, '--deviation', 'second opinion']);
+  assert.equal(out.code, 3, out.stdout);
+  assert.match(out.stderr, /decision seq 1 for ad-1 was already dispatched \(seq 2\); decide again/);
+});
+
+test('F6 outcome after decision: once an outcome follows the decision, no further dispatch of its set without a fresh decision', () => {
+  const trace = tmp();
+  const d = run(req({ taskId: 'sp-1', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: trace });
+  assert.equal(d.route, 'speculative');
+  dispatch('sp-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  recordOutcome(outcome({ 'task-id': 'sp-1', outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const out = cli(['dispatch', 'sp-1', 'cc-fable-high', '--trace', trace, '--now', NOW]);
+  assert.equal(out.code, 3, out.stdout);
+  assert.match(out.stderr, /an outcome \(seq 3\) follows the latest decision \(seq 1\); decide again with previousResult first/);
+});
+
+test('F6 ledger integrity: a seq gap and a parseable non-§10.5 line are refused (exit 4) with nothing appended', () => {
+  const base = { 'task-id': 'li-1', kind: 'decision', ts: NOW, profile: OPUS_TUPLE, counters: { 'calls-used': 0, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: DEADLINE, 'brief-fingerprint': null, detail: 'route delegate (hand)', 'outcome-ref': null };
+  const gap = tmp();
+  writeFileSync(join(gap, 'ledger.jsonl'), `${JSON.stringify({ ...base, seq: 1 })}\n${JSON.stringify({ ...base, seq: 3 })}\n`);
+  const gapBefore = readFileSync(join(gap, 'ledger.jsonl'), 'utf8');
+  const g = cli(['decide', writeJson(req({ taskId: 'li-2' })), '--trace', gap]);
+  assert.equal(g.code, 4, g.stdout);
+  assert.match(g.stderr, /ledger line 2: seq 3 for li-1 does not follow 1; refusing to read or append/);
+  assert.equal(readFileSync(join(gap, 'ledger.jsonl'), 'utf8'), gapBefore);
+  const schema = tmp();
+  writeFileSync(join(schema, 'ledger.jsonl'), `${JSON.stringify({ ...base, seq: 1, kind: 'payment' })}\n`);
+  const schemaBefore = readFileSync(join(schema, 'ledger.jsonl'), 'utf8');
+  const s = cli(['decide', writeJson(req({ taskId: 'li-2' })), '--trace', schema]);
+  assert.equal(s.code, 4, s.stdout);
+  assert.match(s.stderr, /ledger line 1 is not a §10\.5 LedgerRecord \(kind\); refusing to read or append/);
+  assert.equal(readFileSync(join(schema, 'ledger.jsonl'), 'utf8'), schemaBefore);
+});
+
+test('F6 project stop: a failing research gate blocks every candidate at Gate 1 and names the stop', () => {
+  const d = computeDecision(req({ projectStop: { redSuite: false, gateOff: false, researchGateFailing: true } }), loadPolicy(POLICY_PATH), []);
+  assert.equal(d.route, 'blocked');
+  for (const p of POLICY.profiles) {
+    assert.equal(d.candidates[p.id]['first-failing-gate'], 1, p.id);
+    assert.equal(d.candidates[p.id].reason, 'project stop: research gate failing on the project');
+  }
+});
+
+test('F6 Brief attempts: the first decision allows one repair, the repair decision leaves none', () => {
+  const trace = tmp();
+  const first = run(req({ taskId: 'at-1', category: 'fix' }), { traceDir: trace });
+  assert.equal(first.brief.attempts, 1);
+  dispatch('at-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const prev = outcome({ 'task-id': 'at-1', 'original-brief-fingerprint': first.briefFingerprint });
+  recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const repair = run(req({ taskId: 'at-1', category: 'fix', previousResult: prev }), { traceDir: trace });
+  assert.equal(repair.decision.profile, 'cc-opus-high');
+  assert.equal(repair.brief.attempts, 0);
 });
