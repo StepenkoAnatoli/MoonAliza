@@ -14,7 +14,7 @@ itself. Every output it prints carries `Advisory: recommendation only — no dis
 | `route.test.mjs` | `node --test` suite, one test per SmartRouter fixture it mirrors, plus the three golden hand-walked decisions. The base tests and the goldens run on `host-policy-1` (the fixture below), the live policy on its own tests. |
 | `trace/ledger.jsonl` | The Outcome Ledger: spec-v2 §10.5 records, append-only, never rewritten. |
 | `trace/decisions/<task>-<seq>.json` | One file per decision: the request, input and policy digests, the per-candidate gate walkthrough with reasons, the chosen profile, estimates vs accounting, the Brief. `hand-*.json` are the lead's hand-walked decisions from before the adapter existed. |
-| `trace/decisions/host-policy-1.json` | The policy before revision 2, byte-identical to the one the hand-walked decisions and `sr-policy-2-1` were decided under. A test fixture, never edited: the goldens decide against it with `--policy`. |
+| `trace/policies/host-policy-1.json` | The policy before revision 2, byte-identical to the one the hand-walked decisions and `sr-policy-2-1` were decided under. A test fixture, never edited: the goldens decide against it with `--policy`. It lives apart from `trace/decisions/`, whose `<task>-<seq>.json` names belong to decisions (a fixture there would block a task named `host-policy` at seq 1). `sr-policy-2-1`'s Brief names the fixture's first path, `trace/decisions/host-policy-1.json`; the decision file is a record and is not rewritten. |
 | `trace/outcomes/<task>-<seq>.json` | The §10.3 Outcome objects that outcome records point at. |
 | `trace/calibration-<n>/` | A graded calibration run: `observations.json` (per profile: the pin, fix and review grades and the tokens used), `results-table.md`, the lead's notes. Evidence for the qualification rules, read by `rate`, never written to the ledger. |
 | `trace/usage.jsonl` | The usage readings (the subscription's five-hour and seven-day windows) pasted by the lead with `route.mjs usage`. Append-only, never rewritten, separate from the ledger. |
@@ -199,7 +199,8 @@ that size fails them at Gate 2.
    `policy-revision`. The decision files bind every decision to the policy digest, so old decisions stay readable.
    A decision not yet dispatched is rechecked against the edited policy at `dispatch`, so a demotion or a
    revocation takes effect on pending decisions too. When a revision changes what the goldens or the base tests
-   assume, freeze the previous policy as `trace/decisions/host-policy-<n>.json` and keep them on it.
+   assume, freeze the previous policy as `trace/policies/host-policy-<n>.json` and keep them on it (never in
+   `trace/decisions/`, whose file names belong to decisions).
 4. A profile with `qualified-at: null` or a past `expires` fails Gate 2 until this is done.
 
 ## The learning loop

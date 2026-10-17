@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,11 +18,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROUTE = join(HERE, 'route.mjs');
 // the committed policy carries the usage-windows block (fail-closed: no reading, no route); the base tests run against
 // a feature-off fixture with that block deleted, written to a tmp file (lead's ruling R1(a)). Its source is host-policy-1,
-// the policy the base tests were written under, frozen in trace/decisions/host-policy-1.json (unit sr-policy-2), so a
+// the policy the base tests were written under, frozen in trace/policies/host-policy-1.json (unit sr-policy-2), so a
 // policy revision never moves them; the live policy has its own tests (section 'host-policy-2')
 const COMMITTED_POLICY_PATH = join(HERE, 'host-policy.json');
 const COMMITTED_POLICY = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'));
-const BASE_POLICY = JSON.parse(readFileSync(join(HERE, 'trace', 'decisions', 'host-policy-1.json'), 'utf8'));
+const BASE_POLICY = JSON.parse(readFileSync(join(HERE, 'trace', 'policies', 'host-policy-1.json'), 'utf8'));
 const POLICY_PATH = join(mkdtempSync(join(tmpdir(), 'sr-host-fixture-')), 'host-policy.json');
 writeFileSync(POLICY_PATH, `${JSON.stringify(Object.fromEntries(Object.entries(BASE_POLICY).filter(([k]) => k !== 'usage-windows')), null, 2)}\n`);
 const POLICY_TEXT = readFileSync(POLICY_PATH, 'utf8');
@@ -548,10 +548,10 @@ test('learning: cost-overrun demotes, three accepted hand-recorded qualification
 // Golden: the lead's hand-walked decisions
 // ---------------------------------------------------------------------------------------------
 const goldenDir = join(HERE, 'trace', 'decisions');
-// the hand-walked decisions were walked under host-policy-1, frozen as a fixture (trace/decisions/host-policy-1.json,
+// the hand-walked decisions were walked under host-policy-1, frozen as a fixture (trace/policies/host-policy-1.json,
 // never edited; unit sr-policy-2): each golden is decided through the CLI with --policy on that fixture's feature-off
 // derivative (R1(a)), so a policy revision never moves a golden
-const FIXTURE_POLICY_PATH = join(goldenDir, 'host-policy-1.json');
+const FIXTURE_POLICY_PATH = join(HERE, 'trace', 'policies', 'host-policy-1.json');
 const featureOff = (p) => `${JSON.stringify(Object.fromEntries(Object.entries(p).filter(([k]) => k !== 'usage-windows')), null, 2)}\n`;
 function fixtureOffPath() {
   const path = join(tmp(), 'host-policy-1-off.json');
@@ -1782,7 +1782,7 @@ const CAL_TASKS = [['pin-tests', 'pin', (o) => o.pin.score], ['fix', 'fix', (o) 
 const calProfile = (policy, o) => policy.profiles.find((x) => x.model === o.usage.pin.model && x.effort === o.profile.split('-').pop()) ?? null;
 const NEW_PROFILES = ['cc-sonnet-low', 'cc-sonnet-medium', 'cc-sonnet-high', 'cc-opus-medium', 'cc-haiku-low', 'cc-haiku-medium', 'cc-haiku-high', 'cc-fable-medium'];
 
-test('fixture: trace/decisions/host-policy-1.json is the pre-revision policy, byte-identical to the policy the sr-policy-2 decision was bound to', () => {
+test('fixture: trace/policies/host-policy-1.json is the pre-revision policy, byte-identical to the policy the sr-policy-2 decision was bound to', () => {
   assert.ok(existsSync(FIXTURE_POLICY_PATH), 'the host-policy-1 fixture exists');
   const bound = JSON.parse(readFileSync(join(goldenDir, 'sr-policy-2-1.json'), 'utf8')).bindings;
   assert.equal(bound['policy-revision'], 'host-policy-1');
@@ -1790,6 +1790,22 @@ test('fixture: trace/decisions/host-policy-1.json is the pre-revision policy, by
   assert.equal(loadPolicy(FIXTURE_POLICY_PATH)['policy-revision'], 'host-policy-1');
   // the goldens' categories map never mistakes the fixture for a decision file
   assert.equal(JSON.parse(readFileSync(FIXTURE_POLICY_PATH, 'utf8')).request, undefined);
+});
+
+// a policy fixture is not a decision: in trace/decisions/ it would sit in the <task>-<seq>.json namespace, and a task
+// with id host-policy could never be decided at seq 1 (P2-3)
+test('fixture: no policy fixture sits among the decisions; every trace/decisions file is a decision, and a task host-policy decides at seq 1', () => {
+  for (const f of readdirSync(goldenDir).filter((x) => x.endsWith('.json'))) {
+    const j = JSON.parse(readFileSync(join(goldenDir, f), 'utf8'));
+    assert.ok(typeof j.request?.taskId === 'string', `${f} is not a decision file`);
+  }
+  const trace = tmp();
+  cpSync(join(HERE, 'trace'), trace, { recursive: true });
+  const before = readFileSync(join(trace, 'ledger.jsonl'), 'utf8');
+  const r = cli(['decide', writeJson(req({ taskId: 'host-policy' })), '--trace', trace, '--policy', LIVE_OFF_PATH]);
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(JSON.parse(readFileSync(join(trace, 'decisions', 'host-policy-1.json'), 'utf8')).request.taskId, 'host-policy');
+  assert.ok(readFileSync(join(trace, 'ledger.jsonl'), 'utf8').startsWith(before), 'appended, never rewritten');
 });
 
 test('host-policy-2: the pin-tests category and qualified-for per the lead\'s rules from calibration-1; evidence entries record every grade, fails included', () => {
