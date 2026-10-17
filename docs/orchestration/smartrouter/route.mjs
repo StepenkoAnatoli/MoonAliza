@@ -33,6 +33,8 @@ const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 const TUPLE = /^\([^,()]+(, [^,()]+){5}\)$/;
 const EXPIRY_WARN_DAYS = 14;
+// a calibration grade in a profile's evidence: 'calibration-<run>: <category> PASS|FAIL (n=<count>)'
+const CALIBRATION_ENTRY = /^calibration-([1-9]\d*): (\S+) (PASS|FAIL) \(n=([1-9]\d*)\)$/;
 
 export class RouterError extends Error {
   constructor(code, message) {
@@ -116,6 +118,16 @@ function validatePolicy(p) {
     if (!isStr(pr.id) || !isStr(pr.model) || !isStr(pr.effort) || !isStr(pr.config) || !isStrArray(pr['qualified-for'])) fail(`profile ${pr.id} incomplete`);
     if (ids.has(pr.id)) fail(`duplicate profile ${pr.id}`);
     ids.add(pr.id);
+    // a qualification names a category the policy has: a misspelt one would silently never qualify
+    for (const c of pr['qualified-for']) if (!Object.hasOwn(p.categories, c)) fail(`profile ${pr.id} qualified-for names unknown category '${c}'`);
+    if (pr.evidence !== undefined && !isStrArray(pr.evidence)) fail(`profile ${pr.id} evidence must be an array of strings`);
+    // a calibration grade entry (host-policy-2) is counted by the lead's qualification rules, so its form is fixed
+    for (const e of pr.evidence ?? []) {
+      if (!e.startsWith('calibration-')) continue;
+      const m = CALIBRATION_ENTRY.exec(e);
+      if (!m) fail(`profile ${pr.id} evidence '${e}' is not 'calibration-<n>: <category> PASS|FAIL (n=<k>)'`);
+      if (!Object.hasOwn(p.categories, m[2])) fail(`profile ${pr.id} evidence '${e}' names unknown category '${m[2]}'`);
+    }
   }
   const e = p.economics;
   if (!e || !ids.has(e['lead-direct-profile']) || !isInt(e['direct-max-tokens']) || !isInt(e['delegate-overhead-tokens'])) fail('economics incomplete');
