@@ -659,3 +659,21 @@ test('F3: a host deviation is refused unless the deviating profile passes Gates 
   assert.equal(ok.deviation, true);
   assert.match(ok.detail, /^host deviation: second-cheapest eligible; route said cc-opus-high/);
 });
+
+test('F4: a superseding outcome for the same dispatch replaces the first in the learning step; it is not counted twice', () => {
+  const trace = tmp();
+  const d = run(req({ taskId: 'sup-1', category: 'fix' }), { traceDir: trace });
+  dispatch('sup-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const o = outcome({ 'task-id': 'sup-1', 'original-brief-fingerprint': d.briefFingerprint });
+  recordOutcome(o, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  recordOutcome(o, { traceDir: trace, policyPath: POLICY_PATH, now: NOW }); // spec-v2 §10.5: a superseding outcome appends
+  const r = rate({ traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  assert.deepEqual(r.proposals, []);
+  assert.equal(r.stats.stats['cc-opus-high'].fix['verification-failed'], 1);
+  assert.equal(r.stats['outcomes-counted'], 1);
+  // the latest outcome wins: a superseding accepted outcome leaves no failure behind
+  recordOutcome({ ...o, outcome: 'accepted' }, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const r2 = rate({ traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  assert.equal(r2.stats.stats['cc-opus-high'].fix['verification-failed'], 0);
+  assert.equal(r2.stats.stats['cc-opus-high'].fix.accepted, 1);
+});

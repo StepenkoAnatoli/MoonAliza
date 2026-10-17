@@ -125,9 +125,12 @@ at most 15k tokens goes direct to the lead. See the policy findings below for th
 `outcome` records go in, `rate` turns them into proposals, and the lead edits the policy. The adapter never
 writes the policy.
 
-- `rate` aggregates every outcome record per (profile, category): accepted, verification-failed, partial,
-  cost-overrun, cancelled, blocked, escalated, plus how many came from host deviations. It writes
-  `trace/qualification-stats.json`, which is byte-identical when regenerated from the same ledger.
+- `rate` aggregates outcomes per (profile, category): accepted, verification-failed, partial, cost-overrun,
+  cancelled, blocked, escalated, plus how many came from host deviations. It counts **one outcome per dispatch**:
+  a later outcome record for the same dispatch supersedes the earlier one (spec-v2 §10.5, decision-trace.md §4),
+  so recording a correction never double-counts. It writes `trace/qualification-stats.json`
+  (`outcomes-counted` after supersession, `outcome-records` before), which is byte-identical when regenerated from
+  the same ledger.
 - It proposes **demotion** of a profile from a category after two consecutive `verification-failed` outcomes there
   since its `qualified-at`, or after any `cost-overrun`.
 - It proposes **qualification** after three `accepted` outcomes in a category the profile is not qualified for.

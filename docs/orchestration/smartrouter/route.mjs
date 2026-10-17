@@ -324,12 +324,24 @@ function outcomeValue(r) {
   return m && OUTCOMES.includes(m[1]) ? m[1] : null;
 }
 
+// one outcome per dispatch: a later outcome for the same (task, dispatch seq) supersedes the earlier one
+// (spec-v2 §10.5, decision-trace.md §4), so streams count dispatches, not records
+function latestOutcomes(records) {
+  const latest = new Map();
+  for (const r of records) {
+    if (r.kind !== 'outcome') continue;
+    const key = `${r['task-id']}#${isInt(r['dispatch-seq'], 1) ? r['dispatch-seq'] : `record-${r.seq}`}`;
+    latest.delete(key); // re-inserted at the superseding record's place in ledger order
+    latest.set(key, r);
+  }
+  return [...latest.values()];
+}
+
 function learn(policy, records, catMap) {
   const stats = {};
   const streams = {};
   const dispatchBySeq = new Map(records.filter((r) => r.kind === 'dispatch').map((r) => [`${r['task-id']}#${r.seq}`, r]));
-  for (const r of records) {
-    if (r.kind !== 'outcome') continue;
+  for (const r of latestOutcomes(records)) {
     const value = outcomeValue(r);
     const pid = tupleId(r.profile);
     if (!value || !pid) continue;
@@ -847,7 +859,8 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
     _comment: 'derived by route.mjs rate from ledger.jsonl and the decision files; regenerated on every run, never hand-edited',
     'policy-revision': policy['policy-revision'] ?? null,
     'ledger-sha256': existsSync(path) ? sha256(readFileSync(path)) : null,
-    'outcomes-counted': records.filter((r) => r.kind === 'outcome').length,
+    'outcomes-counted': latestOutcomes(records).length,
+    'outcome-records': records.filter((r) => r.kind === 'outcome').length,
     stats,
     proposals
   };
