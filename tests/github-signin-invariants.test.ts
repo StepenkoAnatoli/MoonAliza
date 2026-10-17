@@ -97,16 +97,24 @@ function scan(captured: readonly Captured[], secrets: Readonly<Record<string, st
 }
 const none = () => Object.fromEntries(TARGETS.map(target => [target, [] as string[]])) as Record<Target, string[]>;
 
-/** L-7, DC-9: a rejection's message, stack and whole cause chain (and an AggregateError's members) hold no marker and no
- *  8-character substring of one. Returns what it found. */
+/** L-7, DC-9: a rejection's message, stack, every other own property, and whole cause chain (and an AggregateError's members)
+ *  hold no marker and no 8-character substring of one. Returns what it found. */
 function walk(rejection: unknown, secrets: Readonly<Record<string, string>>): string[] {
   const found: string[] = []; const seen = new Set<unknown>();
   const pieces = Object.entries(secrets).flatMap(([name, value]) => Array.from({ length: value.length - 7 }, (_, i) => ({ name, piece: value.slice(i, i + 8) })));
   const visit = (value: unknown, path: string) => {
     if (value === undefined || value === null || seen.has(value)) return;
     seen.add(value);
-    const texts = value instanceof Error ? [value.message, value.stack ?? ''] : [typeof value === 'string' ? value : inspect(value, { depth: 4 })];
+    const texts = value instanceof Error ? [value.message, value.stack ?? ''] : [typeof value === 'string' ? value : inspect(value, { depth: 4, showHidden: true })];
     for (const text of texts) for (const { name, piece } of pieces) if (text.includes(piece)) { found.push(`${path}: part of ${name}`); break; }
+    // Any other own property of an Error, enumerable or not, symbol-keyed too (U7-R2): the engine records only the message, so a
+    // token riding on a field of the rejection would otherwise pass every scan.
+    if (value instanceof Error) {
+      for (const key of Reflect.ownKeys(value)) {
+        if (key === 'message' || key === 'stack' || key === 'cause' || (key === 'errors' && value instanceof AggregateError)) continue;
+        visit((value as unknown as Record<PropertyKey, unknown>)[key], `${path}.${String(key)}`);
+      }
+    }
     if (value instanceof AggregateError) value.errors.forEach((member, i) => visit(member, `${path}.errors[${i}]`));
     if (typeof value === 'object' && 'cause' in value) visit((value as { cause: unknown }).cause, `${path}.cause`);
   };
@@ -418,6 +426,9 @@ test('L-7, DC-9: oauth parse failures holding markers reject nothing and leave n
   const deep = new Error('A', { cause: new AggregateError([new Error('B', { cause: { note: `x${m.refresh.slice(20, 28)}x` } })], 'C') });
   expect(walk(deep, secrets)).toEqual(['rejection.cause.errors[0].cause: part of refresh']);
   expect(walk(new Error(`${m.device.slice(3, 10)}`), secrets)).toEqual([]);   // seven characters are not a finding
+  // Any other property an Error carries is walked too, enumerable or not (U7-R2): a debugging field holding the token is a finding.
+  expect(walk(Object.assign(new Error('X'), { detail: { auth: m.access } }), secrets)).toEqual(['rejection.detail: part of access']);
+  expect(walk(Object.defineProperty(new Error('Y'), 'sent', { value: m.refresh, enumerable: false }), secrets)).toEqual(['rejection.sent: part of refresh']);
 });
 
 /** S-1's static guard (spec 11). */
