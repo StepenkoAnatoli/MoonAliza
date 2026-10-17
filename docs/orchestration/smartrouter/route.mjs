@@ -770,7 +770,10 @@ function storedDecision(traceDir, taskId, dec) {
 // the route; revocation always wins over the stored decision.
 function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, deviation }) {
   const stored = storedDecision(traceDir, taskId, dec);
-  const again = computeDecision({ ...stored.request, now }, policy, records, {}, { probe: deviation ? profileId : null });
+  // the re-walk sees the ledger as the decision did: the dispatches made under this same decision (the other members
+  // of a speculative set) are its own consumption, not changed evidence; dispatch counts them against the slots itself
+  const own = (r) => r['task-id'] === taskId && r.kind === 'dispatch' && r['decision-seq'] === dec.seq;
+  const again = computeDecision({ ...stored.request, now }, policy, records.filter((r) => !own(r)), {}, { probe: deviation ? profileId : null });
   if (deviation) {
     // a deviation is allowed only to a profile that passes Gates 1-4 on the same request (spec-v2 §11.2, §11.10, §12)
     const p = again.probe;
@@ -787,6 +790,13 @@ function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now
     : again.route === 'delegate' ? [again.profile] : [];
   if (!choice.includes(profileId)) {
     throw refused(`pre-dispatch recheck: the route changed since decision seq ${dec.seq} (now ${again.route}${again.profile ? ` ${again.profile}` : ''}); decide again`);
+  }
+  // gates.md binding item 3: the worker is handed the decided Brief, so its allowance (calls, deadline, attempts,
+  // cash) must still be what the current policy, ledger and clock give; a changed Brief invalidates the route
+  if (again['brief-fingerprint'] !== stored['brief-fingerprint']) {
+    const changed = Object.keys({ ...stored.brief, ...again.brief }).sort()
+      .filter((k) => canonicalJson(stored.brief?.[k] ?? null) !== canonicalJson(again.brief?.[k] ?? null));
+    throw refused(`pre-dispatch recheck: the Brief changed since decision seq ${dec.seq}; decide again (changed: ${changed.join(', ') || 'fingerprint'})`);
   }
 }
 

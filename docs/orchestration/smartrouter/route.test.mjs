@@ -818,8 +818,9 @@ test('F8: the required reviewer is drawn from the candidates and gate-walked (Ga
 // ---------------------------------------------------------------------------------------------
 // a policy copy in which cc-sonnet-high is qualified for review, so a speculative review set is
 // [cc-sonnet-high, cc-opus-high] and cc-fable-high is an eligible profile outside the set
-const sonnetReviewPolicy = () => policyWith((p) => {
+const sonnetReviewPolicy = (more = () => {}) => policyWith((p) => {
   Object.assign(p.profiles.find((x) => x.id === 'cc-sonnet-high'), { 'qualified-for': ['review'], 'qualified-at': '2026-10-17', expires: '2027-01-15', 'context-tested': 1000000, 'headroom-tested': 352000 });
+  more(p);
 });
 
 test('N1: a speculative set is capped at its shared-budget calls, and a speculative route admits no host deviation', () => {
@@ -887,4 +888,36 @@ test('N2: reconcile first: no dispatch while an earlier dispatch of the task has
   assert.equal(later.code, 3, later.stdout);
   assert.match(later.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch/);
   assert.equal(readFileSync(join(t2, 'ledger.jsonl'), 'utf8'), before);
+});
+
+test('N3: an as-decided dispatch is refused when the recomputed Brief differs from the decided one (call limit, deadline cap)', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  // the review's probe: calls-per-task lowered between decide and dispatch while the route stays cc-opus-high
+  const d = run(req({ taskId: 'cl-1', category: 'fix' }), { traceDir: trace });
+  assert.equal(d.brief.allowance.calls, 6);
+  const before = readFileSync(ledger, 'utf8');
+  const three = policyWith((p) => { p.accounting.strict['calls-per-task'] = 3; });
+  const calls = cli(['dispatch', 'cl-1', 'cc-opus-high', '--trace', trace, '--policy', three, '--now', NOW]);
+  assert.equal(calls.code, 3, calls.stdout);
+  assert.match(calls.stderr, /pre-dispatch recheck: the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
+  // a changed deadline cap (12 h -> 6 h) moves allowance.deadline and the stop trigger that names it
+  const six = policyWith((p) => { p.accounting.strict['deadline-per-task-hours'] = 6; });
+  const cap = cli(['dispatch', 'cl-1', 'cc-opus-high', '--trace', trace, '--policy', six, '--now', NOW]);
+  assert.equal(cap.code, 3, cap.stdout);
+  assert.match(cap.stderr, /the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // unchanged inputs: the dispatch goes through and records the decided fingerprint
+  const ok = dispatch('cl-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  assert.equal(ok['brief-fingerprint'], d.briefFingerprint);
+  // the second member of a speculative set is compared with the set's decided Brief: its sibling's dispatch is
+  // the decision's own consumption (N1 shows it dispatching), while a lowered call limit still refuses it
+  const t2 = tmp();
+  const pol = sonnetReviewPolicy();
+  decide(req({ taskId: 'cl-2', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: t2, policyPath: pol });
+  dispatch('cl-2', 'cc-sonnet-high', { traceDir: t2, policyPath: pol, now: NOW });
+  const lowered = sonnetReviewPolicy((p) => { p.accounting.strict['calls-per-task'] = 3; });
+  const member = cli(['dispatch', 'cl-2', 'cc-opus-high', '--trace', t2, '--policy', lowered, '--now', NOW]);
+  assert.equal(member.code, 3, member.stdout);
+  assert.match(member.stderr, /the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
 });

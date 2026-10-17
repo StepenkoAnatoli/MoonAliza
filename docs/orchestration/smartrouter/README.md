@@ -39,8 +39,12 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    that outcome (step 5, `cancelled` if the worker was stopped) and decide again. The only exception is the other
    members of the same speculative decision (spec-v2 §7 and §12). Before it records anything, `dispatch`
    re-walks the decision's stored request (`trace/decisions/<task>-<seq>.json`) against the current policy, ledger
-   and `--now`: a fingerprint that expired, a data class or destination that was revoked, or a route that moved to
-   another profile since the decision refuses the dispatch, and the lead decides again. Dispatching any other
+   and `--now`: a fingerprint that expired, a data class or destination that was revoked, a route that moved to
+   another profile, or a Brief that changed since the decision refuses the dispatch, and the lead decides again.
+   The Brief changes when the call limit, the repair allowance, the deadline cap or a price moves: the recomputed
+   brief fingerprint then differs from the decided one ('the Brief changed since decision seq N; decide again',
+   naming the changed fields). The other members of the same speculative decision are the decision's own use of its
+   slots, so they do not change its Brief. Dispatching any other
    profile than the decided one is a host deviation: it needs `--deviation "<reason>"`, the ledger marks it, and it
    is allowed only to a profile that passes Gates 1-4 on the same request. An unqualified profile, or one with no
    capability fingerprint, is refused even as a deviation (spec-v2 §11.2, §11.10, §12). A `speculative` decision
@@ -83,7 +87,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Same-profile repairs (1 per task) | **enforced**: counted from the ledger by identity (harness, provider, model, effort, config); renaming a profile in the policy does not reset them | `decide`, `dispatch` |
 | Reconcile first | **enforced**: `dispatch` refuses while an earlier dispatch of the task has no later outcome naming its dispatch seq, whatever profile either names, so two workers never own one task and no provider switch follows effects of unknown acceptance (SKILL.md 'Hard prohibitions', spec-v2 §7, §12). The other members of the same speculative decision are the only exception | `dispatch` |
 | Deadline | **enforced**: `now` strictly before; capped at 12 h from the task's first ledger event | `decide`, `dispatch` |
-| Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy and `now`; the decided profile must still be eligible and still the route's choice (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
+| Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy and `now`; the decided profile must still be eligible and still the route's choice, and the recomputed Brief must have the decided brief fingerprint, so the worker is never handed an allowance (calls, attempts, deadline, cash) that no longer matches the task (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
