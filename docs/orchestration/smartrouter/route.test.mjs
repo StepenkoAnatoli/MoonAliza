@@ -1886,3 +1886,26 @@ test('host-policy-2 routing: review and fix still route to cc-opus-high, with th
   assert.equal(computeDecision(req({ category: 'build-core' }), live, [])['review-profile'], 'cc-opus-high');
   assert.equal(computeDecision(req({ category: 'review' }), live, [])['all-in-bound-usd'], computeDecision(req({ category: 'review' }), loadPolicy(POLICY_PATH), [])['all-in-bound-usd']);
 });
+
+test('host-policy-2 routing: a pin-tests request routes to cc-haiku-low at the output-rate bound $0.06 (no reviewer); equal bounds rank the lower effort first', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  // req() draws its checks from the base fixture, which has no pin-tests: the live category's checks are named here
+  const pinReq = () => ({ ...req(), category: 'pin-tests', acceptanceChecks: live.categories['pin-tests'].verification.map((name) => ({ command: `run ${name}`, expect: 'pass' })) });
+  const d = computeDecision(pinReq(), live, []);
+  assert.equal(d.route, 'delegate');
+  assert.equal(d.profile, 'cc-haiku-low');
+  const c = d.candidates['cc-haiku-low'];
+  assert.deepEqual([c['work-bound-usd'], c['review-bound-usd'], c['overhead-bound-usd'], c['all-in-bound-usd']], [0.06, 0, 1, 1.06]);
+  assert.equal(d['review-profile'], null);
+  // the three same-model profiles share the bound; calibration-1 spent fewer tokens at the lower effort on every task
+  assert.deepEqual(d['eligible-ordered'].slice(0, 3), ['cc-haiku-low', 'cc-haiku-medium', 'cc-haiku-high']);
+  for (const id of ['cc-haiku-medium', 'cc-haiku-high']) assert.equal(d.candidates[id]['all-in-bound-usd'], 1.06, id);
+  // headroom is per profile: a 120000-token pin does not fit the smallest calibrated runs
+  assert.match(d.candidates['cc-sonnet-low'].reason, /context: 120000 tokens not below headroom-tested 110000 on cc-sonnet-low/);
+  assert.match(d.candidates['cc-opus-medium'].reason, /context: 120000 tokens not below headroom-tested 115000 on cc-opus-medium/);
+  assert.equal(d.candidates['cc-fable-xhigh'].reason, 'direct unsuitable: 120000 tokens > direct-max-tokens 15000');
+  assert.match(d.text, /^Profile: {11}\(cc-haiku-low, /m);
+  // the id still breaks a tie of rate and effort (S02/D01 twin)
+  const twin = loadPolicy(livePolicyWith((p) => { p.profiles.push({ ...p.profiles.find((x) => x.id === 'cc-haiku-low'), id: 'cc-aaa-haiku' }); }));
+  assert.equal(computeDecision(pinReq(), twin, []).profile, 'cc-aaa-haiku');
+});

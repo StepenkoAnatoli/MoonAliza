@@ -775,11 +775,20 @@ function evaluate(ctx, id, kind) {
   const b = out.bounds;
   return {
     id, kind, eligible: true, 'all-in-bound-usd': round4(b.allIn), 'work-bound-usd': round4(b.work),
-    'review-bound-usd': round4(b.review), 'overhead-bound-usd': round4(b.overhead), walkthrough, _allIn: b.allIn, _rate: b.rate, _usage: out.usage ?? null
+    'review-bound-usd': round4(b.review), 'overhead-bound-usd': round4(b.overhead), walkthrough, _allIn: b.allIn, _rate: b.rate,
+    _effort: effortRank(pr.effort), _usage: out.usage ?? null
   };
 }
 
-const byEconomics = (a, b) => a._allIn - b._allIn || a._rate - b._rate || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+// ties of the all-in bound go to the lower output rate, then the lower effort, then the alphabetical id. The bound
+// prices every profile on the same token estimate, but at one model a lower effort spends fewer tokens: calibration-1
+// measured it for every model on every task (12 model-task pairs, 36 runs; trace/calibration-1/tokens-and-estimates.md). An unknown effort ranks last
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+function effortRank(effort) {
+  const i = EFFORTS.indexOf(effort);
+  return i === -1 ? EFFORTS.length : i;
+}
+const byEconomics = (a, b) => a._allIn - b._allIn || a._rate - b._rate || a._effort - b._effort || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 // gates.md: the gates apply to every profile under consideration, the reviewer included. The required reviewer is
 // drawn from the request's candidates (never the lead-direct profile) and walked through Gate 1 and Gate 2 for the
