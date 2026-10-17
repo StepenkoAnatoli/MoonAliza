@@ -49,7 +49,8 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    slots, so they do not change its Brief. Dispatching any other
    profile than the decided one is a host deviation: it needs `--deviation "<reason>"`, the ledger marks it, and it
    is allowed only to a profile that passes Gates 1-4 on the same request. An unqualified profile, or one with no
-   capability fingerprint, is refused even as a deviation (spec-v2 §11.2, §11.10, §12). A `speculative` decision
+   capability fingerprint, is refused even as a deviation (spec-v2 §11.2, §11.10, §12), and so is the
+   lead-direct profile (`economics.lead-direct-profile`), which works direct only. A `speculative` decision
    admits no deviation at all: only the members of its set are dispatched, and at most its `shared-budget.calls`
    of them (a hard ceiling, spec-v2 §8.4).
 4. **Launch** the sub-agent in its own worktree and branch (`build/<unit-slug>`, the host convention; the Brief's
@@ -90,6 +91,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Reconcile first | **enforced**: `dispatch` refuses while an earlier dispatch of the task has no later outcome naming its dispatch seq, whatever profile either names, so two workers never own one task and no provider switch follows effects of unknown acceptance (SKILL.md 'Hard prohibitions', spec-v2 §7, §12). The other members of the same speculative decision are the only exception | `dispatch` |
 | Deadline | **enforced**: `now` strictly before; capped at 12 h from the task's first ledger event | `decide`, `dispatch` |
 | Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy, `now` and project-stop state; the decided profile must still be eligible and still the route's choice, and the recomputed Brief must have the decided brief fingerprint, so the worker is never handed an allowance (calls, attempts, deadline, cash) that no longer matches the task (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
+| Lead-direct profile | **enforced**: the lead profile is walked only as `direct`, eligible up to `direct-max-tokens` (Gate 5); `dispatch` refuses it as a delegated worker, `--deviation` or not | `decide`, `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |

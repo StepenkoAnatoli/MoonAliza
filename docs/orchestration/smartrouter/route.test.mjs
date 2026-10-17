@@ -955,3 +955,19 @@ test('N4: dispatch requires the current project-stop state (exit 2 when missing 
   const ok = cli([...base, '--project-stop', CLEAR_JSON]);
   assert.equal(ok.code, 0, ok.stderr);
 });
+
+test('N5: a deviation to the lead-direct profile is refused; the lead works direct only, never as a delegated worker', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  // the review's probe: a build-core decision delegates to cc-opus-high; the lead is direct-unsuitable at 316000 tokens
+  const d = run(req({ taskId: 'ld-1', category: 'build-core' }), { traceDir: trace });
+  assert.equal(d.decision.profile, 'cc-opus-high');
+  assert.equal(d.decision.candidates['cc-fable-xhigh'].reason, 'direct unsuitable: 316000 tokens > direct-max-tokens 15000');
+  const before = readFileSync(ledger, 'utf8');
+  assert.throws(() => dispatch('ld-1', 'cc-fable-xhigh', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'lead does it as a worker' }),
+    (e) => e instanceof RouterError && e.code === 3 && /cc-fable-xhigh is the lead-direct profile \(economics\.lead-direct-profile\): it works direct only, up to direct-max-tokens 15000, and is never dispatched as a delegated worker, --deviation or not/.test(e.message));
+  const bare = cli(['dispatch', 'ld-1', 'cc-fable-xhigh', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
+  assert.equal(bare.code, 3, bare.stdout);
+  assert.match(bare.stderr, /is the lead-direct profile/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+});

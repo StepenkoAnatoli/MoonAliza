@@ -834,6 +834,10 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
     if (after.length >= ceiling) throw refused(`speculative set of decision seq ${dec.seq} has used its shared budget: ${after.length} of ${ceiling} calls dispatched; the shared budget is a hard ceiling across the set (spec-v2 §8.4); decide again`);
     if (!asDecided) throw refused(`decision seq ${dec.seq} is speculative: dispatching ${profileId} outside its set (${decided.join(', ')}) is refused; a speculative route admits no host deviation (its shared budget is a hard ceiling, spec-v2 §8.4); decide again`);
   }
+  // the lead-direct profile is walked only as `direct` (Gate 5's direct-max-tokens bound); a deviation probe walks
+  // every profile as a delegate, so without this the lead could be dispatched as a worker past that bound
+  const leadId = policy.economics['lead-direct-profile'];
+  if (!asDecided && profileId === leadId) throw refused(`${profileId} is the lead-direct profile (economics.lead-direct-profile): it works direct only, up to direct-max-tokens ${policy.economics['direct-max-tokens']}, and is never dispatched as a delegated worker, --deviation or not (Gate 5); decide again`);
   if (!asDecided && !isStr(deviation)) throw refused(`decided ${decided.join(', ')}; dispatching ${profileId} is a host deviation: pass --deviation <reason> to record it`);
   if (!(isoMs(now) < isoMs(dec.deadline))) throw refused(`deadline ${dec.deadline} reached: now ${now} is not strictly before it`);
   if (!(st.callsUsed + 1 <= st.callsLimit)) throw refused(`call slots exhausted: ${st.callsUsed} used + 1 > ${st.callsLimit} calls-per-task`);
