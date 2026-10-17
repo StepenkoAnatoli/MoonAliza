@@ -121,7 +121,9 @@ function walk(rejection: unknown, secrets: Readonly<Record<string, string>>): st
   const visit = (value: unknown, path: string) => {
     if (value === undefined || value === null || seen.has(value)) return;
     seen.add(value);
-    const texts = value instanceof Error ? [value.message, value.stack ?? ''] : [typeof value === 'string' ? value : inspect(value, { depth: 4, showHidden: true })];
+    // A non-Error value is read whole (U7-R6): no depth, item or string-length cut, so nothing nested deep or late in it is skipped.
+    const texts = value instanceof Error ? [value.message, value.stack ?? '']
+      : [typeof value === 'string' ? value : inspect(value, { depth: Infinity, showHidden: true, maxArrayLength: Infinity, maxStringLength: Infinity })];
     for (const text of texts) for (const { name, piece } of pieces) if (text.includes(piece)) { found.push(`${path}: part of ${name}`); break; }
     // Any other own property of an Error, enumerable or not, symbol-keyed too (U7-R2): the engine records only the message, so a
     // token riding on a field of the rejection would otherwise pass every scan.
@@ -486,6 +488,12 @@ test('L-7, DC-9: oauth parse failures holding markers reject nothing and leave n
   // Any other property an Error carries is walked too, enumerable or not (U7-R2): a debugging field holding the token is a finding.
   expect(walk(Object.assign(new Error('X'), { detail: { auth: m.access } }), secrets)).toEqual(['rejection.detail: part of access']);
   expect(walk(Object.defineProperty(new Error('Y'), 'sent', { value: m.refresh, enumerable: false }), secrets)).toEqual(['rejection.sent: part of refresh']);
+  // A non-Error value is read whole (U7-R6): a marker six levels down a plain-object cause, at index 120 of an array, in a Set, or
+  // after 20,000 characters of a string is a finding, though inspect's defaults (depth 2, 100 items, 10,000 characters) cut each.
+  expect(walk(new Error('Z', { cause: { a: { b: { c: { d: { e: { t: m.access } } } } } } }), secrets)).toEqual(['rejection.cause: part of access']);
+  expect(walk(new Error('Z', { cause: { sent: Array.from({ length: 150 }, (_, i) => i === 120 ? m.refresh : 'x') } }), secrets)).toEqual(['rejection.cause: part of refresh']);
+  expect(walk(new Error('Z', { cause: new Set(Array.from({ length: 150 }, (_, i) => i === 140 ? m.device : `n${i}`)) }), secrets)).toEqual(['rejection.cause: part of device']);
+  expect(walk(new Error('Z', { cause: { body: 'y'.repeat(20_000) + m.access } }), secrets)).toEqual(['rejection.cause: part of access']);
 });
 
 /** S-1's static guard (spec 11). */
