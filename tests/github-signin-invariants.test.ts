@@ -77,7 +77,7 @@ class Clock {
 /** The places S-1 names that a test can observe (spec "Tests the builders owe", the scan): the ten it lists, plus every other file
  *  under userData, since S-1 also forbids "any file in clear" and the guard allows atomicJson to any path (U7-R1). */
 const TARGETS = ['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm', 'account file', 'vault directory', 'other userData files',
-  'IPC results and DTOs', 'engine messages and events', 'infer messages', 'tool output', 'process.env'] as const;
+  'IPC results and DTOs', 'engine messages and events', 'infer messages', 'tool output', 'process.env', 'argv'] as const;
 type Target = (typeof TARGETS)[number];
 const FILE_TARGETS = new Set<Target>(['state.sqlite', 'state.sqlite-wal', 'state.sqlite-shm', 'account file', 'vault directory', 'other userData files']);
 /** Targets the journey need not fill: the journey writes no file beyond the named ones, so this one is shown by its plant alone. */
@@ -142,9 +142,11 @@ function call<M extends MethodName>(app: Application, method: M, params: MethodP
   return app.handle({ protocolVersion: 1, clientRequestId: randomUUID(), method, params }) as Promise<MethodResult<M>>;
 }
 
+const plantedArgv: string[] = [];
 const opened: Array<{ root: string; service: GitHubSignIn; store: Store }> = [];
 afterEach(async () => {
   delete process.env.MOONALIZA_U7_PLANTED;
+  for (const value of plantedArgv.splice(0)) { const i = process.argv.indexOf(value); if (i >= 0) process.argv.splice(i, 1); }
   for (const { root, service, store } of opened.splice(0)) { service.cancel(); await service.close(); store.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -193,8 +195,8 @@ async function journey() {
 
   const routed = fetcherFor(fake);
   const fetcher: Fetcher = (url, init) => {
-    // While a request carries a token, the token is live: process.env must not hold it now either.
-    const values = Object.values(process.env).join('\n');
+    // While a request carries a token, the token is live: process.env and argv must not hold it now either.
+    const values = [...Object.values(process.env), ...process.argv, ...process.execArgv].join('\n');
     for (const [name, value] of Object.entries(secrets)) if (values.includes(value)) envDuringRequests.push(name);
     return routed(url, init);
   };
@@ -303,6 +305,7 @@ async function journey() {
     { target: 'infer messages', label: 'infer()', bytes: Buffer.from(JSON.stringify(inferred), 'utf8') },
     { target: 'tool output', label: 'tool output', bytes: Buffer.from(JSON.stringify(outputs), 'utf8') },
     { target: 'process.env', label: 'process.env', bytes: Buffer.from(Object.values(process.env).join('\n'), 'utf8') },
+    { target: 'argv', label: 'process.argv and execArgv', bytes: Buffer.from([...process.argv, ...process.execArgv].join('\n'), 'utf8') },
   ];
   return { root, vaultDir, accountFile, database, vault, accountStore, service, store, app, session, clock, pairs, leaked, secrets, REPO_TEXT,
     captured, ipc, engine, inferred, outputs, rejections, envDuringRequests, state, planted, started, loginControl, snapshot, converse, all };
@@ -396,6 +399,7 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   await j.converse(`${planted['engine messages and events']} ${planted['infer messages']} ${REPO_URL}`);
   j.engine.push(j.store.listMessages(j.session.id));
   process.env.MOONALIZA_U7_PLANTED = planted['process.env'];
+  process.argv.push(planted.argv); plantedArgv.push(planted.argv);   // S-1 names argv (U7-R4)
   j.snapshot('planted');
 
   const hits = scan(j.all(), Object.fromEntries(TARGETS.map(target => [target, planted[target]])));
@@ -463,7 +467,8 @@ test('L-7, DC-9: oauth parse failures holding markers reject nothing and leave n
 /** S-1's static guard (spec 11). */
 const NEW_MODULES = ['src/main/github-account-store.ts', 'src/main/github-app.ts', 'src/main/github-credential.ts', 'src/main/github-oauth.ts', 'src/main/github-signin.ts'];
 const PANEL = 'src/renderer/GitHubAccountPanel.tsx';
-const moduleFindings = (source: string) => [...source.matchAll(/console\.|process\.env|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b/g)].map(match => match[0]);
+const moduleFindings = (source: string) => [...source.matchAll(
+  /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bcopyFile(?:Sync)?\b/g)].map(match => match[0]);
 const panelFindings = (source: string) => [...source.matchAll(/localStorage|sessionStorage|clipboard/g)].map(match => match[0]);
 
 test('S-1 static guard: the new src/main/github-*.ts modules have no console, process.env or direct file write, and the panel no web storage or clipboard', () => {
@@ -473,7 +478,12 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
   for (const file of NEW_MODULES) expect(moduleFindings(readFileSync(join(root, file), 'utf8')), file).toEqual([]);
   expect(panelFindings(readFileSync(join(root, PANEL), 'utf8'))).toEqual([]);
   // The guard's own control: each forbidden form is found.
-  expect(moduleFindings('console.info(x); const a = process.env.X; await writeFile(p, b); appendFileSync(p, b); createWriteStream(p);'))
-    .toEqual(['console.', 'process.env', 'writeFile', 'appendFileSync', 'createWriteStream']);
+  // Other spellings of the same forms are found too (U7-R4): a bracketed or destructured console, a bracketed env, the direct writes
+  // writeSync and a handle's write(), and copyFile. The store's own private write() and its this.write() calls, which write through
+  // atomicJson (the one write S-1 allows), are not findings.
+  expect(moduleFindings(['console.info(x);', "console['log'](x);", 'const { log } = console;', 'const a = process.env.X;', "const b = process[ 'env' ].Y;",
+    'await writeFile(p, b);', 'appendFileSync(p, b);', 'createWriteStream(p);', 'fs.writeSync(fd, b);', 'await fh.write(b);', 'await copyFile(p, q);',
+    'copyFileSync(p, q);', 'written = await this.write(account, retired);', 'private async write(account, retiredRefs) {', 'private write(a) {'].join(' ')))
+    .toEqual(['console', 'console', 'console', 'process.env', "process[ 'env", 'writeFile', 'appendFileSync', 'createWriteStream', 'writeSync(', 'write(', 'copyFile', 'copyFileSync']);
   expect(panelFindings('localStorage.setItem(); sessionStorage.x; navigator.clipboard.writeText(code);')).toEqual(['localStorage', 'sessionStorage', 'clipboard']);
 });
