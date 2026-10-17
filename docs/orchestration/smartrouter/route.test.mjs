@@ -147,8 +147,7 @@ test('fresh fingerprint: an unqualified or expired profile fails Gate 2 with "mi
   const d = computeDecision(req({ candidates: ['cc-sonnet-high'] }), policy, []);
   assert.equal(d.candidates['cc-sonnet-high']['first-failing-gate'], 2);
   assert.match(d.candidates['cc-sonnet-high'].reason, /missing or stale capability fingerprint/);
-  assert.equal(d.route, 'recommend-escalation'); // never dispatched on; a qualified profile outside the list is named
-  assert.equal(d.escalation.profile, 'cc-opus-high');
+  assert.equal(d.route, 'blocked'); // never dispatched on, and never resurrected by a profile outside the list (E01)
 
   const expired = loadPolicy(policyWith((p) => { p.profiles.find((x) => x.id === 'cc-opus-high').expires = '2026-10-01'; }));
   const e = computeDecision(req({ candidates: ['cc-opus-high'] }), expired, []);
@@ -327,13 +326,28 @@ test('S02/D01: economics picks the lowest all-in bound; direct wins small tasks,
   assert.equal(computeDecision(req(), twin, []).profile, 'cc-aaa-opus');
 });
 
-test('E01: when the only qualified profile is absent from candidates, recommend-escalation names it', () => {
-  const d = computeDecision(req({ category: 'docs-mechanical', estimatedTokens: 50000, candidates: ['cc-fable-xhigh', 'cc-opus-high'] }), loadPolicy(POLICY_PATH), []);
-  assert.equal(d.route, 'recommend-escalation');
-  assert.equal(d.escalation.profile, 'cc-haiku-low');
-  assert.match(d.text, /^Route: {13}recommend-escalation$/m);
-  assert.match(d.text, /^Profile: {11}\(cc-haiku-low, /m);
+test('E01: an empty eligible set is blocked even when a qualified profile sits outside candidates; listed, it routes', () => {
+  const policy = loadPolicy(POLICY_PATH);
+  // first leg (fixture E01): the only candidate fails Gate 2; the qualified profile is unavailable (not a candidate)
+  const d = computeDecision(req({ candidates: ['cc-sonnet-high'] }), policy, []);
+  assert.equal(d.route, 'blocked');
+  assert.equal(d.profile, null);
+  assert.equal(Object.values(d.candidates).filter((c) => c['first-failing-gate'] === 2).length, 1);
+  assert.match(d.text, /^Route: {13}blocked$/m);
+  assert.match(d.text, /^Profile: {11}none — blocked$/m);
   assert.equal(d.brief, null);
+  // a would-be-eligible non-candidate is a hint in Uncertainty, never a route (no empty-set resurrection)
+  assert.deepEqual(d['eligible-outside-candidates'], ['cc-opus-high', 'cc-fable-high']);
+  assert.ok(d.uncertainty.some((u) => /^not among candidates: cc-opus-high, cc-fable-high would pass all five gates/.test(u)), d.uncertainty.join('|'));
+  // no fallback to a cheaper tier to avoid blocking (gates.md Gate 5)
+  const docs = computeDecision(req({ category: 'docs-mechanical', estimatedTokens: 50000, candidates: ['cc-fable-xhigh', 'cc-opus-high'] }), policy, []);
+  assert.equal(docs.route, 'blocked');
+  assert.equal(docs.profile, null);
+  // second leg: with the qualified profile available, it is the eligible candidate and the route delegates to it
+  const d2 = computeDecision(req({ candidates: ['cc-sonnet-high', 'cc-opus-high'] }), policy, []);
+  assert.equal(d2.route, 'delegate');
+  assert.equal(d2.profile, 'cc-opus-high');
+  assert.equal(d2.candidates['cc-sonnet-high']['first-failing-gate'], 2);
 });
 
 test('speculative only with the host opt-in and high uncertainty', () => {
@@ -363,7 +377,7 @@ test('S24: every output carries the Advisory line and the adapter never claims o
     assert.doesNotMatch(out.stdout, /dispatched to|dispatch performed(?! or claimed)/i);
     routes.push(/^Route: +(\S+)/m.exec(out.stdout)[1]);
   }
-  assert.deepEqual(routes, ['delegate', 'blocked', 'direct', 'recommend-escalation']);
+  assert.deepEqual(routes, ['delegate', 'blocked', 'direct', 'blocked']);
   assert.deepEqual(readLedger(trace).map((r) => r.kind), ['decision', 'decision', 'decision', 'decision']);
   const blocked = cli(['decide', writeJson(req({ taskId: 'a-5', dataClasses: ['secrets'] })), '--trace', trace]);
   assert.match(blocked.stdout, /^Profile: {11}none — blocked$/m);

@@ -26,7 +26,10 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    It prints the Required output format block, the Advisory line, a gate walk per candidate and, for `delegate`,
    the Brief. It also writes `trace/decisions/<task>-<seq>.json` and appends a `decision` record. Exit 0 means a
    route was decided, and that includes `blocked`. Exit 2 means the request is invalid. **A `blocked` route is
-   final**: change the inputs (scope, checks, data classes) and decide again; never dispatch around it.
+   final**: change the inputs (scope, checks, data classes) and decide again; never dispatch around it. When no
+   candidate is eligible the route is `blocked`, even if a profile outside `candidates` would pass: the
+   Uncertainty line names it as a hint (`not among candidates: ...`), and only a fresh decision that lists it can
+   route to it. The adapter never emits `recommend-escalation` (friction item 13).
 2. **Put the Brief in the builder's prompt** verbatim. The JSON after `Brief:` is the contract. Use the profile's
    model and effort exactly as the `Profile:` tuple says.
 3. **Record the dispatch before launching:**
@@ -213,3 +216,13 @@ Every point where the spec was ambiguous or did not fit a subscription host. Cit
     ("No reset of call/repair/attempt counters by restart, rename, or profile change") and spec-v2 §11.9. The
     adapter drops the host id from the sameness key. Upstream could state that the host id is a label, not part of
     sameness.
+13. **`recommend-escalation` and the candidate set.** spec-v2 §5 defines `recommend-escalation` as "No current
+    candidate is suitable; recommend a stronger eligible profile", which reads as reaching outside the candidates.
+    The fixture-pinned semantics say the opposite: SKILL.md decision flow step 3 ("No eligible candidate ⇒ route is
+    `blocked`"), 'Hard prohibitions' ("No empty-set resurrection"), gates.md Gate 5 ("do not fall back to a cheaper
+    tier to avoid blocking"), and fixture E01's first leg in `tests/smart_router_decisions.py` (only C is a
+    candidate, C fails Gate 2, expected `BLOCKED`). The fixture runner's `choose_route` never returns
+    `recommend-escalation`, and the policy has no order of strength between profiles. The adapter follows the
+    fixtures: an empty eligible set is `blocked`, and a would-be-eligible non-candidate is only a hint in
+    Uncertainty. Upstream could say which profiles §5's "stronger eligible profile" may be drawn from, and add a
+    fixture that reaches the route.

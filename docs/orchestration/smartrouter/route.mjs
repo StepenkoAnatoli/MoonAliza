@@ -558,18 +558,14 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
 
   let route;
   let chosen = null;
-  let escalation = null;
   let specSet = null;
+  // no eligible candidate => blocked (SKILL.md decision flow step 3, 'No empty-set resurrection'; fixture E01).
+  // A profile outside the candidates that would pass is named in Uncertainty as a hint, never routed to.
+  let outside = [];
   if (!eligible.length) {
-    const others = policy.profiles.filter((p) => p.id !== leadId && !ids.includes(p.id)).map((p) => evaluate(ctx, p.id, 'delegate'));
-    const viable = others.filter((r) => r.eligible).sort(byEconomics);
-    if (viable.length) {
-      route = 'recommend-escalation';
-      escalation = { profile: viable[0].id, reason: `not among the request's candidates; would pass all five gates (all-in ${usd(viable[0]._allIn)})`, 'all-in-bound-usd': viable[0]['all-in-bound-usd'] };
-      chosen = viable[0];
-    } else {
-      route = 'blocked';
-    }
+    route = 'blocked';
+    outside = policy.profiles.filter((p) => p.id !== leadId && !ids.includes(p.id))
+      .map((p) => evaluate(ctx, p.id, 'delegate')).filter((r) => r.eligible).sort(byEconomics).map((r) => r.id);
   } else {
     const delegates = eligible.filter((r) => r.kind === 'delegate');
     const slots = st.callsLimit - st.callsUsed;
@@ -593,6 +589,7 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
   const uncertainty = [CASH_UNCERTAINTY];
   if (optIns['nested-allowed']) uncertainty.push('nested-allowed opt-in refused: this host cannot produce or enforce a NestedBrief (spec-v2 §14)');
   if (req.uncertainty === 'high' && route !== 'speculative') uncertainty.push(`uncertainty high; speculative not used (${optIns.speculative ? 'fewer than two eligible delegates or call slots' : 'no host opt-in'})`);
+  if (outside.length) uncertainty.push(`not among candidates: ${outside.join(', ')} would pass all five gates (hint only; the route stays blocked, and a fresh decision must list it as a candidate)`);
   const { proposals } = learn(policy, records, catMap);
   const pending = [...proposals, ...expiryFlags(policy, nowMs)].filter((p) => chosen && p.profile === chosen.id);
   for (const p of pending) uncertainty.push(`pending proposal (not applied): ${proposalText(p)}`);
@@ -602,8 +599,7 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
     blocked: 'blocked: nothing is dispatched, nothing to isolate',
     direct: isolation === 'none' ? 'Gate 5: the lead works inline on a low-risk bounded task (<= direct-max-tokens)' : `Gate 1/3: ${category?.risk}-risk work; the lead keeps a ${isolation} even inline`,
     delegate: `Gate 1: concurrent workers in this host never share a tree; Gate 5: the delegated unit owns its ${isolation} (host capability ${policy.isolation.capability})`,
-    speculative: `Gate 5: each speculative candidate owns its ${isolation}; losers are cancelled`,
-    'recommend-escalation': `Gate 5: the recommended profile would own a ${isolation} once a fresh decision selects it`
+    speculative: `Gate 5: each speculative candidate owns its ${isolation}; losers are cancelled`
   }[route];
 
   let brief = null;
@@ -639,7 +635,7 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
 
   const risk = category?.risk;
   const difficulty = !category || risk === 'high' || req.uncertainty === 'high' ? 'high-or-ambiguous' : risk === 'low' ? 'trivial' : 'moderate';
-  const owner = { direct: 'orchestrator', delegate: 'worker', speculative: 'worker', 'recommend-escalation': 'none', blocked: 'none' }[route];
+  const owner = { direct: 'orchestrator', delegate: 'worker', speculative: 'worker', blocked: 'none' }[route];
   let profileLine = 'none — blocked';
   if (route === 'speculative') profileLine = specSet.candidates.map((c) => profileTuple(policy, policy.profiles.find((p) => p.id === c.profile))).join(' | ');
   else if (route !== 'blocked') profileLine = profileTuple(policy, pr);
@@ -663,7 +659,6 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
   ].map(([k, v]) => `${`${k}:`.padEnd(19)}${v}`);
   const walk = results.map((r) => `  ${r.id.padEnd(16)}${r.kind.padEnd(10)}${r.eligible ? `eligible, all-in ${usd(r._allIn)}` : `gate ${r['first-failing-gate']}: ${r.reason}`}`);
   let text = `${lines.join('\n')}\n${ADVISORY}\nGate walk (${route === 'blocked' ? 'first failing gate and reason per candidate' : 'per candidate'}):\n${walk.join('\n')}\n`;
-  if (escalation) text += `Escalation: ${escalation.profile} — ${escalation.reason}\n`;
   if (specSet) text += `SpeculativeSet:\n${JSON.stringify(specSet, null, 2)}\n`;
   if (brief) text += `Brief:\n${JSON.stringify(brief, null, 2)}\n`;
 
@@ -673,7 +668,7 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
     isolation, 'isolation-reason': isolationReason, owner, 'human-gate': optIns['human-gate'], 'nested-allowed': false,
     'max-nesting-depth': maxDepth, difficulty, 'estimated-tokens': ctx.tokens,
     'all-in-bound-usd': allIn, candidates: Object.fromEntries(results.map((r) => [r.id, strip(r)])),
-    'eligible-ordered': eligible.map((r) => r.id), escalation, 'speculative-set': specSet, uncertainty,
+    'eligible-ordered': eligible.map((r) => r.id), 'eligible-outside-candidates': outside, 'speculative-set': specSet, uncertainty,
     advisory: ADVISORY_TEXT, 'pending-proposals': pending, deadline: deadlineIso, 'deadline-capped': capped,
     'review-profile': ctx.reviewer?.id ?? null, brief, 'brief-fingerprint': fingerprint, text,
     counters: counters(st)
@@ -712,7 +707,7 @@ export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TR
   writeFileSync(decisionPath, `${JSON.stringify(file, null, 1)}\n`, { flag: 'wx' });
   const record = appendRecord(traceDir, {
     'task-id': req.taskId, seq, kind: 'decision', ts: req.now, profile: d['profile-tuple'], counters: ctr,
-    deadline: d.deadline, 'brief-fingerprint': fp, detail: `route ${d.route}${d.escalation ? ` (recommend ${d.escalation.profile})` : ''}`,
+    deadline: d.deadline, 'brief-fingerprint': fp, detail: `route ${d.route}`,
     'outcome-ref': null, ...(d['speculative-set'] ? { 'speculative-profiles': d['speculative-set'].candidates.map((c) => c.profile) } : {})
   });
   return { route: d.route, text, decision: d, brief, briefFingerprint: fp, decisionPath, record };
