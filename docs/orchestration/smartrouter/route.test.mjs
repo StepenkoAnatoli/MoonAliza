@@ -477,6 +477,15 @@ function cycle(trace, taskId, category, profile, value, deviation) {
   recordOutcome(outcome({ 'task-id': taskId, outcome: value, 'owner-profile': profile, 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
 }
 const failedFix = (trace, taskId) => cycle(trace, taskId, 'fix', 'cc-opus-high', 'verification-failed');
+// a qualification run on an unqualified profile: dispatch refuses it (F3), so the record stands for a run the lead
+// recorded by hand, outside SmartRouter routing (README 'How to add evidence'); it is marked as a deviation
+function handQualificationRun(trace, taskId, category, profile, value) {
+  const d = run(req({ taskId, category }), { traceDir: trace });
+  const p = POLICY.profiles.find((x) => x.id === profile);
+  const tuple = `(${p.id}, ${POLICY.harness.id}, anthropic, ${p.model}, ${p.effort}, ${p.config})`;
+  appendFileSync(join(trace, 'ledger.jsonl'), `${JSON.stringify({ 'task-id': taskId, seq: 2, kind: 'dispatch', ts: NOW, profile: tuple, counters: { 'calls-used': 1, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: d.decision.deadline, 'brief-fingerprint': null, detail: 'host deviation: qualification run recorded by hand', 'outcome-ref': null, deviation: true })}\n`);
+  recordOutcome(outcome({ 'task-id': taskId, outcome: value, 'owner-profile': profile, 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+}
 
 test('learning: two verification-failed fixes propose demotion, change no policy, and the next decide names the proposal', () => {
   const trace = tmp();
@@ -505,12 +514,12 @@ test('learning: two verification-failed fixes propose demotion, change no policy
   assert.equal(rate({ traceDir: t2, policyPath: POLICY_PATH, now: NOW }).proposals.length, 0);
 });
 
-test('learning: cost-overrun demotes, three accepted host deviations propose qualification, near expiry is flagged', () => {
+test('learning: cost-overrun demotes, three accepted hand-recorded qualification runs propose qualification, near expiry is flagged', () => {
   const trace = tmp();
   cycle(trace, 'c-1', 'review', 'cc-opus-high', 'cost-overrun');
-  for (const id of ['q-1', 'q-2']) cycle(trace, id, 'build-core', 'cc-fable-high', 'accepted', 'lead chose the stronger reviewer profile');
+  for (const id of ['q-1', 'q-2']) handQualificationRun(trace, id, 'build-core', 'cc-fable-high', 'accepted');
   assert.ok(!rate({ traceDir: trace, policyPath: POLICY_PATH, now: NOW }).proposals.some((p) => p.kind === 'qualify'), 'two accepted outcomes are not enough');
-  cycle(trace, 'q-3', 'build-core', 'cc-fable-high', 'accepted', 'lead chose the stronger reviewer profile');
+  handQualificationRun(trace, 'q-3', 'build-core', 'cc-fable-high', 'accepted');
   const r = rate({ traceDir: trace, policyPath: POLICY_PATH, now: '2027-01-05T00:00:00Z' });
   const kinds = r.proposals.map((p) => `${p.kind} ${p.profile} ${p.category}`);
   assert.ok(kinds.includes('demote cc-opus-high review'), kinds.join('|'));
@@ -628,4 +637,25 @@ test('F1 pre-dispatch recheck (gates.md binding item 3): an expiry crossing, a r
   assert.equal(noFile.code, 3, noFile.stdout);
   assert.match(noFile.stderr, /decision file pb-3-1\.json is missing: the route cannot be rechecked before dispatch/);
   assert.equal(readLedger(bare).length, 1);
+});
+
+test('F3: a host deviation is refused unless the deviating profile passes Gates 1-4 on the stored request', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  run(req({ taskId: 'dv-1', category: 'fix' }), { traceDir: trace });
+  const before = readFileSync(ledger, 'utf8');
+  // no capability fingerprint: a Gate 2 failure is never dispatched, deviation or not (spec-v2 §11.2, §11.10, §12)
+  const unq = cli(['dispatch', 'dv-1', 'cc-sonnet-high', '--trace', trace, '--now', NOW, '--deviation', 'try it']);
+  assert.equal(unq.code, 3, unq.stdout);
+  assert.match(unq.stderr, /pre-dispatch recheck refused deviation cc-sonnet-high \(decision seq 1\): gate 2: missing or stale capability fingerprint \(qualified-at null\)/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // qualified for other categories but not this one: still Gate 2
+  run(req({ taskId: 'dv-2', category: 'build-core' }), { traceDir: trace });
+  const other = cli(['dispatch', 'dv-2', 'cc-fable-high', '--trace', trace, '--now', NOW, '--deviation', 'qualification run']);
+  assert.equal(other.code, 3, other.stdout);
+  assert.match(other.stderr, /gate 2: .*cc-fable-high not qualified for build-core/);
+  // an eligible profile that is not the route's choice is an allowed, marked deviation
+  const ok = dispatch('dv-1', 'cc-fable-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'second-cheapest eligible' });
+  assert.equal(ok.deviation, true);
+  assert.match(ok.detail, /^host deviation: second-cheapest eligible; route said cc-opus-high/);
 });

@@ -38,7 +38,9 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    re-walks the decision's stored request (`trace/decisions/<task>-<seq>.json`) against the current policy, ledger
    and `--now`: a fingerprint that expired, a data class or destination that was revoked, or a route that moved to
    another profile since the decision refuses the dispatch, and the lead decides again. Dispatching any other
-   profile than the decided one is a host deviation: it needs `--deviation "<reason>"`, and the ledger marks it.
+   profile than the decided one is a host deviation: it needs `--deviation "<reason>"`, the ledger marks it, and it
+   is allowed only to a profile that passes Gates 1-4 on the same request. An unqualified profile, or one with no
+   capability fingerprint, is refused even as a deviation (spec-v2 §11.2, §11.10, §12).
 4. **Launch** the sub-agent in its own worktree and branch (`build/<unit-slug>`, the host convention; the Brief's
    `branch-hint`).
 5. **Record the outcome** when the unit ends, from observed evidence, never from the agent's self-report:
@@ -102,10 +104,15 @@ at most 15k tokens goes direct to the lead. See the policy findings below for th
 
 ### How to add evidence
 
-1. Run the profile on a real unit in that category: dispatch with `--deviation "qualification run"` when the
-   profile is not yet qualified for it, and record the outcome from observed checks.
+1. A qualification run cannot go through `dispatch`: a profile not qualified for the category fails Gate 2, and
+   `dispatch` refuses it even with `--deviation`. Running an unqualified profile on real work is a host policy
+   that SmartRouter does not sanction (spec-v2 §12: "No dispatch on unknown ... capability"). Whether this host
+   runs such qualification runs at all, and how they are recorded, is **the lead's decision and is not yet made**
+   (friction item 14). Evidence from runs outside SmartRouter routing, such as a calibration matrix, can still
+   support a qualification.
 2. Run `rate`. Three `accepted` outcomes for an unqualified (profile, category) produce a **qualification
-   proposal**.
+   proposal**. With step 1 undecided, such outcomes appear only if the lead records out-of-band runs in the ledger
+   by hand, as dispatch records marked `deviation: true`.
 3. The lead ratifies by editing `host-policy.json`: add the category to `qualified-for`, append the run ids to
    `evidence`, set `qualified-at` to the ratification date, and set `expires` (at most three months out). Bump
    `policy-revision`. The decision files bind every decision to the policy digest, so old decisions stay readable.
@@ -123,8 +130,9 @@ writes the policy.
   `trace/qualification-stats.json`, which is byte-identical when regenerated from the same ledger.
 - It proposes **demotion** of a profile from a category after two consecutive `verification-failed` outcomes there
   since its `qualified-at`, or after any `cost-overrun`.
-- It proposes **qualification** after three `accepted` outcomes in a category the profile is not qualified for
-  (such outcomes can only come from host deviations).
+- It proposes **qualification** after three `accepted` outcomes in a category the profile is not qualified for.
+  `dispatch` refuses such runs, so these outcomes can only come from runs the lead recorded by hand (see 'How to
+  add evidence').
 - It **flags** a profile whose `expires` falls within 14 days.
 - Proposals are printed, never applied. Until the lead edits the policy, `decide` routes by the policy as it
   stands, and its Uncertainty line names every pending proposal for the chosen profile, e.g.
@@ -226,3 +234,8 @@ Every point where the spec was ambiguous or did not fit a subscription host. Cit
     fixtures: an empty eligible set is `blocked`, and a would-be-eligible non-candidate is only a hint in
     Uncertainty. Upstream could say which profiles §5's "stronger eligible profile" may be drawn from, and add a
     fixture that reaches the route.
+14. **No sanctioned path to qualification evidence.** gates.md Gate 2 and spec-v2 §11.10 require declared, tested
+    qualification. §12 forbids dispatch on unknown capability, and §11.2 requires every gate decision to be
+    enforced. So a host cannot route the first runs that would produce the evidence. The builder brief asked for a
+    "qualification run" deviation; the adapter refuses it (review finding F3). Upstream could define a
+    qualification mode, for example shadow runs whose output is never merged, with its own ledger kind.

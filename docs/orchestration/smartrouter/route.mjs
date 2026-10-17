@@ -530,7 +530,7 @@ function reviewerFor(policy, nowMs, leadId) {
 // ---------------------------------------------------------------------------------------------
 // decision
 // ---------------------------------------------------------------------------------------------
-export function computeDecision(req, policy, records = [], catMap = {}) {
+export function computeDecision(req, policy, records = [], catMap = {}, { probe = null } = {}) {
   validateRequest(req, policy);
   const optIns = optInsOf(policy, req.hostOptIns);
   const category = Object.hasOwn(policy.categories, req.category) ? policy.categories[req.category] : null;
@@ -554,6 +554,8 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
   };
   const ids = req.candidates ?? policy.profiles.map((p) => p.id);
   const results = ids.map((id) => evaluate(ctx, id, id === leadId ? 'direct' : 'delegate'));
+  // a profile walked as a delegate without joining the route choice (the pre-dispatch recheck of a host deviation)
+  const probed = probe ? evaluate(ctx, probe, 'delegate') : null;
   const eligible = results.filter((r) => r.eligible).sort(byEconomics);
 
   let route;
@@ -671,7 +673,7 @@ export function computeDecision(req, policy, records = [], catMap = {}) {
     'eligible-ordered': eligible.map((r) => r.id), 'eligible-outside-candidates': outside, 'speculative-set': specSet, uncertainty,
     advisory: ADVISORY_TEXT, 'pending-proposals': pending, deadline: deadlineIso, 'deadline-capped': capped,
     'review-profile': ctx.reviewer?.id ?? null, brief, 'brief-fingerprint': fingerprint, text,
-    counters: counters(st)
+    counters: counters(st), ...(probed ? { probe: strip(probed) } : {})
   };
 }
 
@@ -731,9 +733,15 @@ function storedDecision(traceDir, taskId, dec) {
 // gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4: immediately before dispatch, re-walk the
 // stored request against the current policy, ledger and clock. Changed, expired or revoked evidence invalidates
 // the route; revocation always wins over the stored decision.
-function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now }) {
+function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, deviation }) {
   const stored = storedDecision(traceDir, taskId, dec);
-  const again = computeDecision({ ...stored.request, now }, policy, records);
+  const again = computeDecision({ ...stored.request, now }, policy, records, {}, { probe: deviation ? profileId : null });
+  if (deviation) {
+    // a deviation is allowed only to a profile that passes Gates 1-4 on the same request (spec-v2 §11.2, §11.10, §12)
+    const p = again.probe;
+    if (!p.eligible) throw refused(`pre-dispatch recheck refused deviation ${profileId} (decision seq ${dec.seq}): gate ${p['first-failing-gate']}: ${p.reason}; a host deviation must still pass Gates 1-4 (spec-v2 §11.2)`);
+    return;
+  }
   const c = again.candidates[profileId];
   if (!c?.eligible) {
     const why = c ? `gate ${c['first-failing-gate']}: ${c.reason}` : 'not among the request\'s candidates';
@@ -777,7 +785,7 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   if (repair && !st.records.some((r) => r.kind === 'outcome' && r.seq > prior.seq && sameKey(r.profile) === key)) {
     throw refused(`previous dispatch of ${profileId} (seq ${prior.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
   }
-  if (asDecided) recheck({ traceDir, policy, records, taskId, dec, route, profileId, now });
+  recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, deviation: !asDecided });
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;
   return appendRecord(traceDir, {
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),
