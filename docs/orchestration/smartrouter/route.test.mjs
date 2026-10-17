@@ -971,3 +971,15 @@ test('N5: a deviation to the lead-direct profile is refused; the lead works dire
   assert.match(bare.stderr, /is the lead-direct profile/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
 });
+
+test('N6: a request that declares no data class is invalid (exit 2) and is never routed', () => {
+  // the review's probe: dataClasses [] used to pass Gate 1 and route to cc-opus-high
+  assert.throws(() => computeDecision(req({ dataClasses: [] }), loadPolicy(POLICY_PATH), []),
+    (e) => e instanceof RouterError && e.code === 2 && e.message === 'invalid request: declare at least one data class');
+  const trace = tmp();
+  const out = cli(['decide', writeJson(req({ taskId: 'dc-1', dataClasses: [] })), '--trace', trace]);
+  assert.equal(out.code, 2, out.stdout);
+  assert.match(out.stderr, /invalid request: declare at least one data class/);
+  assert.equal(existsSync(join(trace, 'ledger.jsonl')), false);
+  assert.equal(existsSync(join(trace, 'decisions')), false);
+});

@@ -66,7 +66,7 @@ Run every command from the repository root. Node 24 must be on `PATH`.
 
 Request fields: `taskId`, `objective`, `category`, `unit`, `permittedEffects`, `sources`, `nonGoals`,
 `acceptanceChecks` ([{command, expect}]), `estimatedTokens` (default: the category median), `requiredTools`
-(default: the category's), `needsVision`, `dataClasses`, `projectStop` ({redSuite, gateOff, researchGateFailing}),
+(default: the category's), `needsVision`, `dataClasses` (at least one), `projectStop` ({redSuite, gateOff, researchGateFailing}),
 `previousResult`, `deadline`, `now` (both ISO-8601; `now` is injected for determinism), `candidates` (default: every
 profile; it also bounds who may review), `allowDirect` (default true), `hostOptIns`. Three optional additions are accepted: `uncertainty: "high"`
 (the only way to reach `speculative`, and only with the host opt-in) and `requiredIsolation` (a lower bound on the
@@ -83,7 +83,7 @@ it, and the fix is to add the missing newline, which changes no record.
 
 | Concern | Status | Where |
 |---|---|---|
-| Permissions, data classes, project stops | **enforced**: Gate 1 denies before anything else; a forbidden data class never reaches Gate 2. `dispatch` re-walks Gate 1 with the project-stop state the lead passes as `--project-stop` (required), never with the snapshot taken at decide time | `decide`, `dispatch` |
+| Permissions, data classes, project stops | **enforced**: Gate 1 denies before anything else; a forbidden data class never reaches Gate 2. A request that declares no data class is invalid (exit 2): every dispatch transmits at least the objective and sources. `dispatch` re-walks Gate 1 with the project-stop state the lead passes as `--project-stop` (required), never with the snapshot taken at decide time | `decide`, `dispatch` |
 | Capability qualification and fingerprint freshness | **enforced**: declared `qualified-for`, `qualified-at`, `expires`, `headroom-tested`; equality with `expires` is expiry | `decide` |
 | Verification prerequisites | **enforced**: every category check must be named in `acceptanceChecks`; a required review needs a reviewer drawn from the request's `candidates` (never the lead-direct profile) that passes Gate 1 and Gate 2 for the `review` category, with headroom checked against the review median, and has a price. The decision file lists each would-be reviewer's first failing gate under `review-candidates` | `decide` |
 | Call slots (6 per task) | **enforced**: `used + 1 <= limit` in `decide` and again in `dispatch` | `decide`, `dispatch` |

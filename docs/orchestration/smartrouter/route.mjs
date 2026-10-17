@@ -219,6 +219,9 @@ function validateRequest(r, policy) {
   if (!isStr(r.taskId) || !TASK_ID.test(r.taskId)) fail('taskId must match [A-Za-z0-9][A-Za-z0-9._-]*');
   for (const k of ['objective', 'category', 'unit']) if (!isStr(r[k])) fail(k);
   for (const k of ['permittedEffects', 'sources', 'nonGoals', 'dataClasses']) if (!isStrArray(r[k])) fail(`${k} must be an array of strings`);
+  // Gate 1 is default-deny and a read-only call still transmits prompt bytes (gates.md Gate 1): every dispatch
+  // sends at least the objective and sources, so a request that declares no data has nothing Gate 1 can permit
+  if (r.dataClasses.length === 0) fail('declare at least one data class');
   if (!Array.isArray(r.acceptanceChecks) || !r.acceptanceChecks.every((c) => c && isStr(c.command) && isStr(c.expect))) fail('acceptanceChecks must be [{command, expect}]');
   if (r.estimatedTokens !== undefined && !isInt(r.estimatedTokens, 1)) fail('estimatedTokens');
   if (r.requiredTools !== undefined && !isStrArray(r.requiredTools)) fail('requiredTools');
