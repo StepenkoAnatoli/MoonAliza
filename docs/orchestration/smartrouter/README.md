@@ -24,8 +24,10 @@ Run every command from the repository root. Node 24 must be on `PATH`.
 
 0. **Refresh the usage reading** when the latest one is older than 30 minutes, or a window has reset since it
    (`route.mjs usage` with no file says which): paste the platform's latest `rate_limit_event` with
-   `node docs/orchestration/smartrouter/route.mjs usage <reading.json>` (section 'Usage windows'). Without a fresh
-   reading every candidate that reaches Gate 4 fails it, and `decide` returns `blocked`.
+   `node docs/orchestration/smartrouter/route.mjs usage <reading.json> --now <the event's own timestamp>`
+   (section 'Usage windows'). `--now` is when the platform observed the windows, and staleness is measured from it;
+   without it the paste time is recorded and an old event passes as fresh. Without a fresh reading every candidate
+   that reaches Gate 4 fails it, and `decide` returns `blocked`.
 1. **Decide.** Write the request JSON (fields below) and run
    `node docs/orchestration/smartrouter/route.mjs decide <request.json>`.
    It prints the Required output format block, the Advisory line, a gate walk per candidate and, for `delegate`,
@@ -201,7 +203,11 @@ usage reading recorded: 2026-10-17T19:00:22Z five_hour 0.2 (resets 2026-10-17T23
 ```
 
 This appends `{ ts, windows: { <w>: { utilization, resets-at } }, source: "rate_limit_event", note }` to
-`trace/usage.jsonl`. `ts` is `--now`, or the clock when `--now` is omitted. Only the windows the policy names are
+`trace/usage.jsonl`. `ts` is the observation time: **pass `--now` with the `rate_limit_event`'s own timestamp**
+(`2026-10-17T19:00:22Z` above), not the time of the paste. Every age, the 30-minute staleness included, is measured
+from `ts`, so an event pasted 83 minutes after it happened is stale at once, as it should be. When `--now` is
+omitted, `ts` is the clock, and `usage` says so on stderr:
+`route.mjs: note: no --now, so the reading's ts is the clock (<ts>); pass --now <the rate_limit_event's own timestamp>, because staleness is measured from ts`. Only the windows the policy names are
 recorded. Exit 2, with nothing appended, when:
 
 - a policy window is missing from the reading;

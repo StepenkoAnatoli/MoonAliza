@@ -1599,3 +1599,20 @@ test('SW-3: rate skips a pair whose utilization fell (counted as negative-delta)
   assert.deepEqual(f.usageProposals, []);
   assert.match(f.text, /^no proposals$/m);
 });
+
+test('SW-4: a reading\'s ts is when the platform observed it: pasted with its event\'s --now it is stale 83 minutes later; without --now the clock is used and a note says so', () => {
+  // the brief's 2026-10-17T19:00:22Z event, pasted at 20:23:46Z with its own timestamp: stale for a decision then
+  const trace = tmp();
+  const event = { unifiedWindows: { five_hour: { resetsAt: 1792278000, utilization: 0.2 }, seven_day: { resetsAt: 1792864800, utilization: 0.05 } } };
+  const pasted = usageCli(trace, event, '2026-10-17T19:00:22Z');
+  assert.equal(pasted.code, 0, pasted.stderr);
+  assert.equal(pasted.stderr, ''); // --now given: no note
+  const d = decideOn(req({ taskId: 'sw4-1', now: '2026-10-17T20:23:46Z' }), trace);
+  assert.equal(d.route, 'blocked');
+  assert.equal(d.decision.candidates['cc-opus-high'].reason, 'usage reading stale: age 83.4 min > 30; refresh with route.mjs usage');
+  // without --now the reading is recorded at the clock (the brief's default), with a note on stderr
+  const t2 = tmp();
+  const live = cli(['usage', writeJson(rateLimitInfo(new Date().toISOString())), '--trace', t2, '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(live.code, 0, live.stderr);
+  assert.match(live.stderr, /^route\.mjs: note: no --now, so the reading's ts is the clock \(\S+\); pass --now <the rate_limit_event's own timestamp>, because staleness is measured from ts$/m);
+});

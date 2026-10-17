@@ -1293,6 +1293,8 @@ export function main(argv = process.argv.slice(2)) {
     } else if (cmd === 'usage' && a) {
       const r = recordUsage(readJsonFile(a, 'usage reading'), { ...base, now });
       process.stdout.write(`usage reading recorded: ${r.ts} ${Object.entries(r.windows).map(([w, x]) => `${w} ${x.utilization} (resets ${x['resets-at']})`).join(', ')}\n`);
+      // ts is the observation time staleness is measured from; the paste can come long after the event (SW-4)
+      if (opt.now === undefined) process.stderr.write(`route.mjs: note: no --now, so the reading's ts is the clock (${r.ts}); pass --now <the rate_limit_event's own timestamp>, because staleness is measured from ts\n`);
     } else if (cmd === 'usage') {
       process.stdout.write(usageSummary({ ...base, now }).text);
     } else {
