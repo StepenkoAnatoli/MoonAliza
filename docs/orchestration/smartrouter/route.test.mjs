@@ -1366,3 +1366,122 @@ test('committed policy (ii): after a fresh synthetic reading, the stored build r
   assert.equal(d.decision['all-in-bound-usd'], STORED_BUILD.decision['all-in-bound-usd']);
   assert.deepEqual(d.decision['eligible-ordered'], STORED_BUILD.decision['eligible-ordered']);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Usage windows, learning: outcome tokens and observed coefficients (synthetic readings and token counts)
+// ---------------------------------------------------------------------------------------------
+const withTokens = (over, tokens) => {
+  const o = outcome(over);
+  if (tokens !== undefined) o.evidence = { ...o.evidence, 'actual-tokens': tokens };
+  return o;
+};
+
+test('outcome: evidence.actual-tokens is recorded as the additive field tokens (integer >= 0, or null = unknown; absent = null); anything else is exit 2', () => {
+  const trace = tmp();
+  const cycleWith = (taskId, tokens) => {
+    const d = run(req({ taskId }), { traceDir: trace });
+    dispatch(taskId, 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+    return { d, rec: () => recordOutcome(withTokens({ 'task-id': taskId, outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }, tokens), { traceDir: trace, policyPath: POLICY_PATH, now: NOW }) };
+  };
+  assert.equal(cycleWith('ot-1', 412345).rec().tokens, 412345);
+  assert.equal(cycleWith('ot-2', 0).rec().tokens, 0);
+  assert.equal(cycleWith('ot-3', null).rec().tokens, null);
+  const absent = cycleWith('ot-4', undefined).rec();
+  assert.ok(Object.hasOwn(absent, 'tokens'));
+  assert.equal(absent.tokens, null);
+  // §10.5 counters stay as they are; the outcome file keeps the Outcome as given
+  assert.deepEqual(absent.counters, { 'calls-used': 1, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 });
+  const { d } = cycleWith('ot-5', undefined);
+  for (const bad of [-1, 1.5, '1000', true, {}]) {
+    const out = cli(['outcome', writeJson(withTokens({ 'task-id': 'ot-5', outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }, bad)), '--trace', trace, '--now', NOW]);
+    assert.equal(out.code, 2, `${JSON.stringify(bad)}: ${out.stdout}`);
+    assert.match(out.stderr, /invalid Outcome \(spec-v2 §10\.3\): evidence\.actual-tokens \(an integer >= 0, or null = unknown\)/);
+  }
+  assert.equal(readLedger(trace).filter((r) => r['task-id'] === 'ot-5' && r.kind === 'outcome').length, 0);
+});
+
+// one review unit decided, dispatched and closed at `at` with `tokens` recorded (feature-off fixture: the windows
+// do not gate here; rate reads them through the committed policy)
+function unitAt(trace, taskId, at, tokens) {
+  const d = run(req({ taskId, now: at }), { traceDir: trace });
+  dispatch(taskId, 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: at });
+  recordOutcome(withTokens({ 'task-id': taskId, outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }, tokens), { traceDir: trace, policyPath: POLICY_PATH, now: at });
+  return d.briefFingerprint;
+}
+const FIVE_RESET = '2026-10-17T23:00:00Z';
+const SEVEN_RESET = '2026-10-23T19:00:00Z';
+function readingAt(trace, at, five, seven, fiveReset = FIVE_RESET) {
+  const r = usageCli(trace, { windows: { five_hour: { utilization: five, 'resets-at': fiveReset }, seven_day: { utilization: seven, 'resets-at': SEVEN_RESET } }, note: 'synthetic' }, at);
+  assert.equal(r.code, 0, r.stderr);
+}
+const at = (minutes) => isoAt(NOW_MS + minutes * MIN);
+const rateOn = (trace) => rate({ traceDir: trace, policyPath: COMMITTED_POLICY_PATH, now: at(600) });
+
+test('rate: observed coefficients from consecutive readings and the outcome tokens between them; an upward proposal at once; skipped pairs counted', () => {
+  const trace = tmp();
+  readingAt(trace, at(0), 0.2, 0.05);
+  const fp = unitAt(trace, 'ob-1', at(30), 400000);
+  // a superseding outcome for the same dispatch counts once (one outcome per dispatch, F4): T stays 400000
+  recordOutcome(withTokens({ 'task-id': 'ob-1', outcome: 'accepted', 'original-brief-fingerprint': fp }, 400000), { traceDir: trace, policyPath: POLICY_PATH, now: at(45) });
+  readingAt(trace, at(60), 0.32, 0.08); // pair 1: 0.12 / 0.4 Mtok = 0.3 (five_hour), 0.03 / 0.4 = 0.075 (seven_day)
+  readingAt(trace, at(90), 0.32, 0.08); // pair 2: no outcome in (60, 90]: T = 0, skipped
+  unitAt(trace, 'ob-2', at(105), null);
+  readingAt(trace, at(120), 0.4, 0.1); // pair 3: an outcome with unknown tokens: skipped
+  unitAt(trace, 'ob-3', at(150), 100000); // at the later reading's ts: inside (ts1, ts2]
+  readingAt(trace, at(150), 0.025, 0.1015, '2026-10-18T01:30:00Z'); // pair 4: five_hour reset in between: skipped; seven_day 0.0015 / 0.1
+  const r = rateOn(trace);
+  assert.deepEqual(r.stats.usage, {
+    five_hour: {
+      observed: [{ from: at(0), to: at(60), delta: 0.12, tokens: 400000, coefficient: 0.3 }],
+      'max-observed': 0.3, current: 0.24, skipped: { reset: 1, 'unknown-tokens': 1, 'zero-tokens': 1 }
+    },
+    seven_day: {
+      observed: [{ from: at(0), to: at(60), delta: 0.03, tokens: 400000, coefficient: 0.075 }, { from: at(120), to: at(150), delta: 0.0015, tokens: 100000, coefficient: 0.015 }],
+      'max-observed': 0.075, current: 0.06, skipped: { reset: 0, 'unknown-tokens': 1, 'zero-tokens': 1 }
+    }
+  });
+  assert.match(r.text, /^PROPOSAL usage-windows\.windows\.five_hour\.utilization-per-mtok: 0\.24 -> 0\.3 \(max observed exceeds the current by more than 10 %; upward at once\); not applied — the lead ratifies by editing host-policy\.json$/m);
+  assert.match(r.text, /^PROPOSAL usage-windows\.windows\.seven_day\.utilization-per-mtok: 0\.06 -> 0\.075 /m);
+  assert.deepEqual(r.usageProposals.map((p) => [p.window, p.from, p.to, p.direction]), [['five_hour', 0.24, 0.3, 'up'], ['seven_day', 0.06, 0.075, 'up']]);
+  assert.deepEqual(JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8')), COMMITTED_POLICY); // proposed, never applied
+  assert.doesNotMatch(r.text, /^no proposals$/m);
+  // regenerated byte-identically from the same ledger and readings
+  const first = readFileSync(join(trace, 'qualification-stats.json'), 'utf8');
+  rateOn(trace);
+  assert.equal(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'), first);
+  // within 10 % above the current: no proposal
+  const t2 = tmp();
+  readingAt(t2, at(0), 0.2, 0.05);
+  unitAt(t2, 'ob-4', at(30), 1000000);
+  readingAt(t2, at(60), 0.46, 0.11); // 0.26 vs 0.24 (+8 %), 0.06 vs 0.06
+  const r2 = rateOn(t2);
+  assert.equal(r2.stats.usage.five_hour['max-observed'], 0.26);
+  assert.deepEqual(r2.usageProposals, []);
+  // the feature off: no usage section, nothing proposed
+  assert.equal('usage' in rate({ traceDir: trace, policyPath: POLICY_PATH, now: at(600) }).stats, false);
+});
+
+test('rate: a lower coefficient is proposed only after three consecutive observations all below 90 % of the current', () => {
+  const trace = tmp();
+  // five_hour coefficients per pair (0.5 Mtok each): 0.20, 0.21, 0.23, 0.15, 0.18, 0.19; seven_day stays at 0.06
+  const five = [0.1, 0.2, 0.305, 0.42, 0.495, 0.585, 0.68];
+  const seven = [0.05, 0.08, 0.11, 0.14, 0.17, 0.2, 0.23];
+  const proposalsAfter = (n) => {
+    readingAt(trace, at(30 * n), five[n], seven[n]);
+    return rateOn(trace).usageProposals;
+  };
+  readingAt(trace, at(0), five[0], seven[0]);
+  const seen = [];
+  for (let n = 1; n <= 6; n += 1) {
+    unitAt(trace, `dn-${n}`, at(30 * n - 15), 500000);
+    seen.push(proposalsAfter(n));
+  }
+  const r = rateOn(trace);
+  assert.deepEqual(r.stats.usage.five_hour.observed.map((o) => o.coefficient), [0.2, 0.21, 0.23, 0.15, 0.18, 0.19]);
+  assert.deepEqual(r.stats.usage.seven_day.observed.map((o) => o.coefficient), [0.06, 0.06, 0.06, 0.06, 0.06, 0.06]);
+  // two low observations: too few; the third (0.23) is not below 0.216, so the run restarts; 0.15, 0.18 after it: two
+  assert.deepEqual(seen.slice(0, 5), [[], [], [], [], []]);
+  // 0.15, 0.18, 0.19: three consecutive below 0.216 -> propose the highest of the three (downward slowly)
+  assert.deepEqual(seen[5].map((p) => [p.window, p.from, p.to, p.direction]), [['five_hour', 0.24, 0.19, 'down']]);
+  assert.match(r.text, /^PROPOSAL usage-windows\.windows\.five_hour\.utilization-per-mtok: 0\.24 -> 0\.19 \(the last three observations are all below 90 % of the current; downward slowly\); not applied/m);
+});

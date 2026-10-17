@@ -182,6 +182,8 @@ export function validateOutcome(o) {
   if (!Array.isArray(ev.checks) || !ev.checks.every((c) => c && typeof c.command === 'string' && Number.isInteger(c['exit-code']) && typeof c['output-ref'] === 'string')) fail('evidence.checks');
   // estimate-only host: actual spend is unknown, so null is the honest value (decision-trace.md §1)
   if (!(ev['actual-spend'] === null || (typeof ev['actual-spend'] === 'number' && ev['actual-spend'] >= 0))) fail('evidence.actual-spend');
+  // additive (spec-v2 §13): the tokens the unit actually used, for the usage-window learning in rate
+  if (!(ev['actual-tokens'] === undefined || ev['actual-tokens'] === null || isInt(ev['actual-tokens']))) fail('evidence.actual-tokens (an integer >= 0, or null = unknown)');
   if (!isStrArray(ev['files-touched'])) fail('evidence.files-touched');
   if (typeof ev.notes !== 'string') fail('evidence.notes');
   if (typeof o['original-brief-fingerprint'] !== 'string') fail('original-brief-fingerprint');
@@ -1101,7 +1103,8 @@ export function recordOutcome(o, { policyPath = DEFAULT_POLICY, traceDir = DEFAU
   return appendRecord(traceDir, {
     'task-id': o['task-id'], seq, kind: 'outcome', ts: now, profile: profileTuple(policy, pr), counters: counters(st),
     deadline: st.lastDecision?.deadline ?? null, 'brief-fingerprint': FINGERPRINT.test(fp) ? fp : null,
-    detail: `outcome ${o.outcome} (dispatch seq ${disp.seq})`, 'outcome-ref': o['task-id'], 'dispatch-seq': disp.seq
+    detail: `outcome ${o.outcome} (dispatch seq ${disp.seq})`, 'outcome-ref': o['task-id'], 'dispatch-seq': disp.seq,
+    tokens: isInt(o.evidence['actual-tokens']) ? o.evidence['actual-tokens'] : null
   });
 }
 
@@ -1121,11 +1124,53 @@ export function status(taskId, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT
   return { text: `${text}\n`, counters: counters(st) };
 }
 
+const round6 = (x) => Math.round(x * 1e6) / 1e6;
+
+// observed coefficients: for consecutive readings with no reset of the window between them (same resets-at, not
+// passed by the later reading), (u2 - u1) / (T / 1e6) where T sums the outcome tokens recorded in (ts1, ts2] - one
+// outcome per dispatch, as the qualification streams count. Pairs with unknown tokens or T = 0 are skipped and counted.
+// Proposals: upward at once when the max observed exceeds the current by more than 10 % (the conservative direction);
+// downward only when the last three observations are all below 90 % of the current, to the highest of the three.
+function usageLearning(cfg, readings, records) {
+  const outs = latestOutcomes(records).map((r) => ({ ms: isoMs(r.ts), tokens: isInt(r.tokens) ? r.tokens : null }));
+  const usage = {};
+  const proposals = [];
+  for (const [name, w] of Object.entries(cfg.windows)) {
+    const observed = [];
+    const skipped = { reset: 0, 'unknown-tokens': 0, 'zero-tokens': 0 };
+    for (let i = 1; i < readings.length; i += 1) {
+      const a = readings[i - 1];
+      const b = readings[i];
+      const ra = a.windows[name];
+      const rb = b.windows[name];
+      if (!ra || !rb || ra['resets-at'] !== rb['resets-at'] || isoMs(ra['resets-at']) <= isoMs(b.ts)) { skipped.reset += 1; continue; }
+      const inside = outs.filter((o) => o.ms > isoMs(a.ts) && o.ms <= isoMs(b.ts));
+      if (inside.some((o) => o.tokens === null)) { skipped['unknown-tokens'] += 1; continue; }
+      const tokens = inside.reduce((sum, o) => sum + o.tokens, 0);
+      if (tokens === 0) { skipped['zero-tokens'] += 1; continue; }
+      const delta = rb.utilization - ra.utilization;
+      observed.push({ from: a.ts, to: b.ts, delta: round6(delta), tokens, coefficient: round6(delta / (tokens / 1e6)) });
+    }
+    const current = w['utilization-per-mtok'];
+    const max = observed.length ? Math.max(...observed.map((o) => o.coefficient)) : null;
+    usage[name] = { observed, 'max-observed': max, current, skipped };
+    const last = observed.slice(-3);
+    if (max !== null && max > current * 1.1) {
+      proposals.push({ window: name, from: current, to: max, direction: 'up', reason: 'max observed exceeds the current by more than 10 %; upward at once' });
+    } else if (last.length === 3 && last.every((o) => o.coefficient < current * 0.9)) {
+      proposals.push({ window: name, from: current, to: Math.max(...last.map((o) => o.coefficient)), direction: 'down', reason: 'the last three observations are all below 90 % of the current; downward slowly' });
+    }
+  }
+  return { usage, proposals };
+}
+
 export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString() } = {}) {
   if (isoMs(now) === null) throw invalid('--now must be ISO-8601');
   const policy = loadPolicy(policyPath);
   const records = readLedger(traceDir);
   const { stats, proposals } = learn(policy, records, categoryMap(traceDir));
+  const learned = policy['usage-windows'] ? usageLearning(policy['usage-windows'], readUsage(traceDir), records) : null;
+  const usageProposals = learned ? learned.proposals : [];
   const path = ledgerPath(traceDir);
   const doc = {
     _comment: 'derived by route.mjs rate from ledger.jsonl and the decision files; regenerated on every run, never hand-edited',
@@ -1134,7 +1179,8 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
     'outcomes-counted': latestOutcomes(records).length,
     'outcome-records': records.filter((r) => r.kind === 'outcome').length,
     stats,
-    proposals
+    proposals,
+    ...(learned ? { usage: learned.usage, 'usage-proposals': usageProposals, 'usage-sha256': existsSync(usagePath(traceDir)) ? sha256(readFileSync(usagePath(traceDir))) : null } : {})
   };
   mkdirSync(traceDir, { recursive: true });
   const statsPath = join(traceDir, 'qualification-stats.json');
@@ -1142,9 +1188,10 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const flags = expiryFlags(policy, isoMs(now));
   const lines = [`${statsPath} regenerated (${doc['outcomes-counted']} outcomes)`];
   for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json`);
+  for (const p of usageProposals) lines.push(`PROPOSAL usage-windows.windows.${p.window}.utilization-per-mtok: ${p.from} -> ${p.to} (${p.reason}); not applied — the lead ratifies by editing host-policy.json`);
   for (const f of flags) lines.push(`FLAG ${f.profile}: ${f.reason}`);
-  if (!proposals.length && !flags.length) lines.push('no proposals');
-  return { stats: doc, proposals, flags, statsPath, text: `${lines.join('\n')}\n` };
+  if (!proposals.length && !usageProposals.length && !flags.length) lines.push('no proposals');
+  return { stats: doc, proposals, usageProposals, flags, statsPath, text: `${lines.join('\n')}\n` };
 }
 
 // ---------------------------------------------------------------------------------------------
