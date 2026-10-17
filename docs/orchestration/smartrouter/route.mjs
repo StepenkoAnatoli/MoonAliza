@@ -721,6 +721,37 @@ export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TR
 // ---------------------------------------------------------------------------------------------
 // dispatch, outcome, status, rate
 // ---------------------------------------------------------------------------------------------
+// the decision file behind a ledger decision record: the stored request is what the recheck re-walks
+function storedDecision(traceDir, taskId, dec) {
+  const path = join(traceDir, 'decisions', `${taskId}-${dec.seq}.json`);
+  if (!existsSync(path)) throw refused(`decision file ${taskId}-${dec.seq}.json is missing: the route cannot be rechecked before dispatch, and unknown evidence invalidates it (gates.md 'Qualification, freshness and pre-dispatch binding' item 3); decide again`);
+  let j;
+  try { j = JSON.parse(readFileSync(path, 'utf8')); } catch { throw new RouterError(4, `decision file ${taskId}-${dec.seq}.json is unparseable`); }
+  if (j?.['ledger-seq'] !== dec.seq || j.request?.taskId !== taskId || (j['brief-fingerprint'] ?? null) !== dec['brief-fingerprint']) {
+    throw new RouterError(4, `decision file ${taskId}-${dec.seq}.json does not match ledger decision seq ${dec.seq}`);
+  }
+  return j;
+}
+
+// gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4: immediately before dispatch, re-walk the
+// stored request against the current policy, ledger and clock. Changed, expired or revoked evidence invalidates
+// the route; revocation always wins over the stored decision.
+function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now }) {
+  const stored = storedDecision(traceDir, taskId, dec);
+  const again = computeDecision({ ...stored.request, now }, policy, records);
+  const c = again.candidates[profileId];
+  if (!c?.eligible) {
+    const why = c ? `gate ${c['first-failing-gate']}: ${c.reason}` : 'not among the request\'s candidates';
+    throw refused(`pre-dispatch recheck refused ${profileId} (decision seq ${dec.seq}): ${why}; changed, expired or revoked evidence invalidates the route (gates.md pre-dispatch binding); decide again`);
+  }
+  const choice = route === 'speculative'
+    ? again['eligible-ordered'].filter((id) => again.candidates[id].kind === 'delegate').slice(0, 2)
+    : again.route === 'delegate' ? [again.profile] : [];
+  if (!choice.includes(profileId)) {
+    throw refused(`pre-dispatch recheck: the route changed since decision seq ${dec.seq} (now ${again.route}${again.profile ? ` ${again.profile}` : ''}); decide again`);
+  }
+}
+
 export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString(), deviation = null } = {}) {
   if (!isStr(taskId) || !TASK_ID.test(taskId)) throw invalid(`invalid task id ${taskId}`);
   if (isoMs(now) === null) throw invalid('--now must be ISO-8601');
@@ -751,6 +782,7 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   if (repair && !st.records.some((r) => r.kind === 'outcome' && r.seq > prior.seq && sameKey(r.profile) === key)) {
     throw refused(`previous dispatch of ${profileId} (seq ${prior.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
   }
+  if (asDecided) recheck({ traceDir, policy, records, taskId, dec, route, profileId, now });
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;
   return appendRecord(traceDir, {
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),

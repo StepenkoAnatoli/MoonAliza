@@ -575,3 +575,43 @@ test('R01-R03 under a profile rename: the same model, effort and config under a 
   assert.equal(out.code, 3);
   assert.match(out.stderr, /same-profile repairs exhausted/);
 });
+
+test('F1 pre-dispatch recheck (gates.md binding item 3): an expiry crossing, a revocation or a changed route between decide and dispatch refuses the dispatch', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  // (A) the capability fingerprint expires between decide and dispatch
+  const d = run(req({ taskId: 'pb-1', category: 'fix', now: '2027-01-14T23:00:00Z', deadline: '2027-01-15T06:00:00Z' }), { traceDir: trace });
+  assert.equal(d.decision.profile, 'cc-opus-high');
+  let before = readFileSync(ledger, 'utf8');
+  const expired = cli(['dispatch', 'pb-1', 'cc-opus-high', '--trace', trace, '--now', '2027-01-15T00:30:00Z']);
+  assert.equal(expired.code, 3, expired.stdout);
+  assert.match(expired.stderr, /pre-dispatch recheck refused cc-opus-high \(decision seq 1\): gate 2: missing or stale capability fingerprint \(expired 2027-01-15\)/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // (B) the data class is revoked between decide and dispatch: revocation wins over the stored decision
+  run(req({ taskId: 'pb-2' }), { traceDir: trace });
+  const revoked = policyWith((p) => {
+    p.authorization['data-classes-forbidden'].push('repo-code');
+    p.authorization['data-classes-permitted'] = [];
+  });
+  before = readFileSync(ledger, 'utf8');
+  const rev = cli(['dispatch', 'pb-2', 'cc-opus-high', '--trace', trace, '--policy', revoked, '--now', NOW]);
+  assert.equal(rev.code, 3, rev.stdout);
+  assert.match(rev.stderr, /pre-dispatch recheck refused cc-opus-high \(decision seq 1\): gate 1: data class 'repo-code' is forbidden/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // (C) the decided profile is still eligible but no longer the route's choice (a price change)
+  const repriced = policyWith((p) => { p.prices[OPUS.model].output_rate_per_mtok = 500; });
+  const moved = cli(['dispatch', 'pb-2', 'cc-opus-high', '--trace', trace, '--policy', repriced, '--now', NOW]);
+  assert.equal(moved.code, 3, moved.stdout);
+  assert.match(moved.stderr, /pre-dispatch recheck: the route changed since decision seq 1 \(now delegate cc-fable-high\); decide again/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // (D) unchanged evidence: the decided dispatch goes through
+  assert.equal(dispatch('pb-2', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+  // (E) a decision record with no decision file behind it is unknown evidence: refused, nothing appended
+  const bare = tmp();
+  const hand = { 'task-id': 'pb-3', seq: 1, kind: 'decision', ts: NOW, profile: OPUS_TUPLE, counters: { 'calls-used': 0, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: DEADLINE, 'brief-fingerprint': null, detail: 'route delegate (hand-walked)', 'outcome-ref': null };
+  writeFileSync(join(bare, 'ledger.jsonl'), `${JSON.stringify(hand)}\n`);
+  const noFile = cli(['dispatch', 'pb-3', 'cc-opus-high', '--trace', bare, '--now', NOW]);
+  assert.equal(noFile.code, 3, noFile.stdout);
+  assert.match(noFile.stderr, /decision file pb-3-1\.json is missing: the route cannot be rechecked before dispatch/);
+  assert.equal(readLedger(bare).length, 1);
+});

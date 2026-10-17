@@ -31,8 +31,11 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    model and effort exactly as the `Profile:` tuple says.
 3. **Record the dispatch before launching:**
    `node docs/orchestration/smartrouter/route.mjs dispatch <task-id> <profile-id>`.
-   This reserves the call slot. Exit 3 means refused, so do not launch. Dispatching any other profile than the
-   decided one is a host deviation: it needs `--deviation "<reason>"`, and the ledger marks it.
+   This reserves the call slot. Exit 3 means refused, so do not launch. Before it records anything, `dispatch`
+   re-walks the decision's stored request (`trace/decisions/<task>-<seq>.json`) against the current policy, ledger
+   and `--now`: a fingerprint that expired, a data class or destination that was revoked, or a route that moved to
+   another profile since the decision refuses the dispatch, and the lead decides again. Dispatching any other
+   profile than the decided one is a host deviation: it needs `--deviation "<reason>"`, and the ledger marks it.
 4. **Launch** the sub-agent in its own worktree and branch (`build/<unit-slug>`, the host convention; the Brief's
    `branch-hint`).
 5. **Record the outcome** when the unit ends, from observed evidence, never from the agent's self-report:
@@ -67,6 +70,7 @@ to append to a ledger it cannot read; it never skips a line.
 | Call slots (6 per task) | **enforced**: `used + 1 <= limit` in `decide` and again in `dispatch` | `decide`, `dispatch` |
 | Same-profile repairs (1 per task) | **enforced**: counted from the ledger by identity (harness, provider, model, effort, config); renaming a profile in the policy does not reset them | `decide`, `dispatch` |
 | Deadline | **enforced**: `now` strictly before; capped at 12 h from the task's first ledger event | `decide`, `dispatch` |
+| Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy and `now`; the decided profile must still be eligible and still the route's choice (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
 | Speculative and nested delegation | **off**: speculative needs the opt-in plus `uncertainty: "high"`; a nested opt-in is refused with a note, because this host cannot produce or enforce a NestedBrief (§14) | `decide` |
@@ -102,6 +106,8 @@ at most 15k tokens goes direct to the lead. See the policy findings below for th
 3. The lead ratifies by editing `host-policy.json`: add the category to `qualified-for`, append the run ids to
    `evidence`, set `qualified-at` to the ratification date, and set `expires` (at most three months out). Bump
    `policy-revision`. The decision files bind every decision to the policy digest, so old decisions stay readable.
+   A decision not yet dispatched is rechecked against the edited policy at `dispatch`, so a demotion or a
+   revocation takes effect on pending decisions too.
 4. A profile with `qualified-at: null` or a past `expires` fails Gate 2 until this is done.
 
 ## The learning loop
