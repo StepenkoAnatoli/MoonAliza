@@ -25,6 +25,10 @@ const OPUS_TUPLE = `(${OPUS.id}, ${POLICY.harness.id}, anthropic, ${OPUS.model},
 
 function tmp() { return mkdtempSync(join(tmpdir(), 'sr-host-test-')); }
 
+// the current project-stop state every dispatch must carry (N4): nothing stopped
+const CLEAR = { redSuite: false, gateOff: false, researchGateFailing: false };
+const CLEAR_JSON = JSON.stringify(CLEAR);
+
 function checksFor(category) {
   return POLICY.categories[category].verification.map((name) => ({ command: `run ${name}`, expect: 'pass' }));
 }
@@ -243,51 +247,51 @@ test('R01-R03: a second same-profile repair is refused by dispatch (exit 3) and 
   const fixReq = (over) => req({ taskId: 'r-1', category: 'fix', ...over });
   const first = run(fixReq(), { traceDir: trace });
   assert.equal(first.decision.profile, 'cc-opus-high');
-  dispatch('r-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('r-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const prev = outcome({ 'task-id': 'r-1', 'original-brief-fingerprint': first.briefFingerprint });
   recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const second = run(fixReq({ previousResult: prev }), { traceDir: trace });
   assert.equal(second.decision.profile, 'cc-opus-high'); // first repair allowed
-  const rep = dispatch('r-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const rep = dispatch('r-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   assert.equal(rep.counters['repairs-used'], 1);
   recordOutcome({ ...prev, 'original-brief-fingerprint': second.briefFingerprint }, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const third = run(fixReq({ previousResult: prev }), { traceDir: trace });
   assert.equal(third.decision.candidates['cc-opus-high']['first-failing-gate'], 4);
   assert.match(third.decision.candidates['cc-opus-high'].reason, /same-profile repairs exhausted: 1 used \+ 1 > 1/);
   assert.equal(third.decision.profile, 'cc-fable-high'); // fresh decision on a different profile, not a repair
-  const refused = cli(['dispatch', 'r-1', 'cc-opus-high', '--trace', trace, '--now', NOW, '--deviation', 'try anyway']);
+  const refused = cli(['dispatch', 'r-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--deviation', 'try anyway']);
   assert.equal(refused.code, 3);
   assert.match(refused.stderr, /same-profile repairs exhausted/);
-  const fresh = dispatch('r-1', 'cc-fable-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const fresh = dispatch('r-1', 'cc-fable-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   assert.equal(fresh.counters['repairs-used'], 1);
   assert.equal(fresh.counters['calls-used'], 3);
 });
 
 test('dispatch refuses without a decision, against a blocked decision, on an unrecorded profile switch, and on a second dispatch of one decision', () => {
   const trace = tmp();
-  const none = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  const none = cli(['dispatch', 'd-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(none.code, 3);
   assert.match(none.stderr, /no decision recorded for task d-1/);
   run(req({ taskId: 'd-1', projectStop: { redSuite: true, gateOff: false, researchGateFailing: false } }), { traceDir: trace });
-  const blocked = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', NOW, '--deviation', 'x']);
+  const blocked = cli(['dispatch', 'd-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--deviation', 'x']);
   assert.equal(blocked.code, 3);
   assert.match(blocked.stderr, /latest decision for d-1 is blocked/);
   run(req({ taskId: 'd-1' }), { traceDir: trace });
-  const switched = cli(['dispatch', 'd-1', 'cc-fable-high', '--trace', trace, '--now', NOW]);
+  const switched = cli(['dispatch', 'd-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(switched.code, 3);
   assert.match(switched.stderr, /decided cc-opus-high; dispatching cc-fable-high is a host deviation: pass --deviation/);
-  const ok = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  const ok = cli(['dispatch', 'd-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(ok.code, 0, ok.stderr);
-  const again = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  const again = cli(['dispatch', 'd-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(again.code, 3);
   assert.match(again.stderr, /already dispatched/);
-  const late = cli(['dispatch', 'd-1', 'cc-opus-high', '--trace', trace, '--now', DEADLINE]);
+  const late = cli(['dispatch', 'd-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', DEADLINE]);
   assert.equal(late.code, 3); // refused as already dispatched; the deadline refusal is pinned by 'F6 dispatch deadline'
-  const unknown = cli(['dispatch', 'd-1', 'cc-ghost', '--trace', trace, '--now', NOW]);
+  const unknown = cli(['dispatch', 'd-1', 'cc-ghost', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(unknown.code, 2);
   // a recorded deviation is allowed and marked
   run(req({ taskId: 'd-2' }), { traceDir: trace });
-  const dev = dispatch('d-2', 'cc-fable-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'pre-adapter profile' });
+  const dev = dispatch('d-2', 'cc-fable-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'pre-adapter profile' });
   assert.equal(dev.deviation, true);
   assert.match(dev.detail, /^host deviation: pre-adapter profile; route said cc-opus-high/);
 });
@@ -417,7 +421,7 @@ test('ledger: seq is monotonic per task, counters are task totals, fingerprints 
   assert.equal(d1.record.seq, 1);
   assert.equal(d1b.record.seq, 2); // a second decision continues, never restarts
   run(req({ taskId: 'l-2' }), { traceDir: trace });
-  const disp = dispatch('l-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const disp = dispatch('l-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   assert.equal(disp.seq, 3);
   assert.equal(disp['brief-fingerprint'], d1b.briefFingerprint);
   const out = recordOutcome(outcome({ 'task-id': 'l-1', outcome: 'accepted', 'original-brief-fingerprint': d1b.briefFingerprint }), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
@@ -473,7 +477,7 @@ test('determinism: the same request and ledger give a byte-identical decision fi
 // ---------------------------------------------------------------------------------------------
 function cycle(trace, taskId, category, profile, value, deviation) {
   const d = run(req({ taskId, category }), { traceDir: trace });
-  dispatch(taskId, profile, { traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation });
+  dispatch(taskId, profile, { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation });
   recordOutcome(outcome({ 'task-id': taskId, outcome: value, 'owner-profile': profile, 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
 }
 const failedFix = (trace, taskId) => cycle(trace, taskId, 'fix', 'cc-opus-high', 'verification-failed');
@@ -559,9 +563,9 @@ test('monotonic task clock: decide, dispatch and outcome refuse a `now` earlier 
   const early = cli(['decide', writeJson(req({ taskId: 'm-1', now: '2026-10-17T19:59:59Z' })), '--trace', trace]);
   assert.equal(early.code, 2);
   assert.match(early.stderr, /now 2026-10-17T19:59:59Z precedes the latest ledger event for m-1 \(2026-10-17T20:00:00Z\)/);
-  const earlyDispatch = cli(['dispatch', 'm-1', 'cc-opus-high', '--trace', trace, '--now', '2026-10-17T19:00:00Z']);
+  const earlyDispatch = cli(['dispatch', 'm-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', '2026-10-17T19:00:00Z']);
   assert.equal(earlyDispatch.code, 2);
-  dispatch('m-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: '2026-10-17T20:00:00Z' });
+  dispatch('m-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: '2026-10-17T20:00:00Z' });
   const earlyOutcome = cli(['outcome', writeJson(outcome({ 'task-id': 'm-1', 'original-brief-fingerprint': d.briefFingerprint })), '--trace', trace, '--now', '2026-10-17T19:00:00Z']);
   assert.equal(earlyOutcome.code, 2);
   assert.deepEqual(readLedger(trace).map((r) => r.kind), ['decision', 'dispatch']);
@@ -574,7 +578,7 @@ test('S08-shaped dispatch: with calls-per-task dispatches already recorded, disp
   const decided = { ...recs[1], seq: 7, kind: 'decision', counters: recs[5].counters, detail: 'route delegate (hand-walked)' };
   writeFileSync(join(trace, 'ledger.jsonl'), [...recs, decided].map((r) => JSON.stringify(r)).join('\n') + '\n');
   const before = readFileSync(join(trace, 'ledger.jsonl'), 'utf8');
-  const out = cli(['dispatch', 's-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  const out = cli(['dispatch', 's-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(out.code, 3);
   assert.match(out.stderr, /call slots exhausted: 6 used \+ 1 > 6 calls-per-task/);
   assert.equal(readFileSync(join(trace, 'ledger.jsonl'), 'utf8'), before);
@@ -584,17 +588,17 @@ test('R01-R03 under a profile rename: the same model, effort and config under a 
   const trace = tmp();
   const fixReq = (over) => req({ taskId: 'rn-1', category: 'fix', ...over });
   const first = run(fixReq(), { traceDir: trace });
-  dispatch('rn-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('rn-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const prev = outcome({ 'task-id': 'rn-1', 'original-brief-fingerprint': first.briefFingerprint });
   recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const second = run(fixReq({ previousResult: prev }), { traceDir: trace });
-  dispatch('rn-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('rn-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   recordOutcome({ ...prev, 'original-brief-fingerprint': second.briefFingerprint }, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const renamed = policyWith((p) => { p.profiles.find((x) => x.id === 'cc-opus-high').id = 'cc-opus-renamed'; });
   const third = decide(fixReq({ previousResult: { ...prev, 'owner-profile': OPUS_TUPLE } }), { traceDir: trace, policyPath: renamed });
   assert.equal(third.decision.candidates['cc-opus-renamed']['first-failing-gate'], 4);
   assert.match(third.decision.candidates['cc-opus-renamed'].reason, /same-profile repairs exhausted/);
-  const out = cli(['dispatch', 'rn-1', 'cc-opus-renamed', '--trace', trace, '--policy', renamed, '--now', NOW, '--deviation', 'rename']);
+  const out = cli(['dispatch', 'rn-1', 'cc-opus-renamed', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', renamed, '--now', NOW, '--deviation', 'rename']);
   assert.equal(out.code, 3);
   assert.match(out.stderr, /same-profile repairs exhausted/);
 });
@@ -606,7 +610,7 @@ test('F1 pre-dispatch recheck (gates.md binding item 3): an expiry crossing, a r
   const d = run(req({ taskId: 'pb-1', category: 'fix', now: '2027-01-14T23:00:00Z', deadline: '2027-01-15T06:00:00Z' }), { traceDir: trace });
   assert.equal(d.decision.profile, 'cc-opus-high');
   let before = readFileSync(ledger, 'utf8');
-  const expired = cli(['dispatch', 'pb-1', 'cc-opus-high', '--trace', trace, '--now', '2027-01-15T00:30:00Z']);
+  const expired = cli(['dispatch', 'pb-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', '2027-01-15T00:30:00Z']);
   assert.equal(expired.code, 3, expired.stdout);
   assert.match(expired.stderr, /pre-dispatch recheck refused cc-opus-high \(decision seq 1\): gate 2: missing or stale capability fingerprint \(expired 2027-01-15\)/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
@@ -617,23 +621,23 @@ test('F1 pre-dispatch recheck (gates.md binding item 3): an expiry crossing, a r
     p.authorization['data-classes-permitted'] = [];
   });
   before = readFileSync(ledger, 'utf8');
-  const rev = cli(['dispatch', 'pb-2', 'cc-opus-high', '--trace', trace, '--policy', revoked, '--now', NOW]);
+  const rev = cli(['dispatch', 'pb-2', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', revoked, '--now', NOW]);
   assert.equal(rev.code, 3, rev.stdout);
   assert.match(rev.stderr, /pre-dispatch recheck refused cc-opus-high \(decision seq 1\): gate 1: data class 'repo-code' is forbidden/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // (C) the decided profile is still eligible but no longer the route's choice (a price change)
   const repriced = policyWith((p) => { p.prices[OPUS.model].output_rate_per_mtok = 500; });
-  const moved = cli(['dispatch', 'pb-2', 'cc-opus-high', '--trace', trace, '--policy', repriced, '--now', NOW]);
+  const moved = cli(['dispatch', 'pb-2', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', repriced, '--now', NOW]);
   assert.equal(moved.code, 3, moved.stdout);
   assert.match(moved.stderr, /pre-dispatch recheck: the route changed since decision seq 1 \(now delegate cc-fable-high\); decide again/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // (D) unchanged evidence: the decided dispatch goes through
-  assert.equal(dispatch('pb-2', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+  assert.equal(dispatch('pb-2', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
   // (E) a decision record with no decision file behind it is unknown evidence: refused, nothing appended
   const bare = tmp();
   const hand = { 'task-id': 'pb-3', seq: 1, kind: 'decision', ts: NOW, profile: OPUS_TUPLE, counters: { 'calls-used': 0, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: DEADLINE, 'brief-fingerprint': null, detail: 'route delegate (hand-walked)', 'outcome-ref': null };
   writeFileSync(join(bare, 'ledger.jsonl'), `${JSON.stringify(hand)}\n`);
-  const noFile = cli(['dispatch', 'pb-3', 'cc-opus-high', '--trace', bare, '--now', NOW]);
+  const noFile = cli(['dispatch', 'pb-3', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', bare, '--now', NOW]);
   assert.equal(noFile.code, 3, noFile.stdout);
   assert.match(noFile.stderr, /decision file pb-3-1\.json is missing: the route cannot be rechecked before dispatch/);
   assert.equal(readLedger(bare).length, 1);
@@ -645,17 +649,17 @@ test('F3: a host deviation is refused unless the deviating profile passes Gates 
   run(req({ taskId: 'dv-1', category: 'fix' }), { traceDir: trace });
   const before = readFileSync(ledger, 'utf8');
   // no capability fingerprint: a Gate 2 failure is never dispatched, deviation or not (spec-v2 §11.2, §11.10, §12)
-  const unq = cli(['dispatch', 'dv-1', 'cc-sonnet-high', '--trace', trace, '--now', NOW, '--deviation', 'try it']);
+  const unq = cli(['dispatch', 'dv-1', 'cc-sonnet-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--deviation', 'try it']);
   assert.equal(unq.code, 3, unq.stdout);
   assert.match(unq.stderr, /pre-dispatch recheck refused deviation cc-sonnet-high \(decision seq 1\): gate 2: missing or stale capability fingerprint \(qualified-at null\)/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // qualified for other categories but not this one: still Gate 2
   run(req({ taskId: 'dv-2', category: 'build-core' }), { traceDir: trace });
-  const other = cli(['dispatch', 'dv-2', 'cc-fable-high', '--trace', trace, '--now', NOW, '--deviation', 'qualification run']);
+  const other = cli(['dispatch', 'dv-2', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--deviation', 'qualification run']);
   assert.equal(other.code, 3, other.stdout);
   assert.match(other.stderr, /gate 2: .*cc-fable-high not qualified for build-core/);
   // an eligible profile that is not the route's choice is an allowed, marked deviation
-  const ok = dispatch('dv-1', 'cc-fable-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'second-cheapest eligible' });
+  const ok = dispatch('dv-1', 'cc-fable-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW, deviation: 'second-cheapest eligible' });
   assert.equal(ok.deviation, true);
   assert.match(ok.detail, /^host deviation: second-cheapest eligible; route said cc-opus-high/);
 });
@@ -663,7 +667,7 @@ test('F3: a host deviation is refused unless the deviating profile passes Gates 
 test('F4: a superseding outcome for the same dispatch replaces the first in the learning step; it is not counted twice', () => {
   const trace = tmp();
   const d = run(req({ taskId: 'sup-1', category: 'fix' }), { traceDir: trace });
-  dispatch('sup-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('sup-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const o = outcome({ 'task-id': 'sup-1', 'original-brief-fingerprint': d.briefFingerprint });
   recordOutcome(o, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   recordOutcome(o, { traceDir: trace, policyPath: POLICY_PATH, now: NOW }); // spec-v2 §10.5: a superseding outcome appends
@@ -684,7 +688,7 @@ test('F5: a ledger whose last line has no trailing newline is refused (exit 4) b
   const path = join(trace, 'ledger.jsonl');
   const stripped = readFileSync(path, 'utf8').replace(/\n$/, '');
   writeFileSync(path, stripped);
-  const out = cli(['dispatch', 'nl-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  const out = cli(['dispatch', 'nl-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(out.code, 4, out.stdout);
   assert.match(out.stderr, /ledger does not end with a newline/);
   assert.equal(readFileSync(path, 'utf8'), stripped);
@@ -698,7 +702,7 @@ test('F6 dispatch deadline: a fresh decision dispatched at now == deadline is re
   const trace = tmp();
   run(req({ taskId: 'dl-1' }), { traceDir: trace });
   const before = readFileSync(join(trace, 'ledger.jsonl'), 'utf8');
-  const out = cli(['dispatch', 'dl-1', 'cc-opus-high', '--trace', trace, '--now', DEADLINE]);
+  const out = cli(['dispatch', 'dl-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', DEADLINE]);
   assert.equal(out.code, 3, out.stdout);
   assert.match(out.stderr, /deadline 2026-10-18T06:00:00Z reached: now 2026-10-18T06:00:00Z is not strictly before it/);
   assert.equal(readFileSync(join(trace, 'ledger.jsonl'), 'utf8'), before);
@@ -707,9 +711,9 @@ test('F6 dispatch deadline: a fresh decision dispatched at now == deadline is re
 test('F6 reconcile first: a same-profile re-dispatch with no outcome for the earlier dispatch is refused', () => {
   const trace = tmp();
   run(req({ taskId: 'rc-1' }), { traceDir: trace });
-  dispatch('rc-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('rc-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   run(req({ taskId: 'rc-1' }), { traceDir: trace }); // decided again without recording an outcome
-  const out = cli(['dispatch', 'rc-1', 'cc-opus-high', '--trace', trace, '--now', NOW]);
+  const out = cli(['dispatch', 'rc-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(out.code, 3, out.stdout);
   assert.match(out.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch/);
 });
@@ -717,8 +721,8 @@ test('F6 reconcile first: a same-profile re-dispatch with no outcome for the ear
 test('F6 one dispatch per delegate decision: a different profile after the decision was dispatched is refused, deviation or not', () => {
   const trace = tmp();
   run(req({ taskId: 'ad-1' }), { traceDir: trace });
-  dispatch('ad-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
-  const out = cli(['dispatch', 'ad-1', 'cc-fable-high', '--trace', trace, '--now', NOW, '--deviation', 'second opinion']);
+  dispatch('ad-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const out = cli(['dispatch', 'ad-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--deviation', 'second opinion']);
   assert.equal(out.code, 3, out.stdout);
   assert.match(out.stderr, /decision seq 1 for ad-1 was already dispatched \(seq 2\); decide again/);
 });
@@ -727,9 +731,9 @@ test('F6 outcome after decision: once an outcome follows the decision, no furthe
   const trace = tmp();
   const d = run(req({ taskId: 'sp-1', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: trace });
   assert.equal(d.route, 'speculative');
-  dispatch('sp-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('sp-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   recordOutcome(outcome({ 'task-id': 'sp-1', outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
-  const out = cli(['dispatch', 'sp-1', 'cc-fable-high', '--trace', trace, '--now', NOW]);
+  const out = cli(['dispatch', 'sp-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(out.code, 3, out.stdout);
   assert.match(out.stderr, /an outcome \(seq 3\) follows the latest decision \(seq 1\); decide again with previousResult first/);
 });
@@ -765,7 +769,7 @@ test('F6 Brief attempts: the first decision allows one repair, the repair decisi
   const trace = tmp();
   const first = run(req({ taskId: 'at-1', category: 'fix' }), { traceDir: trace });
   assert.equal(first.brief.attempts, 1);
-  dispatch('at-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('at-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const prev = outcome({ 'task-id': 'at-1', 'original-brief-fingerprint': first.briefFingerprint });
   recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const repair = run(req({ taskId: 'at-1', category: 'fix', previousResult: prev }), { traceDir: trace });
@@ -833,28 +837,28 @@ test('N1: a speculative set is capped at its shared-budget calls, and a speculat
   assert.equal(d.record['speculative-calls'], 2); // the set's hard ceiling travels with the decision record
   // (a) a deviation outside the set is refused before any member is dispatched, with or without --deviation
   let before = readFileSync(ledger, 'utf8');
-  const dev = cli(['dispatch', 'sc-1', 'cc-fable-high', '--trace', trace, '--policy', pol, '--now', NOW, '--deviation', 'a third opinion']);
+  const dev = cli(['dispatch', 'sc-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', pol, '--now', NOW, '--deviation', 'a third opinion']);
   assert.equal(dev.code, 3, dev.stdout);
   assert.match(dev.stderr, /decision seq 1 is speculative: dispatching cc-fable-high outside its set \(cc-sonnet-high, cc-opus-high\) is refused; a speculative route admits no host deviation/);
-  const bare = cli(['dispatch', 'sc-1', 'cc-fable-high', '--trace', trace, '--policy', pol, '--now', NOW]);
+  const bare = cli(['dispatch', 'sc-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', pol, '--now', NOW]);
   assert.equal(bare.code, 3, bare.stdout);
   assert.match(bare.stderr, /a speculative route admits no host deviation/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // (b) both members dispatch as decided
-  assert.equal(dispatch('sc-1', 'cc-sonnet-high', { traceDir: trace, policyPath: pol, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
-  assert.equal(dispatch('sc-1', 'cc-opus-high', { traceDir: trace, policyPath: pol, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+  assert.equal(dispatch('sc-1', 'cc-sonnet-high', { projectStop: CLEAR, traceDir: trace, policyPath: pol, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+  assert.equal(dispatch('sc-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: pol, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
   // (c) the set has spent its shared budget: a third dispatch is refused at the ceiling
   before = readFileSync(ledger, 'utf8');
-  const third = cli(['dispatch', 'sc-1', 'cc-fable-high', '--trace', trace, '--policy', pol, '--now', NOW, '--deviation', 'a third opinion']);
+  const third = cli(['dispatch', 'sc-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', pol, '--now', NOW, '--deviation', 'a third opinion']);
   assert.equal(third.code, 3, third.stdout);
   assert.match(third.stderr, /speculative set of decision seq 1 has used its shared budget: 2 of 2 calls dispatched; the shared budget is a hard ceiling across the set \(spec-v2 §8\.4\); decide again/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // (d) the review finding's probe on host-policy-1: the lead profile as a third member is refused too
   const t2 = tmp();
   decide(req({ taskId: 'sc-2', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: t2, policyPath: POLICY_PATH });
-  dispatch('sc-2', 'cc-opus-high', { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
-  dispatch('sc-2', 'cc-fable-high', { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
-  const lead = cli(['dispatch', 'sc-2', 'cc-fable-xhigh', '--trace', t2, '--now', NOW, '--deviation', 'one more']);
+  dispatch('sc-2', 'cc-opus-high', { projectStop: CLEAR, traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  dispatch('sc-2', 'cc-fable-high', { projectStop: CLEAR, traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  const lead = cli(['dispatch', 'sc-2', 'cc-fable-xhigh', '--project-stop', CLEAR_JSON, '--trace', t2, '--now', NOW, '--deviation', 'one more']);
   assert.equal(lead.code, 3, lead.stdout);
   assert.deepEqual(readLedger(t2).map((r) => r.kind), ['decision', 'dispatch', 'dispatch']);
 });
@@ -864,11 +868,11 @@ test('N2: reconcile first: no dispatch while an earlier dispatch of the task has
   const ledger = join(trace, 'ledger.jsonl');
   // the review's probe: a fresh decision naming a different profile while the first dispatch is open
   const first = run(req({ taskId: 'ip-1', category: 'fix' }), { traceDir: trace });
-  dispatch('ip-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  dispatch('ip-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   const fresh = run(req({ taskId: 'ip-1', category: 'fix', candidates: ['cc-fable-high'] }), { traceDir: trace });
   assert.equal(fresh.decision.profile, 'cc-fable-high');
   let before = readFileSync(ledger, 'utf8');
-  const open = cli(['dispatch', 'ip-1', 'cc-fable-high', '--trace', trace, '--now', NOW]);
+  const open = cli(['dispatch', 'ip-1', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW]);
   assert.equal(open.code, 3, open.stdout);
   assert.match(open.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch \(spec-v2 §12\)/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
@@ -876,15 +880,15 @@ test('N2: reconcile first: no dispatch while an earlier dispatch of the task has
   const prev = outcome({ 'task-id': 'ip-1', outcome: 'cancelled', 'original-brief-fingerprint': first.briefFingerprint });
   assert.equal(recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW })['dispatch-seq'], 2);
   run(req({ taskId: 'ip-1', category: 'fix', candidates: ['cc-fable-high'], previousResult: prev }), { traceDir: trace });
-  assert.equal(dispatch('ip-1', 'cc-fable-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 5)');
+  assert.equal(dispatch('ip-1', 'cc-fable-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 5)');
   // the exception is the same speculative decision only: a member of a later decision waits for the open one
   const t2 = tmp();
   const spec = { uncertainty: 'high', hostOptIns: { speculative: true } };
   run(req({ taskId: 'ip-2', ...spec }), { traceDir: t2 });
-  dispatch('ip-2', 'cc-opus-high', { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  dispatch('ip-2', 'cc-opus-high', { projectStop: CLEAR, traceDir: t2, policyPath: POLICY_PATH, now: NOW });
   run(req({ taskId: 'ip-2', ...spec }), { traceDir: t2 }); // decided again with the first member still open
   before = readFileSync(join(t2, 'ledger.jsonl'), 'utf8');
-  const later = cli(['dispatch', 'ip-2', 'cc-fable-high', '--trace', t2, '--now', NOW]);
+  const later = cli(['dispatch', 'ip-2', 'cc-fable-high', '--project-stop', CLEAR_JSON, '--trace', t2, '--now', NOW]);
   assert.equal(later.code, 3, later.stdout);
   assert.match(later.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch/);
   assert.equal(readFileSync(join(t2, 'ledger.jsonl'), 'utf8'), before);
@@ -898,26 +902,56 @@ test('N3: an as-decided dispatch is refused when the recomputed Brief differs fr
   assert.equal(d.brief.allowance.calls, 6);
   const before = readFileSync(ledger, 'utf8');
   const three = policyWith((p) => { p.accounting.strict['calls-per-task'] = 3; });
-  const calls = cli(['dispatch', 'cl-1', 'cc-opus-high', '--trace', trace, '--policy', three, '--now', NOW]);
+  const calls = cli(['dispatch', 'cl-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', three, '--now', NOW]);
   assert.equal(calls.code, 3, calls.stdout);
   assert.match(calls.stderr, /pre-dispatch recheck: the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
   // a changed deadline cap (12 h -> 6 h) moves allowance.deadline and the stop trigger that names it
   const six = policyWith((p) => { p.accounting.strict['deadline-per-task-hours'] = 6; });
-  const cap = cli(['dispatch', 'cl-1', 'cc-opus-high', '--trace', trace, '--policy', six, '--now', NOW]);
+  const cap = cli(['dispatch', 'cl-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--policy', six, '--now', NOW]);
   assert.equal(cap.code, 3, cap.stdout);
   assert.match(cap.stderr, /the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
   assert.equal(readFileSync(ledger, 'utf8'), before);
   // unchanged inputs: the dispatch goes through and records the decided fingerprint
-  const ok = dispatch('cl-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const ok = dispatch('cl-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
   assert.equal(ok['brief-fingerprint'], d.briefFingerprint);
   // the second member of a speculative set is compared with the set's decided Brief: its sibling's dispatch is
   // the decision's own consumption (N1 shows it dispatching), while a lowered call limit still refuses it
   const t2 = tmp();
   const pol = sonnetReviewPolicy();
   decide(req({ taskId: 'cl-2', uncertainty: 'high', hostOptIns: { speculative: true } }), { traceDir: t2, policyPath: pol });
-  dispatch('cl-2', 'cc-sonnet-high', { traceDir: t2, policyPath: pol, now: NOW });
+  dispatch('cl-2', 'cc-sonnet-high', { projectStop: CLEAR, traceDir: t2, policyPath: pol, now: NOW });
   const lowered = sonnetReviewPolicy((p) => { p.accounting.strict['calls-per-task'] = 3; });
-  const member = cli(['dispatch', 'cl-2', 'cc-opus-high', '--trace', t2, '--policy', lowered, '--now', NOW]);
+  const member = cli(['dispatch', 'cl-2', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', t2, '--policy', lowered, '--now', NOW]);
   assert.equal(member.code, 3, member.stdout);
   assert.match(member.stderr, /the Brief changed since decision seq 1; decide again \(changed: allowance, stop-triggers\)/);
+});
+
+test('N4: dispatch requires the current project-stop state (exit 2 when missing or malformed) and re-walks Gate 1 with it', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  run(req({ taskId: 'ps-1' }), { traceDir: trace }); // decided with every stop clear
+  const before = readFileSync(ledger, 'utf8');
+  const base = ['dispatch', 'ps-1', 'cc-opus-high', '--trace', trace, '--now', NOW];
+  const missing = cli(base);
+  assert.equal(missing.code, 2, missing.stdout);
+  assert.match(missing.stderr, /dispatch needs the current project-stop state: --project-stop/);
+  for (const bad of ['not json', '{"redSuite":false}', '{"redSuite":"no","gateOff":false,"researchGateFailing":false}', '[]']) {
+    const out = cli([...base, '--project-stop', bad]);
+    assert.equal(out.code, 2, `${bad}: ${out.stdout}`);
+  }
+  assert.throws(() => dispatch('ps-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW }), (e) => e instanceof RouterError && e.code === 2);
+  // a stop that appeared after the decision refuses the dispatch at Gate 1 and names the rule
+  const red = cli([...base, '--project-stop', JSON.stringify({ ...CLEAR, redSuite: true })]);
+  assert.equal(red.code, 3, red.stdout);
+  assert.match(red.stderr, /pre-dispatch recheck refused cc-opus-high \(decision seq 1\): gate 1: project stop: red suite/);
+  const off = cli([...base, '--project-stop', JSON.stringify({ ...CLEAR, gateOff: true })]);
+  assert.equal(off.code, 3, off.stdout);
+  assert.match(off.stderr, /gate 1: project stop: GATE_OFF or --no-verify in use/);
+  // a deviation is re-walked with the same current state
+  const dev = cli(['dispatch', 'ps-1', 'cc-fable-high', '--trace', trace, '--now', NOW, '--deviation', 'x', '--project-stop', JSON.stringify({ ...CLEAR, researchGateFailing: true })]);
+  assert.equal(dev.code, 3, dev.stdout);
+  assert.match(dev.stderr, /refused deviation cc-fable-high \(decision seq 1\): gate 1: project stop: research gate failing on the project/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  const ok = cli([...base, '--project-stop', CLEAR_JSON]);
+  assert.equal(ok.code, 0, ok.stderr);
 });

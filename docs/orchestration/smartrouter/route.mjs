@@ -7,7 +7,7 @@
 // run_gates/choose_route), prints the Required output format block plus the Brief (spec-v2 §10.1),
 // and keeps the append-only Outcome Ledger (spec-v2 §10.5). It never dispatches anything itself.
 //
-// CLI:  decide <request.json> | dispatch <task-id> <profile-id> | outcome <outcome.json>
+// CLI:  decide <request.json> | dispatch <task-id> <profile-id> --project-stop <json> | outcome <outcome.json>
 //       | status <task-id> | rate        options: --trace <dir> --policy <file> --now <iso> --deviation <reason>
 // Exit: 0 done (any decided route, blocked included), 2 invalid input, 3 refused, 4 ledger integrity.
 import { createHash } from 'node:crypto';
@@ -58,6 +58,10 @@ const usd = (x) => `$${x.toFixed(2)}`;
 const isStr = (v) => typeof v === 'string' && v.length > 0;
 const isStrArray = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
 const isInt = (v, min = 0) => Number.isInteger(v) && v >= min;
+// the project stop rules' state, from the request at decide and from the lead at dispatch (Gate 1)
+const isProjectStop = (ps) => Boolean(ps) && typeof ps === 'object' && !Array.isArray(ps)
+  && ['redSuite', 'gateOff', 'researchGateFailing'].every((k) => typeof ps[k] === 'boolean');
+const PROJECT_STOP_USAGE = '--project-stop \'{"redSuite":false,"gateOff":false,"researchGateFailing":false}\'';
 
 function isoMs(v) {
   if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(v)) return null;
@@ -220,7 +224,7 @@ function validateRequest(r, policy) {
   if (r.requiredTools !== undefined && !isStrArray(r.requiredTools)) fail('requiredTools');
   if (typeof r.needsVision !== 'boolean') fail('needsVision must be boolean');
   const ps = r.projectStop;
-  if (!ps || !['redSuite', 'gateOff', 'researchGateFailing'].every((k) => typeof ps[k] === 'boolean')) fail('projectStop needs boolean redSuite, gateOff, researchGateFailing');
+  if (!isProjectStop(ps)) fail('projectStop needs boolean redSuite, gateOff, researchGateFailing');
   if (r.previousResult !== null && r.previousResult !== undefined) {
     validateOutcome(r.previousResult);
     if (r.previousResult['task-id'] !== r.taskId) fail('previousResult.task-id differs from taskId');
@@ -768,12 +772,13 @@ function storedDecision(traceDir, taskId, dec) {
 // gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4: immediately before dispatch, re-walk the
 // stored request against the current policy, ledger and clock. Changed, expired or revoked evidence invalidates
 // the route; revocation always wins over the stored decision.
-function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, deviation }) {
+function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, projectStop, deviation }) {
   const stored = storedDecision(traceDir, taskId, dec);
   // the re-walk sees the ledger as the decision did: the dispatches made under this same decision (the other members
   // of a speculative set) are its own consumption, not changed evidence; dispatch counts them against the slots itself
   const own = (r) => r['task-id'] === taskId && r.kind === 'dispatch' && r['decision-seq'] === dec.seq;
-  const again = computeDecision({ ...stored.request, now }, policy, records.filter((r) => !own(r)), {}, { probe: deviation ? profileId : null });
+  // the stop rules are re-walked with the lead's current state, never the snapshot taken at decide time
+  const again = computeDecision({ ...stored.request, now, projectStop }, policy, records.filter((r) => !own(r)), {}, { probe: deviation ? profileId : null });
   if (deviation) {
     // a deviation is allowed only to a profile that passes Gates 1-4 on the same request (spec-v2 §11.2, §11.10, §12)
     const p = again.probe;
@@ -800,9 +805,11 @@ function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now
   }
 }
 
-export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString(), deviation = null } = {}) {
+export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString(), deviation = null, projectStop = null } = {}) {
   if (!isStr(taskId) || !TASK_ID.test(taskId)) throw invalid(`invalid task id ${taskId}`);
   if (isoMs(now) === null) throw invalid('--now must be ISO-8601');
+  // gates.md binding item 3 rechecks current permission: Gate 1's project stops are part of it, so no default
+  if (!isProjectStop(projectStop)) throw invalid(`dispatch needs the current project-stop state: ${PROJECT_STOP_USAGE} (missing or malformed; each of redSuite, gateOff, researchGateFailing a boolean)`);
   const policy = loadPolicy(policyPath);
   const pr = policy.profiles.find((p) => p.id === profileId);
   if (!pr) throw invalid(`unknown profile ${profileId}`);
@@ -841,7 +848,7 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   const sibling = (d) => route === 'speculative' && asDecided && d['decision-seq'] === dec.seq;
   const open = st.records.find((d) => d.kind === 'dispatch' && !reconciled(d) && !sibling(d));
   if (open) throw refused(`previous dispatch of ${tupleId(open.profile)} (seq ${open.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
-  recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, deviation: !asDecided });
+  recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, projectStop, deviation: !asDecided });
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;
   return appendRecord(traceDir, {
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),
@@ -940,7 +947,7 @@ function parseArgs(argv) {
 export function main(argv = process.argv.slice(2)) {
   try {
     const { pos, opt } = parseArgs(argv);
-    const unknown = Object.keys(opt).filter((k) => !['trace', 'policy', 'now', 'deviation'].includes(k));
+    const unknown = Object.keys(opt).filter((k) => !['trace', 'policy', 'now', 'deviation', 'project-stop'].includes(k));
     if (unknown.length) throw invalid(`unknown option --${unknown[0]}`);
     const base = { traceDir: opt.trace ? resolve(opt.trace) : DEFAULT_TRACE, policyPath: opt.policy ? resolve(opt.policy) : DEFAULT_POLICY };
     const now = opt.now ?? new Date().toISOString();
@@ -948,7 +955,11 @@ export function main(argv = process.argv.slice(2)) {
     if (cmd === 'decide' && a) {
       process.stdout.write(decide(readJsonFile(a, 'request'), base).text);
     } else if (cmd === 'dispatch' && a && b) {
-      const r = dispatch(a, b, { ...base, now, deviation: opt.deviation ?? null });
+      let projectStop = null;
+      if (opt['project-stop'] !== undefined) {
+        try { projectStop = JSON.parse(opt['project-stop']); } catch (e) { throw invalid(`--project-stop is not JSON (${e.message}); expected ${PROJECT_STOP_USAGE}`); }
+      }
+      const r = dispatch(a, b, { ...base, now, deviation: opt.deviation ?? null, projectStop });
       process.stdout.write(`dispatch recorded: ${r['task-id']} seq ${r.seq} ${r.profile} (calls ${r.counters['calls-used']} / ${r.counters['calls-limit']}, repairs ${r.counters['repairs-used']} / ${r.counters['repairs-allowed']})\n${r.detail}\n`);
     } else if (cmd === 'outcome' && a) {
       const r = recordOutcome(readJsonFile(a, 'outcome'), { ...base, now });
@@ -958,7 +969,7 @@ export function main(argv = process.argv.slice(2)) {
     } else if (cmd === 'rate') {
       process.stdout.write(rate({ ...base, now }).text);
     } else {
-      throw invalid('usage: route.mjs decide <request.json> | dispatch <task-id> <profile-id> | outcome <outcome.json> | status <task-id> | rate  [--trace <dir>] [--policy <file>] [--now <iso>] [--deviation <reason>]');
+      throw invalid('usage: route.mjs decide <request.json> | dispatch <task-id> <profile-id> --project-stop <json> | outcome <outcome.json> | status <task-id> | rate  [--trace <dir>] [--policy <file>] [--now <iso>] [--deviation <reason>]');
     }
     return 0;
   } catch (e) {

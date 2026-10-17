@@ -33,8 +33,10 @@ Run every command from the repository root. Node 24 must be on `PATH`.
 2. **Put the Brief in the builder's prompt** verbatim. The JSON after `Brief:` is the contract. Use the profile's
    model and effort exactly as the `Profile:` tuple says.
 3. **Record the dispatch before launching:**
-   `node docs/orchestration/smartrouter/route.mjs dispatch <task-id> <profile-id>`.
-   This reserves the call slot. Exit 3 means refused, so do not launch. **Reconcile first**: while any earlier
+   `node docs/orchestration/smartrouter/route.mjs dispatch <task-id> <profile-id> --project-stop '{"redSuite":false,"gateOff":false,"researchGateFailing":false}'`.
+   `--project-stop` is required and states the project stop rules as they are **now** (the suite compared with
+   its baseline, GATE_OFF or `--no-verify` in use, the research gate). Missing or malformed is exit 2. A stop that
+   is true refuses the dispatch at Gate 1 and names the rule. This reserves the call slot. Exit 3 means refused, so do not launch. **Reconcile first**: while any earlier
    dispatch of the task, of any profile, has no outcome record naming its dispatch seq, `dispatch` refuses; record
    that outcome (step 5, `cancelled` if the worker was stopped) and decide again. The only exception is the other
    members of the same speculative decision (spec-v2 §7 and §12). Before it records anything, `dispatch`
@@ -68,7 +70,7 @@ Request fields: `taskId`, `objective`, `category`, `unit`, `permittedEffects`, `
 profile; it also bounds who may review), `allowDirect` (default true), `hostOptIns`. Three optional additions are accepted: `uncertainty: "high"`
 (the only way to reach `speculative`, and only with the host opt-in) and `requiredIsolation` (a lower bound on the
 §6 lattice). Every command takes `--trace <dir>` and `--policy <file>`. `dispatch`, `outcome` and `rate` also take
-`--now <iso>`.
+`--now <iso>`. `dispatch` requires `--project-stop <json>` and takes `--deviation <reason>`.
 
 Exit codes: 0 done; 2 invalid input, including a `now` earlier than the task's latest ledger event (the task clock
 is monotonic); 3 refused; 4 ledger integrity (an unparseable or non-§10.5 line, a seq gap, or a last line with no
@@ -80,14 +82,14 @@ it, and the fix is to add the missing newline, which changes no record.
 
 | Concern | Status | Where |
 |---|---|---|
-| Permissions, data classes, project stops | **enforced**: Gate 1 denies before anything else; a forbidden data class never reaches Gate 2 | `decide` |
+| Permissions, data classes, project stops | **enforced**: Gate 1 denies before anything else; a forbidden data class never reaches Gate 2. `dispatch` re-walks Gate 1 with the project-stop state the lead passes as `--project-stop` (required), never with the snapshot taken at decide time | `decide`, `dispatch` |
 | Capability qualification and fingerprint freshness | **enforced**: declared `qualified-for`, `qualified-at`, `expires`, `headroom-tested`; equality with `expires` is expiry | `decide` |
 | Verification prerequisites | **enforced**: every category check must be named in `acceptanceChecks`; a required review needs a reviewer drawn from the request's `candidates` (never the lead-direct profile) that passes Gate 1 and Gate 2 for the `review` category, with headroom checked against the review median, and has a price. The decision file lists each would-be reviewer's first failing gate under `review-candidates` | `decide` |
 | Call slots (6 per task) | **enforced**: `used + 1 <= limit` in `decide` and again in `dispatch` | `decide`, `dispatch` |
 | Same-profile repairs (1 per task) | **enforced**: counted from the ledger by identity (harness, provider, model, effort, config); renaming a profile in the policy does not reset them | `decide`, `dispatch` |
 | Reconcile first | **enforced**: `dispatch` refuses while an earlier dispatch of the task has no later outcome naming its dispatch seq, whatever profile either names, so two workers never own one task and no provider switch follows effects of unknown acceptance (SKILL.md 'Hard prohibitions', spec-v2 §7, §12). The other members of the same speculative decision are the only exception | `dispatch` |
 | Deadline | **enforced**: `now` strictly before; capped at 12 h from the task's first ledger event | `decide`, `dispatch` |
-| Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy and `now`; the decided profile must still be eligible and still the route's choice, and the recomputed Brief must have the decided brief fingerprint, so the worker is never handed an allowance (calls, attempts, deadline, cash) that no longer matches the task (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
+| Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy, `now` and project-stop state; the decided profile must still be eligible and still the route's choice, and the recomputed Brief must have the decided brief fingerprint, so the worker is never handed an allowance (calls, attempts, deadline, cash) that no longer matches the task (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
 | Cash | **advisory**: the conservative bound (tokens x output rate) is computed, recorded and printed, never a cap. The Uncertainty line always says `cash: estimate only, no host accounting (subscription); not a strict cap` | `decide` |
 | Unknown price | **enforced, by host choice**: a profile whose model has no price fails Gate 4 (`unknown price for <model>: the bound cannot be computed (no silent zero)`), though cash is not a cap here (friction item 15) | `decide` |
