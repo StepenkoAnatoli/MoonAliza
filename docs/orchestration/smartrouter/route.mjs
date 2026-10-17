@@ -824,9 +824,13 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   const prior = st.dispatchedKeys.get(key);
   const repair = Boolean(prior);
   if (repair && !(st.repairsUsed + 1 <= st.repairsAllowed)) throw refused(`same-profile repairs exhausted for ${taskId}: ${st.repairsUsed} used + 1 > ${st.repairsAllowed} allowed (R01-R03)`);
-  if (repair && !st.records.some((r) => r.kind === 'outcome' && r.seq > prior.seq && sameKey(r.profile) === key)) {
-    throw refused(`previous dispatch of ${profileId} (seq ${prior.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
-  }
+  // reconcile first (SKILL.md 'Hard prohibitions', spec-v2 §7 and §12): any earlier dispatch of the task, of any
+  // profile, whose acceptance is unknown (no later outcome naming its dispatch-seq) holds every further dispatch;
+  // the one exception is the other members of the same speculative decision, which run side by side by design
+  const reconciled = (d) => st.records.some((o) => o.kind === 'outcome' && o.seq > d.seq && o['dispatch-seq'] === d.seq);
+  const sibling = (d) => route === 'speculative' && asDecided && d['decision-seq'] === dec.seq;
+  const open = st.records.find((d) => d.kind === 'dispatch' && !reconciled(d) && !sibling(d));
+  if (open) throw refused(`previous dispatch of ${tupleId(open.profile)} (seq ${open.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
   recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, deviation: !asDecided });
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;
   return appendRecord(traceDir, {

@@ -857,3 +857,34 @@ test('N1: a speculative set is capped at its shared-budget calls, and a speculat
   assert.equal(lead.code, 3, lead.stdout);
   assert.deepEqual(readLedger(t2).map((r) => r.kind), ['decision', 'dispatch', 'dispatch']);
 });
+
+test('N2: reconcile first: no dispatch while an earlier dispatch of the task has no outcome, except the other members of the same speculative decision', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  // the review's probe: a fresh decision naming a different profile while the first dispatch is open
+  const first = run(req({ taskId: 'ip-1', category: 'fix' }), { traceDir: trace });
+  dispatch('ip-1', 'cc-opus-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  const fresh = run(req({ taskId: 'ip-1', category: 'fix', candidates: ['cc-fable-high'] }), { traceDir: trace });
+  assert.equal(fresh.decision.profile, 'cc-fable-high');
+  let before = readFileSync(ledger, 'utf8');
+  const open = cli(['dispatch', 'ip-1', 'cc-fable-high', '--trace', trace, '--now', NOW]);
+  assert.equal(open.code, 3, open.stdout);
+  assert.match(open.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch \(spec-v2 §12\)/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // reconciled: an outcome names the open dispatch, a fresh decision follows it, and the other profile dispatches
+  const prev = outcome({ 'task-id': 'ip-1', outcome: 'cancelled', 'original-brief-fingerprint': first.briefFingerprint });
+  assert.equal(recordOutcome(prev, { traceDir: trace, policyPath: POLICY_PATH, now: NOW })['dispatch-seq'], 2);
+  run(req({ taskId: 'ip-1', category: 'fix', candidates: ['cc-fable-high'], previousResult: prev }), { traceDir: trace });
+  assert.equal(dispatch('ip-1', 'cc-fable-high', { traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 5)');
+  // the exception is the same speculative decision only: a member of a later decision waits for the open one
+  const t2 = tmp();
+  const spec = { uncertainty: 'high', hostOptIns: { speculative: true } };
+  run(req({ taskId: 'ip-2', ...spec }), { traceDir: t2 });
+  dispatch('ip-2', 'cc-opus-high', { traceDir: t2, policyPath: POLICY_PATH, now: NOW });
+  run(req({ taskId: 'ip-2', ...spec }), { traceDir: t2 }); // decided again with the first member still open
+  before = readFileSync(join(t2, 'ledger.jsonl'), 'utf8');
+  const later = cli(['dispatch', 'ip-2', 'cc-fable-high', '--trace', t2, '--now', NOW]);
+  assert.equal(later.code, 3, later.stdout);
+  assert.match(later.stderr, /previous dispatch of cc-opus-high \(seq 2\) has no outcome; reconcile before any re-dispatch/);
+  assert.equal(readFileSync(join(t2, 'ledger.jsonl'), 'utf8'), before);
+});

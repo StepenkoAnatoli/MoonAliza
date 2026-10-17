@@ -34,7 +34,10 @@ Run every command from the repository root. Node 24 must be on `PATH`.
    model and effort exactly as the `Profile:` tuple says.
 3. **Record the dispatch before launching:**
    `node docs/orchestration/smartrouter/route.mjs dispatch <task-id> <profile-id>`.
-   This reserves the call slot. Exit 3 means refused, so do not launch. Before it records anything, `dispatch`
+   This reserves the call slot. Exit 3 means refused, so do not launch. **Reconcile first**: while any earlier
+   dispatch of the task, of any profile, has no outcome record naming its dispatch seq, `dispatch` refuses; record
+   that outcome (step 5, `cancelled` if the worker was stopped) and decide again. The only exception is the other
+   members of the same speculative decision (spec-v2 §7 and §12). Before it records anything, `dispatch`
    re-walks the decision's stored request (`trace/decisions/<task>-<seq>.json`) against the current policy, ledger
    and `--now`: a fingerprint that expired, a data class or destination that was revoked, or a route that moved to
    another profile since the decision refuses the dispatch, and the lead decides again. Dispatching any other
@@ -78,6 +81,7 @@ it, and the fix is to add the missing newline, which changes no record.
 | Verification prerequisites | **enforced**: every category check must be named in `acceptanceChecks`; a required review needs a reviewer drawn from the request's `candidates` (never the lead-direct profile) that passes Gate 1 and Gate 2 for the `review` category, with headroom checked against the review median, and has a price. The decision file lists each would-be reviewer's first failing gate under `review-candidates` | `decide` |
 | Call slots (6 per task) | **enforced**: `used + 1 <= limit` in `decide` and again in `dispatch` | `decide`, `dispatch` |
 | Same-profile repairs (1 per task) | **enforced**: counted from the ledger by identity (harness, provider, model, effort, config); renaming a profile in the policy does not reset them | `decide`, `dispatch` |
+| Reconcile first | **enforced**: `dispatch` refuses while an earlier dispatch of the task has no later outcome naming its dispatch seq, whatever profile either names, so two workers never own one task and no provider switch follows effects of unknown acceptance (SKILL.md 'Hard prohibitions', spec-v2 §7, §12). The other members of the same speculative decision are the only exception | `dispatch` |
 | Deadline | **enforced**: `now` strictly before; capped at 12 h from the task's first ledger event | `decide`, `dispatch` |
 | Pre-dispatch recheck | **enforced**: `dispatch` re-runs Gates 1-5 on the stored request with the current policy and `now`; the decided profile must still be eligible and still the route's choice (gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4). A decision record with no decision file behind it is unknown evidence and is refused | `dispatch` |
 | Isolation | **enforced as a lower bound**: `worktree+branch` for delegated work; a stronger requirement than the host's capability is denied at Gate 1 | `decide` |
