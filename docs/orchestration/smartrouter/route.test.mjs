@@ -15,7 +15,12 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROUTE = join(HERE, 'route.mjs');
-const POLICY_PATH = join(HERE, 'host-policy.json');
+// the committed policy carries the usage-windows block (fail-closed: no reading, no route); the base tests run against
+// a feature-off fixture, the committed policy with that block deleted, written to a tmp file (lead's ruling R1(a))
+const COMMITTED_POLICY_PATH = join(HERE, 'host-policy.json');
+const COMMITTED_POLICY = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'));
+const POLICY_PATH = join(mkdtempSync(join(tmpdir(), 'sr-host-fixture-')), 'host-policy.json');
+writeFileSync(POLICY_PATH, `${JSON.stringify(Object.fromEntries(Object.entries(COMMITTED_POLICY).filter(([k]) => k !== 'usage-windows')), null, 2)}\n`);
 const POLICY_TEXT = readFileSync(POLICY_PATH, 'utf8');
 const POLICY = JSON.parse(POLICY_TEXT);
 const NOW = '2026-10-17T19:00:00Z';
@@ -51,8 +56,10 @@ function policyWith(mutate) {
   return path;
 }
 
+// every CLI call runs on the feature-off fixture unless it names a policy itself (R1(a))
 function cli(args) {
-  const r = spawnSync(process.execPath, [ROUTE, ...args], { encoding: 'utf8' });
+  const withPolicy = args.includes('--policy') ? args : [...args, '--policy', POLICY_PATH];
+  const r = spawnSync(process.execPath, [ROUTE, ...withPolicy], { encoding: 'utf8' });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 
@@ -542,9 +549,13 @@ for (const file of readdirSync(goldenDir).filter((f) => f.startsWith('hand-')).s
     const golden = JSON.parse(readFileSync(join(goldenDir, file), 'utf8'));
     const got = run(golden.request, { traceDir: tmp() }).decision;
     const want = golden.decision;
-    for (const k of ['route', 'profile', 'isolation', 'owner', 'human-gate', 'nested-allowed', 'max-nesting-depth', 'estimated-tokens', 'all-in-bound-usd', 'eligible-ordered', 'uncertainty', 'advisory']) {
+    for (const k of ['route', 'profile', 'isolation', 'owner', 'human-gate', 'nested-allowed', 'max-nesting-depth', 'estimated-tokens', 'all-in-bound-usd', 'eligible-ordered', 'advisory']) {
       assert.deepEqual(got[k], want[k], k);
     }
+    // the hand-walked decisions predate the usage windows and are never hand-edited: uncertainty is compared after
+    // dropping every 'usage windows:' line (lead's ruling R1(b)); everything else stays an exact comparison
+    const dropUsage = (lines) => lines.filter((l) => !l.startsWith('usage windows:'));
+    assert.deepEqual(dropUsage(got.uncertainty), dropUsage(want.uncertainty), 'uncertainty');
     for (const [id, c] of Object.entries(want.candidates)) {
       assert.equal(got.candidates[id].eligible, c.eligible, id);
       if (c.eligible) {
@@ -1017,4 +1028,341 @@ test('N6: a request that declares no data class is invalid (exit 2) and is never
   assert.match(out.stderr, /invalid request: declare at least one data class/);
   assert.equal(existsSync(join(trace, 'ledger.jsonl')), false);
   assert.equal(existsSync(join(trace, 'decisions')), false);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Usage windows (unit sr-windows): Gate 4 on a subscription host. Every reading below is synthetic, built by the
+// test relative to its own clock; none is a real rate_limit_event observation.
+// ---------------------------------------------------------------------------------------------
+const MIN = 60000;
+const HOUR = 3600000;
+const NOW_MS = Date.parse(NOW);
+const isoAt = (ms) => new Date(ms).toISOString().replace('.000Z', 'Z');
+const USAGE_BASIS_LINE = `usage windows: coefficients host-declared (${COMMITTED_POLICY['usage-windows']['coefficient-basis']})`;
+// a synthetic rate_limit_info as the platform reports it (resetsAt in epoch seconds), relative to `at`
+function rateLimitInfo(at, { five = 0.2, seven = 0.05, fiveResetMs = 4 * HOUR, sevenResetMs = 144 * HOUR } = {}) {
+  const ms = Date.parse(at);
+  return { unifiedWindows: { five_hour: { resetsAt: (ms + fiveResetMs) / 1000, utilization: five }, seven_day: { resetsAt: (ms + sevenResetMs) / 1000, utilization: seven } } };
+}
+const usageCli = (trace, reading, now, policy = COMMITTED_POLICY_PATH) => cli(['usage', writeJson(reading), '--trace', trace, '--now', now, '--policy', policy]);
+const decideOn = (r, trace, policyPath = COMMITTED_POLICY_PATH) => decide(r, { traceDir: trace, policyPath });
+// the committed block in a feature-off copy, mutated
+const usagePolicy = (mutate = () => {}) => policyWith((p) => { p['usage-windows'] = structuredClone(COMMITTED_POLICY['usage-windows']); mutate(p['usage-windows'], p); });
+
+test('usage windows: the policy block is validated whole (exit 2): a missing or non-positive coefficient, a reserve >= stop-at, a bad stop-at or length', () => {
+  assert.deepEqual(Object.keys(loadPolicy(COMMITTED_POLICY_PATH)['usage-windows'].windows), ['five_hour', 'seven_day']);
+  const coefficient = /^invalid policy: usage-windows\.windows\.five_hour\.utilization-per-mtok must be a finite number > 0 \(a window with no coefficient cannot be projected; declare one with its basis\)$/;
+  const cases = [
+    [(u) => { delete u.windows.five_hour['utilization-per-mtok']; }, coefficient],
+    [(u) => { u.windows.five_hour['utilization-per-mtok'] = null; }, coefficient],
+    [(u) => { u.windows.five_hour['utilization-per-mtok'] = 0; }, coefficient],
+    [(u) => { u.windows.five_hour['utilization-per-mtok'] = -0.24; }, coefficient],
+    [(u) => { u.windows.five_hour['utilization-per-mtok'] = '0.24'; }, coefficient],
+    [(u) => { u.windows.seven_day['lead-reserve'] = 0.9; }, /^invalid policy: usage-windows\.windows\.seven_day\.lead-reserve must be in \[0, stop-at\) \(lead-reserve 0\.9, stop-at 0\.9\)$/],
+    [(u) => { u.windows.seven_day['lead-reserve'] = -0.01; }, /seven_day\.lead-reserve must be in \[0, stop-at\)/],
+    [(u) => { u.windows.five_hour['stop-at'] = 1.01; }, /^invalid policy: usage-windows\.windows\.five_hour\.stop-at must be in \(0, 1\]$/],
+    [(u) => { u.windows.five_hour['stop-at'] = 0; }, /five_hour\.stop-at must be in \(0, 1\]/],
+    [(u) => { u.windows.five_hour['length-seconds'] = 18000.5; }, /^invalid policy: usage-windows\.windows\.five_hour\.length-seconds must be a positive integer$/],
+    [(u) => { u['reading-max-age-minutes'] = 0; }, /^invalid policy: usage-windows\.reading-max-age-minutes must be a number > 0$/],
+    [(u) => { delete u['coefficient-basis']; }, /^invalid policy: usage-windows\.coefficient-basis missing/],
+    [(u) => { u.source = ''; }, /^invalid policy: usage-windows\.source missing/],
+    [(u) => { u.windows = {}; }, /^invalid policy: usage-windows\.windows must name at least one window$/]
+  ];
+  for (const [mutate, re] of cases) {
+    const path = usagePolicy(mutate);
+    assert.throws(() => loadPolicy(path), (e) => e instanceof RouterError && e.code === 2 && re.test(e.message), String(re));
+  }
+  const out = cli(['decide', writeJson(req({ taskId: 'pv-1' })), '--trace', tmp(), '--policy', usagePolicy(cases[0][0])]);
+  assert.equal(out.code, 2, out.stdout);
+  assert.match(out.stderr, /usage-windows\.windows\.five_hour\.utilization-per-mtok must be a finite number > 0/);
+  // a complete block in a copy loads, and leaves everything else as it was
+  assert.equal(loadPolicy(usagePolicy())['usage-windows']['reading-max-age-minutes'], 30);
+});
+
+test('usage: a reading is appended to trace/usage.jsonl in any of three forms, normalised; the ledger is untouched', () => {
+  const trace = tmp();
+  const info = rateLimitInfo(NOW);
+  const a = usageCli(trace, info, NOW);
+  assert.equal(a.code, 0, a.stderr);
+  assert.match(a.stdout, /^usage reading recorded: 2026-10-17T19:00:00Z five_hour 0\.2 \(resets 2026-10-17T23:00:00Z\), seven_day 0\.05 \(resets 2026-10-23T19:00:00Z\)$/m);
+  assert.equal(usageCli(trace, info.unifiedWindows, isoAt(NOW_MS + MIN)).code, 0);
+  const normalised = { windows: { five_hour: { utilization: 0.3, 'resets-at': '2026-10-17T23:00:00Z' }, seven_day: { utilization: 0.07, 'resets-at': '2026-10-23T19:00:00Z' } }, note: 'synthetic, normalised form' };
+  const c = usageCli(trace, normalised, isoAt(NOW_MS + 2 * MIN));
+  assert.equal(c.code, 0, c.stderr);
+  const recs = readFileSync(join(trace, 'usage.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const windows = { five_hour: { utilization: 0.2, 'resets-at': '2026-10-17T23:00:00Z' }, seven_day: { utilization: 0.05, 'resets-at': '2026-10-23T19:00:00Z' } };
+  assert.deepEqual(recs, [
+    { ts: NOW, windows, source: 'rate_limit_event', note: null },
+    { ts: '2026-10-17T19:01:00Z', windows, source: 'rate_limit_event', note: null },
+    { ts: '2026-10-17T19:02:00Z', windows: normalised.windows, source: 'rate_limit_event', note: 'synthetic, normalised form' }
+  ]);
+  assert.equal(existsSync(join(trace, 'ledger.jsonl')), false);
+  // a window the policy does not name is not recorded (the policy decides which windows bind)
+  const extra = rateLimitInfo(isoAt(NOW_MS + 3 * MIN));
+  extra.unifiedWindows.seven_day_opus = { resetsAt: null, utilization: null };
+  assert.equal(usageCli(trace, extra, isoAt(NOW_MS + 3 * MIN)).code, 0);
+  assert.deepEqual(Object.keys(JSON.parse(readFileSync(join(trace, 'usage.jsonl'), 'utf8').trim().split('\n').pop()).windows), ['five_hour', 'seven_day']);
+  // the feature off: a reading has nothing to bind against
+  const off = cli(['usage', writeJson(info), '--trace', tmp(), '--now', NOW]);
+  assert.equal(off.code, 2, off.stdout);
+  assert.match(off.stderr, /usage windows are not configured in the policy \(no usage-windows block\)/);
+});
+
+test('usage: a reading is refused (exit 2, nothing appended) on a missing window, a utilization outside [0,1], a reset not after ts, or a ts not after the previous reading', () => {
+  const trace = tmp();
+  const path = join(trace, 'usage.jsonl');
+  const refusedWith = (reading, now, re) => {
+    const before = existsSync(path) ? readFileSync(path, 'utf8') : null;
+    const r = usageCli(trace, reading, now);
+    assert.equal(r.code, 2, `${re}: ${r.stdout}`);
+    assert.match(r.stderr, re);
+    assert.equal(existsSync(path) ? readFileSync(path, 'utf8') : null, before);
+  };
+  const info = rateLimitInfo(NOW);
+  const noSeven = { unifiedWindows: { five_hour: info.unifiedWindows.five_hour } };
+  refusedWith(noSeven, NOW, /invalid usage reading: window seven_day \(named in the policy\) is missing/);
+  const over = structuredClone(info); over.unifiedWindows.five_hour.utilization = 1.2;
+  refusedWith(over, NOW, /invalid usage reading: five_hour utilization 1\.2 is not a number in \[0, 1\]/);
+  const under = structuredClone(info); under.unifiedWindows.seven_day.utilization = -0.01;
+  refusedWith(under, NOW, /invalid usage reading: seven_day utilization -0\.01 is not a number in \[0, 1\]/);
+  const text = structuredClone(info); text.unifiedWindows.five_hour.utilization = '0.2';
+  refusedWith(text, NOW, /invalid usage reading: five_hour utilization "0\.2" is not a number in \[0, 1\]/);
+  const atTs = structuredClone(info); atTs.unifiedWindows.five_hour.resetsAt = NOW_MS / 1000;
+  refusedWith(atTs, NOW, /invalid usage reading: five_hour resets-at 2026-10-17T19:00:00Z is not strictly after the reading ts 2026-10-17T19:00:00Z/);
+  const noReset = structuredClone(info); delete noReset.unifiedWindows.five_hour.resetsAt;
+  refusedWith(noReset, NOW, /invalid usage reading: five_hour resets-at missing or not a time/);
+  // a reset further out than one window length cannot describe that window (e.g. milliseconds pasted as seconds)
+  const millis = structuredClone(info); millis.unifiedWindows.five_hour.resetsAt = NOW_MS + 4 * HOUR;
+  refusedWith(millis, NOW, /invalid usage reading: five_hour resets-at .* is more than one window length \(18000 s\) after the reading ts/);
+  refusedWith(['not', 'a', 'reading'], NOW, /invalid usage reading: expected rate_limit_info, its unifiedWindows, or \{ windows: \{ <name>: \{ utilization, resets-at \} \} \}/);
+  // monotonic: each reading's ts follows the previous one strictly
+  assert.equal(usageCli(trace, info, NOW).code, 0);
+  refusedWith(info, NOW, /invalid usage reading: ts 2026-10-17T19:00:00Z does not follow the previous reading's ts 2026-10-17T19:00:00Z \(readings are monotonic\)/);
+  refusedWith(rateLimitInfo(isoAt(NOW_MS - MIN)), isoAt(NOW_MS - MIN), /does not follow the previous reading's ts/);
+  assert.equal(usageCli(trace, rateLimitInfo(isoAt(NOW_MS + MIN)), isoAt(NOW_MS + MIN)).code, 0);
+  assert.equal(readFileSync(path, 'utf8').split('\n').filter(Boolean).length, 2);
+  // an unterminated last line is refused like the ledger's (exit 4), before anything is appended
+  writeFileSync(path, readFileSync(path, 'utf8').replace(/\n$/, ''));
+  const cut = usageCli(trace, rateLimitInfo(isoAt(NOW_MS + 2 * MIN)), isoAt(NOW_MS + 2 * MIN));
+  assert.equal(cut.code, 4, cut.stdout);
+  assert.match(cut.stderr, /usage\.jsonl does not end with a newline/);
+});
+
+test('usage: with no file it prints the latest reading, its age and each window\'s headroom in Mtok', () => {
+  const trace = tmp();
+  const none = cli(['usage', '--trace', trace, '--now', NOW, '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(none.code, 0, none.stderr);
+  assert.match(none.stdout, /^no usage reading recorded in .*usage\.jsonl; paste one with route\.mjs usage <reading\.json>$/m);
+  usageCli(trace, rateLimitInfo(NOW, { five: 0.6 }), NOW);
+  const s = cli(['usage', '--trace', trace, '--now', isoAt(NOW_MS + 12 * MIN), '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(s.code, 0, s.stderr);
+  assert.match(s.stdout, /^latest usage reading 2026-10-17T19:00:00Z \(age 12 min, max 30\)$/m);
+  // (stop-at - lead-reserve - utilization) / utilization-per-mtok
+  assert.match(s.stdout, /^ {2}five_hour: utilization 0\.6, resets 2026-10-17T23:00:00Z, headroom 1\.0417 Mtok \(\(0\.9 - 0\.05 - 0\.6\) \/ 0\.24\)$/m);
+  assert.match(s.stdout, /^ {2}seven_day: utilization 0\.05, resets 2026-10-23T19:00:00Z, headroom 13\.3333 Mtok \(\(0\.9 - 0\.05 - 0\.05\) \/ 0\.06\)$/m);
+  const stale = cli(['usage', '--trace', trace, '--now', isoAt(NOW_MS + 31 * MIN), '--policy', COMMITTED_POLICY_PATH]);
+  assert.match(stale.stdout, /^latest usage reading 2026-10-17T19:00:00Z \(age 31 min, max 30\): stale; refresh with route\.mjs usage$/m);
+  const reset = cli(['usage', '--trace', trace, '--now', isoAt(NOW_MS + 4 * HOUR), '--policy', COMMITTED_POLICY_PATH]);
+  assert.match(reset.stdout, /^ {2}five_hour: utilization 0\.6, resets 2026-10-17T23:00:00Z: reset since the reading; refresh with route\.mjs usage$/m);
+});
+
+test('Gate 4 usage step 1: no reading, or a reading older than reading-max-age-minutes, fails every candidate that reaches Gate 4', () => {
+  const trace = tmp();
+  const missing = decideOn(req({ taskId: 'g4-1' }), trace);
+  assert.equal(missing.route, 'blocked');
+  for (const id of ['cc-fable-xhigh', 'cc-opus-high', 'cc-fable-high']) {
+    assert.equal(missing.decision.candidates[id]['first-failing-gate'], 4, id);
+    assert.equal(missing.decision.candidates[id].reason, 'usage reading missing', id);
+  }
+  assert.equal(missing.decision.candidates['cc-sonnet-high']['first-failing-gate'], 2); // earlier gates keep their reasons
+  assert.deepEqual(missing.decision.usage, { 'reading-ts': null, 'reading-age-minutes': null, windows: {} });
+  assert.equal(missing.record['usage-tokens'], null);
+  usageCli(trace, rateLimitInfo(NOW), NOW);
+  const atLimit = decideOn(req({ taskId: 'g4-2', now: isoAt(NOW_MS + 30 * MIN) }), trace);
+  assert.equal(atLimit.route, 'delegate'); // age == max passes
+  const stale = decideOn(req({ taskId: 'g4-3', now: isoAt(NOW_MS + 31 * MIN) }), trace);
+  assert.equal(stale.route, 'blocked');
+  assert.equal(stale.decision.candidates['cc-opus-high'].reason, 'usage reading stale: age 31 min > 30; refresh with route.mjs usage');
+  assert.equal(stale.decision.usage['reading-age-minutes'], 31);
+  // a reading taken after the decision's `now` is not used for it: the latest reading at or before `now` is
+  const early = decideOn(req({ taskId: 'g4-4', now: isoAt(NOW_MS - MIN) }), trace);
+  assert.equal(early.decision.candidates['cc-opus-high'].reason, 'usage reading missing');
+});
+
+test('Gate 4 usage step 2: a window that reset after the reading fails closed', () => {
+  const trace = tmp();
+  usageCli(trace, rateLimitInfo(NOW, { fiveResetMs: 10 * MIN }), NOW);
+  const d = decideOn(req({ taskId: 'g4-5', now: isoAt(NOW_MS + 20 * MIN) }), trace);
+  assert.equal(d.route, 'blocked');
+  assert.equal(d.decision.candidates['cc-opus-high']['first-failing-gate'], 4);
+  assert.equal(d.decision.candidates['cc-opus-high'].reason, 'usage window five_hour reset at 2026-10-17T19:10:00Z after the reading; refresh with route.mjs usage');
+  // equality is a reset (now must be strictly before resets-at)
+  const eq = decideOn(req({ taskId: 'g4-6', now: isoAt(NOW_MS + 10 * MIN) }), trace);
+  assert.match(eq.decision.candidates['cc-opus-high'].reason, /^usage window five_hour reset at 2026-10-17T19:10:00Z after the reading/);
+  assert.equal(decideOn(req({ taskId: 'g4-7', now: isoAt(NOW_MS + 9 * MIN) }), trace).route, 'delegate');
+});
+
+test('Gate 4 usage step 3: a projection over stop-at - lead-reserve fails with the reason text, and the defer suffix when the window resets before the deadline', () => {
+  const trace = tmp();
+  usageCli(trace, rateLimitInfo(NOW, { five: 0.8 }), NOW);
+  // review: 209000 work tokens; no required review; + 20000 overhead = 229000 for a delegate, 209000 direct
+  const d = decideOn(req({ taskId: 'g4-8' }), trace);
+  assert.equal(d.route, 'blocked');
+  assert.equal(d.decision.candidates['cc-opus-high'].reason, 'usage window five_hour: projected 0.855 > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:00:00Z; defer until the reset');
+  assert.equal(d.decision.candidates['cc-fable-xhigh'].reason, 'usage window five_hour: projected 0.8502 > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:00:00Z; defer until the reset');
+  assert.equal(d.decision.usage.windows.five_hour.projected, null); // blocked: nothing projected for a chosen profile
+  // the window resets after the task deadline: no defer suffix
+  const late = decideOn(req({ taskId: 'g4-9', deadline: '2026-10-17T22:00:00Z' }), trace);
+  assert.equal(late.decision.candidates['cc-opus-high'].reason, 'usage window five_hour: projected 0.855 > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-17T23:00:00Z');
+  // the seven-day window binds on its own
+  const t2 = tmp();
+  usageCli(t2, rateLimitInfo(NOW, { seven: 0.84 }), NOW);
+  const week = decideOn(req({ taskId: 'g4-10', deadline: '2026-10-17T22:00:00Z' }), t2);
+  assert.equal(week.decision.candidates['cc-opus-high'].reason, 'usage window seven_day: projected 0.8537 > 0.85 (stop-at 0.9 - lead-reserve 0.05); resets 2026-10-23T19:00:00Z');
+});
+
+test('Gate 4 usage step 3: under the limit the decision carries the usage block, and tokens are work for direct, work + review + overhead for delegate', () => {
+  const trace = tmp();
+  usageCli(trace, rateLimitInfo(NOW), NOW);
+  const core = decideOn(req({ taskId: 'g4-11', category: 'build-core', now: isoAt(NOW_MS + 6 * MIN) }), trace);
+  assert.equal(core.route, 'delegate');
+  assert.equal(core.decision.profile, 'cc-opus-high');
+  // 316000 work + 209000 review (build-core names a review) + 20000 delegate overhead
+  assert.equal(core.decision['usage-tokens'], 545000);
+  assert.equal(core.record['usage-tokens'], 545000);
+  assert.deepEqual(core.decision.usage, {
+    'reading-ts': NOW, 'reading-age-minutes': 6,
+    windows: {
+      five_hour: { utilization: 0.2, 'resets-at': '2026-10-17T23:00:00Z', projected: 0.3308, 'headroom-mtok': 2.7083 },
+      seven_day: { utilization: 0.05, 'resets-at': '2026-10-23T19:00:00Z', projected: 0.0827, 'headroom-mtok': 13.3333 }
+    }
+  });
+  assert.ok(core.decision.uncertainty.includes(USAGE_BASIS_LINE), core.decision.uncertainty.join('|'));
+  assert.ok(!core.decision.uncertainty.includes('usage windows: not configured'));
+  const g4 = core.decision.candidates['cc-opus-high'].walkthrough[3];
+  assert.match(g4.note, /; usage window five_hour binds: projected 0\.3308 <= 0\.85$/);
+  // the stored decision file carries the usage block too, for dispatch to re-check
+  assert.deepEqual(JSON.parse(readFileSync(core.decisionPath, 'utf8')).decision.usage, core.decision.usage);
+  // review: no required review, so a delegate projects work + overhead only
+  const review = decideOn(req({ taskId: 'g4-12', now: isoAt(NOW_MS + 6 * MIN) }), trace);
+  assert.equal(review.decision['usage-tokens'], 229000);
+  assert.equal(review.decision.usage.windows.five_hour.projected, 0.255);
+  // direct: the work tokens alone
+  const direct = decideOn(req({ taskId: 'g4-13', estimatedTokens: 10000, now: isoAt(NOW_MS + 6 * MIN) }), trace);
+  assert.equal(direct.route, 'direct');
+  assert.equal(direct.decision['usage-tokens'], 10000);
+  assert.equal(direct.decision.usage.windows.five_hour.projected, 0.2024);
+  assert.equal(direct.brief, null);
+});
+
+test('Gate 4 usage: a candidate over the window is ineligible and economics orders what is left', () => {
+  // host-policy-1 makes direct cheaper than every delegate whenever direct is eligible (20000 overhead tokens at
+  // the lead's rate exceed 15000 direct tokens), and every delegate projects the same tokens. A copy that lets a
+  // 40000-token docs-mechanical unit go direct shows the cheaper delegate (haiku, $0.27) losing to the window and
+  // the pricier direct ($2.00) that fits being chosen
+  const pol = usagePolicy((u, p) => { p.economics['direct-max-tokens'] = 50000; p.economics['delegate-overhead-tokens'] = 5000; });
+  const r = (taskId, now) => req({ taskId, category: 'docs-mechanical', estimatedTokens: 40000, now });
+  const roomy = tmp();
+  usageCli(roomy, rateLimitInfo(NOW, { five: 0.5 }), NOW, pol);
+  const free = decideOn(r('ec-1', NOW), roomy, pol);
+  assert.equal(free.decision.profile, 'cc-haiku-low');
+  assert.deepEqual(free.decision['eligible-ordered'], ['cc-haiku-low', 'cc-fable-xhigh']);
+  const tight = tmp();
+  usageCli(tight, rateLimitInfo(NOW, { five: 0.84 }), NOW, pol);
+  const d = decideOn(r('ec-2', NOW), tight, pol);
+  assert.equal(d.route, 'direct');
+  assert.equal(d.decision.profile, 'cc-fable-xhigh'); // 0.84 + 0.04 x 0.24 = 0.8496 fits
+  assert.equal(d.decision.candidates['cc-haiku-low']['first-failing-gate'], 4); // 0.84 + 0.045 x 0.24 = 0.8508 does not
+  assert.match(d.decision.candidates['cc-haiku-low'].reason, /^usage window five_hour: projected 0\.8508 > 0\.85/);
+  assert.deepEqual(d.decision['eligible-ordered'], ['cc-fable-xhigh']);
+  // on host-policy-1: a cheaper profile within the window is chosen over a pricier one that exceeds it (ineligible,
+  // not merely ranked lower): 15000 tokens direct fit, the 35000-token delegates do not
+  const t3 = tmp();
+  usageCli(t3, rateLimitInfo(NOW, { five: 0.8455 }), NOW);
+  const small = decideOn(req({ taskId: 'ec-3', estimatedTokens: 15000 }), t3);
+  assert.equal(small.decision.profile, 'cc-fable-xhigh');
+  assert.equal(small.decision.candidates['cc-opus-high']['first-failing-gate'], 4);
+  assert.deepEqual(small.decision['eligible-ordered'], ['cc-fable-xhigh']);
+});
+
+test('dispatch re-checks the usage windows at its --now: a reading gone stale or a projection now over refuses (exit 3) with the same reason text', () => {
+  const trace = tmp();
+  const ledger = join(trace, 'ledger.jsonl');
+  usageCli(trace, rateLimitInfo(NOW), NOW);
+  const d = decideOn(req({ taskId: 'ud-1', now: isoAt(NOW_MS + 5 * MIN) }), trace);
+  assert.equal(d.decision.profile, 'cc-opus-high');
+  const before = readFileSync(ledger, 'utf8');
+  const args = (now) => ['dispatch', 'ud-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', now, '--policy', COMMITTED_POLICY_PATH];
+  // decided 5 minutes after the reading, dispatched 31 minutes after it
+  const stale = cli(args(isoAt(NOW_MS + 31 * MIN)));
+  assert.equal(stale.code, 3, stale.stdout);
+  assert.match(stale.stderr, /usage check refused cc-opus-high \(decision seq 1, usage-tokens 229000\): usage reading stale: age 31 min > 30; refresh with route\.mjs usage/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // a fresh reading shows the window filled up since the decision
+  usageCli(trace, rateLimitInfo(isoAt(NOW_MS + 32 * MIN), { five: 0.8 }), isoAt(NOW_MS + 32 * MIN));
+  const over = cli(args(isoAt(NOW_MS + 33 * MIN)));
+  assert.equal(over.code, 3, over.stdout);
+  assert.match(over.stderr, /usage check refused cc-opus-high \(decision seq 1, usage-tokens 229000\): usage window five_hour: projected 0\.855 > 0\.85 \(stop-at 0\.9 - lead-reserve 0\.05\); resets 2026-10-17T23:32:00Z; defer until the reset/);
+  assert.equal(readFileSync(ledger, 'utf8'), before);
+  // a deviation is held to the windows as well
+  const dev = cli([...args(isoAt(NOW_MS + 33 * MIN)).map((a) => (a === 'cc-opus-high' ? 'cc-fable-high' : a)), '--deviation', 'second opinion']);
+  assert.equal(dev.code, 3, dev.stdout);
+  assert.match(dev.stderr, /usage check refused cc-fable-high .*usage window five_hour: projected 0\.855 > 0\.85/);
+  // room again: the dispatch goes through as decided
+  usageCli(trace, rateLimitInfo(isoAt(NOW_MS + 34 * MIN), { five: 0.3 }), isoAt(NOW_MS + 34 * MIN));
+  const ok = cli(args(isoAt(NOW_MS + 35 * MIN)));
+  assert.equal(ok.code, 0, ok.stderr);
+  assert.equal(readLedger(trace).pop().detail, 'dispatch as decided (decision seq 1)');
+});
+
+test('usage windows off (no usage-windows block): Uncertainty says not configured, no usage block, no usage-tokens, usage.jsonl never read', () => {
+  const trace = tmp();
+  writeFileSync(join(trace, 'usage.jsonl'), 'not json, and never read when the feature is off\n');
+  const d = run(req({ taskId: 'off-1' }), { traceDir: trace });
+  assert.equal(d.route, 'delegate');
+  assert.ok(d.decision.uncertainty.includes('usage windows: not configured'), d.decision.uncertainty.join('|'));
+  assert.equal(d.decision.usage, null);
+  assert.equal('usage-tokens' in d.record, false);
+  assert.equal(d.decision.candidates['cc-opus-high'].walkthrough[3].note, 'cash estimate $5.18: estimate only, never a strict cap in this host');
+  assert.equal(dispatch('off-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW }).detail, 'dispatch as decided (decision seq 1)');
+});
+
+// the two compensating tests on the committed policy (lead's ruling R1(a)), on the stored build request
+const STORED_BUILD = JSON.parse(readFileSync(join(goldenDir, 'hand-sr-host-build.json'), 'utf8'));
+
+test('committed policy (i): with no reading, the stored build request is blocked; every candidate that reaches Gate 4 fails it with "usage reading missing"', () => {
+  const d = decideOn(STORED_BUILD.request, tmp());
+  assert.equal(d.route, 'blocked');
+  for (const [id, want] of Object.entries(STORED_BUILD.decision.candidates)) {
+    const got = d.decision.candidates[id];
+    assert.equal(got.eligible, false, id);
+    if (want.eligible || want['first-failing-gate'] > 4) {
+      assert.equal(got['first-failing-gate'], 4, id);
+      assert.equal(got.reason, 'usage reading missing', id);
+    } else {
+      assert.equal(got['first-failing-gate'], want['first-failing-gate'], id); // earlier gates are unchanged
+    }
+  }
+  assert.ok(d.decision.uncertainty.includes(USAGE_BASIS_LINE));
+});
+
+test('committed policy (ii): after a fresh synthetic reading, the stored build request delegates to cc-opus-high with the usage block filled', () => {
+  const trace = tmp();
+  const at = STORED_BUILD.request.now;
+  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05, fiveResetMs: 4 * HOUR, sevenResetMs: 144 * HOUR }), at);
+  assert.equal(r.code, 0, r.stderr);
+  const d = decideOn(STORED_BUILD.request, trace);
+  assert.equal(d.route, 'delegate');
+  assert.equal(d.decision.profile, 'cc-opus-high');
+  assert.equal(d.decision.usage['reading-ts'], at);
+  const uw = COMMITTED_POLICY['usage-windows'].windows;
+  for (const w of ['five_hour', 'seven_day']) {
+    const u = d.decision.usage.windows[w];
+    assert.equal(typeof u.projected, 'number', w);
+    assert.ok(u.projected < uw[w]['stop-at'] - uw[w]['lead-reserve'], `${w} ${u.projected}`);
+    assert.ok(u['headroom-mtok'] > 0, w);
+  }
+  // everything else is the golden decision
+  assert.equal(d.decision['all-in-bound-usd'], STORED_BUILD.decision['all-in-bound-usd']);
+  assert.deepEqual(d.decision['eligible-ordered'], STORED_BUILD.decision['eligible-ordered']);
 });

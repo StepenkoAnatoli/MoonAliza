@@ -8,7 +8,8 @@
 // and keeps the append-only Outcome Ledger (spec-v2 §10.5). It never dispatches anything itself.
 //
 // CLI:  decide <request.json> | dispatch <task-id> <profile-id> --project-stop <json> | outcome <outcome.json>
-//       | status <task-id> | rate        options: --trace <dir> --policy <file> --now <iso> --deviation <reason>
+//       | status <task-id> | rate | usage [<reading.json>]
+//       options: --trace <dir> --policy <file> --now <iso> --deviation <reason>
 // Exit: 0 done (any decided route, blocked included), 2 invalid input, 3 refused, 4 ledger integrity.
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -22,6 +23,7 @@ export const CASH_UNCERTAINTY = 'cash: estimate only, no host accounting (subscr
 export const ADVISORY_TEXT = 'recommendation only — no dispatch performed or claimed';
 export const ADVISORY = `Advisory: ${ADVISORY_TEXT}`;
 export const PROVIDER = 'anthropic';
+export const USAGE_OFF = 'usage windows: not configured';
 
 const ISOLATION = ['none', 'directory', 'worktree+branch', 'ephemeral-container'];
 const HUMAN_GATES = ['none', 'review-before-dispatch', 'review-before-merge', 'approval-required'];
@@ -118,6 +120,27 @@ function validatePolicy(p) {
   if (!e || !ids.has(e['lead-direct-profile']) || !isInt(e['direct-max-tokens']) || !isInt(e['delegate-overhead-tokens'])) fail('economics incomplete');
   const lead = p.profiles.find((x) => x.id === e['lead-direct-profile']);
   if (!(p.prices[lead.model]?.output_rate_per_mtok >= 0)) fail('the lead-direct profile has no price; brief overhead cannot be bounded');
+  if (p['usage-windows'] !== undefined) validateUsageWindows(p['usage-windows'], fail);
+}
+
+// the optional usage-windows block: when present it is required whole. Unknown is not allowed for a coefficient: a
+// window with no coefficient cannot be projected, so the lead declares one with its basis rather than gate blind
+function validateUsageWindows(u, fail) {
+  const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (!u || typeof u !== 'object' || Array.isArray(u)) fail('usage-windows must be an object');
+  if (!isStr(u.source)) fail('usage-windows.source missing (where the reading comes from)');
+  if (!(isNum(u['reading-max-age-minutes']) && u['reading-max-age-minutes'] > 0)) fail('usage-windows.reading-max-age-minutes must be a number > 0');
+  if (!isStr(u['coefficient-basis'])) fail('usage-windows.coefficient-basis missing (the basis of the declared coefficients)');
+  const ws = u.windows;
+  if (!ws || typeof ws !== 'object' || Array.isArray(ws) || Object.keys(ws).length === 0) fail('usage-windows.windows must name at least one window');
+  for (const [name, w] of Object.entries(ws)) {
+    const at = `usage-windows.windows.${name}`;
+    if (!w || typeof w !== 'object') fail(`${at} must be an object`);
+    if (!isInt(w['length-seconds'], 1)) fail(`${at}.length-seconds must be a positive integer`);
+    if (!(isNum(w['stop-at']) && w['stop-at'] > 0 && w['stop-at'] <= 1)) fail(`${at}.stop-at must be in (0, 1]`);
+    if (!(isNum(w['lead-reserve']) && w['lead-reserve'] >= 0 && w['lead-reserve'] < w['stop-at'])) fail(`${at}.lead-reserve must be in [0, stop-at) (lead-reserve ${w['lead-reserve']}, stop-at ${w['stop-at']})`);
+    if (!(isNum(w['utilization-per-mtok']) && w['utilization-per-mtok'] > 0)) fail(`${at}.utilization-per-mtok must be a finite number > 0 (a window with no coefficient cannot be projected; declare one with its basis)`);
+  }
 }
 
 function profileTuple(policy, pr) {
@@ -278,6 +301,149 @@ function appendRecord(traceDir, rec) {
 }
 
 const isDeviation = (r) => r.deviation === true || /^host deviation/.test(r.detail);
+
+// ---------------------------------------------------------------------------------------------
+// usage windows: the subscription's rolling limits (rate_limit_event -> rate_limit_info.unifiedWindows), pasted by
+// the lead into trace/usage.jsonl (append-only, separate from the ledger) and projected in Gate 4
+// ---------------------------------------------------------------------------------------------
+const usagePath = (traceDir) => join(traceDir, 'usage.jsonl');
+const USAGE_REFRESH = 'refresh with route.mjs usage';
+const minutesOf = (ms) => Math.round(ms / 600) / 100;
+
+function usageConfig(policy) {
+  const u = policy['usage-windows'];
+  if (u === undefined) throw invalid('usage windows are not configured in the policy (no usage-windows block)');
+  return u;
+}
+
+export function readUsage(traceDir = DEFAULT_TRACE) {
+  const path = usagePath(traceDir);
+  if (!existsSync(path)) return [];
+  const text = readFileSync(path, 'utf8');
+  if (text.length && !text.endsWith('\n')) throw new RouterError(4, `usage.jsonl does not end with a newline (last line unterminated); refusing to read or append (${path})`);
+  const lines = text.split('\n');
+  lines.pop();
+  return lines.map((line, i) => {
+    let rec;
+    try { rec = JSON.parse(line); } catch { throw new RouterError(4, `usage.jsonl line ${i + 1} is unparseable; refusing to read or append (${path})`); }
+    const ok = rec && isoMs(rec.ts) !== null && rec.windows && typeof rec.windows === 'object'
+      && Object.values(rec.windows).every((w) => w && typeof w.utilization === 'number' && isoMs(w['resets-at']) !== null);
+    if (!ok) throw new RouterError(4, `usage.jsonl line ${i + 1} is not a usage reading; refusing to read or append (${path})`);
+    return rec;
+  });
+}
+
+// the three accepted forms: rate_limit_info, its bare unifiedWindows, or { windows: { <w>: { utilization, resets-at } }, note }
+function normaliseReading(raw, cfg, ts) {
+  const fail = (m) => { throw invalid(`invalid usage reading: ${m}`); };
+  const isObj = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+  if (!isObj(raw)) fail('expected rate_limit_info, its unifiedWindows, or { windows: { <name>: { utilization, resets-at } } }');
+  let src = raw;
+  let note = null;
+  if (isObj(raw.unifiedWindows)) src = raw.unifiedWindows;
+  else if (isObj(raw.windows)) { src = raw.windows; note = isStr(raw.note) ? raw.note : null; }
+  const tsMs = isoMs(ts);
+  const windows = {};
+  // only the windows the policy names are recorded: the policy decides which windows bind
+  for (const [name, w] of Object.entries(cfg.windows)) {
+    const e = src[name];
+    if (!isObj(e)) fail(`window ${name} (named in the policy) is missing`);
+    const u = e.utilization;
+    if (!(typeof u === 'number' && Number.isFinite(u) && u >= 0 && u <= 1)) fail(`${name} utilization ${JSON.stringify(u)} is not a number in [0, 1]`);
+    let rMs = null;
+    if (typeof e.resetsAt === 'number' && Number.isFinite(e.resetsAt) && e.resetsAt > 0) rMs = e.resetsAt * 1000;
+    else if (isoMs(e['resets-at']) !== null) rMs = isoMs(e['resets-at']);
+    if (rMs === null) fail(`${name} resets-at missing or not a time (resetsAt in epoch seconds, or resets-at ISO-8601)`);
+    const shown = typeof e.resetsAt === 'number' ? `${e.resetsAt} (epoch seconds)` : e['resets-at'];
+    if (!(rMs > tsMs)) fail(`${name} resets-at ${rMs > 0 && rMs < 8.64e15 ? isoOf(rMs) : shown} is not strictly after the reading ts ${ts}`);
+    // a rolling window resets within one window length of any moment in it (catches milliseconds pasted as seconds)
+    if (rMs - tsMs > w['length-seconds'] * 1000) fail(`${name} resets-at ${shown} is more than one window length (${w['length-seconds']} s) after the reading ts ${ts}`);
+    windows[name] = { utilization: u, 'resets-at': typeof e.resetsAt === 'number' ? isoOf(rMs) : e['resets-at'] };
+  }
+  return { windows, note };
+}
+
+export function recordUsage(raw, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString() } = {}) {
+  if (isoMs(now) === null) throw invalid('--now must be ISO-8601');
+  const cfg = usageConfig(loadPolicy(policyPath));
+  const readings = readUsage(traceDir);
+  const prev = readings[readings.length - 1];
+  // readings are monotonic, like the ledger clock
+  if (prev && !(isoMs(now) > isoMs(prev.ts))) throw invalid(`invalid usage reading: ts ${now} does not follow the previous reading's ts ${prev.ts} (readings are monotonic)`);
+  const { windows, note } = normaliseReading(raw, cfg, now);
+  const rec = { ts: now, windows, source: 'rate_limit_event', note };
+  mkdirSync(traceDir, { recursive: true });
+  appendFileSync(usagePath(traceDir), `${JSON.stringify(rec)}\n`);
+  return rec;
+}
+
+// the latest reading taken at or before `now`: a later reading says nothing about an earlier decision
+function latestReading(readings, nowMs) {
+  let best = null;
+  for (const r of readings) if (isoMs(r.ts) <= nowMs && (!best || isoMs(r.ts) > isoMs(best.ts))) best = r;
+  return best;
+}
+
+const usageLimit = (w) => w['stop-at'] - w['lead-reserve'];
+const headroomMtok = (w, u) => round4((usageLimit(w) - u) / w['utilization-per-mtok']);
+
+// Gate 4's usage steps, in order: (1) a fresh reading, (2) no window reset since it, (3) every window's projection
+// within stop-at - lead-reserve. Returns { reason } on the first failure, else each window's projection and the binding one
+function usageWalk(cfg, reading, nowMs, tokens, deadlineMs) {
+  if (!reading) return { reason: 'usage reading missing' };
+  const age = nowMs - isoMs(reading.ts);
+  if (age > cfg['reading-max-age-minutes'] * 60000) return { reason: `usage reading stale: age ${minutesOf(age)} min > ${cfg['reading-max-age-minutes']}; ${USAGE_REFRESH}` };
+  for (const name of Object.keys(cfg.windows)) {
+    const r = reading.windows[name];
+    if (!r) return { reason: `usage reading has no window ${name}; ${USAGE_REFRESH}` };
+    if (!(nowMs < isoMs(r['resets-at']))) return { reason: `usage window ${name} reset at ${r['resets-at']} after the reading; ${USAGE_REFRESH}` };
+  }
+  const projected = {};
+  let binding = null;
+  for (const [name, w] of Object.entries(cfg.windows)) {
+    const r = reading.windows[name];
+    const p = r.utilization + (tokens / 1e6) * w['utilization-per-mtok'];
+    const limit = usageLimit(w);
+    if (p - limit > 1e-12) {
+      const defer = isoMs(r['resets-at']) < deadlineMs ? '; defer until the reset' : '';
+      return { reason: `usage window ${name}: projected ${round4(p)} > ${round4(limit)} (stop-at ${w['stop-at']} - lead-reserve ${w['lead-reserve']}); resets ${r['resets-at']}${defer}` };
+    }
+    projected[name] = p;
+    if (!binding || limit - p < binding.slack) binding = { name, slack: limit - p, projected: p, limit };
+  }
+  return { reason: null, projected, binding };
+}
+
+// the decision's usage block: the reading, its age, and per window the projection for the chosen profile (null if blocked)
+function usageBlock(cfg, reading, nowMs, chosenProjected) {
+  if (!reading) return { 'reading-ts': null, 'reading-age-minutes': null, windows: {} };
+  const windows = {};
+  for (const [name, w] of Object.entries(cfg.windows)) {
+    const r = reading.windows[name];
+    if (!r) continue;
+    windows[name] = { utilization: r.utilization, 'resets-at': r['resets-at'], projected: chosenProjected ? round4(chosenProjected[name]) : null, 'headroom-mtok': headroomMtok(w, r.utilization) };
+  }
+  return { 'reading-ts': reading.ts, 'reading-age-minutes': minutesOf(nowMs - isoMs(reading.ts)), windows };
+}
+
+export function usageSummary({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, now = new Date().toISOString() } = {}) {
+  const nowMs = isoMs(now);
+  if (nowMs === null) throw invalid('--now must be ISO-8601');
+  const cfg = usageConfig(loadPolicy(policyPath));
+  const readings = readUsage(traceDir);
+  const r = latestReading(readings, nowMs);
+  if (!r) return { reading: null, text: `no usage reading recorded in ${usagePath(traceDir)}; paste one with route.mjs usage <reading.json>\n` };
+  const age = nowMs - isoMs(r.ts);
+  const max = cfg['reading-max-age-minutes'];
+  const lines = [`latest usage reading ${r.ts} (age ${minutesOf(age)} min, max ${max})${age > max * 60000 ? `: stale; ${USAGE_REFRESH}` : ''}`];
+  for (const [name, w] of Object.entries(cfg.windows)) {
+    const x = r.windows[name];
+    if (!x) { lines.push(`  ${name}: not in the reading; ${USAGE_REFRESH}`); continue; }
+    if (!(nowMs < isoMs(x['resets-at']))) { lines.push(`  ${name}: utilization ${x.utilization}, resets ${x['resets-at']}: reset since the reading; ${USAGE_REFRESH}`); continue; }
+    lines.push(`  ${name}: utilization ${x.utilization}, resets ${x['resets-at']}, headroom ${headroomMtok(w, x.utilization)} Mtok ((${w['stop-at']} - ${w['lead-reserve']} - ${x.utilization}) / ${w['utilization-per-mtok']})`);
+  }
+  return { reading: r, text: `${lines.join('\n')}\n` };
+}
 
 function taskState(records, taskId, policy) {
   const recs = records.filter((r) => r['task-id'] === taskId);
@@ -508,7 +674,24 @@ function gate4(ctx, pr, id, kind, out) {
   if (!b) return `unknown price for ${pr.model}: the bound cannot be computed (no silent zero)`;
   out.bounds = b;
   out.note = `cash estimate ${usd(b.allIn)}: estimate only, never a strict cap in this host`;
+  if (ctx.usage) {
+    // the usage windows are this host's finite resource: a fresh reading, no reset since, and a projection within
+    // stop-at - lead-reserve for every window, over the same tokens the cash bound counts
+    const tokens = usageTokens(ctx, kind);
+    const u = usageWalk(ctx.usage.cfg, ctx.usage.reading, ctx.nowMs, tokens, ctx.deadlineMs);
+    if (u.reason) return u.reason;
+    out.usage = { tokens, projected: u.projected };
+    out.note += `; usage window ${u.binding.name} binds: projected ${round4(u.binding.projected)} <= ${round4(u.binding.limit)}`;
+  }
   return null;
+}
+
+// the tokens Gate 4 projects: the work for direct; work + the required reviewer's (the review median) + the brief
+// overhead for a delegate - the same count the cash bound uses
+function usageTokens(ctx, kind) {
+  if (kind === 'direct') return ctx.tokens;
+  const review = ctx.reviewer ? ctx.policy.categories.review['median-tokens'] : 0;
+  return ctx.tokens + review + ctx.policy.economics['delegate-overhead-tokens'];
 }
 
 function gate5(ctx, pr, id, kind) {
@@ -539,7 +722,7 @@ function evaluate(ctx, id, kind) {
   const b = out.bounds;
   return {
     id, kind, eligible: true, 'all-in-bound-usd': round4(b.allIn), 'work-bound-usd': round4(b.work),
-    'review-bound-usd': round4(b.review), 'overhead-bound-usd': round4(b.overhead), walkthrough, _allIn: b.allIn, _rate: b.rate
+    'review-bound-usd': round4(b.review), 'overhead-bound-usd': round4(b.overhead), walkthrough, _allIn: b.allIn, _rate: b.rate, _usage: out.usage ?? null
   };
 }
 
@@ -570,7 +753,7 @@ function reviewerFor(ctx, ids, leadId) {
 // ---------------------------------------------------------------------------------------------
 // decision
 // ---------------------------------------------------------------------------------------------
-export function computeDecision(req, policy, records = [], catMap = {}, { probe = null } = {}) {
+export function computeDecision(req, policy, records = [], catMap = {}, { probe = null, readings = [] } = {}) {
   validateRequest(req, policy);
   const optIns = optInsOf(policy, req.hostOptIns);
   const category = Object.hasOwn(policy.categories, req.category) ? policy.categories[req.category] : null;
@@ -590,7 +773,8 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     req, policy, category, st, nowMs, deadlineMs, deadlineIso, leadRate, reviewName,
     tokens: req.estimatedTokens ?? category?.['median-tokens'] ?? 0,
     requiredTools: req.requiredTools ?? category?.['required-tools'] ?? [],
-    reviewer: null, reviewWalk: {}
+    reviewer: null, reviewWalk: {},
+    usage: policy['usage-windows'] ? { cfg: policy['usage-windows'], reading: latestReading(readings, nowMs) } : null
   };
   const ids = req.candidates ?? policy.profiles.map((p) => p.id);
   if (reviewName) ({ reviewer: ctx.reviewer, walk: ctx.reviewWalk } = reviewerFor(ctx, ids, leadId));
@@ -630,6 +814,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
 
   const pr = chosen ? policy.profiles.find((p) => p.id === chosen.id) : null;
   const uncertainty = [CASH_UNCERTAINTY];
+  uncertainty.push(ctx.usage ? `usage windows: coefficients host-declared (${ctx.usage.cfg['coefficient-basis']})` : USAGE_OFF);
   if (optIns['nested-allowed']) uncertainty.push('nested-allowed opt-in refused: this host cannot produce or enforce a NestedBrief (spec-v2 §14)');
   if (req.uncertainty === 'high' && route !== 'speculative') uncertainty.push(`uncertainty high; speculative not used (${optIns.speculative ? 'fewer than two eligible delegates or call slots' : 'no host opt-in'})`);
   if (outside.length) uncertainty.push(`not among candidates: ${outside.join(', ')} would pass all five gates (hint only; the route stays blocked, and a fresh decision must list it as a candidate)`);
@@ -706,6 +891,8 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   if (brief) text += `Brief:\n${JSON.stringify(brief, null, 2)}\n`;
 
   const strip = (r) => Object.fromEntries(Object.entries(r).filter(([k]) => !k.startsWith('_') && k !== 'id'));
+  const usage = ctx.usage ? usageBlock(ctx.usage.cfg, ctx.usage.reading, nowMs, chosen?._usage?.projected ?? null) : null;
+  const usageFields = ctx.usage ? { 'usage-tokens': chosen?._usage?.tokens ?? null } : {};
   return {
     route, profile: route === 'blocked' ? null : chosen.id, 'profile-tuple': route === 'blocked' ? null : profileTuple(policy, pr),
     isolation, 'isolation-reason': isolationReason, owner, 'human-gate': optIns['human-gate'], 'nested-allowed': false,
@@ -714,7 +901,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     'eligible-ordered': eligible.map((r) => r.id), 'eligible-outside-candidates': outside, 'speculative-set': specSet, uncertainty,
     advisory: ADVISORY_TEXT, 'pending-proposals': pending, deadline: deadlineIso, 'deadline-capped': capped,
     'review-profile': ctx.reviewer?.id ?? null, 'review-candidates': ctx.reviewWalk, brief, 'brief-fingerprint': fingerprint, text,
-    counters: counters(st), ...(probed ? { probe: strip(probed) } : {})
+    counters: counters(st), usage, ...usageFields, ...(probed ? { probe: strip(probed) } : {})
   };
 }
 
@@ -728,7 +915,8 @@ function policyBindings(policy, policyPath) {
 export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE } = {}) {
   const policy = loadPolicy(policyPath);
   const records = readLedger(traceDir);
-  const d = computeDecision(req, policy, records, categoryMap(traceDir));
+  const readings = policy['usage-windows'] ? readUsage(traceDir) : [];
+  const d = computeDecision(req, policy, records, categoryMap(traceDir), { readings });
   const st = taskState(records, req.taskId, policy);
   const seq = st.lastSeq + 1;
   const { text, brief, 'brief-fingerprint': fp, counters: ctr, ...decision } = d;
@@ -752,6 +940,8 @@ export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TR
     'task-id': req.taskId, seq, kind: 'decision', ts: req.now, profile: d['profile-tuple'], counters: ctr,
     deadline: d.deadline, 'brief-fingerprint': fp, detail: `route ${d.route}`,
     'outcome-ref': null,
+    // additive (spec-v2 §13): the tokens Gate 4 projected for the chosen profile, so dispatch re-checks that count
+    ...('usage-tokens' in d ? { 'usage-tokens': d['usage-tokens'] } : {}),
     ...(d['speculative-set'] ? { 'speculative-profiles': d['speculative-set'].candidates.map((c) => c.profile), 'speculative-calls': d['speculative-set']['shared-budget'].calls } : {})
   });
   return { route: d.route, text, decision: d, brief, briefFingerprint: fp, decisionPath, record };
@@ -775,13 +965,13 @@ function storedDecision(traceDir, taskId, dec) {
 // gates.md 'Qualification, freshness and pre-dispatch binding' items 3-4: immediately before dispatch, re-walk the
 // stored request against the current policy, ledger and clock. Changed, expired or revoked evidence invalidates
 // the route; revocation always wins over the stored decision.
-function recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, projectStop, deviation }) {
+function recheck({ traceDir, policy, records, readings, taskId, dec, route, profileId, now, projectStop, deviation }) {
   const stored = storedDecision(traceDir, taskId, dec);
   // the re-walk sees the ledger as the decision did: the dispatches made under this same decision (the other members
   // of a speculative set) are its own consumption, not changed evidence; dispatch counts them against the slots itself
   const own = (r) => r['task-id'] === taskId && r.kind === 'dispatch' && r['decision-seq'] === dec.seq;
   // the stop rules are re-walked with the lead's current state, never the snapshot taken at decide time
-  const again = computeDecision({ ...stored.request, now, projectStop }, policy, records.filter((r) => !own(r)), {}, { probe: deviation ? profileId : null });
+  const again = computeDecision({ ...stored.request, now, projectStop }, policy, records.filter((r) => !own(r)), {}, { probe: deviation ? profileId : null, readings });
   if (deviation) {
     // a deviation is allowed only to a profile that passes Gates 1-4 on the same request (spec-v2 §11.2, §11.10, §12)
     const p = again.probe;
@@ -872,7 +1062,14 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   const sibling = (d) => route === 'speculative' && asDecided && d['decision-seq'] === dec.seq;
   const open = st.records.find((d) => d.kind === 'dispatch' && !reconciled(d) && !sibling(d));
   if (open) throw refused(`previous dispatch of ${tupleId(open.profile)} (seq ${open.seq}) has no outcome; reconcile before any re-dispatch (spec-v2 §12)`);
-  recheck({ traceDir, policy, records, taskId, dec, route, profileId, now, projectStop, deviation: !asDecided });
+  // the usage windows at dispatch time, against the token count the decision projected: a decision taken minutes
+  // earlier can be stale by now, or the window can have filled since (the recheck below walks Gate 4 again too)
+  const readings = policy['usage-windows'] ? readUsage(traceDir) : [];
+  if (policy['usage-windows'] && isInt(dec['usage-tokens'])) {
+    const u = usageWalk(policy['usage-windows'], latestReading(readings, isoMs(now)), isoMs(now), dec['usage-tokens'], isoMs(dec.deadline));
+    if (u.reason) throw refused(`usage check refused ${profileId} (decision seq ${dec.seq}, usage-tokens ${dec['usage-tokens']}): ${u.reason}`);
+  }
+  recheck({ traceDir, policy, records, readings, taskId, dec, route, profileId, now, projectStop, deviation: !asDecided });
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;
   return appendRecord(traceDir, {
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),
@@ -992,8 +1189,13 @@ export function main(argv = process.argv.slice(2)) {
       process.stdout.write(status(a, base).text);
     } else if (cmd === 'rate') {
       process.stdout.write(rate({ ...base, now }).text);
+    } else if (cmd === 'usage' && a) {
+      const r = recordUsage(readJsonFile(a, 'usage reading'), { ...base, now });
+      process.stdout.write(`usage reading recorded: ${r.ts} ${Object.entries(r.windows).map(([w, x]) => `${w} ${x.utilization} (resets ${x['resets-at']})`).join(', ')}\n`);
+    } else if (cmd === 'usage') {
+      process.stdout.write(usageSummary({ ...base, now }).text);
     } else {
-      throw invalid('usage: route.mjs decide <request.json> | dispatch <task-id> <profile-id> --project-stop <json> | outcome <outcome.json> | status <task-id> | rate  [--trace <dir>] [--policy <file>] [--now <iso>] [--deviation <reason>]');
+      throw invalid('usage: route.mjs decide <request.json> | dispatch <task-id> <profile-id> --project-stop <json> | outcome <outcome.json> | status <task-id> | rate | usage [<reading.json>]  [--trace <dir>] [--policy <file>] [--now <iso>] [--deviation <reason>]');
     }
     return 0;
   } catch (e) {

@@ -30,5 +30,14 @@
     { "id": "cc-haiku-low", "model": "claude-haiku-5-5", "effort": "low", "config": "workflow-subagent/structured-output@1", "tools": true, "vision": false, "context-tested": 1000000, "headroom-tested": 92000, "qualified-for": ["docs-mechanical"], "evidence": ["one completed mechanical extraction dispatch this session (91k tokens, done)"], "qualified-at": "2026-10-17", "expires": "2027-01-15", "reviewer": "host-declared (lead), not independent" }
   ],
   "economics": { "delegate-overhead-tokens": 20000, "lead-direct-profile": "cc-fable-xhigh", "direct-max-tokens": 15000, "note": "direct (the lead inline) is eligible only for work bounded by direct-max-tokens; above that the lead's context is the scarce resource and delegation is compared all-in: worker bound + required review bound + brief overhead at the lead's rates" },
-  "host-opt-ins": { "speculative": false, "nested-allowed": false, "max-nesting-depth": 0, "human-gate": "none" }
+  "host-opt-ins": { "speculative": false, "nested-allowed": false, "max-nesting-depth": 0, "human-gate": "none" },
+  "usage-windows": {
+    "source": "claude-code-remote list_events kinds=[\"rate_limit_event\"] -> rate_limit_info.unifiedWindows; the lead pastes it with route.mjs usage <reading.json>",
+    "reading-max-age-minutes": 30,
+    "windows": {
+      "five_hour": { "length-seconds": 18000, "stop-at": 0.90, "lead-reserve": 0.05, "utilization-per-mtok": 0.24 },
+      "seven_day": { "length-seconds": 604800, "stop-at": 0.90, "lead-reserve": 0.05, "utilization-per-mtok": 0.06 }
+    },
+    "coefficient-basis": "host-declared 2026-10-17 from two coarse observations (README 'Usage windows'); rate proposes revisions from paired readings"
+  }
 }
