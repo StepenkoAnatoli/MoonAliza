@@ -1433,11 +1433,11 @@ test('rate: observed coefficients from consecutive readings and the outcome toke
   assert.deepEqual(r.stats.usage, {
     five_hour: {
       observed: [{ from: at(0), to: at(60), delta: 0.12, tokens: 400000, coefficient: 0.3 }],
-      'max-observed': 0.3, current: 0.24, skipped: { reset: 1, 'unknown-tokens': 1, 'zero-tokens': 1 }
+      'max-observed': 0.3, current: 0.24, skipped: { reset: 1, 'unknown-tokens': 1, 'zero-tokens': 1, 'negative-delta': 0 }
     },
     seven_day: {
       observed: [{ from: at(0), to: at(60), delta: 0.03, tokens: 400000, coefficient: 0.075 }, { from: at(120), to: at(150), delta: 0.0015, tokens: 100000, coefficient: 0.015 }],
-      'max-observed': 0.075, current: 0.06, skipped: { reset: 0, 'unknown-tokens': 1, 'zero-tokens': 1 }
+      'max-observed': 0.075, current: 0.06, skipped: { reset: 0, 'unknown-tokens': 1, 'zero-tokens': 1, 'negative-delta': 0 }
     }
   });
   assert.match(r.text, /^PROPOSAL usage-windows\.windows\.five_hour\.utilization-per-mtok: 0\.24 -> 0\.3 \(max observed exceeds the current by more than 10 %; upward at once\); not applied — the lead ratifies by editing host-policy\.json$/m);
@@ -1571,4 +1571,31 @@ test('SW-2: Gate 4 counts the usage-tokens of every dispatch made since the read
   const u = decideOn(req({ taskId: 'unk-b', now: at(2) }), t3);
   assert.equal(u.route, 'blocked');
   assert.equal(u.decision.candidates['cc-opus-high'].reason, 'usage reading 2026-10-17T19:00:00Z predates dispatch seq 2 of unk-a, whose usage-tokens are unknown; refresh with route.mjs usage');
+});
+
+test('SW-3: rate skips a pair whose utilization fell (counted as negative-delta) and never proposes a coefficient <= 0', () => {
+  // five_hour falls 0.5 -> 0.45 -> 0.40 -> 0.35 under one resets-at, a 500k-token unit between each pair
+  const trace = tmp();
+  const five = [0.5, 0.45, 0.4, 0.35];
+  const seven = [0.05, 0.08, 0.11, 0.14];
+  readingAt(trace, at(0), five[0], seven[0]);
+  for (let n = 1; n <= 3; n += 1) {
+    unitAt(trace, `neg-${n}`, at(30 * n - 15), 500000);
+    readingAt(trace, at(30 * n), five[n], seven[n]);
+  }
+  const r = rateOn(trace);
+  assert.deepEqual(r.stats.usage.five_hour, { observed: [], 'max-observed': null, current: 0.24, skipped: { reset: 0, 'unknown-tokens': 0, 'zero-tokens': 0, 'negative-delta': 3 } });
+  assert.deepEqual(r.stats.usage.seven_day.observed.map((o) => o.coefficient), [0.06, 0.06, 0.06]);
+  assert.deepEqual(r.usageProposals, []);
+  // an unchanged utilization is an observation of 0, and three of them never propose 0
+  const flat = tmp();
+  readingAt(flat, at(0), 0.5, seven[0]);
+  for (let n = 1; n <= 3; n += 1) {
+    unitAt(flat, `flat-${n}`, at(30 * n - 15), 500000);
+    readingAt(flat, at(30 * n), 0.5, seven[n]);
+  }
+  const f = rateOn(flat);
+  assert.deepEqual(f.stats.usage.five_hour.observed.map((o) => o.coefficient), [0, 0, 0]);
+  assert.deepEqual(f.usageProposals, []);
+  assert.match(f.text, /^no proposals$/m);
 });

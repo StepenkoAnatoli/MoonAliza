@@ -1187,7 +1187,7 @@ function usageLearning(cfg, readings, records) {
   const proposals = [];
   for (const [name, w] of Object.entries(cfg.windows)) {
     const observed = [];
-    const skipped = { reset: 0, 'unknown-tokens': 0, 'zero-tokens': 0 };
+    const skipped = { reset: 0, 'unknown-tokens': 0, 'zero-tokens': 0, 'negative-delta': 0 };
     for (let i = 1; i < readings.length; i += 1) {
       const a = readings[i - 1];
       const b = readings[i];
@@ -1199,6 +1199,9 @@ function usageLearning(cfg, readings, records) {
       const tokens = inside.reduce((sum, o) => sum + o.tokens, 0);
       if (tokens === 0) { skipped['zero-tokens'] += 1; continue; }
       const delta = rb.utilization - ra.utilization;
+      // utilization that fell under one resets-at (a rolling window shedding old usage, or a mistaken paste) says
+      // nothing about what the tokens cost: skipped and counted, never a negative coefficient (SW-3)
+      if (delta < 0) { skipped['negative-delta'] += 1; continue; }
       observed.push({ from: a.ts, to: b.ts, delta: round6(delta), tokens, coefficient: round6(delta / (tokens / 1e6)) });
     }
     const current = w['utilization-per-mtok'];
@@ -1207,7 +1210,8 @@ function usageLearning(cfg, readings, records) {
     const last = observed.slice(-3);
     if (max !== null && max > current * 1.1) {
       proposals.push({ window: name, from: current, to: max, direction: 'up', reason: 'max observed exceeds the current by more than 10 %; upward at once' });
-    } else if (last.length === 3 && last.every((o) => o.coefficient < current * 0.9)) {
+    } else if (last.length === 3 && last.every((o) => o.coefficient < current * 0.9) && Math.max(...last.map((o) => o.coefficient)) > 0) {
+      // validatePolicy refuses a coefficient <= 0, so none is ever proposed (SW-3)
       proposals.push({ window: name, from: current, to: Math.max(...last.map((o) => o.coefficient)), direction: 'down', reason: 'the last three observations are all below 90 % of the current; downward slowly' });
     }
   }

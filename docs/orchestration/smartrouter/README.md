@@ -301,12 +301,14 @@ cannot be projected.
 them (same `resets-at`, not passed by the later reading), it computes
 `observed = (u2 - u1) / (T / 1e6)`, where `T` sums the `tokens` of the outcome records with `ts` in `(ts1, ts2]`
 (one outcome per dispatch). A pair is skipped and counted under `skipped` when any outcome in it has unknown tokens,
-or when `T` = 0 (only unrecorded tokens moved the window). `qualification-stats.json` gets
+when `T` = 0 (only unrecorded tokens moved the window), or when utilization fell under one `resets-at`
+(`negative-delta`: a rolling window shedding old usage, or a mistaken paste, says nothing about what the tokens
+cost). `qualification-stats.json` gets
 `usage: { <w>: { observed: [{ from, to, delta, tokens, coefficient }], max-observed, current, skipped } }`. `rate`
 prints `PROPOSAL usage-windows.windows.<w>.utilization-per-mtok: <current> -> <max-observed>` when the maximum
 observed exceeds the current by more than 10 % (upward at once: the conservative direction). It proposes a lower
 value only when the last three observations are all below 90 % of the current, and then proposes the highest of
-those three (downward slowly). The lead ratifies by editing the policy, as for every other proposal.
+those three (downward slowly), and never a value <= 0, which the policy refuses. The lead ratifies by editing the policy, as for every other proposal.
 
 ## Policy findings (host-policy-1)
 
