@@ -179,7 +179,7 @@ the cell representative in kind. The size difference is held by three things: th
 after two consecutive `verification-failed` outcomes.
 
 **The routing consequence.** A default `fix` request (193000 tokens) fits only the fix-qualified profiles whose
-headroom admits it: `cc-haiku-high` (261k), `cc-opus-xhigh` (246k), `cc-opus-high` (771k), `cc-fable-high` (352k)
+headroom admits it: `cc-haiku-high` (261k), `cc-opus-xhigh` (246k), `cc-opus-high` (848k), `cc-fable-high` (352k)
 (and the lead, whose direct path stops at 15k). Every other fix-qualified profile fails Gate 2 on its headroom. Each
 delegate carries the same required review at `cc-opus-high` ($4.18 for the 209000-token review median) and $1.00 of
 brief overhead, so the cheapest worker wins: **a default `fix` request now routes to `cc-haiku-high`**. `decide` on
@@ -222,7 +222,7 @@ Gate 5's reason: `cc-haiku-high` has the lowest all-in bound among the four elig
 | `cc-fable-medium` | medium | review, fix, pin-tests | 172k | PASS / PASS / PASS | PASS / PASS / PASS | calibration-1 + calibration-2 |
 | `cc-opus-max` | max | none | 307k | - / - / - | - / - / PASS | calibration-2 review only: one pass, not a qualification |
 | `cc-opus-xhigh` | xhigh | review, fix, pin-tests | 246k | PASS / PASS / PASS | PASS / PASS / PASS | calibration-1 + calibration-2 (new in host-policy-3) |
-| `cc-opus-high` | high | build-core, build-ui, build-tests, review, fix, research-collect, pin-tests | 771k | PASS / PASS / PASS | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 + calibration-2; headroom from the accepted sr-policy-2 outcome (770527 tokens) |
+| `cc-opus-high` | high | build-core, build-ui, build-tests, review, fix, research-collect, pin-tests | 848k | PASS / PASS / PASS | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 + calibration-2; headroom from the accepted sr-policy-2 outcome (770527 tokens) |
 | `cc-opus-medium` | medium | fix, pin-tests | 154k | PASS / PASS / PASS | PASS / PASS / FAIL | calibration-1 + calibration-2; review: a pass, then a FAIL (G-1 recorded, not applied) |
 | `cc-sonnet-xhigh` | xhigh | none | 328k | - / - / - | - / - / PASS | calibration-2 review only: one pass, not a qualification |
 | `cc-sonnet-high` | high | fix, pin-tests | 183k | PASS / PASS / FAIL | PASS / PASS / PASS | calibration-1 + calibration-2; review: a FAIL, then a pass |

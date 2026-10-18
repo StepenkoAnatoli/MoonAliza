@@ -363,7 +363,7 @@
    "tools": true,
    "vision": true,
    "context-tested": 1000000,
-   "headroom-tested": 771000,
+   "headroom-tested": 848000,
    "qualified-for": [
     "build-core",
     "build-ui",
@@ -383,7 +383,8 @@
     "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json)",
     "calibration-2: pin-tests PASS (n=1)",
     "calibration-2: fix PASS (n=1)",
-    "calibration-2: review PASS (n=1)"
+    "calibration-2: review PASS (n=1)",
+    "sr-policy-3 outcome accepted 2026-10-18T02:20:00Z: 847844 tokens completed (trace/outcomes/sr-policy-3-5.json); rate proposed headroom-tested 771000 -> 848000, ratified by the lead"
    ],
    "qualified-at": "2026-10-17",
    "expires": "2027-01-15",

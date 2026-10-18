@@ -1809,10 +1809,22 @@ const CAL_TASKS = [['pin-tests', 'pin', (o) => o.pin.score], ['fix', 'fix', (o) 
 const calProfile = (policy, o) => policy.profiles.find((x) => x.model === o.usage.pin.model && x.effort === o.profile.split('-').pop()) ?? null;
 // the largest tokens an accepted outcome in the committed ledger completed, per profile id (outcome records carry the
 // additive field tokens, null when unknown)
-function acceptedTokens() {
+// The committed ledger grows with every unit, so the tests that read it bind to an instant: records after `cutoff` are
+// left out. 2026-10-18T01:45:00Z is after every record the host-policy-2 fixture was frozen with (sr-policy-3 seq 1-4)
+// and before that unit's accepted outcome (seq 5, 02:20), which raised cc-opus-high again (the lead's P3-L2).
+const FREEZE_HP2 = '2026-10-18T01:45:00Z';
+function frozenTrace(cutoff) {
+  const dir = tmp();
+  cpSync(join(HERE, 'trace'), dir, { recursive: true });
+  const kept = readFileSync(join(dir, 'ledger.jsonl'), 'utf8').split('\n').filter((l) => l && JSON.parse(l).ts <= cutoff);
+  writeFileSync(join(dir, 'ledger.jsonl'), kept.join('\n') + '\n');
+  return dir;
+}
+function acceptedTokens(cutoff) {
   const max = {};
   for (const r of readLedger(join(HERE, 'trace'))) {
     if (r.kind !== 'outcome' || !/^outcome accepted /.test(r.detail) || !Number.isInteger(r.tokens)) continue;
+    if (cutoff && !(r.ts <= cutoff)) continue;
     const id = /^\(([^,]+),/.exec(r.profile)[1];
     max[id] = Math.max(max[id] ?? 0, r.tokens);
   }
@@ -1881,7 +1893,7 @@ test('host-policy-2: the pin-tests category and qualified-for per the lead\'s ru
   // headroom is the largest completed run, rounded up to the next thousand (the host-policy-1 basis: a 91k run gave
   // 92000), and never lowered: a calibration run, or an accepted outcome in the ledger (the policy maintenance of
   // 490b7ed raised cc-opus-high to 771000 from the accepted sr-policy-2 outcome, 770527 tokens)
-  const accepted = acceptedTokens();
+  const accepted = acceptedTokens(FREEZE_HP2);
   for (const o of Object.values(CAL1)) {
     const pr = calProfile(live, o);
     if (!pr) continue;
@@ -2111,7 +2123,7 @@ const HP3_TABLE = {
   'cc-sonnet-medium': { add: ['fix'], headroom: 128000 },
   'cc-sonnet-high': { add: ['fix'], headroom: 183000 },
   'cc-opus-medium': { add: ['fix'], headroom: 154000 },
-  'cc-opus-high': { add: [], headroom: 771000 },
+  'cc-opus-high': { add: [], headroom: 848000 },   // rate's proposal on the accepted sr-policy-3 outcome (847844 tokens), ratified
   'cc-opus-xhigh': { new: ['review', 'fix', 'pin-tests'], headroom: 246000 },
   'cc-fable-medium': { add: ['review', 'fix'], headroom: 172000 },
   'cc-fable-high': { add: [], headroom: 352000 },
@@ -2342,8 +2354,7 @@ const HEADROOM_SUFFIX = 'not applied — the lead ratifies by editing host-polic
 test('rate: an accepted outcome above headroom-tested proposes the raise (the stale cc-opus-high headroom behind sr-policy-3 seq 1); unknown or lower tokens propose nothing', () => {
   // the committed trace under the policy the sr-policy-2 unit ran on (host-policy-1, cc-opus-high 514000): the
   // accepted sr-policy-2 outcome completed 770527 tokens, and the raise the lead applied by hand in 490b7ed is proposed
-  const real = tmp();
-  cpSync(join(HERE, 'trace'), real, { recursive: true });
+  const real = frozenTrace(FREEZE_HP2);   // the sr-policy-3 outcome (847844 tokens, after the freeze) is left out
   const policyBefore = readFileSync(FIXTURE_POLICY_PATH, 'utf8');
   const r1 = cli(['rate', '--trace', real, '--now', '2026-10-18T02:00:00Z', '--policy', FIXTURE_POLICY_PATH]);
   assert.equal(r1.code, 0, r1.stderr);
