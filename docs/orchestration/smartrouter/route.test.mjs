@@ -3921,3 +3921,81 @@ test('host-policy-6 routing (E6): fix@T1 -> cc-haiku-high, fix@T2 -> cc-opus-hig
     assert.deepEqual([decided.bindings['policy-revision'], decided.decision.route, decided.decision.profile], ['host-policy-6', route, profile], category);
   }
 });
+
+// E7: every command loads the policy through loadPolicy, so an unresolvable reference stops each of them (exit 2) before
+// it reads or writes anything; no new command or flag
+test('E7: decide, dispatch, outcome, status, rate and usage all validate the policy - an unresolvable reference is exit 2 with the reason, and nothing is written', () => {
+  const bad = withLine('cc-opus-high', 'outcome: ref-fail fix@T2 accepted 2026-10-18 (trace/outcomes/ref-fail-3.json)');
+  const reason = /^route\.mjs: invalid policy: profile cc-opus-high evidence 'outcome: ref-fail fix@T2 accepted 2026-10-18 \(trace\/outcomes\/ref-fail-3\.json\)' cannot be resolved: trace\/outcomes\/ref-fail-3\.json records outcome verification-failed, not accepted\n$/;
+  // a task decided and dispatched under a valid policy, so every command has something to act on
+  const trace = tmp();
+  const good = withLine('cc-opus-high', REF_T2);
+  const d = decide(hp5Req('fix', { taskId: 'e7-1', difficultyTier: 'T2' }), { traceDir: trace, policyPath: good });
+  assert.equal(cli(['dispatch', 'e7-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--policy', good]).code, 0);
+  const before = readFileSync(join(trace, 'ledger.jsonl'), 'utf8');
+  const out = writeJson(outcome({ 'task-id': 'e7-1', outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint }));
+  for (const args of [
+    ['decide', writeJson(hp5Req('fix', { taskId: 'e7-2', difficultyTier: 'T1' }))],
+    ['dispatch', 'e7-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--now', NOW],
+    ['outcome', out, '--now', NOW],
+    ['status', 'e7-1'],
+    ['rate', '--now', NOW],
+    ['usage', '--now', NOW]
+  ]) {
+    const r = cli([...args, '--trace', trace, '--policy', bad]);
+    assert.equal(r.code, 2, `${args[0]}: ${r.stderr}`);
+    assert.match(r.stderr, reason, args[0]);
+  }
+  assert.equal(readFileSync(join(trace, 'ledger.jsonl'), 'utf8'), before, 'nothing appended');
+  assert.ok(!existsSync(join(trace, 'qualification-stats.json')), 'rate wrote nothing');
+  assert.ok(!existsSync(join(trace, 'decisions', 'e7-2-1.json')) && !existsSync(join(trace, 'outcomes')), 'decide and outcome wrote nothing');
+});
+
+// E7: rate keeps proposing from outcomes as it does; a qualify proposal's PROPOSAL line now ends with the typed references
+// the lead would paste (one per accepted outcome behind it, as JSON strings for the evidence array), each resolvable
+// against the store beside the policy
+test('E7: a qualify proposal ends with the typed reference lines the lead would paste - the decision\'s tier when it declares one, bare when it does not - and pasted, they resolve and the proposal is gone', () => {
+  // tiered: the three hand-recorded T2 fixes on cc-haiku-high of the tiers D7 test, in a layout with the policy beside trace/
+  const dir = tmp();
+  const policyPath = join(dir, 'host-policy.json');
+  writeFileSync(policyPath, readFileSync(TIERED_PATH));
+  const q = join(dir, 'trace');
+  const pol = loadPolicy(policyPath);
+  for (const id of ['q-1', 'q-2', 'q-3']) {
+    const d = decide(reqFor(pol, 'fix', { taskId: id, difficultyTier: 'T2', now: LATE }), { traceDir: q, policyPath });
+    const h = profileOf(pol, 'cc-haiku-high');
+    appendFileSync(join(q, 'ledger.jsonl'), `${JSON.stringify({ 'task-id': id, seq: 2, kind: 'dispatch', ts: LATE, profile: `(${h.id}, ${pol.harness.id}, anthropic, ${h.model}, ${h.effort}, ${h.config})`, counters: { 'calls-used': 1, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: d.decision.deadline, 'brief-fingerprint': null, detail: 'host deviation: qualification run recorded by hand', 'outcome-ref': null, deviation: true, 'decision-seq': 1 })}\n`);
+    recordOutcome(outcome({ 'task-id': id, outcome: 'accepted', 'owner-profile': 'cc-haiku-high', 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: q, policyPath, now: LATE });
+  }
+  const lines = ['q-1', 'q-2', 'q-3'].map((id) => `outcome: ${id} fix@T2 accepted 2026-10-18 (trace/outcomes/${id}-3.json)`);
+  const r = cli(['rate', '--trace', q, '--now', LATE, '--policy', policyPath]);
+  assert.equal(r.code, 0, r.stderr);
+  const want = `PROPOSAL qualify cc-haiku-high for fix@T2: 3 accepted while unqualified (host deviations: q-1, q-2, q-3); not applied — the lead ratifies by editing host-policy.json; typed evidence to paste: ${lines.map((l) => JSON.stringify(l)).join(', ')}`;
+  assert.ok(r.stdout.split('\n').includes(want), r.stdout);
+  const doc = JSON.parse(readFileSync(join(q, 'qualification-stats.json'), 'utf8'));
+  assert.deepEqual(doc.proposals.map((p) => [p.kind, p.category, p.references]), [['qualify', 'fix@T2', lines]]);
+  // pasted (the paste is valid JSON array elements) with the entry the lead would ratify, they resolve and back it
+  const pasted = JSON.parse(readFileSync(policyPath, 'utf8'));
+  const h = profileOf(pasted, 'cc-haiku-high');
+  h['qualified-for'] = h['qualified-for'].map((c) => (c === 'fix' ? 'fix@T2' : c));
+  h.evidence.push(...JSON.parse(`[${want.slice(want.indexOf('paste: ') + 'paste: '.length)}]`));
+  writeFileSync(policyPath, JSON.stringify(pasted, null, 2));
+  assert.ok(loadPolicy(policyPath));
+  assert.ok(!rate({ traceDir: q, policyPath, now: LATE }).proposals.some((p) => p.kind === 'qualify'), 'qualified: no proposal');
+  // untiered: the hand-recorded build-core runs on cc-fable-high (host-policy-1); the decisions carry no tier, so the lines are bare
+  const dir2 = tmp();
+  const policy2 = join(dir2, 'host-policy.json');
+  writeFileSync(policy2, POLICY_TEXT);
+  const t2 = join(dir2, 'trace');
+  for (const id of ['u-1', 'u-2', 'u-3']) handQualificationRun(t2, id, 'build-core', 'cc-fable-high', 'accepted');
+  const r2 = rate({ traceDir: t2, policyPath: policy2, now: NOW });
+  const lines2 = ['u-1', 'u-2', 'u-3'].map((id) => `outcome: ${id} build-core accepted 2026-10-17 (trace/outcomes/${id}-3.json)`);
+  assert.ok(r2.text.split('\n').includes(`PROPOSAL qualify cc-fable-high for build-core: 3 accepted while unqualified (host deviations: u-1, u-2, u-3); not applied — the lead ratifies by editing host-policy.json; typed evidence to paste: ${lines2.map((l) => JSON.stringify(l)).join(', ')}`), r2.text);
+  const p2 = JSON.parse(POLICY_TEXT);
+  profileOf(p2, 'cc-fable-high')['qualified-for'].push('build-core');
+  profileOf(p2, 'cc-fable-high').evidence = [...(profileOf(p2, 'cc-fable-high').evidence ?? []), ...lines2];
+  writeFileSync(policy2, JSON.stringify(p2, null, 2));
+  assert.ok(loadPolicy(policy2));
+  // demotion proposals carry no references (nothing to paste)
+  assert.ok(rate({ traceDir: frozenTrace(FREEZE_HP3), policyPath: HP3_POLICY_PATH, now: LATE }).proposals.every((p) => p.kind !== 'demote' || p.references === undefined));
+});

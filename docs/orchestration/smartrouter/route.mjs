@@ -13,7 +13,7 @@
 // Exit: 0 done (any decided route, blocked included), 2 invalid input, 3 refused, 4 ledger integrity.
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -763,7 +763,7 @@ function latestOutcomes(records) {
 // under an enforced policy the streams are per (profile, category, tier) (D7, proposal 2.3-2.4): stats keys and proposals
 // read '<category>@T<k>'; a profile is qualified at tier k when it holds the category at k or above. Untiered: per
 // (profile, category), as before
-function learn(policy, records, catMap) {
+function learn(policy, records, catMap, reference = () => null) {
   const tiered = tiersEnforced(policy);
   const stats = {};
   const streams = {};
@@ -773,11 +773,13 @@ function learn(policy, records, catMap) {
     const pid = tupleId(r.profile);
     if (!value || !pid) continue;
     const m = catMap[r['task-id']];
-    const entry = typeof m === 'string' ? { category: m, tier: 'T1', tiers: {} } : m;
+    const entry = typeof m === 'string' ? { category: m, tier: 'T1', tiers: {}, declared: {}, latestDeclared: null } : m;
     const cat = entry?.category ?? 'unknown';
     const d = dispatchBySeq.get(`${r['task-id']}#${r['dispatch-seq']}`);
     // the tier of the decision the dispatch was made under, else the task's (a dispatch recorded without decision-seq)
     const tier = (d && entry?.tiers?.[d['decision-seq']]) || entry?.tier || 'T1';
+    // the tier that decision declares, null for none: a typed reference to this outcome carries it, or none (E1, E7)
+    const declared = (d && entry?.declared && Object.hasOwn(entry.declared, d['decision-seq']) ? entry.declared[d['decision-seq']] : entry?.latestDeclared) ?? null;
     const label = tiered && cat !== 'unknown' ? `${cat}@${tier}` : cat;
     stats[pid] ??= {};
     stats[pid][label] ??= { ...Object.fromEntries(OUTCOMES.map((o) => [o, 0])), deviations: 0 };
@@ -786,7 +788,7 @@ function learn(policy, records, catMap) {
     if (d && isDeviation(d)) s.deviations += 1;
     streams[pid] ??= {};
     streams[pid][label] ??= { cat, tier, list: [] };
-    streams[pid][label].list.push({ value, task: r['task-id'], ms: isoMs(r.ts) });
+    streams[pid][label].list.push({ value, task: r['task-id'], ms: isoMs(r.ts), seq: r.seq, declared });
   }
   const proposals = [];
   for (const pid of Object.keys(streams).sort()) {
@@ -809,8 +811,11 @@ function learn(policy, records, catMap) {
         if (hit) proposals.push({ kind: 'demote', profile: pid, category: label, reason: `2 consecutive verification-failed (${hit.join(', ')})` });
         else if (overrun.length) proposals.push({ kind: 'demote', profile: pid, category: label, reason: `cost-overrun (${overrun.join(', ')})` });
       } else {
-        const acc = list.filter((o) => o.value === 'accepted').map((o) => o.task);
-        if (acc.length >= 3) proposals.push({ kind: 'qualify', profile: pid, category: label, reason: `${acc.length} accepted while unqualified (host deviations: ${acc.join(', ')})` });
+        const accepted = list.filter((o) => o.value === 'accepted');
+        const acc = accepted.map((o) => o.task);
+        // E7: the typed references the lead would paste, one per accepted outcome behind the proposal
+        const references = accepted.map((o) => reference(o, cat)).filter(Boolean);
+        if (acc.length >= 3) proposals.push({ kind: 'qualify', profile: pid, category: label, reason: `${acc.length} accepted while unqualified (host deviations: ${acc.join(', ')})`, ...(references.length ? { references } : {}) });
       }
     }
   }
@@ -1582,7 +1587,14 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   if (isoMs(now) === null) throw invalid('--now must be ISO-8601');
   const policy = loadPolicy(policyPath);
   const records = readLedger(traceDir);
-  const { stats, proposals } = learn(policy, records, categoryMap(traceDir));
+  // E7: a typed reference to an outcome record, its path relative to the policy file's directory (where E1 resolves it)
+  const policyDir = dirname(resolve(policyPath));
+  const reference = (o, category) => {
+    if (!isInt(o.seq, 1) || o.ms === null) return null;
+    const path = relative(policyDir, join(resolve(traceDir), 'outcomes', `${o.task}-${o.seq}.json`)).split(sep).join('/');
+    return `outcome: ${o.task} ${category}${o.declared ? `@${o.declared}` : ''} accepted ${isoOf(o.ms).slice(0, 10)} (${path})`;
+  };
+  const { stats, proposals } = learn(policy, records, categoryMap(traceDir), reference);
   const learned = policy['usage-windows'] ? usageLearning(policy['usage-windows'], readUsage(traceDir), records) : null;
   const usageProposals = learned ? learned.proposals : [];
   const calibration = calibrationEvidence(policy, traceDir);
@@ -1606,7 +1618,7 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const flags = expiryFlags(policy, isoMs(now));
   const lines = [`${statsPath} regenerated (${doc['outcomes-counted']} outcomes)`];
   if (calibration) lines.push(...calibration.lines);
-  for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json`);
+  for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json${p.references ? `; typed evidence to paste: ${p.references.map((x) => JSON.stringify(x)).join(', ')}` : ''}`);
   for (const h of headroom) lines.push(`PROPOSAL profiles.${h.profile}.headroom-tested: ${h.from} -> ${h.to} (accepted outcome ${h.task} completed ${h.tokens} tokens); not applied — the lead ratifies by editing host-policy.json`);
   for (const p of usageProposals) lines.push(`PROPOSAL usage-windows.windows.${p.window}.utilization-per-mtok: ${p.from} -> ${p.to} (${p.reason}); not applied — the lead ratifies by editing host-policy.json`);
   for (const f of flags) lines.push(`FLAG ${f.profile}: ${f.reason}`);
