@@ -160,7 +160,7 @@ State:
 - Usage 17:28:39Z recorded with `route.mjs usage` (plan card via get_usage, as at 16:02Z): five_hour 0.09 (resets 19:20Z, headroom 11.2 Mtok), seven_day 0.71 (resets 2026-10-24T18:00Z, headroom 6 Mtok), weekly Fable 0.76. Both under 0.85; nothing launched.
 
 Decisions and why:
-- #104 accepted as opened, not reopened or reverted: its head is the verified `41f7366` and its body is the prepared one. This ledger does not record the operator's go; the opening session does.
+- #104 opened on the operator's go, relayed by the originating session at 17:25Z: "Go: push hosts/claude-code-revision-4 and open the draft refresh PR with reports/sr-refresh-pr-body.md." Accepted as opened, not reopened or reverted: its head is the verified `41f7366` and its body is the prepared one.
 - #104 stays a draft until #101's delta review, because the `trace/calibration-3/` resync after that review is a stated limit in its body (17:15 decision).
 
 Open items (numbering as at 15:55):
@@ -172,3 +172,5 @@ Open items (numbering as at 15:55):
 6. #103's stale body line for #102: unchanged.
 
 Before any launch: refresh the reading (this one is stale at 17:58:39Z); stop at 0.90, launch nothing past 0.85.
+
+Update 17:35Z (operator decision, relayed by the originating session): SmartRouter #100, #101 and #102 go into main now, without the delta reviews ("incorporate 100-101-102"; offered the choices, the operator picked "Merge them into main"). The originating session does the merges and updates #104 afterwards; this session does not push to, comment on or merge those PRs, nor touch #104. Open item 1 becomes: merged without delta review, by operator decision 2026-10-18. At 17:35Z: #100 MERGED 17:31:07Z (`2e30291`); #101 MERGED 17:33:30Z (`72fe412`, head `5e18125`); #102 open, head now `26cd65d`. The next resume point records #102's merge commit and #104's update.
