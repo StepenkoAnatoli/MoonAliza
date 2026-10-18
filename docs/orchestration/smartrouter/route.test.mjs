@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync, cpSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync, cpSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -3575,4 +3575,118 @@ test('fixture: trace/policies/host-policy-5.json is the pre-revision policy, byt
   }
   assert.equal(loadPolicy(HP5_POLICY_PATH)['policy-revision'], 'host-policy-5');
   assert.equal(JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8')).request, undefined, 'a policy, never a decision');
+});
+
+// E1: an outcome store of real decide - dispatch - outcome cycles (decisions, outcomes, ledger under trace/) and the
+// policies written beside it, so a reference's path 'trace/outcomes/<task>-<seq>.json' resolves against the policy
+// file's directory. ref-t2: a fix decided at T2 (host-policy-5, enforced), accepted; ref-fail: the same, verification-
+// failed; ref-pre: a fix decided under the untiered host-policy-4 (no difficulty-tier), accepted. All at LATE (2026-10-18)
+const REF_STORE = tmp();
+const REF_TRACE = join(REF_STORE, 'trace');
+let refStoreBuilt = false;
+function refStore() {
+  if (refStoreBuilt) return;
+  tieredCycle(REF_TRACE, HP5_OFF_PATH, 'ref-t2', 'fix', 'T2', 'cc-opus-high', 'accepted');
+  tieredCycle(REF_TRACE, HP5_OFF_PATH, 'ref-fail', 'fix', 'T2', 'cc-opus-high', 'verification-failed');
+  tieredCycle(REF_TRACE, HP4_OFF_PATH, 'ref-pre', 'fix', null, 'cc-haiku-high', 'accepted');
+  refStoreBuilt = true;
+}
+let refN = 0;
+// the host-policy-5 fixture's feature-off derivative, mutated, written into `dir` (default: beside the store)
+function refPolicy(mutate, dir = REF_STORE) {
+  refStore();
+  const p = JSON.parse(readFileSync(HP5_OFF_PATH, 'utf8'));
+  mutate(p);
+  refN += 1;
+  const path = join(dir, `host-policy-ref-${refN}.json`);
+  writeFileSync(path, JSON.stringify(p, null, 2));
+  return path;
+}
+const withLine = (id, line, dir) => refPolicy((p) => { profileOf(p, id).evidence.push(line); }, dir);
+const REF_T2 = 'outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)';
+const REF_FORM = "is not 'outcome: <task-id> <category>[@T<k>] accepted <YYYY-MM-DD> (<path>)'";
+
+test('E1: a typed production reference loads when it resolves against the store beside the policy file - an accepted Outcome of that task and profile, recorded that day, decided in that category at that tier; a pre-tier decision takes any tier with the "would be" wording', () => {
+  assert.equal(loadPolicy(withLine('cc-opus-high', REF_T2))['policy-revision'], 'host-policy-5');
+  // the store as the adapter wrote it: no tier on ref-pre's decision, T2 on ref-t2's; the outcome files carry no ts, so
+  // the recorded time is the outcome record's
+  const decisions = (t) => JSON.parse(readFileSync(join(REF_TRACE, 'decisions', `${t}-1.json`), 'utf8')).decision['difficulty-tier'];
+  assert.deepEqual([decisions('ref-t2'), decisions('ref-pre')], ['T2', undefined]);
+  assert.equal(JSON.parse(readFileSync(join(REF_TRACE, 'outcomes', 'ref-t2-3.json'), 'utf8')).ts, undefined);
+  for (const line of [
+    'outcome: ref-pre fix@T3 accepted 2026-10-18 (trace/outcomes/ref-pre-3.json); would be T3 by the table: one pass at T3, not a qualification',
+    'outcome: ref-pre fix@T1 accepted 2026-10-18 (trace/outcomes/ref-pre-3.json); would be T1 by the table',
+    'outcome: ref-pre fix accepted 2026-10-18 (trace/outcomes/ref-pre-3.json)'
+  ]) assert.equal(loadPolicy(withLine('cc-haiku-high', line))['policy-revision'], 'host-policy-5', line);
+  // a reference under a policy that is untiered loads too (the tier is the host's declaration, checked against the decision)
+  assert.ok(loadPolicy(refPolicy((p) => { delete p['difficulty-tiers']; profileOf(p, 'cc-opus-high').evidence.push(REF_T2); })));
+  // free text that mentions an outcome is prose, never parsed (E4): only a line that starts 'outcome: ' is typed
+  assert.ok(loadPolicy(withLine('cc-opus-high', 'ref-t2 outcome accepted 2026-10-18: anything at all')));
+  // the fixtures host-policy-1..5 carry no typed reference and load unchanged
+  for (const n of [1, 2, 3, 4, 5]) {
+    const path = join(HERE, 'trace', 'policies', `host-policy-${n}.json`);
+    const raw = JSON.parse(readFileSync(path, 'utf8'));
+    assert.ok(raw.profiles.every((p) => (p.evidence ?? []).every((e) => !e.startsWith('outcome:'))), `host-policy-${n}`);
+    assert.equal(loadPolicy(path)['policy-revision'], `host-policy-${n}`);
+  }
+});
+
+test('E1: a reference\'s form is checked from the policy alone (exit 2): the literal "accepted", a known category, a calendar day, a relative path naming outcomes/<task-id>-<seq>.json', () => {
+  const formOnly = tmp();   // no store here: a form refusal never reaches resolution
+  for (const line of [
+    'outcome: ref-t2 fix@T2 verification-failed 2026-10-18 (trace/outcomes/ref-t2-3.json)',
+    'outcome: ref-t2 fix@T4 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)',
+    'outcome: ref-t2 fix@T2 accepted 2026-10-18T02:00:00Z (trace/outcomes/ref-t2-3.json)',
+    'outcome: ref-t2 fix@T2 accepted 2026-10-18',
+    'outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json) trailing',
+    'outcome:ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)'
+  ]) exit2(() => loadPolicy(withLine('cc-opus-high', line, formOnly)), new RegExp(`^invalid policy: profile cc-opus-high evidence '${esc(line)}' ${esc(REF_FORM)}$`));
+  const named = (line, why) => exit2(() => loadPolicy(withLine('cc-opus-high', line, formOnly)), new RegExp(`^invalid policy: profile cc-opus-high evidence '${esc(line)}' ${why}$`));
+  named('outcome: ref-t2 astrology accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)', "names unknown category 'astrology'");
+  named('outcome: ref-t2 fix@T2 accepted 2026-02-30 (trace/outcomes/ref-t2-3.json)', 'date 2026-02-30 is not a calendar day');
+  for (const path of ['/abs/trace/outcomes/ref-t2-3.json', 'C:/trace/outcomes/ref-t2-3.json', 'trace/outcomes/ref-x-3.json', 'trace/ref-t2-3.json', 'trace/outcomes/ref-t2.json', 'trace\\outcomes\\ref-t2-3.json']) {
+    named(`outcome: ref-t2 fix@T2 accepted 2026-10-18 (${path})`, esc(`path ${path} must be relative to the policy file's directory and name the outcome file outcomes/ref-t2-<seq>.json`));
+  }
+});
+
+test('E1: an unresolvable reference is an invalid policy (exit 2, naming the profile and the entry): a wrong category, a non-accepted outcome, a missing file, a tier other than its tiered decision\'s, a pre-tier decision without the "would be" wording, a wrong date, another profile\'s or another task\'s outcome, a file that is not an Outcome', () => {
+  refStore();
+  const cannot = (id, line, why) => exit2(() => loadPolicy(withLine(id, line)), new RegExp(`^invalid policy: profile ${id} evidence '${esc(line)}' cannot be resolved: ${why}$`));
+  cannot('cc-opus-high', 'outcome: ref-t2 review@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)', esc('ref-t2 was decided as fix, not review'));
+  cannot('cc-opus-high', 'outcome: ref-fail fix@T2 accepted 2026-10-18 (trace/outcomes/ref-fail-3.json)', esc('trace/outcomes/ref-fail-3.json records outcome verification-failed, not accepted'));
+  cannot('cc-opus-high', 'outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-9.json)', `${esc('trace/outcomes/ref-t2-9.json does not exist (resolved against the policy file\'s directory ')}.+\\)`);
+  cannot('cc-opus-high', 'outcome: ref-t2 fix@T3 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)', esc('ref-t2 was decided at T2, not T3'));
+  cannot('cc-opus-high', 'outcome: ref-t2 fix@T1 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json); would be T1 by the table', esc('ref-t2 was decided at T2, not T1'));
+  cannot('cc-opus-high', 'outcome: ref-t2 fix accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)', esc('ref-t2 was decided at T2, not T1'));
+  for (const note of ['', '; five files', '; would be T2 by the table']) {
+    cannot('cc-haiku-high', `outcome: ref-pre fix@T3 accepted 2026-10-18 (trace/outcomes/ref-pre-3.json)${note}`, esc('the decision of ref-pre carries no difficulty tier, so the line must say \'would be T3 by the table\''));
+  }
+  cannot('cc-opus-high', 'outcome: ref-t2 fix@T2 accepted 2026-10-17 (trace/outcomes/ref-t2-3.json)', esc('trace/outcomes/ref-t2-3.json was recorded 2026-10-18T02:00:00Z, not on 2026-10-17'));
+  cannot('cc-haiku-high', 'outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-3.json)', esc('trace/outcomes/ref-t2-3.json is an outcome of cc-opus-high, not cc-haiku-high'));
+  // another task's Outcome under this task's name, and a file that is not an Outcome (written into the temp store only)
+  writeFileSync(join(REF_TRACE, 'outcomes', 'ref-x-3.json'), readFileSync(join(REF_TRACE, 'outcomes', 'ref-t2-3.json')));
+  cannot('cc-opus-high', 'outcome: ref-x fix@T2 accepted 2026-10-18 (trace/outcomes/ref-x-3.json)', esc('trace/outcomes/ref-x-3.json is the outcome of ref-t2, not ref-x'));
+  writeFileSync(join(REF_TRACE, 'outcomes', 'ref-y-3.json'), readFileSync(join(REF_TRACE, 'decisions', 'ref-t2-1.json')));
+  cannot('cc-opus-high', 'outcome: ref-y fix@T2 accepted 2026-10-18 (trace/outcomes/ref-y-3.json)', `${esc('trace/outcomes/ref-y-3.json is not an Outcome (invalid Outcome (spec-v2 §10.3): ')}.+\\)`);
+  writeFileSync(join(REF_TRACE, 'outcomes', 'ref-z-3.json'), '{ not json');
+  cannot('cc-opus-high', 'outcome: ref-z fix@T2 accepted 2026-10-18 (trace/outcomes/ref-z-3.json)', esc('trace/outcomes/ref-z-3.json is not JSON'));
+  // an accepted Outcome with no outcome record behind it and no ts of its own has no recorded time; with no decision
+  // file, no category
+  const orphan = { ...JSON.parse(readFileSync(join(REF_TRACE, 'outcomes', 'ref-t2-3.json'), 'utf8')), 'task-id': 'ref-o' };
+  writeFileSync(join(REF_TRACE, 'outcomes', 'ref-o-3.json'), JSON.stringify(orphan));
+  cannot('cc-opus-high', 'outcome: ref-o fix@T2 accepted 2026-10-18 (trace/outcomes/ref-o-3.json)', `${esc('trace/outcomes/ref-o-3.json has no recorded time (no ts in the Outcome, no outcome record ref-o seq 3 in ')}.+${esc('ledger.jsonl)')}`);
+  writeFileSync(join(REF_TRACE, 'outcomes', 'ref-o-3.json'), JSON.stringify({ ...orphan, ts: '2026-10-18T03:00:00Z' }));
+  cannot('cc-opus-high', 'outcome: ref-o fix@T2 accepted 2026-10-18 (trace/outcomes/ref-o-3.json)', `${esc('no decision file for ref-o in ')}.+decisions`);
+  for (const f of ['ref-x-3.json', 'ref-y-3.json', 'ref-z-3.json', 'ref-o-3.json']) rmSync(join(REF_TRACE, 'outcomes', f));
+});
+
+test('E1: references resolve against the policy file\'s directory, never against --trace: the same policy elsewhere is refused even with --trace naming the store; beside its store it decides with any --trace', () => {
+  const away = withLine('cc-opus-high', REF_T2, tmp());
+  exit2(() => loadPolicy(away), /cannot be resolved: trace\/outcomes\/ref-t2-3\.json does not exist \(resolved against the policy file's directory /);
+  const request = (taskId) => writeJson(hp5Req('fix', { taskId, difficultyTier: 'T1' }));
+  const refusedCli = cli(['decide', request('away-1'), '--trace', REF_TRACE, '--policy', away]);
+  assert.equal(refusedCli.code, 2, refusedCli.stderr);
+  assert.match(refusedCli.stderr, /^route\.mjs: invalid policy: profile cc-opus-high evidence 'outcome: ref-t2 fix@T2 accepted 2026-10-18 \(trace\/outcomes\/ref-t2-3\.json\)' cannot be resolved: /);
+  const ok = cli(['decide', request('here-1'), '--trace', tmp(), '--policy', withLine('cc-opus-high', REF_T2)]);
+  assert.equal(ok.code, 0, ok.stderr);
 });

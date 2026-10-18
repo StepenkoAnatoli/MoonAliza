@@ -46,6 +46,13 @@ const tierRank = (t) => TIERS.indexOf(t) + 1;
 const tiersEnforced = (policy) => policy['difficulty-tiers'] === TIERS_ENFORCED;
 // a qualified-for entry is '<category>' or '<category>@T1|T2|T3' (D2)
 const QUALIFICATION = /^([^\s@]+)(?:@(T[1-3]))?$/;
+// calibration-first evidence (SmartRouter docs/proposals/calibration-first-onboarding.md Item 1, the lead's decisions
+// E1-E7 in briefs/policy6-builder.md). E1: the typed production reference, 'outcome: <task-id> <category>[@T<k>] accepted
+// <YYYY-MM-DD> (<path>)', optionally followed by '; <note>'. <path> is the outcome file the host writes
+// (trace/outcomes/<task>-<seq>.json), relative to the policy file's directory; its form is checked from the policy alone,
+// then it is resolved against the store it names (resolveReference)
+const OUTCOME_REFERENCE = /^outcome: (\S+) ([^\s@]+)(?:@(T([1-9])))? accepted (\S+) \(([^()]+)\)(?:; (.+))?$/;
+const REFERENCE_FORM = "'outcome: <task-id> <category>[@T<k>] accepted <YYYY-MM-DD> (<path>)'";
 function parseQualification(entry) {
   const m = QUALIFICATION.exec(entry);
   return m ? { category: m[1], tier: m[2] ?? null } : null;
@@ -117,11 +124,71 @@ function readJsonFile(path, what) {
 // ---------------------------------------------------------------------------------------------
 export function loadPolicy(path = DEFAULT_POLICY) {
   const p = readJsonFile(path, 'policy');
-  validatePolicy(p);
+  // typed production references resolve against the policy file's directory, never against --trace (E1)
+  validatePolicy(p, dirname(resolve(path)));
   return p;
 }
 
-function validatePolicy(p) {
+// the form of a typed production reference (E1), from the policy alone: null when the line is well formed, else the reason
+function referenceForm(e, categories) {
+  const m = OUTCOME_REFERENCE.exec(e);
+  if (!m || (m[3] && !TIERS.includes(m[3])) || !/^\d{4}-\d{2}-\d{2}$/.test(m[5])) return { why: `is not ${REFERENCE_FORM}` };
+  const [, task, category, tier, , date, path, note] = m;
+  if (!TASK_ID.test(task)) return { why: `is not ${REFERENCE_FORM} (task-id ${task})` };
+  if (!Object.hasOwn(categories, category)) return { why: `names unknown category '${category}'` };
+  if (Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return { why: `date ${date} is not a calendar day` };
+  // relative (an absolute path would not travel with the policy and its trace), '/'-separated, and naming the file the
+  // host writes for this task: the store is the directory that holds outcomes/, the seq finds the outcome record
+  const seq = new RegExp(`(?:^|/)outcomes/${task.replace(/[.]/g, '\\.')}-([1-9]\\d*)\\.json$`).exec(path)?.[1];
+  if (/^([A-Za-z]:)?\//.test(path) || path.includes('\\') || !seq) return { why: `path ${path} must be relative to the policy file's directory and name the outcome file outcomes/${task}-<seq>.json` };
+  return { ref: { task, category, tier: tier ?? null, date, path, note: note ?? '', seq: Number(seq) } };
+}
+
+// one outcome store (a trace directory: ledger.jsonl, decisions/), read once per validation
+function storeOf(stores, dir) {
+  if (!stores.has(dir)) {
+    try { stores.set(dir, { records: readLedger(dir), catMap: categoryMap(dir) }); } catch (e) { stores.set(dir, { error: e.message }); }
+  }
+  return stores.get(dir);
+}
+
+// E1: resolve a well-formed reference against the store it names, relative to the policy file's directory: null when it
+// resolves, else the reason. The file must be an Outcome of that task, owned by the referencing profile, `accepted`,
+// recorded on the date (its own ts, else its outcome record's), and the task decided in the reference's category; the
+// tier must be the decision's when the decision carries one, and a tier declared on a pre-tier decision must be the
+// host's stated reading ('would be T<k> by the table')
+function resolveReference(ref, pr, baseDir, stores) {
+  const file = resolve(baseDir, ref.path);
+  if (!existsSync(file)) return `${ref.path} does not exist (resolved against the policy file's directory ${baseDir})`;
+  let o;
+  try { o = JSON.parse(readFileSync(file, 'utf8')); } catch { return `${ref.path} is not JSON`; }
+  try { validateOutcome(o); } catch (e) { return `${ref.path} is not an Outcome (${e.message})`; }
+  if (o['task-id'] !== ref.task) return `${ref.path} is the outcome of ${o['task-id']}, not ${ref.task}`;
+  if (o.outcome !== 'accepted') return `${ref.path} records outcome ${o.outcome}, not accepted`;
+  if (tupleId(o['owner-profile']) !== pr.id) return `${ref.path} is an outcome of ${tupleId(o['owner-profile'])}, not ${pr.id}`;
+  const dir = dirname(dirname(file));
+  const store = storeOf(stores, dir);
+  if (store.error) return `the outcome store ${dir} is unreadable (${store.error})`;
+  const rec = store.records.find((r) => r.kind === 'outcome' && r['task-id'] === ref.task && r.seq === ref.seq);
+  const ts = isoMs(o.ts) !== null ? o.ts : rec?.ts;
+  if (isoMs(ts) === null) return `${ref.path} has no recorded time (no ts in the Outcome, no outcome record ${ref.task} seq ${ref.seq} in ${ledgerPath(dir)})`;
+  if (isoOf(isoMs(ts)).slice(0, 10) !== ref.date) return `${ref.path} was recorded ${ts}, not on ${ref.date}`;
+  const m = store.catMap[ref.task];
+  if (!m) return `no decision file for ${ref.task} in ${join(dir, 'decisions')}`;
+  if (m.category !== ref.category) return `${ref.task} was decided as ${m.category}, not ${ref.category}`;
+  // the tier of the decision the outcome's dispatch was made under (as learn() counts it), else the task's latest
+  const disp = rec && store.records.find((r) => r.kind === 'dispatch' && r['task-id'] === ref.task && r.seq === rec['dispatch-seq']);
+  const declared = disp && Object.hasOwn(m.declared, disp['decision-seq']) ? m.declared[disp['decision-seq']] : m.latestDeclared;
+  const tier = ref.tier ?? 'T1';
+  if (declared) {
+    if (declared !== tier) return `${ref.task} was decided at ${declared}, not ${tier}`;
+  } else if (ref.tier && !new RegExp(`(^|[^\\w])would be ${ref.tier} by the table`).test(ref.note)) {
+    return `the decision of ${ref.task} carries no difficulty tier, so the line must say 'would be ${ref.tier} by the table'`;
+  }
+  return null;
+}
+
+function validatePolicy(p, baseDir) {
   const fail = (m) => { throw invalid(`invalid policy: ${m}`); };
   if (!p || typeof p !== 'object') fail('not an object');
   if (!isStr(p.harness?.id)) fail('harness.id missing');
@@ -139,6 +206,7 @@ function validatePolicy(p) {
   }
   if (!Array.isArray(p.profiles) || p.profiles.length === 0) fail('profiles missing');
   const ids = new Set();
+  const stores = new Map();
   for (const pr of p.profiles) {
     if (!isStr(pr.id) || !isStr(pr.model) || !isStr(pr.effort) || !isStr(pr.config) || !isStrArray(pr['qualified-for'])) fail(`profile ${pr.id} incomplete`);
     if (ids.has(pr.id)) fail(`duplicate profile ${pr.id}`);
@@ -154,8 +222,16 @@ function validatePolicy(p) {
       held.set(q.category, c);
     }
     if (pr.evidence !== undefined && !isStrArray(pr.evidence)) fail(`profile ${pr.id} evidence must be an array of strings`);
-    // a calibration grade entry (host-policy-2) is counted by the lead's qualification rules, so its form is fixed
+    // a calibration grade entry (host-policy-2) is counted by the lead's qualification rules, so its form is fixed; a
+    // typed production reference (E1, a line starting 'outcome:') is checked for form, then resolved against its store
     for (const e of pr.evidence ?? []) {
+      if (e.startsWith('outcome:')) {
+        const { ref, why } = referenceForm(e, p.categories);
+        if (why) fail(`profile ${pr.id} evidence '${e}' ${why}`);
+        const unresolved = resolveReference(ref, pr, baseDir, stores);
+        if (unresolved) fail(`profile ${pr.id} evidence '${e}' cannot be resolved: ${unresolved}`);
+        continue;
+      }
       if (!e.startsWith('calibration-')) continue;
       const m = CALIBRATION_ENTRY.exec(e);
       if (!m) fail(`profile ${pr.id} evidence '${e}' is not 'calibration-<n>: <category> PASS|PARTIAL|FAIL (n=<k>)'`);
@@ -623,10 +699,15 @@ function categoryMap(traceDir) {
     const t = j.decision?.['difficulty-tier'];
     if (t !== undefined && !TIERS.includes(t)) throw new RouterError(4, `decision file ${f}: difficulty-tier ${JSON.stringify(t)} is not T1, T2 or T3`);
     const tier = t ?? 'T1';
-    const entry = (map[j.request.taskId] ??= { tiers: {} });
+    const entry = (map[j.request.taskId] ??= { tiers: {}, declared: {} });
     entry.category = j.request.category;
     entry.tier = tier;
-    if (isInt(j['ledger-seq'], 1)) entry.tiers[j['ledger-seq']] = tier;
+    // the tier as the decision declares it, null for none (E1: a reference's tier is checked against a declared one only)
+    entry.latestDeclared = t ?? null;
+    if (isInt(j['ledger-seq'], 1)) {
+      entry.tiers[j['ledger-seq']] = tier;
+      entry.declared[j['ledger-seq']] = t ?? null;
+    }
   }
   return map;
 }
