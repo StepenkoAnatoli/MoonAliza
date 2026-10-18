@@ -2001,7 +2001,7 @@ test('rate: a CALIBRATION line per profile and category from trace/calibration-1
   for (const o of Object.values(CAL1)) {
     const label = calProfile(live, o)?.id ?? `${o.profile} (no policy profile)`;
     for (const [cat, , score] of CAL_TASKS) {
-      assert.ok(lines.includes(`CALIBRATION ${label} ${cat}: ${score(o) ? '1 pass, 0 fail' : '0 pass, 1 fail'} (calibration-1)`), `${label} ${cat}`);
+      assert.ok(lines.includes(`CALIBRATION ${label} ${cat}: ${score(o) ? '1 pass, 0 partial, 0 fail' : '0 pass, 0 partial, 1 fail'} (calibration-1)`), `${label} ${cat}`);
     }
   }
   assert.equal(Object.values(CAL1).filter((o) => !calProfile(live, o)).length, 1, 'one calibrated profile is not in host-policy-2');
@@ -2010,7 +2010,7 @@ test('rate: a CALIBRATION line per profile and category from trace/calibration-1
   const doc = JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'));
   assert.equal(doc['outcomes-counted'], 0);
   assert.deepEqual(doc.stats, {});
-  assert.deepEqual(doc.calibration.profiles['cc-haiku-low'], { fix: { fail: 0, pass: 1, ungraded: 0 }, 'pin-tests': { fail: 0, pass: 1, ungraded: 0 }, review: { fail: 1, pass: 0, ungraded: 0 } });
+  assert.deepEqual(doc.calibration.profiles['cc-haiku-low'], { fix: { fail: 0, partial: 0, pass: 1, ungraded: 0 }, 'pin-tests': { fail: 0, partial: 0, pass: 1, ungraded: 0 }, review: { fail: 1, partial: 0, pass: 0, ungraded: 0 } });
   assert.deepEqual(doc.calibration.runs, [{ run: 'calibration-1', 'observations-sha256': createHash('sha256').update(readFileSync(join(trace, 'calibration-1', 'observations.json'))).digest('hex') }]);
   assert.deepEqual(r.proposals, []);
   // regenerated identically, and the CLI prints the same lines
@@ -2040,8 +2040,8 @@ test('rate: calibration passes and fails never make a proposal; proposals stay o
   third.b.fix.score = null; // not graded
   const trace = calibrationTrace([oneRun(), oneRun(), third]);
   const r = rate({ traceDir: trace, policyPath: HP2_OFF_PATH, now: NOW });
-  assert.match(r.text, /^CALIBRATION cc-sonnet-high review: 3 pass, 0 fail \(calibration-1, calibration-2, calibration-3\)$/m);
-  assert.match(r.text, /^CALIBRATION cc-opus-high fix: 0 pass, 2 fail, 1 ungraded \(calibration-1, calibration-2, calibration-3\)$/m);
+  assert.match(r.text, /^CALIBRATION cc-sonnet-high review: 3 pass, 0 partial, 0 fail \(calibration-1, calibration-2, calibration-3\)$/m);
+  assert.match(r.text, /^CALIBRATION cc-opus-high fix: 0 pass, 0 partial, 2 fail, 1 ungraded \(calibration-1, calibration-2, calibration-3\)$/m);
   assert.deepEqual(r.proposals, []);
   assert.ok(!/PROPOSAL/.test(r.text), r.text);
   assert.match(r.text, /^no proposals$/m);
@@ -2051,7 +2051,7 @@ test('rate: calibration passes and fails never make a proposal; proposals stay o
   failedFix(both, 'f-2');
   const r2 = rate({ traceDir: both, policyPath: POLICY_PATH, now: NOW });
   assert.deepEqual(r2.proposals.map((p) => `${p.kind} ${p.profile} ${p.category}`), ['demote cc-opus-high fix']);
-  assert.match(r2.text, /^CALIBRATION cc-opus-high fix: 0 pass, 1 fail \(calibration-1\)$/m);
+  assert.match(r2.text, /^CALIBRATION cc-opus-high fix: 0 pass, 0 partial, 1 fail \(calibration-1\)$/m);
   // an unreadable observations file refuses the run, as an unreadable decision file does
   const bad = cli(['rate', '--trace', calibrationTrace(['{ not json']), '--now', NOW, '--policy', HP2_OFF_PATH]);
   assert.equal(bad.code, 4, bad.stdout);
@@ -2238,4 +2238,62 @@ test('host-policy-3 routing: pin-tests -> cc-haiku-low; review -> cc-opus-high (
   const decided = cliDecide(reqFor(live, 'fix', { taskId: 'hp3-fix' }), LIVE_OFF_PATH);
   assert.equal(decided.bindings['policy-revision'], 'host-policy-3');
   assert.equal(decided.decision.profile, 'cc-haiku-high');
+});
+
+// rate reads both calibration formats: run 1 grades review with the boolean review-grade.score, run 2 with the
+// three-valued review-grade.result (PASS | PARTIAL | FAIL); a task an observation does not carry (run 2's review-only
+// profiles have pin and fix null) was not run and is not counted
+test('rate: CALIBRATION lines read both observation formats - run 1\'s boolean review score, run 2\'s PASS/PARTIAL/FAIL result - and count pass, partial, fail across runs', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const trace = calibrationTrace([CAL1, CAL2]);
+  const r = rate({ traceDir: trace, policyPath: LIVE_OFF_PATH, now: NOW });
+  const lines = r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  // every count is the observation files' own grades, across both runs
+  const want = {};
+  for (const [run, obs] of [[1, CAL1], [2, CAL2]]) {
+    for (const o of Object.values(obs)) {
+      const id = calProfileAny(live, o).id;
+      for (const e of gradeEntries(run, o)) {
+        const [, cat, word] = /^calibration-\d+: (\S+) (\S+) /.exec(e);
+        const c = ((want[id] ??= {})[cat] ??= { pass: 0, partial: 0, fail: 0, runs: [] });
+        c[word.toLowerCase()] += 1;
+        c.runs.push(`calibration-${run}`);
+      }
+    }
+  }
+  const expected = Object.keys(want).sort().flatMap((id) => ['pin-tests', 'fix', 'review'].filter((cat) => want[id][cat])
+    .map((cat) => { const c = want[id][cat]; return `CALIBRATION ${id} ${cat}: ${c.pass} pass, ${c.partial} partial, ${c.fail} fail (${c.runs.join(', ')})`; }));
+  assert.deepEqual(lines, expected, r.text);
+  // the cells the lead's table turns on, spelled out
+  for (const line of [
+    'CALIBRATION cc-sonnet-low review: 1 pass, 1 partial, 0 fail (calibration-1, calibration-2)',
+    'CALIBRATION cc-sonnet-medium review: 1 pass, 0 partial, 1 fail (calibration-1, calibration-2)',
+    'CALIBRATION cc-sonnet-high review: 1 pass, 0 partial, 1 fail (calibration-1, calibration-2)',
+    'CALIBRATION cc-opus-medium review: 1 pass, 0 partial, 1 fail (calibration-1, calibration-2)',
+    'CALIBRATION cc-haiku-low fix: 2 pass, 0 partial, 0 fail (calibration-1, calibration-2)',
+    'CALIBRATION cc-opus-xhigh pin-tests: 2 pass, 0 partial, 0 fail (calibration-1, calibration-2)',
+    'CALIBRATION cc-sonnet-xhigh review: 1 pass, 0 partial, 0 fail (calibration-2)',
+    'CALIBRATION cc-opus-max review: 1 pass, 0 partial, 0 fail (calibration-2)',
+    'CALIBRATION cc-fable-max review: 1 pass, 0 partial, 0 fail (calibration-2)'
+  ]) assert.ok(lines.includes(line), `missing: ${line}`);
+  // a review-only profile has no pin or fix line: those cells were not run, not ungraded
+  for (const id of ['cc-sonnet-xhigh', 'cc-opus-max', 'cc-fable-max']) {
+    assert.ok(!lines.some((l) => l.startsWith(`CALIBRATION ${id} pin-tests`) || l.startsWith(`CALIBRATION ${id} fix`)), id);
+  }
+  assert.ok(!lines.some((l) => /no policy profile|ungraded/.test(l)), r.text);
+  const doc = JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'));
+  assert.deepEqual(doc.calibration.profiles['cc-sonnet-low'].review, { fail: 0, partial: 1, pass: 1, ungraded: 0 });
+  assert.deepEqual(Object.keys(doc.calibration.profiles['cc-opus-max']), ['review']);
+  assert.deepEqual(doc.calibration.runs.map((x) => x.run), ['calibration-1', 'calibration-2']);
+  // calibration never proposes, partial or not
+  assert.deepEqual(r.proposals, []);
+  // a run-2 review result outside PASS/PARTIAL/FAIL is ungraded, never a pass; result wins over a stray boolean score
+  const odd = structuredClone(CAL2['sonnet-low']);
+  odd['review-grade'].result = 'pass';
+  const both = structuredClone(CAL2['sonnet-medium']);
+  both['review-grade'].score = true;
+  const t2 = calibrationTrace([{ 'sonnet-low': odd, 'sonnet-medium': both }]);
+  const r2 = rate({ traceDir: t2, policyPath: LIVE_OFF_PATH, now: NOW });
+  assert.match(r2.text, /^CALIBRATION cc-sonnet-low review: 0 pass, 0 partial, 0 fail, 1 ungraded \(calibration-1\)$/m);
+  assert.match(r2.text, /^CALIBRATION cc-sonnet-medium review: 0 pass, 0 partial, 1 fail \(calibration-1\)$/m);
 });

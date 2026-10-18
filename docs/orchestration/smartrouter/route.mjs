@@ -1268,8 +1268,20 @@ function usageLearning(cfg, readings, records) {
 // calibration evidence (host-policy-2): graded calibration runs in <trace>/calibration-<n>/observations.json, counted per
 // (profile, category) apart from the outcomes. They never enter the ledger and never make a proposal: proposals stay
 // outcome-based, and qualification from calibration is the lead's, under the qualification rules (README).
-// The tasks and the categories they represent: the pin task is pin-tests (rule 4), the fix task fix, the review task review
-const CALIBRATION_TASKS = [['pin-tests', (o) => o?.pin?.score], ['fix', (o) => o?.fix?.score], ['review', (o) => o?.['review-grade']?.score]];
+// The tasks and the categories they represent: the pin task is pin-tests (rule 4), the fix task fix, the review task review.
+// Each reads a grade: 'pass' | 'partial' | 'fail' | 'ungraded', or null when the observation does not carry the task (not
+// run: calibration-2's review-only profiles have pin and fix null). Pin and fix carry a boolean score in both runs; the
+// review grade is calibration-1's boolean review-grade.score or calibration-2's three-valued review-grade.result
+// (PASS | PARTIAL | FAIL, its preregistered protocol), the result read first. Anything else is ungraded, never a pass.
+const isObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+const scoreGrade = (task) => (!isObject(task) ? null : task.score === true ? 'pass' : task.score === false ? 'fail' : 'ungraded');
+function reviewGrade(o) {
+  const g = o?.['review-grade'];
+  if (!isObject(g)) return null;
+  if (g.result !== undefined) return ['PASS', 'PARTIAL', 'FAIL'].includes(g.result) ? g.result.toLowerCase() : 'ungraded';
+  return scoreGrade(g);
+}
+const CALIBRATION_TASKS = [['pin-tests', (o) => scoreGrade(o?.pin)], ['fix', (o) => scoreGrade(o?.fix)], ['review', reviewGrade]];
 
 function calibrationEvidence(policy, traceDir) {
   if (!existsSync(traceDir)) return null;
@@ -1292,15 +1304,16 @@ function calibrationEvidence(policy, traceDir) {
     }
     runs.push({ run, 'observations-sha256': sha256(bytes) });
     for (const [key, o] of Object.entries(obs)) {
-      // an observation is a profile's model (any task's usage) at the effort its name ends in
-      const model = Object.values(o?.usage ?? {}).find((u) => isStr(u?.model))?.model;
+      // an observation is a profile's model (any of its own tasks' usage, never the grader's) at the effort its name ends in
+      const model = Object.entries(o?.usage ?? {}).filter(([t]) => t !== 'grade').map(([, u]) => u).find((u) => isStr(u?.model))?.model;
       const name = isStr(o?.profile) ? o.profile : key;
       const pr = policy.profiles.find((p) => p.model === model && p.effort === name.split('-').pop());
       const label = pr ? pr.id : `${name} (no policy profile)`;
-      for (const [cat, score] of CALIBRATION_TASKS) {
-        const c = ((profiles[label] ??= {})[cat] ??= { pass: 0, fail: 0, ungraded: 0 });
-        const s = score(o);
-        if (s === true) c.pass += 1; else if (s === false) c.fail += 1; else c.ungraded += 1;
+      for (const [cat, grade] of CALIBRATION_TASKS) {
+        const g = grade(o);
+        if (g === null) continue; // the task was not run for this profile: nothing to count
+        const c = ((profiles[label] ??= {})[cat] ??= { pass: 0, partial: 0, fail: 0, ungraded: 0 });
+        c[g] += 1;
         const r = ((seen[label] ??= {})[cat] ??= []);
         if (!r.includes(run)) r.push(run);
       }
@@ -1310,7 +1323,8 @@ function calibrationEvidence(policy, traceDir) {
   for (const label of Object.keys(profiles).sort()) {
     for (const [cat] of CALIBRATION_TASKS) {
       const c = profiles[label][cat];
-      lines.push(`CALIBRATION ${label} ${cat}: ${c.pass} pass, ${c.fail} fail${c.ungraded ? `, ${c.ungraded} ungraded` : ''} (${seen[label][cat].join(', ')})`);
+      if (!c) continue;
+      lines.push(`CALIBRATION ${label} ${cat}: ${c.pass} pass, ${c.partial} partial, ${c.fail} fail${c.ungraded ? `, ${c.ungraded} ungraded` : ''} (${seen[label][cat].join(', ')})`);
     }
   }
   return { doc: { runs, profiles }, lines };
