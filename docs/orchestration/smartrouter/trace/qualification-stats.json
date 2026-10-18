@@ -277,7 +277,7 @@
         "reset": 1,
         "spanning": 2,
         "unknown-tokens": 0,
-        "zero-tokens": 0
+        "zero-tokens": 3
       }
     },
     "seven_day": {
@@ -291,10 +291,10 @@
         "reset": 0,
         "spanning": 2,
         "unknown-tokens": 0,
-        "zero-tokens": 1
+        "zero-tokens": 4
       }
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "b8e0df100e7cca39d20c960bce70ae6aaf18757cd007da82340f0f90e66c8495"
+  "usage-sha256": "edf03d369e88cabd0be6c4991cbc982434438b335b0164e56948d9c784d0b115"
 }
