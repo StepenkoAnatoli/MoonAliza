@@ -6,19 +6,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         }
       },
@@ -26,7 +26,7 @@
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       },
@@ -34,11 +34,11 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
-          "fail": 0,
+          "fail": 1,
           "partial": 0,
           "pass": 2,
           "ungraded": 0
@@ -46,7 +46,7 @@
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         }
       },
@@ -54,19 +54,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         }
       },
@@ -74,19 +74,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 2,
           "partial": 0,
-          "pass": 0,
+          "pass": 1,
           "ungraded": 0
         }
       },
@@ -94,19 +94,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 2,
           "partial": 0,
-          "pass": 0,
+          "pass": 1,
           "ungraded": 0
         }
       },
@@ -114,19 +114,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 2,
           "partial": 0,
-          "pass": 0,
+          "pass": 1,
           "ungraded": 0
         }
       },
@@ -134,19 +134,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         }
       },
@@ -154,7 +154,7 @@
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       },
@@ -162,19 +162,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 1,
           "partial": 0,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       },
@@ -182,19 +182,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         }
       },
@@ -202,19 +202,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 1,
           "partial": 0,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       },
@@ -222,19 +222,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 0,
           "partial": 1,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       },
@@ -242,19 +242,19 @@
         "fix": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "pin-tests": {
           "fail": 0,
           "partial": 0,
-          "pass": 2,
+          "pass": 3,
           "ungraded": 0
         },
         "review": {
           "fail": 1,
           "partial": 0,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       },
@@ -262,7 +262,7 @@
         "review": {
           "fail": 0,
           "partial": 0,
-          "pass": 1,
+          "pass": 2,
           "ungraded": 0
         }
       }
@@ -275,6 +275,10 @@
       {
         "observations-sha256": "f794c1fd58b742b4e2c6f9e2f9245908912d252b6ca4bf6f5ba6da0533713a24",
         "run": "calibration-2"
+      },
+      {
+        "observations-sha256": "d4bcb504428532ccaa89a42a38758fed933d8ad285f86ddb4ab4c72f99b1b371",
+        "run": "calibration-3"
       }
     ]
   },
@@ -371,7 +375,7 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 2,
-        "spanning": 6,
+        "spanning": 7,
         "unknown-tokens": 0,
         "zero-tokens": 5
       }
@@ -384,7 +388,7 @@
       "ratified-at": "2026-10-18T01:23:32Z",
       "skipped": {
         "negative-delta": 0,
-        "reset": 0,
+        "reset": 1,
         "spanning": 7,
         "unknown-tokens": 0,
         "zero-tokens": 6
@@ -392,5 +396,5 @@
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "3b8f0b96c19639578602ec606e8c285220a78af9c79b3318308d0b68557d5450"
+  "usage-sha256": "0cf8efd0c972c6c2767ef0cbbddea6b29b49c4b05e5fd87a0cce897d956f55dd"
 }
