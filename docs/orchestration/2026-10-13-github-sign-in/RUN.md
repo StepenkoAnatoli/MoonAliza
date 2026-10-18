@@ -238,3 +238,8 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Lead's mistake at integration: the F3 README edit was committed with its message before the edit had applied (the pattern spanned a line break); caught by re-reading the diff, fixed by amending the unpushed commit. Impact: none delivered.
 - Next: upstream refresh PR (hosts/claude-code at revision 5), then the onboarding units (#102), then run 4 stage 4a.
 - 20:35 UTC: upstream refresh PR opened as draft, SmartRouter #105 (`hosts/claude-code-revision-5` at 8a375a2 from main 7f7fc75); gate green locally (119 node tests, artifacts 5 OK, conform_spec record and outcome CONFORMANT, run_regression PASS). Subscribed. Next: the onboarding units (#102).
+
+## 2026-10-18 20:50 UTC (originating session) - unit sr-policy-6 (calibration-first evidence) dispatched
+
+- Brief `briefs/policy6-builder.md` (E1-E7). Request declares `difficultyTier: T3` (six-entry edit set, floor T3). Decision: delegate cc-opus-high. Lead's mistake: `decide` was run twice by a careless shell line, so the ledger carries two decision rows (seq 1 and 2, identical route); dispatch is seq 3 on decision seq 2. The ledger is append-only and not edited; recorded here instead.
+- Consequence the operator should know (E5-E6): under revision 6, `build-core`, `build-tests`, `research-collect` and `docs-mechanical` have no delegate until a host-pack calibration cell qualifies one; run 4 gains those T1 cells.
