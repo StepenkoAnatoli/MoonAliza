@@ -283,9 +283,9 @@
     ]
   },
   "headroom-proposals": [],
-  "ledger-sha256": "4517c5677972989dbaa10fec07929790df31c1121c450c644ea04592f3112e27",
-  "outcome-records": 20,
-  "outcomes-counted": 18,
+  "ledger-sha256": "46a5fdc087959aa4e400d1a0c2d0fd11edc13bc14380057f119b3fd7f75669e1",
+  "outcome-records": 21,
+  "outcomes-counted": 19,
   "policy-revision": "host-policy-6",
   "proposals": [],
   "stats": {
@@ -337,7 +337,7 @@
         "verification-failed": 1
       },
       "build-ui@T3": {
-        "accepted": 2,
+        "accepted": 3,
         "blocked": 0,
         "cancelled": 0,
         "cost-overrun": 0,
@@ -378,7 +378,7 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 5,
-        "spanning": 9,
+        "spanning": 10,
         "unknown-tokens": 0,
         "zero-tokens": 8
       }
@@ -392,12 +392,12 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 2,
-        "spanning": 10,
+        "spanning": 11,
         "unknown-tokens": 0,
         "zero-tokens": 10
       }
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "2023e876128640113592b007b77fff4a0351f863d9c715fc3c420500bbae25c1"
+  "usage-sha256": "194fc1e9647f694f2553c110ab1bd47e1ad6b79451c89a74ca59a6d3179bab32"
 }
