@@ -3690,3 +3690,71 @@ test('E1: references resolve against the policy file\'s directory, never against
   const ok = cli(['decide', request('here-1'), '--trace', tmp(), '--policy', withLine('cc-opus-high', REF_T2)]);
   assert.equal(ok.code, 0, ok.stderr);
 });
+
+// E2/E3: the adopting switch "evidence": "typed" (absent: the old behaviour) and the supported-entry rule
+const typed = (p) => { p.evidence = 'typed'; };
+const unsupported = (id, entry, cat, tier) => new RegExp(`^invalid policy: profile ${esc(id)} qualified-for '${esc(entry)}' has no typed evidence behind it \\(a PASS grade entry or an accepted outcome reference for ${esc(cat)}${tier ? ` at ${tier} or above` : ''}; free text supports nothing\\)$`);
+// host-policy-5 made typed-valid in the smallest way: the entries free text alone held dropped, cc-opus-high's fix@T2
+// backed by the ref-t2 reference
+const typedHp5 = (p) => {
+  typed(p);
+  const opus = profileOf(p, 'cc-opus-high');
+  opus['qualified-for'] = ['review@T1', 'fix@T2', 'pin-tests'];
+  opus.evidence.push(REF_T2);
+  profileOf(p, 'cc-fable-high')['qualified-for'] = ['review@T1', 'fix', 'pin-tests'];
+  profileOf(p, 'cc-haiku-low')['qualified-for'] = ['pin-tests'];
+};
+
+test('E2: "evidence" is "typed" or absent (exit 2 otherwise); absent, an entry with nothing typed behind it loads as before; typed, it is refused naming the profile and the entry', () => {
+  for (const bad of ['on', 'Typed', true, null, 1]) {
+    exit2(() => loadPolicy(refPolicy((p) => { p.evidence = bad; })), new RegExp(`^invalid policy: evidence must be "typed" when present \\(absent: free-text evidence accepted\\); got ${esc(JSON.stringify(bad))}$`));
+  }
+  // host-policy-5 as it stands: absent, it loads; typed, its first entry held by free text alone is refused (cc-fable-high
+  // fix@T2: its calibration fix PASSes are T1, the U5 fix-round line is prose)
+  assert.ok(loadPolicy(HP5_OFF_PATH));
+  exit2(() => loadPolicy(refPolicy(typed)), unsupported('cc-fable-high', 'fix@T2', 'fix', 'T2'));
+  // made typed-valid, it loads
+  assert.equal(loadPolicy(refPolicy(typedHp5)).evidence, 'typed');
+  // free text supports nothing: cc-opus-high's build-core@T3 line of revision 5, and the 302-dispatches line
+  exit2(() => loadPolicy(refPolicy((p) => { typedHp5(p); profileOf(p, 'cc-opus-high')['qualified-for'].unshift('build-core@T3'); })), unsupported('cc-opus-high', 'build-core@T3', 'build-core', 'T3'));
+  // a profile with an entry and no evidence at all
+  exit2(() => loadPolicy(refPolicy((p) => { typedHp5(p); profileOf(p, 'cc-sonnet-xhigh').evidence = []; })), unsupported('cc-sonnet-xhigh', 'review', 'review', 'T1'));
+  // the onboarding state (proposal Item 1.2): present, priced, qualified-for [] - valid, and Gate 2 refuses it
+  assert.ok(loadPolicy(refPolicy((p) => { typedHp5(p); const s = profileOf(p, 'cc-sonnet-xhigh'); s['qualified-for'] = []; s.evidence = []; })));
+});
+
+test('E2: a PASS grade entry or an accepted reference at the entry\'s tier or above supports it; PARTIAL and FAIL support nothing; a tierless grade is T1; untiered, the tier is ignored; extra references are the record', () => {
+  const load = (mutate) => loadPolicy(refPolicy((p) => { typedHp5(p); mutate(p); }));
+  const sonnetLow = (p) => profileOf(p, 'cc-sonnet-low');
+  // cc-sonnet-low review: PASS, PARTIAL, PASS - without its PASS lines, the PARTIAL alone supports nothing; a FAIL alone neither
+  exit2(() => load((p) => { sonnetLow(p).evidence = sonnetLow(p).evidence.filter((e) => !/: review PASS /.test(e)); }), unsupported('cc-sonnet-low', 'review', 'review', 'T1'));
+  exit2(() => load((p) => { sonnetLow(p).evidence = sonnetLow(p).evidence.filter((e) => !/: review /.test(e)).concat('calibration-4: review FAIL (n=1)'); }), unsupported('cc-sonnet-low', 'review', 'review', 'T1'));
+  // tiers: the reference at T2 supports fix@T2 and a bare fix (T1), not fix@T3; a tierless grade supports @T1, not @T2;
+  // a grade at T2 supports @T2
+  const opus = (p) => profileOf(p, 'cc-opus-high');
+  exit2(() => load((p) => { opus(p)['qualified-for'] = ['review@T1', 'fix@T3', 'pin-tests']; }), unsupported('cc-opus-high', 'fix@T3', 'fix', 'T3'));
+  assert.ok(load((p) => { opus(p)['qualified-for'] = ['review@T1', 'fix', 'pin-tests']; opus(p).evidence = opus(p).evidence.filter((e) => !/^calibration-\d: fix /.test(e)); }));
+  exit2(() => load((p) => { opus(p).evidence = opus(p).evidence.filter((e) => e !== REF_T2); }), unsupported('cc-opus-high', 'fix@T2', 'fix', 'T2'));
+  assert.ok(load((p) => { opus(p).evidence = opus(p).evidence.filter((e) => e !== REF_T2).concat('calibration-4: fix@T2 PASS (n=1)'); }));
+  exit2(() => load((p) => { opus(p)['qualified-for'] = ['review@T2', 'fix@T2', 'pin-tests']; }), unsupported('cc-opus-high', 'review@T2', 'review', 'T2'));
+  // untiered (no "difficulty-tiers"): an entry is supported by any PASS or reference of its category, whatever the tiers
+  assert.ok(load((p) => { delete p['difficulty-tiers']; opus(p)['qualified-for'] = ['review@T3', 'fix@T3', 'pin-tests']; }));
+  exit2(() => load((p) => { delete p['difficulty-tiers']; opus(p)['qualified-for'].push('build-core'); }), unsupported('cc-opus-high', 'build-core', 'build-core', null));
+  // extra typed references that support no entry are allowed: cc-haiku-high's T3 pass (it holds a bare fix) and a
+  // reference in a category the profile does not hold
+  assert.ok(load((p) => { profileOf(p, 'cc-haiku-high').evidence.push('outcome: ref-pre fix@T3 accepted 2026-10-18 (trace/outcomes/ref-pre-3.json); would be T3 by the table'); }));
+  assert.ok(load((p) => { opus(p)['qualified-for'] = ['review@T1', 'pin-tests']; }));
+});
+
+test('E3: the lead-direct profile (economics.lead-direct-profile) is exempt from E2 - its qualifications authorize the lead\'s own inline work; its references are still resolved, and another lead-direct profile moves the exemption', () => {
+  const policy = loadPolicy(refPolicy(typedHp5));
+  const lead = profileOf(policy, policy.economics['lead-direct-profile']);
+  assert.equal(lead.id, 'cc-fable-xhigh');
+  assert.ok(lead['qualified-for'].includes('build-core@T3') && lead.evidence.every((e) => !e.startsWith('outcome:')), 'held by prose and T1 grades alone');
+  // the exemption follows the economics key: with cc-opus-high as the lead-direct profile, cc-fable-xhigh is checked
+  exit2(() => loadPolicy(refPolicy((p) => { typedHp5(p); p.economics['lead-direct-profile'] = 'cc-opus-high'; })), unsupported('cc-fable-xhigh', 'build-core@T3', 'build-core', 'T3'));
+  // ... and cc-opus-high, now exempt, may hold build-core@T3 on prose
+  assert.ok(loadPolicy(refPolicy((p) => { typedHp5(p); p.economics['lead-direct-profile'] = 'cc-opus-high'; profileOf(p, 'cc-fable-xhigh')['qualified-for'] = ['review', 'fix', 'pin-tests']; profileOf(p, 'cc-opus-high')['qualified-for'].unshift('build-core@T3'); })));
+  // E1 still applies to the exempt profile's typed lines
+  exit2(() => loadPolicy(refPolicy((p) => { typedHp5(p); profileOf(p, 'cc-fable-xhigh').evidence.push(REF_T2); })), /^invalid policy: profile cc-fable-xhigh evidence '.*' cannot be resolved: trace\/outcomes\/ref-t2-3\.json is an outcome of cc-opus-high, not cc-fable-xhigh$/);
+});

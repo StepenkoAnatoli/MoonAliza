@@ -53,6 +53,9 @@ const QUALIFICATION = /^([^\s@]+)(?:@(T[1-3]))?$/;
 // then it is resolved against the store it names (resolveReference)
 const OUTCOME_REFERENCE = /^outcome: (\S+) ([^\s@]+)(?:@(T([1-9])))? accepted (\S+) \(([^()]+)\)(?:; (.+))?$/;
 const REFERENCE_FORM = "'outcome: <task-id> <category>[@T<k>] accepted <YYYY-MM-DD> (<path>)'";
+// E2: a policy adopts the supported-entry rule with the top-level key "evidence": "typed" (the shape of "difficulty-tiers");
+// absent, free-text evidence is accepted as before
+export const EVIDENCE_TYPED = 'typed';
 function parseQualification(entry) {
   const m = QUALIFICATION.exec(entry);
   return m ? { category: m[1], tier: m[2] ?? null } : null;
@@ -201,12 +204,15 @@ function validatePolicy(p, baseDir) {
   if (!p.prices || typeof p.prices !== 'object') fail('prices missing');
   if (!p.categories || typeof p.categories !== 'object') fail('categories missing');
   if (p['difficulty-tiers'] !== undefined && p['difficulty-tiers'] !== TIERS_ENFORCED) fail(`difficulty-tiers must be "${TIERS_ENFORCED}" when present (absent: untiered); got ${JSON.stringify(p['difficulty-tiers'])}`);
+  if (p.evidence !== undefined && p.evidence !== EVIDENCE_TYPED) fail(`evidence must be "${EVIDENCE_TYPED}" when present (absent: free-text evidence accepted); got ${JSON.stringify(p.evidence)}`);
   for (const [id, c] of Object.entries(p.categories)) {
     if (!isStrArray(c.verification) || !isStrArray(c['required-tools']) || !isInt(c['median-tokens'], 1) || !isStr(c.risk)) fail(`category ${id} incomplete`);
   }
   if (!Array.isArray(p.profiles) || p.profiles.length === 0) fail('profiles missing');
   const ids = new Set();
   const stores = new Map();
+  // per profile, what its typed evidence supports (E2): PASS grade entries and resolved references, by category and tier
+  const supports = new Map();
   for (const pr of p.profiles) {
     if (!isStr(pr.id) || !isStr(pr.model) || !isStr(pr.effort) || !isStr(pr.config) || !isStrArray(pr['qualified-for'])) fail(`profile ${pr.id} incomplete`);
     if (ids.has(pr.id)) fail(`duplicate profile ${pr.id}`);
@@ -224,24 +230,45 @@ function validatePolicy(p, baseDir) {
     if (pr.evidence !== undefined && !isStrArray(pr.evidence)) fail(`profile ${pr.id} evidence must be an array of strings`);
     // a calibration grade entry (host-policy-2) is counted by the lead's qualification rules, so its form is fixed; a
     // typed production reference (E1, a line starting 'outcome:') is checked for form, then resolved against its store
+    const typedSupport = [];
+    supports.set(pr.id, typedSupport);
     for (const e of pr.evidence ?? []) {
       if (e.startsWith('outcome:')) {
         const { ref, why } = referenceForm(e, p.categories);
         if (why) fail(`profile ${pr.id} evidence '${e}' ${why}`);
         const unresolved = resolveReference(ref, pr, baseDir, stores);
         if (unresolved) fail(`profile ${pr.id} evidence '${e}' cannot be resolved: ${unresolved}`);
+        typedSupport.push({ category: ref.category, tier: tierRank(ref.tier ?? 'T1') });
         continue;
       }
       if (!e.startsWith('calibration-')) continue;
       const m = CALIBRATION_ENTRY.exec(e);
       if (!m) fail(`profile ${pr.id} evidence '${e}' is not 'calibration-<n>: <category> PASS|PARTIAL|FAIL (n=<k>)'`);
       if (!Object.hasOwn(p.categories, m[2])) fail(`profile ${pr.id} evidence '${e}' names unknown category '${m[2]}'`);
+      // a PARTIAL or FAIL grade supports nothing (E2); a tierless grade is T1
+      if (m[4] === 'PASS') typedSupport.push({ category: m[2], tier: tierRank(m[3] ?? 'T1') });
     }
   }
   const e = p.economics;
   if (!e || !ids.has(e['lead-direct-profile']) || !isInt(e['direct-max-tokens']) || !isInt(e['delegate-overhead-tokens'])) fail('economics incomplete');
   const lead = p.profiles.find((x) => x.id === e['lead-direct-profile']);
   if (!(p.prices[lead.model]?.output_rate_per_mtok >= 0)) fail('the lead-direct profile has no price; brief overhead cannot be bounded');
+  // E2: under "evidence": "typed" every qualified-for entry needs a PASS grade entry or an accepted reference for its
+  // category at its tier or above (untiered: of its category). The validator counts no passes; the lead's rules do.
+  // E3: the lead-direct profile is exempt - its qualifications are the operator's authorization of the lead's own inline
+  // work, not a capability claim about a delegate (policy finding and friction item 23 of host-policy-6)
+  if (p.evidence === EVIDENCE_TYPED) {
+    const tiered = tiersEnforced(p);
+    for (const pr of p.profiles) {
+      if (pr.id === e['lead-direct-profile']) continue;
+      for (const c of pr['qualified-for']) {
+        const q = parseQualification(c);
+        const k = tiered ? tierRank(q.tier ?? 'T1') : 0;
+        if (supports.get(pr.id).some((s) => s.category === q.category && s.tier >= k)) continue;
+        fail(`profile ${pr.id} qualified-for '${c}' has no typed evidence behind it (a PASS grade entry or an accepted outcome reference for ${q.category}${tiered ? ` at T${Math.max(k, 1)} or above` : ''}; free text supports nothing)`);
+      }
+    }
+  }
   if (p['usage-windows'] !== undefined) validateUsageWindows(p['usage-windows'], fail);
 }
 
