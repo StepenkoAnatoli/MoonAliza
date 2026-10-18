@@ -2302,6 +2302,23 @@ test('rate: CALIBRATION lines read both observation formats - run 1\'s boolean r
   assert.match(r2.text, /^CALIBRATION cc-sonnet-medium review: 0 pass, 0 partial, 1 fail \(calibration-1\)$/m);
 });
 
+// P3-R1: a profile is matched by its own tasks' usage, never the grader's. A review-only run-2 observation whose own
+// usage carries no model must not borrow usage.grade's (opus) model: its grades would land on an opus profile's line.
+test('rate: a calibration observation whose own usage has no model is never matched through the grader\'s usage (labelled no policy profile, not counted under the grader\'s profile)', () => {
+  const obs = structuredClone(CAL2['sonnet-xhigh']);
+  delete obs.usage.review.model;
+  assert.ok(typeof obs.usage.grade.model === 'string' && obs.usage.grade.model.startsWith('claude-opus'), 'the grader is an opus model');
+  const grader = loadPolicy(LIVE_OFF_PATH).profiles.find((p) => p.model === obs.usage.grade.model && p.effort === 'xhigh');
+  assert.ok(grader, 'the grader\'s model at the observation\'s effort names a policy profile: the case the guard exists for');
+  const trace = calibrationTrace([{}, { 'sonnet-xhigh': obs }]);
+  const r = rate({ traceDir: trace, policyPath: LIVE_OFF_PATH, now: NOW });
+  const lines = r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  assert.deepEqual(lines, ['CALIBRATION sonnet-xhigh (no policy profile) review: 1 pass, 0 partial, 0 fail (calibration-2)'], r.text);
+  assert.ok(!lines.some((l) => l.startsWith(`CALIBRATION ${grader.id} `)), r.text);
+  const doc = JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'));
+  assert.deepEqual(Object.keys(doc.calibration.profiles), ['sonnet-xhigh (no policy profile)']);
+});
+
 // deliverable F: an accepted outcome that completed more tokens than the profile's headroom-tested proposes the raise
 // (headroom-tested is the largest completed run, rounded up to the next thousand, never lowered); proposed, never applied
 const HEADROOM_SUFFIX = 'not applied — the lead ratifies by editing host-policy.json';
