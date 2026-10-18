@@ -3245,3 +3245,165 @@ test('tiers D8: rate prints a CALIBRATION line per (category, tier) for an obser
     assert.equal(existsSync(join(trace, 'qualification-stats.json')), false);
   }
 });
+
+// the lead's re-declaration table (briefs/policy5-builder.md): per profile, the tier each production-derived entry is
+// re-declared at, and the evidence lines it gains (in addition to the lines it carries); every entry not named stays bare
+const HD = 'host-declared (lead), not independent';
+const FX_LINE = (c) => `${c}@T3: the lead-direct profile integrates every unit of every tier and fixes inline (U1-R11 d4c4bdb, U2-R15 d37652e); ${HD}; eligible only below direct-max-tokens`;
+const FX_CATS = ['build-core', 'build-ui', 'build-tests', 'review', 'fix', 'docs-mechanical', 'research-collect', 'pin-tests'];
+const HP5_TABLE = {
+  'cc-opus-high': {
+    tiers: { 'build-core': 'T3', 'build-ui': 'T3', 'build-tests': 'T3', review: 'T1', fix: 'T2', 'research-collect': 'T2' },
+    lines: [
+      `build-core@T3: pre-adapter units U1-U5 of github-sign-in (28 builds, RUN.md), multi-file units with new harnesses, would be T3 by the table; ${HD}`,
+      'build-ui@T3: accepted outcomes sr-policy-2 seq 3, sr-policy-3 seq 5, sr-policy-4 seq 4 (five files), sr-ci-item4 seq 3 (nine files), would be T3 by the table',
+      `build-tests@T3: pre-adapter test units of U1-U5 (RUN.md), new harnesses (fakes, recorders), would be T3 by the table; ${HD}`,
+      'review@T1: accepted outcomes sr-host-review seq 3, sr-host-rereview1 seq 3, sr-host-rereview2 seq 3 (one module against gates.md with the shipped tests), would be T1 by the table; calibration-1..3 review PASS',
+      'fix@T2: accepted outcomes sr-host-fix1 seq 4, sr-host-fix2 seq 4 (three files, one module, cause named by the findings, existing harness), would be T2 by the table; two passes at T2 (rule 2.3)',
+      `research-collect@T2: 26 research runs this session (RUN.md), 20-page budgets with enumerated unknowns, would be T2 by the table (budget over ten pages); ${HD}`
+    ]
+  },
+  'cc-fable-high': {
+    tiers: { fix: 'T2', review: 'T1' },
+    lines: [
+      `fix@T2: U5 fix rounds 3 and 4 (wf_1fcbe585-d1e, wf_7f80ebc5-5a8; src/main/github-signin.ts, its tests and fixtures: three files, cause named by the findings), would be T2 by the table; ${HD}`,
+      'review@T1: U5 review and re-review rounds (wf_1fcbe585-d1e) and accepted outcome gsi-u5-rereview4 seq 3 (one module with the shipped tests), would be T1 by the table; calibration-1..3 review PASS'
+    ]
+  },
+  'cc-fable-xhigh': { tiers: Object.fromEntries(FX_CATS.map((c) => [c, 'T3'])), lines: FX_CATS.map(FX_LINE) }
+};
+const HAIKU_HIGH_LINE = 'fix-x2-1 seq 3 accepted (five files, src/main and tests), would be T3 by the table: one pass at T3, not a qualification (rule 2.3)';
+
+test('host-policy-5: the lead\'s table applied - "difficulty-tiers": "enforced", the production-derived entries re-declared at their units\' tier with the evidence lines, calibration-derived entries bare; nothing else changes', () => {
+  const raw = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'));
+  const hp4 = JSON.parse(readFileSync(HP4_POLICY_PATH, 'utf8'));
+  const live = loadPolicy(COMMITTED_POLICY_PATH);
+  assert.equal(live['policy-revision'], 'host-policy-5');
+  assert.equal(live['difficulty-tiers'], 'enforced');
+  // the key sits after the revision; headroom, categories, economics, prices, usage windows, harness, authorization,
+  // isolation, accounting, opt-ins: untouched
+  const keys = Object.keys(hp4);
+  keys.splice(keys.indexOf('policy-revision') + 1, 0, 'difficulty-tiers');
+  assert.deepEqual(Object.keys(raw), keys);
+  const rest = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['policy-revision', 'difficulty-tiers', 'profiles'].includes(k)));
+  assert.deepEqual(rest(raw), rest(hp4), 'only the revision, the key and the profiles change');
+  assert.deepEqual(raw.profiles.map((p) => p.id), hp4.profiles.map((p) => p.id), 'the fifteen profiles of host-policy-4, in order');
+  const fixed = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['qualified-for', 'qualified-at', 'evidence'].includes(k)));
+  for (const after of raw.profiles) {
+    const before = hp4.profiles.find((p) => p.id === after.id);
+    assert.deepEqual(fixed(after), fixed(before), `${after.id}: model, effort, config, tools, vision, context, headroom, expires, reviewer unchanged`);
+    const want = HP5_TABLE[after.id];
+    if (want) {
+      assert.deepEqual(after['qualified-for'], before['qualified-for'].map((c) => (want.tiers[c] ? `${c}@${want.tiers[c]}` : c)), `${after.id} qualified-for`);
+      for (const c of Object.keys(want.tiers)) assert.ok(before['qualified-for'].includes(c), `${after.id} held ${c} in host-policy-4`);
+      assert.deepEqual(after.evidence, [...before.evidence, ...want.lines], `${after.id} evidence`);
+      assert.equal(after['qualified-at'], '2026-10-18', `${after.id} re-declared`);
+      assert.equal(after.reviewer, HD, `${after.id} keeps its reviewer line`);
+    } else {
+      // calibration-derived: bare, read @T1; cc-haiku-high gains the one line of the table and nothing else
+      assert.deepEqual(after['qualified-for'], before['qualified-for'], `${after.id} qualified-for`);
+      assert.ok(after['qualified-for'].every((c) => !c.includes('@')), `${after.id}: bare entries`);
+      assert.equal(after['qualified-at'], before['qualified-at'], after.id);
+      assert.deepEqual(after.evidence, [...before.evidence, ...(after.id === 'cc-haiku-high' ? [HAIKU_HIGH_LINE] : [])], `${after.id} evidence`);
+    }
+  }
+  // pin-tests stays bare on the re-declared profiles that hold it from calibration
+  for (const id of ['cc-opus-high', 'cc-fable-high']) assert.ok(raw.profiles.find((p) => p.id === id)['qualified-for'].includes('pin-tests'), id);
+  // every production evidence line names the table's tier wording, except the lead-direct profile's (the table gives it whole)
+  for (const [id, { lines }] of Object.entries(HP5_TABLE)) {
+    for (const l of lines) assert.ok(id === 'cc-fable-xhigh' || /would be T[123] by the table/.test(l), l);
+  }
+  assert.match(HAIKU_HIGH_LINE, /would be T3 by the table: one pass at T3, not a qualification/);
+  // a tiered entry exists only where the table puts one
+  const tiered = raw.profiles.flatMap((p) => p['qualified-for'].filter((c) => c.includes('@')).map((c) => `${p.id} ${c}`));
+  assert.deepEqual(tiered.sort(), Object.entries(HP5_TABLE).flatMap(([id, { tiers }]) => Object.entries(tiers).map(([c, t]) => `${id} ${c}@${t}`)).sort());
+});
+
+const hp5Req = (category, over = {}) => reqFor(loadPolicy(LIVE_OFF_PATH), category, over);
+const FIX_HOLDERS_T1 = ['cc-fable-medium', 'cc-opus-xhigh', 'cc-opus-medium', 'cc-sonnet-high', 'cc-sonnet-medium', 'cc-sonnet-low', 'cc-haiku-high', 'cc-haiku-medium'];
+test('host-policy-5 routing (deliverable D): fix@T1 -> cc-haiku-high, fix@T2 -> cc-opus-high, undeclared fix (T3) and review (T3) blocked at Gate 2 by tier, review@T1 -> cc-sonnet-xhigh, undeclared build-ui (T2) -> cc-opus-high, docs-mechanical@T3 blocked', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const decideLive = (category, over) => computeDecision(hp5Req(category, over), live, []);
+  // fix 193000 at T1: unchanged from host-policy-4 - cc-haiku-high, with cc-sonnet-xhigh the reviewer (walked at review@T1)
+  const t1 = decideLive('fix', { difficultyTier: 'T1' });
+  assert.deepEqual([t1.route, t1.profile, t1['review-profile'], t1['difficulty-tier'], t1['all-in-bound-usd']], ['delegate', 'cc-haiku-high', 'cc-sonnet-xhigh', 'T1', 3.1865]);
+  assert.deepEqual(t1['eligible-ordered'], ['cc-haiku-high', 'cc-opus-high', 'cc-opus-xhigh', 'cc-fable-high']);
+  // fix at T2: the fix@T2 holders only, cc-opus-high the cheaper
+  const t2 = decideLive('fix', { difficultyTier: 'T2' });
+  assert.deepEqual([t2.route, t2.profile, t2['review-profile'], t2['all-in-bound-usd'], t2['eligible-ordered']], ['delegate', 'cc-opus-high', 'cc-sonnet-xhigh', 6.95, ['cc-opus-high', 'cc-fable-high']]);
+  assert.equal(t2.candidates['cc-haiku-high'].reason, 'cc-haiku-high not qualified for fix@T2 (holds fix@T1)');
+  assert.equal(t2.candidates['cc-opus-xhigh'].reason, 'cc-opus-xhigh not qualified for fix@T2 (holds fix@T1)');
+  // undeclared fix reads T3 (high-risk): blocked; every delegate fails Gate 2 with the tier reason (or holds no fix), the
+  // lead-direct profile (fix@T3) passes Gate 2 and fails Gate 5 on direct-max-tokens
+  const t3 = decideLive('fix');
+  assert.deepEqual([t3.route, t3['difficulty-tier'], t3['eligible-outside-candidates']], ['blocked', 'T3', []]);
+  for (const [id, c] of Object.entries(t3.candidates)) {
+    if (id === 'cc-fable-xhigh') { assert.deepEqual([c['first-failing-gate'], c.reason], [5, 'direct unsuitable: 193000 tokens > direct-max-tokens 15000']); continue; }
+    assert.equal(c['first-failing-gate'], 2, id);
+    const held = ['cc-opus-high', 'cc-fable-high'].includes(id) ? 'T2' : FIX_HOLDERS_T1.includes(id) ? 'T1' : null;
+    assert.ok(c.reason.startsWith(held ? `${id} not qualified for fix@T3 (holds fix@${held})` : `${id} not qualified for fix`), `${id}: ${c.reason}`);
+  }
+  // five files declared T1: below the floor (T3), an invalid request
+  exit2(() => decideLive('fix', { permittedEffects: FIVE_FILES, difficultyTier: 'T1' }), /^invalid request: difficultyTier T1 is below the floor T3 \(edit set of 5 files, more than three\)/);
+  // review 209000 at T1: cc-sonnet-xhigh, as under host-policy-4; undeclared review reads T3: blocked
+  const r1 = decideLive('review', { difficultyTier: 'T1' });
+  assert.deepEqual([r1.route, r1.profile, r1['all-in-bound-usd']], ['delegate', 'cc-sonnet-xhigh', 3.09]);
+  const r3 = decideLive('review');
+  assert.deepEqual([r3.route, r3['difficulty-tier']], ['blocked', 'T3']);
+  assert.equal(r3.candidates['cc-sonnet-xhigh'].reason, 'cc-sonnet-xhigh not qualified for review@T3 (holds review@T1)');
+  assert.equal(r3.candidates['cc-opus-high'].reason, 'cc-opus-high not qualified for review@T3 (holds review@T1)');
+  assert.equal(r3.candidates['cc-fable-xhigh'].reason, 'direct unsuitable: 209000 tokens > direct-max-tokens 15000');
+  // build-ui 250000 undeclared reads T2 (normal risk): cc-opus-high holds build-ui@T3; the reviewer at review@T1
+  const ui = decideLive('build-ui', { estimatedTokens: 250000 });
+  assert.deepEqual([ui.route, ui.profile, ui['difficulty-tier'], ui['review-profile'], ui['all-in-bound-usd'], ui['eligible-ordered']], ['delegate', 'cc-opus-high', 'T2', 'cc-sonnet-xhigh', 8.09, ['cc-opus-high']]);
+  // docs-mechanical declared T3 (above its T1 floor): accepted as declared; the only docs-mechanical@T3 holder is the
+  // lead-direct profile, which takes it only below direct-max-tokens: blocked at the median, direct at 15000
+  const dm = decideLive('docs-mechanical', { difficultyTier: 'T3' });
+  assert.deepEqual([dm.route, dm['difficulty-tier']], ['blocked', 'T3']);
+  assert.equal(dm.candidates['cc-haiku-low'].reason, 'cc-haiku-low not qualified for docs-mechanical@T3 (holds docs-mechanical@T1)');
+  assert.equal(dm.candidates['cc-fable-xhigh'].reason, 'direct unsuitable: 92000 tokens > direct-max-tokens 15000');
+  const small = decideLive('docs-mechanical', { difficultyTier: 'T3', estimatedTokens: 15000 });
+  assert.deepEqual([small.route, small.profile], ['direct', 'cc-fable-xhigh']);
+  // the D3 default on the categories whose holders are all bare: undeclared pin-tests and docs-mechanical read T2 and
+  // are blocked; declared T1 they route as under host-policy-4
+  for (const category of ['pin-tests', 'docs-mechanical']) {
+    assert.deepEqual([decideLive(category).route, decideLive(category)['difficulty-tier']], ['blocked', 'T2'], category);
+    assert.deepEqual([decideLive(category, { difficultyTier: 'T1' }).route, decideLive(category, { difficultyTier: 'T1' }).profile], ['delegate', 'cc-haiku-low'], category);
+  }
+  // the CLI on the live policy agrees, and records the revision and the tier
+  for (const [category, over, profile, tier] of [['fix', { difficultyTier: 'T1' }, 'cc-haiku-high', 'T1'], ['fix', { difficultyTier: 'T2' }, 'cc-opus-high', 'T2'], ['review', { difficultyTier: 'T1' }, 'cc-sonnet-xhigh', 'T1'], ['build-ui', { estimatedTokens: 250000 }, 'cc-opus-high', 'T2']]) {
+    const decided = cliDecide(hp5Req(category, { taskId: `hp5-${category}`, ...over }), LIVE_OFF_PATH);
+    assert.deepEqual([decided.bindings['policy-revision'], decided.decision.route, decided.decision.profile, decided.decision['difficulty-tier'], decided.brief['difficulty-tier']], ['host-policy-5', 'delegate', profile, tier, tier], category);
+  }
+});
+
+test('host-policy-5: a decision made under revision 5 dispatches - the committed policy with a fresh synthetic reading, the recheck accepting the Brief with difficulty-tier; the decision record carries the tier', () => {
+  const trace = tmp();
+  const at = '2026-10-18T19:00:00Z';
+  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05 }), at, COMMITTED_POLICY_PATH);
+  assert.equal(r.code, 0, r.stderr);
+  const request = reqFor(COMMITTED_POLICY, 'build-ui', { taskId: 'hp5-rt', estimatedTokens: 250000, now: at, deadline: '2026-10-19T03:00:00Z' });
+  const d = decide(request, { traceDir: trace, policyPath: COMMITTED_POLICY_PATH });
+  assert.deepEqual([d.route, d.decision.profile, d.brief['difficulty-tier'], d.record['difficulty-tier'], d.record['usage-tokens']], ['delegate', 'cc-opus-high', 'T2', 'T2', 479000]);
+  assert.match(d.text, /\nDifficultyTier: {4}T2\n/);
+  const disp = cli(['dispatch', 'hp5-rt', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', '2026-10-18T19:05:00Z', '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(disp.code, 0, disp.stderr);
+  assert.equal(ledgerLines(trace).pop()['brief-fingerprint'], d.briefFingerprint);
+});
+
+test('rate (host-policy-5): CALIBRATION lines for runs 1-3 carry no tier; a fix observation with tier T3 prints fix@T3; two consecutive verification-failed fixes at T2 propose demote cc-opus-high from fix@T2', () => {
+  const lines = (r) => r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  const committed = rate({ traceDir: frozenTrace(FREEZE_HP4), policyPath: LIVE_OFF_PATH, now: NOW });
+  assert.ok(lines(committed).length > 0 && lines(committed).every((l) => !/@T/.test(l)), lines(committed).join('\n'));
+  assert.deepEqual(lines(committed), lines(rate({ traceDir: frozenTrace(FREEZE_HP4), policyPath: HP4_OFF_PATH, now: NOW })), 'the same lines as under host-policy-4');
+  const o = CAL3['opus-high'];
+  const run4 = { 'opus-high': { profile: 'opus-high', fix: { ...o.fix, tier: 'T3' }, usage: o.usage } };
+  const tiered = lines(rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3, run4]), policyPath: LIVE_OFF_PATH, now: NOW }));
+  assert.ok(tiered.includes('CALIBRATION cc-opus-high fix@T3: 1 pass, 0 partial, 0 fail (calibration-4)'), tiered.join('\n'));
+  const trace = tmp();
+  for (const id of ['d-1', 'd-2']) tieredCycle(trace, LIVE_OFF_PATH, id, 'fix', 'T2', 'cc-opus-high', 'verification-failed');
+  const r = cli(['rate', '--trace', trace, '--now', LATE, '--policy', LIVE_OFF_PATH]);
+  assert.equal(r.code, 0, r.stderr);
+  assert.ok(r.stdout.split('\n').includes('PROPOSAL demote cc-opus-high from fix@T2: 2 consecutive verification-failed (d-1, d-2); not applied — the lead ratifies by editing host-policy.json'), r.stdout);
+  assert.equal(JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8')).stats['cc-opus-high']['fix@T2']['verification-failed'], 2);
+});
