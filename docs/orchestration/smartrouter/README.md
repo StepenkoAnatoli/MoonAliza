@@ -1024,8 +1024,7 @@ Found while building revision 5 (unit sr-policy-5). The lead decides.
    deleting that key from `host-policy.json` returns the host to per-category routing with no code change (D1, D2:
    the tiered entries still load). With the key removed, a default `fix`, `review`, `pin-tests` and
    `docs-mechanical`, a `build-ui` at 250000 and a `fix` declared T2 route as host-policy-4 routes them (probed in
-   fix round 1). A decision taken under the enforced revision would then be refused at dispatch (`changed:
-   difficulty-tier`), the mirror of the pending-decision note. Until the delta review is recorded, host-policy-5 runs
+   fix round 1). A decision taken under the enforced revision would then be refused at dispatch (`the route changed` where the untiered route picks another profile, as for a fix declared T2; `changed: difficulty-tier` where it picks the same one), the mirror of the pending-decision note. Until the delta review is recorded, host-policy-5 runs
    ahead of the specification it cites. Whether to keep the key on until then is the lead's call.
 
 ## Policy findings (host-policy-4)
