@@ -260,3 +260,10 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - SmartRouter branch `tools/calibration-kit` at 229aa1f (23 files, 57 kit tests, gate green through the hook on every commit), draft PR #106, subscribed.
 - Outcome sr-kit seq 4 accepted, 1,262,204 tokens; rate proposes cc-opus-high headroom-tested 1030000 -> 1263000, ratified in the next commit.
 - Next: the shared synthetic subject pack (3c), the CI check (3d), the qualification table (3e); then run 4 stage 4a with the host-pack T1 cells for the four undelegatable categories.
+
+## 2026-10-18 22:20 UTC (originating session) - units sr-pack and sr-evidence dispatched in parallel
+
+- sr-pack (the shared synthetic subject pack, `briefs/pack-builder.md`): decision seq 1 delegate cc-opus-high (build-ui@T3), dispatch seq 2, workflow wf_15173ede-7d9, worktree sr-pack on SmartRouter branch `tools/calibration-shared-pack` stacked on `tools/calibration-kit` (229aa1f).
+- sr-evidence (the evidence check and the qualification table, `briefs/evidence-check-builder.md`): decision seq 1 delegate cc-opus-high (build-ui@T3), dispatch seq 2, workflow wf_2f45f911-b10's sibling (id in the next entry), worktree sr-evidence on `tools/calibration-evidence-check`, also stacked on the kit.
+- Usage 21:59:28Z: five_hour 0.15, seven_day 0.76. Gate 4 admitted both (projection with both in flight about 0.78, under the 0.80 limit for seven_day). **Run 4 stage 4a (4.8M-9.6M tokens) does not fit the seven-day window before its reset on 2026-10-24 18:00Z**: with the week at 0.76 and the stop rule at 0.90, it waits for the reset or the operator's call.
+- The PR #105 adapter copy lags the host by the sr-kit, sr-pack and sr-evidence trace rows and the 1263000 headroom; they ride the next refresh.
