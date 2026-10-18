@@ -526,8 +526,9 @@ const PANEL = 'src/renderer/GitHubAccountPanel.tsx';
 // process.env and process['env'];
 // writev(Sync) and a handle's writev() beside write(Sync).
 // Child processes and worker threads, by their module names and by the calls that spawn (U7-R10): a token in a child's argv or a worker's
-// message reaches a place no scan reads.
-const FORBIDDEN = /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\}\s*=\s*process\b|(?:\bfrom\s*|\b(?:require|import)\s*\(\s*)['"](?:node:)?process['"]|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bwritev(?:Sync)?\(|\bcopyFile(?:Sync)?\b|['"](?:node:)?(?:child_process|worker_threads)['"]|\b(?:spawn|execFile|fork|execSync|spawnSync|execFileSync)\s*\(/g;
+// message reaches a place no scan reads. A child's env is reached through exec too, and through process.getBuiltinModule under a
+// computed name (U7-R13), so both are findings.
+const FORBIDDEN =/\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\}\s*=\s*process\b|(?:\bfrom\s*|\b(?:require|import)\s*\(\s*)['"](?:node:)?process['"]|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bwritev(?:Sync)?\(|\bcopyFile(?:Sync)?\b|['"](?:node:)?(?:child_process|worker_threads)['"]|\b(?:spawn|exec|execFile|fork|execSync|spawnSync|execFileSync)\s*\(|\bgetBuiltinModule\b/g;
 const moduleFindings = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => match[0]);
 /** The same findings with their line, so a red guard names the module and the line it found (U7-R10). */
 const moduleLines = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => `${source.slice(0, match.index ?? 0).split('\n').length}: ${match[0]}`);
@@ -573,10 +574,10 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
     'const { env } = process;', 'const { argv, env: e } = process;', 'const { env: { HOME } } = process;', "import { env } from 'node:process';", 'import * as p from "process";',
     "const q = require('node:process');", "const r = await import('process');", 'fs.writevSync(fd, bufs);', 'await fh.writev(bufs);',
     // The child processes and worker threads, by module and by call (U7-R10).
-    "import { spawn } from 'node:child_process';", "spawnSync('git', [t]);", 'const w = require("worker_threads");'].join(' ')))
+    "import { spawn } from 'node:child_process';", "spawnSync('git', [t]);", 'const w = require("worker_threads");', "exec('true', { env: { GH_TOKEN: t } }, cb);", "const g = (globalThis as any).process.getBuiltinModule(['child', 'process'].join('_'));"].join(' ')))
     .toEqual(['console', 'console', 'console', 'process.env', "process[ 'env", 'writeFile', 'appendFileSync', 'createWriteStream', 'writeSync(', 'write(', 'copyFile', 'copyFileSync',
       '} = process', '} = process', '} = process', "from 'node:process'", 'from "process"', "require('node:process'", "import('process'", 'writevSync(', 'writev(',
-      "'node:child_process'", 'spawnSync(', '"worker_threads"']);
+      "'node:child_process'", 'spawnSync(', '"worker_threads"', 'exec(', 'getBuiltinModule']);
   // The by-reference control (U7-R11): an import, a comment and a call are not findings; the held reference is.
   expect(atomicJsonByReference("import { atomicJson, removeFile } from '../models/artifact-files';\n// atomicJson renames last\nawait atomicJson(p, v);\nconst persist = atomicJson;")).toEqual(['atomicJson']);
   // The import control (U7-R12): an allowed module and Buffer.from are not findings; a module off the list and a computed name are.
