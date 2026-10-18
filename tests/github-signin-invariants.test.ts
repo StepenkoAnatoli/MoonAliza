@@ -157,20 +157,29 @@ afterEach(async () => {
 
 /** U7-R9: atomicJson is swapped on its module object for the run, so each call's value is recorded before it is written, whatever
  *  the path and however briefly the file lives (a staging file removed inside one commit point is in no snapshot). The importers read
- *  the export at each call, so the swap reaches them; the value is kept in UTF-8 and UTF-16LE, as the other scans read it. */
-function recordAtomicJson(root: string, targetOf: (file: string) => Target): { writes: Captured[]; restore: () => void } {
+ *  the export at each call, so the swap reaches them; the value is kept in UTF-8 and UTF-16LE, as the other scans read it.
+ *  U7-R16: privateDirectory is swapped too, and the name of every path a write or a directory is made at is recorded beside the value,
+ *  in UTF-8 and UTF-16LE: a token in a file or directory name is in clear on disk, though no file holds it. */
+function recordWrites(root: string, targetOf: (file: string) => Target): { writes: Captured[]; restore: () => void } {
   const writes: Captured[] = [];
-  const real = artifactFiles.atomicJson;
+  const realWrite = artifactFiles.atomicJson; const realDirectory = artifactFiles.privateDirectory;
+  const shown = (path: string) => (path.startsWith(root + sep) ? relative(root, path).split(sep).join('/') : path);
+  const recordName = (kind: string, path: string) => {
+    const label = `${kind}: name ${shown(path)}`;
+    writes.push({ target: targetOf(path), label, bytes: Buffer.from(shown(path), 'utf8') }, { target: targetOf(path), label, bytes: Buffer.from(shown(path), 'utf16le') });
+  };
   const exported = (path: string, value: unknown) => {
     const json = JSON.stringify(value);
-    const inside = path.startsWith(root + sep);
-    const label = `atomicJson: ${inside ? relative(root, path).split(sep).join('/') : path}`;
+    const label = `atomicJson: ${shown(path)}`;
     writes.push({ target: targetOf(path), label, bytes: Buffer.from(json, 'utf8') }, { target: targetOf(path), label, bytes: Buffer.from(json, 'utf16le') });
-    return real(path, value);
+    recordName('atomicJson', path);
+    return realWrite(path, value);
   };
-  const define = (value: unknown) => Object.defineProperty(artifactFiles, 'atomicJson', { configurable: true, enumerable: true, writable: true, value });
-  define(exported);
-  return { writes, restore: () => define(real) };
+  const directory = (path: string) => { recordName('privateDirectory', path); return realDirectory(path); };
+  const define = (name: 'atomicJson' | 'privateDirectory', value: unknown) =>
+    Object.defineProperty(artifactFiles, name, { configurable: true, enumerable: true, writable: true, value });
+  define('atomicJson', exported); define('privateDirectory', directory);
+  return { writes, restore: () => { define('atomicJson', realWrite); define('privateDirectory', realDirectory); } };
 }
 
 /** Builds the stack, runs the journey and returns everything it saw. `pendingPlant`: the mutation test's plant for the pending window
@@ -182,7 +191,7 @@ async function journey(options: { pendingPlant?: string } = {}) {
   // Every file under userData (root), walked recursively, so a clear token in any file is found, not only in the named ones (U7-R1).
   const named = new Map<string, Target>([[database, 'state.sqlite'], [`${database}-wal`, 'state.sqlite-wal'], [`${database}-shm`, 'state.sqlite-shm'], [accountFile, 'account file']]);
   const targetOf = (file: string): Target => named.get(file) ?? (file.startsWith(vaultDir + sep) ? 'vault directory' : 'other userData files');
-  const recorder = recordAtomicJson(root, targetOf); unhook = recorder.restore;
+  const recorder = recordWrites(root, targetOf); unhook = recorder.restore;
   const vault = new Vault(vaultDir, cryptor); await vault.initialize('epoch-1');
   const accountStore = new GitHubAccountStore(accountFile, vault, CLIENT);
   await accountStore.open();
@@ -276,17 +285,23 @@ async function journey(options: { pendingPlant?: string } = {}) {
     ipc.push({ method, result: value });
     return value;
   };
-  const filesUnder = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+  /** Every entry under dir, directories too (U7-R16): a name holds a token as much as the bytes of a file do. */
+  const entriesUnder = (dir: string): Array<{ path: string; file: boolean }> => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const path = join(dir, entry.name);
-    return entry.isDirectory() ? filesUnder(path) : entry.isFile() ? [path] : [];
+    return entry.isDirectory() ? [{ path, file: false }, ...entriesUnder(path)] : entry.isFile() ? [{ path, file: true }] : [];
   });
   const snapshot = (label: string) => {
-    for (const file of filesUnder(root)) {
+    for (const { path: file, file: isFile } of entriesUnder(root)) {
+      // The name is on disk in clear as the entry is (U7-R16): it is captured in UTF-8 and UTF-16LE, as the contents are.
+      const name = relative(root, file).split(sep).join('/');
+      captured.push({ target: targetOf(file), label: `${label}: name ${name}`, bytes: Buffer.from(name, 'utf8') },
+        { target: targetOf(file), label: `${label}: name ${name}`, bytes: Buffer.from(name, 'utf16le') });
+      if (!isFile) continue;
       // A request's snapshot can run while an atomic write's rename is in flight: a file gone between the listing and the read is
       // no longer on disk, so it is skipped rather than failing the run.
       let bytes: Buffer;
       try { bytes = readFileSync(file); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
-      captured.push({ target: targetOf(file), label: `${label}: ${relative(root, file).split(sep).join('/')}`, bytes });
+      captured.push({ target: targetOf(file), label: `${label}: ${name}`, bytes });
     }
   };
   snapshotAt = snapshot;
@@ -436,6 +451,9 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   writeFileSync(join(j.vaultDir, 'planted.b64'), Buffer.concat([randomBytes(1), vaultPlant, randomBytes(1)]).toString('base64'));
   writeFileSync(join(j.vaultDir, 'planted.b64url'), Buffer.concat([randomBytes(2), vaultPlant, randomBytes(2)]).toString('base64url'));
   writeFileSync(join(j.vaultDir, 'planted.hex'), vaultPlant.toString('hex'));
+  // A name in clear (U7-R16): a directory under userData named with a marker. No file under it holds the marker, so only the name scan finds it.
+  const namePlant = plant();
+  mkdirSync(join(j.root, 'github', `planted-${namePlant}`));
   j.ipc.push({ method: 'github.account.read', result: { account: { state: 'signed-in', login: planted['IPC results and DTOs'], renewalHeld: false, lastOutcome: null } } });
   // Through the engine's own channels: a prompt reaches the engine's messages, events and infer(); a file text not in the vault
   // (so not redacted) reaches the tool output.
@@ -453,6 +471,7 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   }
   expect(hits['vault directory'].some(hit => hit.endsWith('(UTF-16LE)'))).toBe(true);
   expect(['base64', 'base64url', 'hex'].map(encoding => hits['vault directory'].some(hit => hit.endsWith(`(${encoding})`)))).toEqual([true, true, true]);
+  expect(scan(j.captured, { namePlant })['other userData files']).toContain(`namePlant in planted: name github/planted-${namePlant} (UTF-8)`);
   // Every alignment, in both alphabets, between random neighbours: the cut forms find the marker wherever in the stream it starts.
   for (const shift of [0, 1, 2]) for (const encoding of ['base64', 'base64url'] as const) {
     const text = Buffer.concat([randomBytes(shift), vaultPlant, randomBytes(3)]).toString(encoding);
@@ -462,7 +481,7 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   // The pending window (U7-R5): a device code in clear on disk only while the poll is out, removed before the commit point, is found
   // by the snapshot each request takes, though no checkpoint snapshot ever sees the file.
   expect(scan(j.captured, { pending: pendingPlant })['other userData files']).toContain('pending in request: github/account.json.pending.json (UTF-8)');
-  expect(j.captured.filter(item => item.label.endsWith('account.json.pending.json')).map(item => item.label)).toEqual(['request: github/account.json.pending.json']);
+  expect(j.captured.filter(item => item.label.endsWith('account.json.pending.json') && !item.label.includes(': name ')).map(item => item.label)).toEqual(['request: github/account.json.pending.json']);
   // File targets are scanned per file, the WAL apart from the database (pre-mortem 2).
   for (const target of FILE_TARGETS) expect(j.all().some(item => item.target === target && item.label.startsWith('planted'))).toBe(true);
   // The journey's own markers are still absent: the plants are what turned each scan red.
