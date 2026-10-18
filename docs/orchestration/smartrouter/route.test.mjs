@@ -2512,7 +2512,7 @@ test('Item 4: every record a decision, dispatch and outcome cycle appends carrie
   assert.ok(committed.some((r) => !Object.hasOwn(r.counters, 'cash-basis')));
 });
 
-test('Item 4: an outcome with evidence.actual-spend null and no actual-spend-basis is stored and recorded with actual-spend-basis "estimate-only"; a supplied basis is kept; a non-null spend gets none', () => {
+test('Item 4: an outcome with evidence.actual-spend null and no actual-spend-basis (absent or null) is stored and recorded with actual-spend-basis "estimate-only"; a supplied "estimate-only" is kept; any other basis is exit 2; a non-null spend gets none', () => {
   const trace = tmp();
   const cycle = (taskId, evidence, policyPath = POLICY_PATH, dir = trace) => {
     const d = decide(req({ taskId }), { policyPath, traceDir: dir });
@@ -2538,9 +2538,28 @@ test('Item 4: an outcome with evidence.actual-spend null and no actual-spend-bas
   assert.equal(supplied.stored.evidence['actual-spend-basis'], 'estimate-only');
   assert.deepEqual(supplied.stored, supplied.given);
   assert.equal(supplied.rec['actual-spend-basis'], 'estimate-only');
-  const other = cycle('sb-3', { 'actual-spend-basis': 'lead estimate' });
-  assert.equal(other.stored.evidence['actual-spend-basis'], 'lead estimate');
-  assert.equal(other.rec['actual-spend-basis'], 'lead estimate');
+  // R1: a null basis is no basis - it is defaulted like an absent one, never stored or recorded as null
+  const nullBasis = cycle('sb-3', { 'actual-spend-basis': null });
+  assert.equal(nullBasis.stored.evidence['actual-spend-basis'], 'estimate-only');
+  assert.equal(nullBasis.rec['actual-spend-basis'], 'estimate-only');
+  const knownNull = cycle('sb-7', { 'actual-spend': 0.42, 'actual-spend-basis': null });
+  assert.equal(Object.hasOwn(knownNull.stored.evidence, 'actual-spend-basis'), false);
+  assert.equal(Object.hasOwn(knownNull.rec, 'actual-spend-basis'), false);
+  // R1: upstream conform_spec.py refuses any other basis (sr-ci-item4 B), so the adapter refuses it (exit 2) and
+  // stores and appends nothing
+  for (const [i, bad] of ['lead estimate', 'metered', 42, true, {}].entries()) {
+    const taskId = `sb-8${i}`;
+    const d = decide(req({ taskId }), { policyPath: POLICY_PATH, traceDir: trace });
+    dispatch(taskId, 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+    const o = outcome({ 'task-id': taskId, outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint });
+    o.evidence = { ...o.evidence, 'actual-spend-basis': bad };
+    assert.throws(() => recordOutcome(o, { traceDir: trace, policyPath: POLICY_PATH, now: NOW }), (e) => e instanceof RouterError && e.code === 2 && /invalid Outcome \(spec-v2 §10\.3\): evidence\.actual-spend-basis must be "estimate-only" when present \(SmartRouter Item 4\)/.test(e.message), JSON.stringify(bad));
+    const out = cli(['outcome', writeJson(o), '--trace', trace, '--now', NOW]);
+    assert.equal(out.code, 2, `${JSON.stringify(bad)}: ${out.stdout}`);
+    assert.match(out.stderr, /evidence\.actual-spend-basis must be "estimate-only" when present/);
+    assert.equal(readLedger(trace).filter((r) => r['task-id'] === taskId && r.kind === 'outcome').length, 0);
+    assert.equal(existsSync(join(trace, 'outcomes', `${taskId}-3.json`)), false);
+  }
   // a known spend needs no marker
   const known = cycle('sb-4', { 'actual-spend': 0.42 });
   assert.deepEqual(known.stored, known.given);
@@ -2557,4 +2576,8 @@ test('Item 4: an outcome with evidence.actual-spend null and no actual-spend-bas
   const metered = cycle('sb-6', {}, policyWith((p) => { p.accounting.mode = 'metered'; }), tmp());
   assert.equal(Object.hasOwn(metered.stored.evidence, 'actual-spend-basis'), false);
   assert.equal(Object.hasOwn(metered.rec, 'actual-spend-basis'), false);
+  // R1: nor does it keep a null basis there
+  const meteredNull = cycle('sb-9', { 'actual-spend-basis': null }, policyWith((p) => { p.accounting.mode = 'metered'; }), tmp());
+  assert.equal(Object.hasOwn(meteredNull.stored.evidence, 'actual-spend-basis'), false);
+  assert.equal(Object.hasOwn(meteredNull.rec, 'actual-spend-basis'), false);
 });

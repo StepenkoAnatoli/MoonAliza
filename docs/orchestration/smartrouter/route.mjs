@@ -199,6 +199,8 @@ export function validateOutcome(o) {
   if (!(ev['actual-spend'] === null || (typeof ev['actual-spend'] === 'number' && ev['actual-spend'] >= 0))) fail('evidence.actual-spend');
   // additive (spec-v2 §13): the tokens the unit actually used, for the usage-window learning in rate
   if (!(ev['actual-tokens'] === undefined || ev['actual-tokens'] === null || isInt(ev['actual-tokens']))) fail('evidence.actual-tokens (an integer >= 0, or null = unknown)');
+  // SmartRouter Item 4: a basis other than "estimate-only" is a violation upstream (conform_spec.py); null = no basis
+  if (!(ev['actual-spend-basis'] == null || ev['actual-spend-basis'] === ESTIMATE_ONLY)) fail(`evidence.actual-spend-basis must be "${ESTIMATE_ONLY}" when present (SmartRouter Item 4)`);
   if (!isStrArray(ev['files-touched'])) fail('evidence.files-touched');
   if (typeof ev.notes !== 'string') fail('evidence.notes');
   if (typeof o['original-brief-fingerprint'] !== 'string') fail('original-brief-fingerprint');
@@ -1211,12 +1213,11 @@ export function recordOutcome(o, { policyPath = DEFAULT_POLICY, traceDir = DEFAU
   if (st.fingerprints.size && !st.fingerprints.has(fp)) throw refused(`original-brief-fingerprint does not match any Brief recorded for ${o['task-id']}`);
   const seq = st.lastSeq + 1;
   // Item 4: an estimate-only host's unknown spend (null) is stored with the basis that makes it conformant (§10.3);
-  // a basis the Outcome supplies is kept as given, and a known spend needs none. The caller's object is not changed
-  const ev = o.evidence;
-  const stored = estimateOnly(policy) && ev['actual-spend'] === null && ev['actual-spend-basis'] === undefined
-    ? { ...o, evidence: { ...ev, 'actual-spend-basis': ESTIMATE_ONLY } }
-    : o;
-  const basis = stored.evidence['actual-spend-basis'];
+  // a supplied "estimate-only" is kept (validateOutcome refuses any other), a null basis is no basis - defaulted like
+  // an absent one, or dropped where none applies - and a known spend needs none. The caller's object is not changed
+  const { 'actual-spend-basis': supplied, ...unbased } = o.evidence;
+  const basis = supplied ?? (estimateOnly(policy) && o.evidence['actual-spend'] === null ? ESTIMATE_ONLY : undefined);
+  const stored = basis === supplied ? o : { ...o, evidence: basis === undefined ? unbased : { ...unbased, 'actual-spend-basis': basis } };
   const dir = join(traceDir, 'outcomes');
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${o['task-id']}-${seq}.json`), `${JSON.stringify(stored, null, 1)}\n`, { flag: 'wx' });
