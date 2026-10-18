@@ -32,12 +32,14 @@ You build one unit of the GitHub sign-in for MoonAliza, an Electron + TypeScript
 - **Commits.**
   - One five-part commit per task (What changed / Why / What it touched / What you verified, each claim marked verified, untested or expected / What you got wrong, "nothing to report" if nothing).
   - Identity: `git -c user.name=StepenkoAnatoli -c user.email=318295322+StepenkoAnatoli@users.noreply.github.com commit`.
-  - End every message with:
+  - End every message with the two trailer lines. The `Co-Authored-By` line names the model that writes the commit (lead
+    ruling W-4/SW-6, 2026-10-17: the harness's attribution, so a sub-agent's commit says `Claude Opus 5.5`, `Claude Sonnet 5.5`
+    or `Claude Haiku 5.5`, and the lead's says `Claude Fable 5.1`); the second line is always the session:
 
-        Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+        Co-Authored-By: <the model writing this commit> <noreply@anthropic.com>
         Claude-Session: https://claude.ai/code/session_01VdJ51CTnHT4Zet6eScsBBh
 
-  - No other model identifiers anywhere.
+  - No model identifier anywhere else: not in code, comments, docs, test names or PR text.
   - A commit that touches `src/` stages `docs/ARCHITECTURE.md` with your sentence appended to the "GitHub sign-in" paragraph.
   - Never use `--no-verify`.
 - **Checks after each commit:**
