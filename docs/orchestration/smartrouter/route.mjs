@@ -1210,14 +1210,23 @@ export function recordOutcome(o, { policyPath = DEFAULT_POLICY, traceDir = DEFAU
   const fp = o['original-brief-fingerprint'];
   if (st.fingerprints.size && !st.fingerprints.has(fp)) throw refused(`original-brief-fingerprint does not match any Brief recorded for ${o['task-id']}`);
   const seq = st.lastSeq + 1;
+  // Item 4: an estimate-only host's unknown spend (null) is stored with the basis that makes it conformant (§10.3);
+  // a basis the Outcome supplies is kept as given, and a known spend needs none. The caller's object is not changed
+  const ev = o.evidence;
+  const stored = estimateOnly(policy) && ev['actual-spend'] === null && ev['actual-spend-basis'] === undefined
+    ? { ...o, evidence: { ...ev, 'actual-spend-basis': ESTIMATE_ONLY } }
+    : o;
+  const basis = stored.evidence['actual-spend-basis'];
   const dir = join(traceDir, 'outcomes');
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, `${o['task-id']}-${seq}.json`), `${JSON.stringify(o, null, 1)}\n`, { flag: 'wx' });
+  writeFileSync(join(dir, `${o['task-id']}-${seq}.json`), `${JSON.stringify(stored, null, 1)}\n`, { flag: 'wx' });
   return appendRecord(traceDir, policy, {
     'task-id': o['task-id'], seq, kind: 'outcome', ts: now, profile: profileTuple(policy, pr), counters: counters(st),
     deadline: st.lastDecision?.deadline ?? null, 'brief-fingerprint': FINGERPRINT.test(fp) ? fp : null,
     detail: `outcome ${o.outcome} (dispatch seq ${disp.seq})`, 'outcome-ref': o['task-id'], 'dispatch-seq': disp.seq,
-    tokens: isInt(o.evidence['actual-tokens']) ? o.evidence['actual-tokens'] : null
+    tokens: isInt(o.evidence['actual-tokens']) ? o.evidence['actual-tokens'] : null,
+    // derived from the stored Outcome, like tokens: the basis of its actual-spend, when it has one
+    ...(basis !== undefined ? { 'actual-spend-basis': basis } : {})
   });
 }
 

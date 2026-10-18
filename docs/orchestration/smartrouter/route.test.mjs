@@ -2511,3 +2511,50 @@ test('Item 4: every record a decision, dispatch and outcome cycle appends carrie
   assert.ok(committed.length > 0);
   assert.ok(committed.some((r) => !Object.hasOwn(r.counters, 'cash-basis')));
 });
+
+test('Item 4: an outcome with evidence.actual-spend null and no actual-spend-basis is stored and recorded with actual-spend-basis "estimate-only"; a supplied basis is kept; a non-null spend gets none', () => {
+  const trace = tmp();
+  const cycle = (taskId, evidence, policyPath = POLICY_PATH, dir = trace) => {
+    const d = decide(req({ taskId }), { policyPath, traceDir: dir });
+    dispatch(taskId, 'cc-opus-high', { projectStop: CLEAR, traceDir: dir, policyPath, now: NOW });
+    const o = outcome({ 'task-id': taskId, outcome: 'accepted', 'original-brief-fingerprint': d.briefFingerprint });
+    o.evidence = { ...o.evidence, ...evidence };
+    const given = JSON.parse(JSON.stringify(o));
+    const rec = recordOutcome(o, { traceDir: dir, policyPath, now: NOW });
+    assert.deepEqual(o, given, 'the caller\'s Outcome is not mutated');
+    const stored = JSON.parse(readFileSync(join(dir, 'outcomes', `${taskId}-${rec.seq}.json`), 'utf8'));
+    return { rec, stored, given };
+  };
+  // null spend, no basis: the stored copy and the record carry the marker; nothing else in the Outcome moves
+  const unmarked = cycle('sb-1', {});
+  assert.equal(unmarked.given.evidence['actual-spend'], null);
+  assert.equal(unmarked.stored.evidence['actual-spend-basis'], 'estimate-only');
+  assert.equal(unmarked.stored.evidence['actual-spend'], null);
+  assert.deepEqual({ ...unmarked.stored, evidence: { ...unmarked.stored.evidence, 'actual-spend-basis': undefined } }, { ...unmarked.given, evidence: { ...unmarked.given.evidence, 'actual-spend-basis': undefined } });
+  assert.equal(unmarked.rec['actual-spend-basis'], 'estimate-only');
+  assert.equal(ledgerLines(trace).find((r) => r['task-id'] === 'sb-1' && r.kind === 'outcome')['actual-spend-basis'], 'estimate-only');
+  // a supplied basis is kept as given, on the stored copy and the record
+  const supplied = cycle('sb-2', { 'actual-spend-basis': 'estimate-only' });
+  assert.equal(supplied.stored.evidence['actual-spend-basis'], 'estimate-only');
+  assert.deepEqual(supplied.stored, supplied.given);
+  assert.equal(supplied.rec['actual-spend-basis'], 'estimate-only');
+  const other = cycle('sb-3', { 'actual-spend-basis': 'lead estimate' });
+  assert.equal(other.stored.evidence['actual-spend-basis'], 'lead estimate');
+  assert.equal(other.rec['actual-spend-basis'], 'lead estimate');
+  // a known spend needs no marker
+  const known = cycle('sb-4', { 'actual-spend': 0.42 });
+  assert.deepEqual(known.stored, known.given);
+  assert.equal(Object.hasOwn(known.stored.evidence, 'actual-spend-basis'), false);
+  assert.equal(Object.hasOwn(known.rec, 'actual-spend-basis'), false);
+  // the CLI stores the same marker
+  const cliTrace = tmp();
+  const cd = run(req({ taskId: 'sb-5' }), { traceDir: cliTrace });
+  dispatch('sb-5', 'cc-opus-high', { projectStop: CLEAR, traceDir: cliTrace, policyPath: POLICY_PATH, now: NOW });
+  const r = cli(['outcome', writeJson(outcome({ 'task-id': 'sb-5', outcome: 'accepted', 'original-brief-fingerprint': cd.briefFingerprint })), '--trace', cliTrace, '--now', NOW]);
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(JSON.parse(readFileSync(join(cliTrace, 'outcomes', 'sb-5-3.json'), 'utf8')).evidence['actual-spend-basis'], 'estimate-only');
+  // a host whose accounting is not estimate-only does not claim the basis
+  const metered = cycle('sb-6', {}, policyWith((p) => { p.accounting.mode = 'metered'; }), tmp());
+  assert.equal(Object.hasOwn(metered.stored.evidence, 'actual-spend-basis'), false);
+  assert.equal(Object.hasOwn(metered.rec, 'actual-spend-basis'), false);
+});
