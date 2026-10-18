@@ -279,9 +279,9 @@
     ]
   },
   "headroom-proposals": [],
-  "ledger-sha256": "17738a7a1776c4a430b9b47397d4ed2baef41c104e94221c031470fb448f42b0",
-  "outcome-records": 13,
-  "outcomes-counted": 11,
+  "ledger-sha256": "424c748b06748b6fde30b1126da485eee5ab91075e7d77b94f2c1fe2177ced10",
+  "outcome-records": 14,
+  "outcomes-counted": 12,
   "policy-revision": "host-policy-3",
   "proposals": [],
   "stats": {
@@ -295,6 +295,18 @@
         "escalated": 0,
         "partial": 0,
         "verification-failed": 0
+      }
+    },
+    "cc-haiku-low": {
+      "fix": {
+        "accepted": 0,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 1
       }
     },
     "cc-opus-high": {
