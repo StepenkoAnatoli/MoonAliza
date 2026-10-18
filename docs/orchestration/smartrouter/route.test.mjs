@@ -3999,3 +3999,83 @@ test('E7: a qualify proposal ends with the typed reference lines the lead would 
   // demotion proposals carry no references (nothing to paste)
   assert.ok(rate({ traceDir: frozenTrace(FREEZE_HP3), policyPath: HP3_POLICY_PATH, now: LATE }).proposals.every((p) => p.kind !== 'demote' || p.references === undefined));
 });
+
+// deliverable E: the README's host-policy-6 qualification table is the live policy verbatim (P2-2)
+test('README: the host-policy-6 qualification table matches host-policy.json row for row (15 rows), qualified-for in policy order, the three runs\' grades', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const start = readme.indexOf('### The table (host-policy-6');
+  assert.ok(start >= 0, 'the README carries the host-policy-6 table');
+  const section = readme.slice(start, readme.indexOf('\n#', start + 1));
+  const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
+  assert.equal(rows.length, 15);
+  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of COMMITTED_POLICY.profiles) {
+    const [, , qual, headroom, run1, run2, run3, refs] = rows.find((r) => r[0] === `\`${p.id}\``);
+    assert.equal(qual, p['qualified-for'].join(', ') || 'none', `${p.id} qualified-for`);
+    assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
+    const grade = (run, cat) => (p.evidence.find((e) => e.startsWith(`calibration-${run}: ${cat} `)) ?? '').split(' ')[2] ?? '-';
+    for (const [run, cell] of [[1, run1], [2, run2], [3, run3]]) {
+      assert.equal(cell, ['pin-tests', 'fix', 'review'].map((cat) => grade(run, cat) || '-').join(' / '), `${p.id} calibration-${run} grades`);
+    }
+    // the typed references column: '<task> <category>[@T<k>]' per reference, in evidence order
+    const typedRefs = p.evidence.filter((e) => e.startsWith('outcome: ')).map((e) => e.split(' ').slice(1, 3).join(' '));
+    assert.equal(refs, typedRefs.join(', ') || '-', `${p.id} references`);
+  }
+});
+
+const ONBOARD_STATUS = 'Status: **draft proposal, not normative; revision 2 after the independent review of 2026-10-18 (Request Changes on c53cd77).** Nothing in `skills/` is amended by this document. If accepted after independent review (plan §15), the items below would become one additional host-policy validation rule, one new tools path holding the calibration kit, one evidence-folder contract with a CI check, and an additive host-policy field; until then hosts MUST NOT emit or require them.';
+test('README: Calibration-first evidence (host-policy-6) - the two forms quoted, resolution, the supported-entry rule, the exemption, prose, the lead\'s table with every typed line, and the routing consequence as decide prints it with the remedy', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const unquote = (s) => s.replace(/\n\s*>\s?/g, ' ').replace(/\s+/g, ' ');
+  const start = readme.indexOf('## Calibration-first evidence (host-policy-6)');
+  assert.ok(start >= 0, 'the README carries the section');
+  const section = readme.slice(start, readme.indexOf('\n## ', start + 1));
+  const flat = unquote(section);
+  for (const s of [
+    '`calibration-<n>: <category>[@T<k>] PASS|PARTIAL|FAIL (n=<k>)`',
+    '`outcome: <task-id> <category>[@T<k>] accepted <ISO date> (<path>)`',
+    ONBOARD_STATUS,
+    '`| 1-5 (revision 2) | pending delta review | — | — |`',
+    'relative to the policy file\'s directory, never to `--trace`',
+    'A PARTIAL or FAIL grade entry supports nothing.',
+    '`"evidence": "typed"`',
+    'free text supports nothing',
+    DROPPED.slice(2),
+    'Run 4 gains one T1 host-pack cell for each of `build-core`, `build-tests`, `research-collect` and `docs-mechanical`'
+  ]) assert.ok(flat.includes(s), `the section lacks: ${s}`);
+  for (const line of [...Object.values(HP6_TABLE).flatMap((t) => t.refs ?? []), HP6_HAIKU_HIGH_LINE]) assert.ok(flat.includes(line), `the section lacks the line ${line}`);
+  // the routing consequence: decide's own lines on the live policy (feature-off derivative)
+  for (const [i, [category, over, walked]] of [['build-core', {}, true], ['docs-mechanical', { difficultyTier: 'T1' }, false], ['fix', { difficultyTier: 'T2' }, false]].entries()) {
+    const r = cli(['decide', writeJson(hp6Req(category, { taskId: `readme6-${i}`, ...over })), '--trace', tmp(), '--policy', LIVE_OFF_PATH]);
+    assert.equal(r.code, 0, r.stderr);
+    const out = r.stdout.split('\n');
+    const pickLine = (k) => out.find((l) => l.startsWith(`${k}:`));
+    const profile = pickLine('Profile');
+    const pr = COMMITTED_POLICY.profiles.find((p) => profile.includes(`(${p.id},`));
+    const head = [pickLine('Difficulty'), pickLine('DifficultyTier'), pickLine('Route'), pr ? profile.replace(pr.model, '<model>') : profile, pickLine('Reservations')].join('\n');
+    assert.ok(section.includes(`\n${head}\n`), `${category}: the section lacks\n${head}`);
+    if (walked) {
+      const walk = out.slice(out.findIndex((l) => l.startsWith('Gate walk')), out.findIndex((l, j) => j > 0 && (l.startsWith('Brief') || l === '')));
+      assert.equal(walk.length, 1 + COMMITTED_POLICY.profiles.length);
+      assert.ok(section.includes(`\n${walk.join('\n')}\n`), `${category}: the section lacks the gate walk`);
+    }
+  }
+});
+
+test('README: How the onboarding proposal was applied (host-policy-6) names E1-E7; policy findings (host-policy-6); friction items 23 (the lead-direct exemption) and 24 (the reference form carries no tier)', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const start = readme.indexOf('### How the onboarding proposal was applied (host-policy-6)');
+  assert.ok(start >= 0);
+  const applied = readme.slice(start, readme.indexOf('\n### ', start + 1));
+  for (const e of ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7']) assert.match(applied, new RegExp(`\\n- \\*\\*${e}\\.\\*\\*`), e);
+  const fStart = readme.indexOf('## Policy findings (host-policy-6)');
+  assert.ok(fStart >= 0 && fStart < readme.indexOf('## Policy findings (host-policy-5)'), 'the revision-6 findings come first');
+  const findings = readme.slice(fStart, readme.indexOf('\n## ', fStart + 1)).replace(/\s+/g, ' ');
+  // the next revision's fixture problem and the owner check beyond E1 are on record
+  for (const s of ['trace/policies/host-policy-6.json', 'owner-profile']) assert.ok(findings.includes(s), `the findings lack: ${s}`);
+  const friction = readme.slice(readme.indexOf('## Friction log for SmartRouter upstream'));
+  assert.match(friction, /\n23\. \*\*The proposal has no clause for the lead's own profile\.\*\*/);
+  assert.match(friction, /\n24\. \*\*The proposal's `outcome:` form carries no tier\.\*\*/);
+  const f24 = friction.slice(friction.indexOf('\n24. **')).replace(/\s+/g, ' ');
+  assert.ok(f24.includes('`[@T<k>]`'), 'item 24 names the tier this host added');
+});
