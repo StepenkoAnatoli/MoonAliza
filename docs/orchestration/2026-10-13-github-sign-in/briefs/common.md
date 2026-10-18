@@ -63,3 +63,7 @@ You build one unit of the GitHub sign-in for MoonAliza, an Electron + TypeScript
 - The checks you ran and their results, and the full-suite comparison.
 - Anything in the design or contracts you judged wrong: where you stopped and why.
 - What you got wrong.
+
+## Reports (Ballast rule, adopted 2026-10-18)
+- Write the full report to a file in the run folder (`reports/<unit>-<n>.md`) or the worktree's `docs/orchestration/` reports directory; the structured return carries a gist of at most 5 lines plus the file's path. The lead reads the file, never a long return.
+- When you brief a side session or sub-agent, ask it for exactly that.
