@@ -2119,7 +2119,7 @@ function gradeEntries(run, o) {
 const HP3_TABLE = {
   'cc-haiku-low': { add: ['fix'], headroom: 175000 },
   'cc-haiku-medium': { add: ['fix'], headroom: 183000 },
-  'cc-haiku-high': { add: ['fix'], headroom: 261000 },
+  'cc-haiku-high': { add: ['fix'], headroom: 726000 },
   'cc-sonnet-low': { add: ['fix'], headroom: 114000 },
   'cc-sonnet-medium': { add: ['fix'], headroom: 128000 },
   'cc-sonnet-high': { add: ['fix'], headroom: 183000 },
@@ -2258,7 +2258,7 @@ test('host-policy-3 routing: pin-tests -> cc-haiku-low; review -> cc-opus-high (
 });
 
 // P3-R2: the README's 'routing consequence' names what decide does above cc-haiku-high's headroom, and no tie that never
-// decides: at 261000 tokens cc-opus-xhigh (246k) fails Gate 2 too, so cc-opus-high is the only opus left
+// decides: at 726000 tokens cc-opus-xhigh (246k) fails Gate 2 too, so cc-opus-high is the only opus left
 test('README: a fix at cc-haiku-high\'s headroom or above routes to cc-opus-high, and the routing-consequence sentence says so without a cc-opus-xhigh tie', () => {
   const live = loadPolicy(LIVE_OFF_PATH);
   const haiku = live.profiles.find((p) => p.id === 'cc-haiku-high')['headroom-tested'];

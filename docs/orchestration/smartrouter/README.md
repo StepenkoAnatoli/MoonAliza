@@ -182,7 +182,7 @@ the cell representative in kind. The size difference is held by three things: th
 after two consecutive `verification-failed` outcomes.
 
 **The routing consequence.** A default `fix` request (193000 tokens) fits only the fix-qualified profiles whose
-headroom admits it: `cc-haiku-high` (261k), `cc-opus-xhigh` (246k), `cc-opus-high` (848k), `cc-fable-high` (352k)
+headroom admits it: `cc-haiku-high` (726k), `cc-opus-xhigh` (246k), `cc-opus-high` (848k), `cc-fable-high` (352k)
 (and the lead, whose direct path stops at 15k). Every other fix-qualified profile fails Gate 2 on its headroom. Each
 delegate carries the same required review at `cc-opus-high` ($4.18 for the 209000-token review median) and $1.00 of
 brief overhead, so the cheapest worker wins: **a default `fix` request now routes to `cc-haiku-high`**. `decide` on
@@ -212,8 +212,8 @@ Gate walk (per candidate):
 
 Gate 5's reason: `cc-haiku-high` has the lowest all-in bound among the four eligible delegates, $5.2765 (work
 193000 x the output rate / 1e6 = $0.0965, review $4.18, overhead $1.00), against $9.04 for `cc-opus-high` and
-`cc-opus-xhigh` and $14.83 for `cc-fable-high`. A fix estimated at 261000 tokens or more no longer fits
-`cc-haiku-high` (or `cc-opus-xhigh`, 246k) and goes to `cc-opus-high` ($10.40 at 261000).
+`cc-opus-xhigh` and $14.83 for `cc-fable-high`. A fix estimated at 726000 tokens or more no longer fits
+`cc-haiku-high` (or `cc-opus-xhigh`, 246k) and goes to `cc-opus-high` ($19.70 at 726000).
 
 ### The table (host-policy-3, generated from `host-policy.json`)
 
@@ -231,7 +231,7 @@ Gate 5's reason: `cc-haiku-high` has the lowest all-in bound among the four elig
 | `cc-sonnet-high` | high | fix, pin-tests | 183k | PASS / PASS / FAIL | PASS / PASS / PASS | calibration-1 + calibration-2; review: a FAIL, then a pass |
 | `cc-sonnet-medium` | medium | fix, pin-tests | 128k | PASS / PASS / PASS | PASS / PASS / FAIL | calibration-1 + calibration-2; review: a pass, then a FAIL |
 | `cc-sonnet-low` | low | fix, pin-tests | 114k | PASS / PASS / PASS | PASS / PASS / PARTIAL | calibration-1 + calibration-2; review: a pass, then a PARTIAL |
-| `cc-haiku-high` | high, no vision | fix, pin-tests | 261k | PASS / PASS / FAIL | PASS / PASS / FAIL | calibration-1 + calibration-2 |
+| `cc-haiku-high` | high, no vision | fix, pin-tests | 726k | PASS / PASS / FAIL | PASS / PASS / FAIL | calibration-1 + calibration-2 |
 | `cc-haiku-medium` | medium, no vision | fix, pin-tests | 183k | PASS / PASS / FAIL | PASS / PASS / FAIL | calibration-1 + calibration-2 |
 | `cc-haiku-low` | low, no vision | fix, docs-mechanical, pin-tests | 175k | PASS / PASS / FAIL | PASS / PASS / FAIL | session runs (host-policy-1) + calibration-1 + calibration-2 |
 

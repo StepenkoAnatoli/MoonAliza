@@ -279,11 +279,18 @@
     ]
   },
   "headroom-proposals": [],
-  "ledger-sha256": "424c748b06748b6fde30b1126da485eee5ab91075e7d77b94f2c1fe2177ced10",
-  "outcome-records": 14,
-  "outcomes-counted": 12,
+  "ledger-sha256": "7f05d6221eaf67de6ded60169ac0412fd33a3e0be8bd74c0899c0e651066f76b",
+  "outcome-records": 16,
+  "outcomes-counted": 14,
   "policy-revision": "host-policy-3",
-  "proposals": [],
+  "proposals": [
+    {
+      "category": "fix",
+      "kind": "demote",
+      "profile": "cc-haiku-low",
+      "reason": "2 consecutive verification-failed (fix-u7-r3, fix-x2-2)"
+    }
+  ],
   "stats": {
     "cc-fable-high": {
       "review": {
@@ -292,6 +299,18 @@
         "cancelled": 0,
         "cost-overrun": 0,
         "deviations": 1,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      }
+    },
+    "cc-haiku-high": {
+      "fix": {
+        "accepted": 1,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
         "escalated": 0,
         "partial": 0,
         "verification-failed": 0
@@ -306,7 +325,7 @@
         "deviations": 0,
         "escalated": 0,
         "partial": 0,
-        "verification-failed": 1
+        "verification-failed": 2
       }
     },
     "cc-opus-high": {
@@ -352,7 +371,7 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 2,
-        "spanning": 5,
+        "spanning": 6,
         "unknown-tokens": 0,
         "zero-tokens": 5
       }
@@ -366,12 +385,12 @@
       "skipped": {
         "negative-delta": 0,
         "reset": 0,
-        "spanning": 6,
+        "spanning": 7,
         "unknown-tokens": 0,
         "zero-tokens": 6
       }
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "e59bd07b3be4ea22617c98984c5a2c16a2913abb282d6099e104f50a848936ab"
+  "usage-sha256": "3b8f0b96c19639578602ec606e8c285220a78af9c79b3318308d0b68557d5450"
 }
