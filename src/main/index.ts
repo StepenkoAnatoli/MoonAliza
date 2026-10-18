@@ -192,7 +192,7 @@ if (ownsInstance) void app.whenReady().then(async () => {
   engine.start();
   const references = z.array(z.string()).parse(await engine.control({ method: 'vault.references' }));
   // The collector token and the GitHub sign-in's pair live outside the engine database: their references must survive the reconcile.
-  // The GitHub store's file could not be read, so its references are unknown: its staged entries are kept for this start.
+  // When the GitHub store could not read its file, its references are unknown, so this start keeps every unreferenced staged entry; the next readable start deletes them.
   await vault.reconcile(new Set([...references, ...collectorSettings.references(), ...githubStore.references()]), { keepStaged: githubStore.unreadAtOpen() });
   await collectorSettings.finishStartup();
   await githubStore.finishStartup();
