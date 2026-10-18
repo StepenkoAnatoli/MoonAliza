@@ -1,6 +1,6 @@
 {
- "_comment": "SmartRouter host policy for the MoonAliza build process (the Claude Code session that plans and delegates units). Inputs the lead collects before every dispatch decision, per skills/smart-router/SKILL.md 'Decision flow' step 1. Qualification is host-declared from this session's run history and from graded calibration runs (trace/calibration-<n>/), under the lead's qualification rules (README 'Qualification rules'), and is not an independent review; every evidence ref is a workflow run id in the session's workflow journal plus the unit's ledger row in RUN.md, or a calibration grade entry 'calibration-<n>: <category> PASS|FAIL (n=<k>)'.",
- "policy-revision": "host-policy-2",
+ "_comment": "SmartRouter host policy for the MoonAliza build process (the Claude Code session that plans and delegates units). Inputs the lead collects before every dispatch decision, per skills/smart-router/SKILL.md 'Decision flow' step 1. Qualification is host-declared from this session's run history and from graded calibration runs (trace/calibration-<n>/), under the lead's qualification rules (README 'Qualification rules'), and is not an independent review; every evidence ref is a workflow run id in the session's workflow journal plus the unit's ledger row in RUN.md, or a calibration grade entry 'calibration-<n>: <category> PASS|PARTIAL|FAIL (n=<k>)'.",
+ "policy-revision": "host-policy-3",
  "smartrouter": {
   "repo": "https://github.com/StepenkoAnatoli/SmartRouter",
   "revision": "fbe7bca",
@@ -223,11 +223,33 @@
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json)",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review PASS (n=1)"
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json)",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PASS (n=1)"
    ],
    "qualified-at": "2026-10-17",
    "expires": "2027-01-15",
    "reviewer": "host-declared (lead), not independent"
+  },
+  {
+   "id": "cc-fable-max",
+   "model": "claude-fable-5-1",
+   "effort": "max",
+   "config": "workflow-subagent/structured-output@1",
+   "tools": true,
+   "vision": true,
+   "context-tested": 1000000,
+   "headroom-tested": 230000,
+   "qualified-for": [],
+   "evidence": [
+    "wf_fe91e1d6-d78 (calibration-2): review graded in trace/calibration-2/ (results-table.md, observations.json); a review-only profile in that run (no pin or fix cell); headroom-tested is its largest completed run (229283 tokens) rounded up to the next thousand",
+    "calibration-2: review PASS (n=1)"
+   ],
+   "qualified-at": "2026-10-18",
+   "expires": "2027-01-15",
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-fable-high",
@@ -249,7 +271,11 @@
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json)",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review PASS (n=1)"
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json)",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PASS (n=1)"
    ],
    "qualified-at": "2026-10-17",
    "expires": "2027-01-15",
@@ -263,19 +289,71 @@
    "tools": true,
    "vision": true,
    "context-tested": 1000000,
-   "headroom-tested": 139000,
+   "headroom-tested": 172000,
    "qualified-for": [
+    "review",
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (138825 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review PASS (n=1)"
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (171828 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PASS (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
+  },
+  {
+   "id": "cc-opus-max",
+   "model": "claude-opus-5-5",
+   "effort": "max",
+   "config": "workflow-subagent/structured-output@1",
+   "tools": true,
+   "vision": true,
+   "context-tested": 1000000,
+   "headroom-tested": 307000,
+   "qualified-for": [],
+   "evidence": [
+    "wf_fe91e1d6-d78 (calibration-2): review graded in trace/calibration-2/ (results-table.md, observations.json); a review-only profile in that run (no pin or fix cell); headroom-tested is its largest completed run (306927 tokens) rounded up to the next thousand",
+    "calibration-2: review PASS (n=1)"
+   ],
+   "qualified-at": "2026-10-18",
+   "expires": "2027-01-15",
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
+  },
+  {
+   "id": "cc-opus-xhigh",
+   "model": "claude-opus-5-5",
+   "effort": "xhigh",
+   "config": "workflow-subagent/structured-output@1",
+   "tools": true,
+   "vision": true,
+   "context-tested": 1000000,
+   "headroom-tested": 246000,
+   "qualified-for": [
+    "review",
+    "fix",
+    "pin-tests"
+   ],
+   "evidence": [
+    "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (245925 tokens) rounded up to the next thousand",
+    "calibration-1: pin-tests PASS (n=1)",
+    "calibration-1: fix PASS (n=1)",
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json)",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PASS (n=1)"
+   ],
+   "qualified-at": "2026-10-18",
+   "expires": "2027-01-15",
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-opus-high",
@@ -301,7 +379,11 @@
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
     "calibration-1: review PASS (n=1)",
-    "sr-policy-2 outcome accepted 2026-10-17T21:25:59Z: 770527 tokens completed (trace/outcomes/sr-policy-2-3.json); headroom-tested raised 514000 -> 771000 (largest completed run, rounded up, never lowered)"
+    "sr-policy-2 outcome accepted 2026-10-17T21:25:59Z: 770527 tokens completed (trace/outcomes/sr-policy-2-3.json); headroom-tested raised 514000 -> 771000 (largest completed run, rounded up, never lowered)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json)",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PASS (n=1)"
    ],
    "qualified-at": "2026-10-17",
    "expires": "2027-01-15",
@@ -315,19 +397,43 @@
    "tools": true,
    "vision": true,
    "context-tested": 1000000,
-   "headroom-tested": 115000,
+   "headroom-tested": 154000,
    "qualified-for": [
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (114273 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review PASS (n=1)"
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (153636 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review FAIL (n=1)",
+    "G-1 (trace/calibration-2/lead-notes.md): the calibration-2 review FAIL rests on one grader classification that the cross-candidate adjudication contests; the preregistered rule stands for the score, the adjudication is recorded, not applied"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
+  },
+  {
+   "id": "cc-sonnet-xhigh",
+   "model": "claude-sonnet-5-5",
+   "effort": "xhigh",
+   "config": "workflow-subagent/structured-output@1",
+   "tools": true,
+   "vision": true,
+   "context-tested": null,
+   "headroom-tested": 328000,
+   "qualified-for": [],
+   "evidence": [
+    "wf_fe91e1d6-d78 (calibration-2): review graded in trace/calibration-2/ (results-table.md, observations.json); a review-only profile in that run (no pin or fix cell); headroom-tested is its largest completed run (327759 tokens) rounded up to the next thousand",
+    "calibration-2: review PASS (n=1)"
+   ],
+   "qualified-at": "2026-10-18",
+   "expires": "2027-01-15",
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-sonnet-high",
@@ -337,19 +443,24 @@
    "tools": true,
    "vision": true,
    "context-tested": null,
-   "headroom-tested": 163000,
+   "headroom-tested": 183000,
    "qualified-for": [
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (162318 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review FAIL (n=1)"
+    "calibration-1: review FAIL (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (182356 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PASS (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-sonnet-medium",
@@ -359,19 +470,24 @@
    "tools": true,
    "vision": true,
    "context-tested": null,
-   "headroom-tested": 121000,
+   "headroom-tested": 128000,
    "qualified-for": [
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (120217 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review PASS (n=1)"
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (127804 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review FAIL (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-sonnet-low",
@@ -381,19 +497,24 @@
    "tools": true,
    "vision": true,
    "context-tested": null,
-   "headroom-tested": 110000,
+   "headroom-tested": 114000,
    "qualified-for": [
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (109830 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review PASS (n=1)"
+    "calibration-1: review PASS (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (113230 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review PARTIAL (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-haiku-high",
@@ -405,17 +526,22 @@
    "context-tested": 1000000,
    "headroom-tested": 261000,
    "qualified-for": [
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (260363 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review FAIL (n=1)"
+    "calibration-1: review FAIL (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json)",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review FAIL (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-haiku-medium",
@@ -425,19 +551,24 @@
    "tools": true,
    "vision": false,
    "context-tested": 1000000,
-   "headroom-tested": 162000,
+   "headroom-tested": 183000,
    "qualified-for": [
+    "fix",
     "pin-tests"
    ],
    "evidence": [
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (161937 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review FAIL (n=1)"
+    "calibration-1: review FAIL (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (182199 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review FAIL (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead) from calibration-1 grades"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   },
   {
    "id": "cc-haiku-low",
@@ -447,8 +578,9 @@
    "tools": true,
    "vision": false,
    "context-tested": 1000000,
-   "headroom-tested": 139000,
+   "headroom-tested": 175000,
    "qualified-for": [
+    "fix",
     "docs-mechanical",
     "pin-tests"
    ],
@@ -457,11 +589,15 @@
     "wf_052c5f34-973 (calibration-1): pin, fix and review graded in trace/calibration-1/ (results-table.md, observations.json); headroom-tested is its largest completed run (138101 tokens) rounded up to the next thousand",
     "calibration-1: pin-tests PASS (n=1)",
     "calibration-1: fix PASS (n=1)",
-    "calibration-1: review FAIL (n=1)"
+    "calibration-1: review FAIL (n=1)",
+    "wf_fe91e1d6-d78 (calibration-2): pin, fix and review graded in trace/calibration-2/ (results-table.md, observations.json); headroom-tested is its largest completed run (174821 tokens) rounded up to the next thousand",
+    "calibration-2: pin-tests PASS (n=1)",
+    "calibration-2: fix PASS (n=1)",
+    "calibration-2: review FAIL (n=1)"
    ],
-   "qualified-at": "2026-10-17",
+   "qualified-at": "2026-10-18",
    "expires": "2027-01-15",
-   "reviewer": "host-declared (lead), not independent"
+   "reviewer": "host-declared (lead) from calibration-1 and calibration-2 grades"
   }
  ],
  "economics": {

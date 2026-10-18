@@ -33,8 +33,9 @@ const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 const TUPLE = /^\([^,()]+(, [^,()]+){5}\)$/;
 const EXPIRY_WARN_DAYS = 14;
-// a calibration grade in a profile's evidence: 'calibration-<run>: <category> PASS|FAIL (n=<count>)'
-const CALIBRATION_ENTRY = /^calibration-([1-9]\d*): (\S+) (PASS|FAIL) \(n=([1-9]\d*)\)$/;
+// a calibration grade in a profile's evidence: 'calibration-<run>: <category> PASS|PARTIAL|FAIL (n=<count>)'. PARTIAL
+// (host-policy-3) is calibration-2's third review grade: one of the two ground-truth findings, no false blocking one
+const CALIBRATION_ENTRY = /^calibration-([1-9]\d*): (\S+) (PASS|PARTIAL|FAIL) \(n=([1-9]\d*)\)$/;
 
 export class RouterError extends Error {
   constructor(code, message) {
@@ -125,7 +126,7 @@ function validatePolicy(p) {
     for (const e of pr.evidence ?? []) {
       if (!e.startsWith('calibration-')) continue;
       const m = CALIBRATION_ENTRY.exec(e);
-      if (!m) fail(`profile ${pr.id} evidence '${e}' is not 'calibration-<n>: <category> PASS|FAIL (n=<k>)'`);
+      if (!m) fail(`profile ${pr.id} evidence '${e}' is not 'calibration-<n>: <category> PASS|PARTIAL|FAIL (n=<k>)'`);
       if (!Object.hasOwn(p.categories, m[2])) fail(`profile ${pr.id} evidence '${e}' names unknown category '${m[2]}'`);
     }
   }
