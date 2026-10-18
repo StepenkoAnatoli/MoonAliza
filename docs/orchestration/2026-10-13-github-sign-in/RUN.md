@@ -134,3 +134,20 @@ File paths:
 - SmartRouter worktrees: /home/user/task5-handoff/wt/sr-tiers (proposal/difficulty-tiers), wt/sr-cal3 (evidence/calibration-3), wt/sr-onboard (proposal/calibration-first), wt/sr-policy4 (build/sr-policy4, integrated); clone /home/user/smartrouter.
 - Scratch: /tmp/claude-0/-home-user-Research-Kit/5649504a-fc26-5a4a-85c4-62cf875be3b1/scratchpad (cal3-*, sr-policy-4-*.json, usage-rule.md, gate logs).
 - Ballast clone: /home/user/stepenkoanatoli/ideal-umbrella (read-only).
+
+## Resume point 2026-10-18 17:15 UTC (Windows host session; Ballast rule: context past 150k)
+
+State:
+- Resumed from the 15:55 point on the operator's Windows machine (`C:\Users\PC\Desktop\gittoken`), not the container: no `/home/user` path exists here. Local clones, both checked out with LF (`core.autocrlf=false`): `moonaliza-gsi-build` (this branch) and `sr-refresh` (SmartRouter, branch `hosts/claude-code-revision-4` from `ade3f1e`, `core.hooksPath .githooks`). The container scratch (compare.py, baseline-failing.json, gate logs) is not reachable from here.
+- Delta reviews of #100-#102: none posted (latest PR activity 09:11Z, checked 16:00Z). No pushes to them.
+- Refresh unit (open item 2) built and verified, NOT pushed: local commit `41f7366` on `hosts/claude-code-revision-4` = `docs/orchestration/smartrouter/` at `e43e656` minus `briefs/` over `hosts/claude-code/` (20 files). Checks: node --test 100/100; test_claude_code_host_artifacts 5 OK; conform_spec --record (newest ledger line, sr-policy-4 seq 4) and --outcome sr-policy-4-4 CONFORMANT; run_regression.py all checks PASS (standalone, 24.5 min on Windows, and through the hook). Commit message and draft PR body: `reports/sr-refresh-commit-msg.txt`, `reports/sr-refresh-pr-body.md`.
+- Usage 16:02:10Z recorded with `route.mjs usage` (from the desktop app's plan card, not a rate_limit_event): five_hour 0.07 (resets 19:20Z), seven_day 0.71 (resets 2026-10-24T18:00Z on the card; the 09:07Z event said 2026-10-25T02:00Z), weekly Fable 0.76.
+
+Decisions and why:
+- Push and draft PR of the refresh wait for the operator's go (prompt item 5 "when told to proceed"; review queue stays at three).
+- `trace/calibration-3/` kept as copied, not synced from #101: #101's `adjudication.json` and `void-cells.json` add review-time fields (`three_prong_reading`, `lens_schema_prongs`, `relayed_message`); no value differs; the other three shared files are byte-identical. Resync after #101's delta review; stated in the PR body's limits.
+- fbe7bca binding kept: the mirrored files (decision fixtures, gates.md, SKILL.md 3.0.0, prices-2.json) are unchanged to ade3f1e.
+- Windows checkouts need LF: with CRLF, 4 byte-identity tests fail.
+- Commit trailer: no `Claude-Session` line, since this desktop session has no claude.ai/code URL.
+
+Open items: as at 15:55, except item 2 is now "push `hosts/claude-code-revision-4` and open the draft PR with `reports/sr-refresh-pr-body.md`". For item 4 (MoonAliza fix unit) on this host, the 74-failure baseline is Linux-only; a Windows baseline is needed first.
