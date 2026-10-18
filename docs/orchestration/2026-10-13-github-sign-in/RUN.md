@@ -219,3 +219,11 @@ Open items:
 6. #103 describes merged PRs; the operator or reviewer updates or closes it.
 
 Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
+
+## 2026-10-18 18:52 UTC (originating session) - unit sr-policy-5 claimed
+
+- Open item 1 (the tiered-qualification adapter unit) is taken by the originating session: brief
+  `docs/orchestration/smartrouter/briefs/policy5-builder.md` (the lead's decisions D1-D9 and the re-declaration
+  table), request `sr-policy-5`, dispatched through the adapter. The Windows host session does not start it.
+- The two calibration-3 trace files are resynced (950790f); open item 2's resync clause is done.
+- Usage reading 18:43:02Z: five_hour 0.11, seven_day 0.71. Launch allowed (both below 0.85).
