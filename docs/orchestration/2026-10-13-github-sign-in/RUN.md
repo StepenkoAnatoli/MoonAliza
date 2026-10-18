@@ -196,3 +196,26 @@ Open items:
 6. #103 describes PRs that are now merged; the operator or reviewer updates or closes it.
 
 Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
+
+## Resume point 2026-10-18 18:28 UTC (Windows host session; refresh #104 merged)
+
+State:
+- SmartRouter #104 (adapter refresh: host policy revision 4 and the run-3 trace) MERGED by the operator at 18:25:17Z, merge commit `7f7fc75` (head `398e91b`); main = `7f7fc75`. Verified with gh at 18:26Z.
+- Upstream adapter = this branch's adapter: main's `hosts/claude-code/` is byte-identical to `docs/orchestration/smartrouter/` at `e43e656` minus `briefs/` (verified, `diff -rq` of the two trees at 18:26Z). Since `e43e656` this branch adds only two `trace/usage.jsonl` readings (16:02:10Z, 17:28:39Z), which are not mirrored.
+- #100-#102 merged as at 17:40 (`2e30291`, `72fe412`, `bb3fa6c`). #103 (the reviewer's status note, `e9e511c`) still open, describing merged PRs.
+- The local `sr-refresh` checkout is still at `41f7366` on `hosts/claude-code-revision-4`, a branch now merged; a new refresh starts from `origin/main` (`7f7fc75`).
+- Usage: latest reading 17:28:39Z, stale since 17:58:39Z. Nothing launched.
+
+Decisions and why:
+- Open item 2 closed by the operator's merge.
+- The two calibration-3 trace files upstream (`adjudication.json`, `void-cells.json`) still lack #101's three review-time fields (`three_prong_reading`, `lens_schema_prongs`, `relayed_message`). They are resynced at the next adapter refresh, not in a PR of their own, because no value differs (17:15 decision).
+
+Open items:
+1. Follow-on units, unblocked since 17:40: #100 -> tiered-qualification adapter unit and run 4 stage 4a (fix@T3, 12 cells, 4.8M-9.6M tokens); #102 -> validator rule, kit path, shared subject pack, CI check, qualification table, each its own unit. Refresh the usage reading before any launch.
+2. Next adapter refresh (from `origin/main`): resync the two calibration-3 trace files with #101's review-time fields; mirror whatever the follow-on units change.
+3. Run 4 preparation (G-2 forbidden prong, A-1 no relayed chat): unchanged.
+4. MoonAliza fix unit (C-1..C-3) and Stages 6-9: unchanged; on this host a Windows baseline comes first.
+5. Operator decisions (Research-Kit branch move, UD-1, key rotation): unchanged.
+6. #103 describes merged PRs; the operator or reviewer updates or closes it.
+
+Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
