@@ -533,11 +533,16 @@ const moduleFindings = (source: string) => [...source.matchAll(FORBIDDEN)].map(m
 /** The same findings with their line, so a red guard names the module and the line it found (U7-R10). */
 const moduleLines = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => `${source.slice(0, match.index ?? 0).split('\n').length}: ${match[0]}`);
 /** U7-R11: atomicJson is called, never held. A reference taken at module load (`const persist = atomicJson`) keeps the real function,
- *  so a write through it is never recorded. Comments are stripped; an import clause is the only other place the name may stand. */
+ *  so a write through it is never recorded. Comments are stripped; an import clause is the only other place the name may stand.
+ *  U7-R15: an import that renames it (`{ atomicJson as aj }`) and a namespace import of artifact-files (whose export is read under a
+ *  computed name) hold the same function under another name, so each is a finding too. */
 const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
 const atomicJsonByReference = (source: string) => {
-  const code = withoutComments(source).replace(/\bimport\b[^{};]*\{[^}]*\}\s*from\b/g, '');
-  return [...code.matchAll(/\batomicJson\b(?!\s*(?:\?\.)?\s*\()/g)].map(match => match[0]);
+  const code = withoutComments(source);
+  const renamed = [...code.matchAll(/\batomicJson\s+as\b/g)].map(match => match[0]);
+  const namespace = [...code.matchAll(/\bimport\s*\*\s*as\s+[\w$]+\s+from\s*['"`]\.\.\/models\/artifact-files['"`]/g)].map(match => match[0]);
+  const stripped = code.replace(/\bimport\b[^{};]*\{[^}]*\}\s*from\b/g, '');
+  return [...renamed, ...namespace, ...[...stripped.matchAll(/\batomicJson\b(?!\s*(?:\?\.)?\s*\()/g)].map(match => match[0])];
 };
 /** U7-R12: the new modules import only what is listed here, today's imports and nothing else. A module not on the list (better-sqlite3,
  *  node:fs/promises, a dynamic import) is a finding until it is added on purpose, and a require or import with a computed name is one
@@ -580,6 +585,9 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
       "'node:child_process'", 'spawnSync(', '"worker_threads"', 'exec(', 'getBuiltinModule']);
   // The by-reference control (U7-R11): an import, a comment and a call are not findings; the held reference is.
   expect(atomicJsonByReference("import { atomicJson, removeFile } from '../models/artifact-files';\n// atomicJson renames last\nawait atomicJson(p, v);\nconst persist = atomicJson;")).toEqual(['atomicJson']);
+  // U7-R15: a rename at the import is a finding (the alias is the reference), and so is a namespace import of the module.
+  expect(atomicJsonByReference("import { atomicJson as aj } from '../models/artifact-files';\nconst p = aj;")).toEqual(['atomicJson as']);
+  expect(atomicJsonByReference("import * as af from '../models/artifact-files';\nconst p = (af as any)['atomic' + 'Json'];")).toEqual(["import * as af from '../models/artifact-files'"]);
   // The import control (U7-R12): an allowed module and Buffer.from are not findings; a module off the list and a computed name are.
   expect(importFindings("import Database from 'better-sqlite3';\nconst fs = await import('node:fs/promises');\nconst x = require(name);\nimport { randomUUID } from 'node:crypto';\nconst h = Buffer.from('6869', 'hex');")).toEqual(['better-sqlite3', 'node:fs/promises', 'non-literal require(']);
   expect(panelFindings('localStorage.setItem(); sessionStorage.x; navigator.clipboard.writeText(code);')).toEqual(['localStorage', 'sessionStorage', 'clipboard']);
