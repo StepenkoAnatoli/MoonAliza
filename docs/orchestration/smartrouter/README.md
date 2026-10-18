@@ -126,7 +126,11 @@ it, and the fix is to add the missing newline, which changes no record.
 Host-policy-5 adopts SmartRouter's difficulty-tiers proposal (`docs/proposals/difficulty-tiers.md` on SmartRouter
 main, PR #100, merged 2026-10-18 by the operator): Items 1-3 and 5 in the adapter and the policy. Item 4 (calibration
 run 4, the T3 cells) is a later unit. The proposal is the specification; where it leaves a choice the lead's
-decisions D1-D9 bind (section 'How the tiers proposal was applied'). A policy turns the rules on with the top-level
+decisions D1-D9 bind (section 'How the tiers proposal was applied'). The proposal's own status line still reads "draft
+proposal, not normative" and says that until an independent review accepts it "hosts MUST NOT emit or require" its
+fields; its review record shows revision 2 as `pending delta review`. This host emits and requires them anyway, on the
+operator's decision to merge PR #100 without the delta review and the lead's D1-D9 (policy finding 7, friction item
+22). A policy turns the rules on with the top-level
 key `"difficulty-tiers": "enforced"`; any other value is invalid (exit 2), and without the key a policy is untiered
 and the adapter behaves exactly as before: no `DifficultyTier` line, no `difficulty-tier` field, Gate 2 per category.
 The fixtures host-policy-1..4 are untiered, so every golden and every assertion on them is unchanged.
@@ -992,6 +996,31 @@ Found while building revision 5 (unit sr-policy-5). The lead decides.
 6. **A review above T1 has no delegate.** No calibrated profile holds `review@T2` or above, and the production
    reviews re-declared are T1. Every T2 or T3 review request the lead dispatches is blocked until run 4 (or a later
    run) qualifies one; the required reviewer of a unit is unaffected (D5).
+7. **The proposal says hosts MUST NOT emit or require its fields until a delta review accepts it; host-policy-5 emits and requires them.**
+   The merged text (SmartRouter `7f7fc75`; the file is unchanged since PR #100's merge commit `2e30291`, and the same
+   on `origin/main`) opens:
+
+   > Status: **draft proposal, not normative; revision 2 after the independent review of 2026-10-18 (Request Changes
+   > on 987a4e3).** Nothing in `skills/` is amended by this document. If accepted after independent review (plan
+   > §15), the items below would become one additional Gate 2 rule, an additive host-policy qualification form,
+   > additive §9/§10 fields under the §13 "additive unknown fields remain ignorable" rule, and one
+   > calibration-protocol change for the host under `hosts/claude-code/`; until then hosts MUST NOT emit or require
+   > them.
+
+   Its review record ends with the row `| 1-5 (revision 2) | pending delta review | — | — |`, and no later commit
+   changes the status. Under D6 host-policy-5 emits `DifficultyTier` and `difficulty-tier` (the decision, the §10.1
+   Brief, the §10.5 ledger decision record), and under D3 and D4 it requires the tier (the floor refusal, Gate 2 by
+   tier). The basis is a decision, not the text: the operator chose on 2026-10-18 to merge PR #100 (with #101 and
+   #102) into main without the delta review (the github-sign-in run ledger, `RUN.md`, commit `b8e1a1d`, as relayed by
+   the originating session), and the lead's brief for this unit adopts the merged text as the specification with
+   D1-D9 binding where it leaves a choice. Two things limit the exposure. The fields are additive under §13, so a
+   reader that ignores unknown fields is not broken. And the rules apply only under `"difficulty-tiers": "enforced"`:
+   deleting that key from `host-policy.json` returns the host to per-category routing with no code change (D1, D2:
+   the tiered entries still load). With the key removed, a default `fix`, `review`, `pin-tests` and
+   `docs-mechanical`, a `build-ui` at 250000 and a `fix` declared T2 route as host-policy-4 routes them (probed in
+   fix round 1). A decision taken under the enforced revision would then be refused at dispatch (`changed:
+   difficulty-tier`), the mirror of the pending-decision note. Until the delta review is recorded, host-policy-5 runs
+   ahead of the specification it cites. Whether to keep the key on until then is the lead's call.
 
 ## Policy findings (host-policy-4)
 
@@ -1242,3 +1271,11 @@ Every point where the spec was ambiguous or did not fit a subscription host. Cit
     says at which tier. This host walks it at `review@T1` (D5), because the review is its own request when the lead
     dispatches it. Upstream could state the reviewer's tier, and say whether "names it" means a profile outside the
     candidates, a higher-tier profile inside them, or both.
+22. **A merged proposal still says hosts MUST NOT emit or require its fields.** PR #100 put
+    `docs/proposals/difficulty-tiers.md` on main with its status line unchanged ("draft proposal, not normative; ...
+    until then hosts MUST NOT emit or require them") and its review record ending in
+    `| 1-5 (revision 2) | pending delta review | — | — |`. A merge is the operator's act, but the text has no state
+    between "draft, not normative" and "accepted", so a host that adopts a merged proposal on the operator's word (this
+    one, host-policy-5, policy finding 7) contradicts the text it cites, and nothing in SmartRouter tells a reader
+    that the merge was a decision to adopt. Upstream could update the status line when a proposal is merged or
+    reviewed, or say that a merged but unreviewed proposal may be adopted by a host behind a policy switch.

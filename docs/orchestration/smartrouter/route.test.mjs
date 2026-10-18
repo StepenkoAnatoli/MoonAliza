@@ -3500,3 +3500,31 @@ test('README: Difficulty tiers (host-policy-5) - the predicate table, the floor,
   const friction = readme.slice(readme.indexOf('## Friction log for SmartRouter upstream'));
   assert.match(friction, /\n21\. \*\*The proposal's Item 3 "names it" clause is the existing `eligible-outside-candidates` hint, and the reviewer-tier question \(D5\) is not addressed by the proposal\.\*\*/);
 });
+
+// sr-policy-5 fix round 1, F1: the proposal's own status clause and pending review row, and the basis on which this
+// host enforces it anyway, are on record in the README (tiers section, policy finding 7, friction item 22)
+const TIERS_STATUS = 'Status: **draft proposal, not normative; revision 2 after the independent review of 2026-10-18 (Request Changes on 987a4e3).** Nothing in `skills/` is amended by this document. If accepted after independent review (plan §15), the items below would become one additional Gate 2 rule, an additive host-policy qualification form, additive §9/§10 fields under the §13 "additive unknown fields remain ignorable" rule, and one calibration-protocol change for the host under `hosts/claude-code/`; until then hosts MUST NOT emit or require them.';
+const TIERS_REVIEW_ROW = '| 1-5 (revision 2) | pending delta review | — | — |';
+test('README (F1): the proposal\'s status clause ("not normative ... hosts MUST NOT emit or require them") and its pending delta-review row are quoted, with the basis for enforcing anyway, in the tiers section, policy finding 7 and friction item 22', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const unquote = (s) => s.replace(/\n\s*>\s?/g, ' ').replace(/\s+/g, ' ');   // a blockquote's markers are not text
+  const tiers = unquote(readme.slice(readme.indexOf('## Difficulty tiers (host-policy-5)'), readme.indexOf('**The tier scale**')));
+  for (const s of ['not normative', 'MUST NOT emit or require', 'pending delta review', 'policy finding 7', 'friction item 22']) {
+    assert.ok(tiers.includes(s), `the tiers section's opening lacks: ${s}`);
+  }
+  const fStart = readme.indexOf('## Policy findings (host-policy-5)');
+  const findings = readme.slice(fStart, readme.indexOf('\n## ', fStart + 1));
+  const f7 = findings.slice(findings.indexOf('\n7. **'));
+  assert.ok(f7.startsWith('\n7. **The proposal says hosts MUST NOT emit or require its fields until a delta review accepts it; host-policy-5 emits and requires them.**'), 'policy finding 7');
+  const f7flat = unquote(f7);
+  for (const s of [TIERS_STATUS, '`' + TIERS_REVIEW_ROW + '`', 'PR #100', '`2e30291`', '`7f7fc75`', '`b8e1a1d`', 'D1-D9', 'without the delta review', '"difficulty-tiers": "enforced"']) {
+    assert.ok(f7flat.includes(s), `policy finding 7 lacks: ${s}`);
+  }
+  const friction = readme.slice(readme.indexOf('## Friction log for SmartRouter upstream'));
+  const f22 = friction.slice(friction.indexOf('\n22. **'));
+  assert.ok(f22.startsWith('\n22. **A merged proposal still says hosts MUST NOT emit or require its fields.**'), 'friction item 22');
+  const f22flat = unquote(f22);
+  for (const s of ['until then hosts MUST NOT emit or require them', '`' + TIERS_REVIEW_ROW + '`', 'PR #100', 'policy finding 7']) {
+    assert.ok(f22flat.includes(s), `friction item 22 lacks: ${s}`);
+  }
+});
