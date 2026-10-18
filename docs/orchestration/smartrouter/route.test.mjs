@@ -2350,3 +2350,64 @@ test('rate: an accepted outcome above headroom-tested proposes the raise (the st
   // decide is not changed by a headroom proposal: it routes by the policy as it stands
   assert.deepEqual(run(req({ taskId: 'h-next' }), { traceDir: trace }).decision['pending-proposals'], []);
 });
+
+// the usage-window coefficients ratified from calibration run 2's measurement (host-policy-3); the gate's arithmetic
+// is unchanged, only the declared numbers and their basis
+const RUN2_TOKENS = 7872276; // trace/calibration-2/results-table.md 'Totals': the workflow's reported sub-agent tokens
+test('usage windows (host-policy-3): the coefficients ratified from run 2 (0.05, 0.015) are above the measured values, the lead reserve raised (0.25, 0.10), ratified-at the second reading, the basis names the measurement', () => {
+  const uw = COMMITTED_POLICY['usage-windows'];
+  const readings = readFileSync(join(HERE, 'trace', 'usage.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  const at = (ts) => readings.find((r) => r.ts === ts);
+  const [from, to] = [at('2026-10-17T23:22:51Z'), at('2026-10-18T01:23:32Z')];
+  assert.ok(from && to, 'both readings of the measurement are in trace/usage.jsonl');
+  const want = { five_hour: [0.05, 0.25, 18000], seven_day: [0.015, 0.1, 604800] };
+  for (const [w, [coefficient, reserve, length]] of Object.entries(want)) {
+    const x = uw.windows[w];
+    assert.deepEqual([x['utilization-per-mtok'], x['lead-reserve'], x['ratified-at'], x['stop-at'], x['length-seconds']], [coefficient, reserve, '2026-10-18T01:23:32Z', 0.9, length], w);
+    // the measured coefficient over the run, and the declared one above it (the conservative direction), within 1.6x
+    const measured = (to.windows[w].utilization - from.windows[w].utilization) / (RUN2_TOKENS / 1e6);
+    assert.ok(coefficient > measured && coefficient < measured * 1.6, `${w}: declared ${coefficient}, measured ${measured}`);
+  }
+  assert.equal(Math.round(((to.windows.five_hour.utilization - from.windows.five_hour.utilization) / (RUN2_TOKENS / 1e6)) * 1e4) / 1e4, 0.0343);
+  assert.equal(Math.round(((to.windows.seven_day.utilization - from.windows.seven_day.utilization) / (RUN2_TOKENS / 1e6)) * 1e4) / 1e4, 0.0102);
+  for (const part of ['wf_fe91e1d6-d78', '2026-10-17T23:22:51Z', '2026-10-18T01:23:32Z', '7872276', '2026-10-17T23:07:08Z', 'not dispatched through the adapter']) {
+    assert.ok(uw['coefficient-basis'].includes(part), `coefficient-basis names ${part}`);
+  }
+  // the gate's arithmetic: the limit is stop-at - lead-reserve, as before
+  const d = computeDecision(req({ category: 'build-core' }), loadPolicy(COMMITTED_POLICY_PATH), [], {}, { readings: [{ ts: NOW, windows: { five_hour: { utilization: 0.6, 'resets-at': isoAt(NOW_MS + 4 * HOUR) }, seven_day: { utilization: 0.05, 'resets-at': isoAt(NOW_MS + 144 * HOUR) } } }] });
+  assert.equal(d.route, 'delegate');
+  assert.equal(d.usage.windows.five_hour.projected, 0.6273); // 0.6 + 0.545 x 0.05
+  assert.equal(d.usage.windows.five_hour['headroom-mtok'], 1); // (0.9 - 0.25 - 0.6) / 0.05
+  assert.match(d.candidates['cc-opus-high'].walkthrough[3].note, /usage window five_hour binds: projected 0\.6273 <= 0\.65$/);
+  assert.ok(d.uncertainty.includes(`usage windows: coefficients host-declared (${uw['coefficient-basis']})`));
+  // rate on the committed readings: the ratification is after every observation, so nothing is considered or proposed
+  const real = tmp();
+  cpSync(join(HERE, 'trace'), real, { recursive: true });
+  const r = rate({ traceDir: real, policyPath: COMMITTED_POLICY_PATH, now: '2026-10-18T02:00:00Z' });
+  for (const w of ['five_hour', 'seven_day']) {
+    assert.equal(r.stats.usage[w]['ratified-at'], '2026-10-18T01:23:32Z', w);
+    assert.equal(r.stats.usage[w].considered, 0, w);
+  }
+  assert.deepEqual(r.usageProposals, []);
+});
+
+test('usage (host-policy-3): with no file it prints the headroom from the ratified coefficients and reserve, on a synthetic reading and on the committed readings', () => {
+  const trace = tmp();
+  usageCli(trace, rateLimitInfo(NOW, { five: 0.6 }), NOW, COMMITTED_POLICY_PATH);
+  const s = cli(['usage', '--trace', trace, '--now', isoAt(NOW_MS + 12 * MIN), '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(s.code, 0, s.stderr);
+  assert.match(s.stdout, /^ {2}five_hour: utilization 0\.6, resets 2026-10-17T23:00:00Z, headroom 1 Mtok \(\(0\.9 - 0\.25 - 0\.6\) \/ 0\.05\)$/m);
+  assert.match(s.stdout, /^ {2}seven_day: utilization 0\.05, resets 2026-10-23T19:00:00Z, headroom 50 Mtok \(\(0\.9 - 0\.1 - 0\.05\) \/ 0\.015\)$/m);
+  // the committed readings (copied): the latest is 01:30:06, and the sr-policy-3 dispatch (829000 usage-tokens) is after it
+  const real = tmp();
+  cpSync(join(HERE, 'trace'), real, { recursive: true });
+  const live = cli(['usage', '--trace', real, '--now', '2026-10-18T01:45:00Z', '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(live.code, 0, live.stderr);
+  assert.equal(live.stdout, [
+    'latest usage reading 2026-10-18T01:30:06Z (age 14.9 min, max 30)',
+    '  dispatched and not in the reading: 829000 tokens (829000 since the reading, 0 in flight from before it)',
+    '  five_hour: utilization 0.42, resets 2026-10-18T04:00:00Z, headroom 3.771 Mtok ((0.9 - 0.25 - 0.42) / 0.05 - 0.829 dispatched and not in the reading)',
+    '  seven_day: utilization 0.36, resets 2026-10-24T18:00:00Z, headroom 28.5043 Mtok ((0.9 - 0.1 - 0.36) / 0.015 - 0.829 dispatched and not in the reading)',
+    ''
+  ].join('\n'));
+});

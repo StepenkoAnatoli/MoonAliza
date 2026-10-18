@@ -619,16 +619,18 @@
    "five_hour": {
     "length-seconds": 18000,
     "stop-at": 0.9,
-    "lead-reserve": 0.05,
-    "utilization-per-mtok": 0.24
+    "lead-reserve": 0.25,
+    "utilization-per-mtok": 0.05,
+    "ratified-at": "2026-10-18T01:23:32Z"
    },
    "seven_day": {
     "length-seconds": 604800,
     "stop-at": 0.9,
-    "lead-reserve": 0.05,
-    "utilization-per-mtok": 0.06
+    "lead-reserve": 0.1,
+    "utilization-per-mtok": 0.015,
+    "ratified-at": "2026-10-18T01:23:32Z"
    }
   },
-  "coefficient-basis": "host-declared 2026-10-17 from two coarse observations (README 'Usage windows'); rate proposes revisions from paired readings"
+  "coefficient-basis": "ratified 2026-10-18T01:23:32Z (host-policy-3) from calibration run 2 (wf_fe91e1d6-d78): readings 2026-10-17T23:22:51Z (five_hour 0.12, seven_day 0.28) and 2026-10-18T01:23:32Z (five_hour 0.39, seven_day 0.36), nothing in flight at either, the lead idle but for one check-in, 7872276 reported sub-agent tokens between them: measured 0.0343 (five_hour) and 0.0102 (seven_day) per Mtok, declared about 1.5x higher and rounded up, 0.05 and 0.015 (the conservative direction). Lead-only work 2026-10-17T23:07:08Z to 23:22:51Z (no sub-agent running) moved five_hour 0.02 -> 0.12, about 0.40 per hour of active lead work, so lead-reserve is five_hour 0.25 (about 40 minutes of it) and seven_day 0.10. rate could not learn this: the run was not dispatched through the adapter, so every pair of readings during it had no recorded outcome tokens (README Usage windows, friction item 17)"
  }
 }
