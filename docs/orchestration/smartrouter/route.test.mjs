@@ -2503,6 +2503,170 @@ test('fixture: trace/policies/host-policy-3.json is the pre-revision policy, byt
   assert.equal(JSON.parse(readFileSync(HP3_POLICY_PATH, 'utf8')).request, undefined, 'a policy, never a decision');
 });
 
+const CAL3 = JSON.parse(readFileSync(join(HERE, 'trace', 'calibration-3', 'observations.json'), 'utf8'));
+const RUN3_ID = 'wf_4e9ef48d-066 (calibration-3): ';
+const RUN3_SUPPLEMENTARY = '; fix (cc-haiku-high) and review (cc-haiku-low) from the supplementary run wf_dbe29a64-3b2 (amendment A-1)';
+// the lead's applied table (briefs/policy4-builder.md): categories added to or removed from the host-policy-3
+// qualified-for; every other field of every profile is unchanged but for the entries
+const HP4_TABLE = {
+  'cc-haiku-low': { remove: ['fix'] },
+  'cc-haiku-medium': {},
+  'cc-haiku-high': {},
+  'cc-sonnet-low': { add: ['review'] },
+  'cc-sonnet-medium': {},
+  'cc-sonnet-high': { add: ['review'] },
+  'cc-sonnet-xhigh': { add: ['review'] },
+  'cc-opus-medium': {},
+  'cc-opus-high': {},
+  'cc-opus-xhigh': {},
+  'cc-opus-max': { add: ['review'] },
+  'cc-fable-medium': { remove: ['pin-tests'] },
+  'cc-fable-high': {},
+  'cc-fable-xhigh': {},
+  'cc-fable-max': { add: ['review'] }
+};
+const HP4_REVIEWER = 'host-declared (lead) from calibration-1, calibration-2 and calibration-3 grades';
+const HP4_EXTRA = {
+  'cc-haiku-low': 'demoted from fix 2026-10-18: two consecutive verification-failed outcomes (fix-u7-r3 seq 4, fix-x2-2 seq 3; rate proposal ratified); re-qualification needs two later passes',
+  'cc-fable-medium': 'pin-tests blocked 2026-10-18: calibration-3 pin FAIL (over-specified pin, lead-notes N-1); two later passes needed'
+};
+// the entries revision 4 appends to a profile's host-policy-3 evidence, in order: the run-3 run id (a review-only
+// profile's says so, as revision 3 wrote it), its run-3 grades, then the demotion or block entry
+function hp4NewEntries(id, o) {
+  const graded = o.pin ? 'pin, fix and review graded in trace/calibration-3/ (results-table.md, observations.json)'
+    : 'review graded in trace/calibration-3/ (results-table.md, observations.json); a review-only profile in that run (no pin or fix cell)';
+  const supplementary = ['cc-haiku-high', 'cc-haiku-low'].includes(id) ? RUN3_SUPPLEMENTARY : '';
+  return [`${RUN3_ID}${graded}${supplementary}`, ...gradeEntries(3, o), ...(HP4_EXTRA[id] ? [HP4_EXTRA[id]] : [])];
+}
+
+test('host-policy-4: the lead\'s table applied - qualified-for, the three runs\' grade entries and run ids, the demotion and block entries, headroom rule over the three runs; nothing else changes', () => {
+  const raw = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'));
+  const hp3 = JSON.parse(readFileSync(HP3_POLICY_PATH, 'utf8'));
+  const live = loadPolicy(COMMITTED_POLICY_PATH);
+  assert.equal(live['policy-revision'], 'host-policy-4');
+  // categories, economics, usage windows, prices, harness, authorization, isolation, accounting, opt-ins: untouched
+  const rest = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['policy-revision', 'profiles'].includes(k)));
+  assert.deepEqual(rest(raw), rest(hp3), 'only the revision and the profiles change');
+  assert.deepEqual(raw.profiles.map((p) => p.id), hp3.profiles.map((p) => p.id), 'the fifteen profiles of host-policy-3, in order');
+  assert.deepEqual(Object.keys(HP4_TABLE).sort(), raw.profiles.map((p) => p.id).sort());
+  const fixed = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['qualified-for', 'qualified-at', 'reviewer', 'evidence'].includes(k)));
+  const seen = new Set();
+  for (const o of Object.values(CAL3)) {
+    const pr = calProfileAny(live, o);
+    assert.ok(pr, `${o.profile} (calibration-3) has a policy profile`);
+    seen.add(pr.id);
+    const before = hp3.profiles.find((p) => p.id === pr.id);
+    const want = HP4_TABLE[pr.id];
+    const after = raw.profiles.find((p) => p.id === pr.id);
+    assert.deepEqual(fixed(after), fixed(before), `${pr.id}: model, effort, config, tools, vision, context, headroom, expires unchanged`);
+    const expected = before['qualified-for'].filter((c) => !(want.remove ?? []).includes(c)).concat(want.add ?? []);
+    assert.deepEqual([...after['qualified-for']].sort(), [...expected].sort(), `${pr.id} qualified-for`);
+    for (const c of want.remove ?? []) assert.ok(before['qualified-for'].includes(c), `${pr.id} held ${c} before its removal`);
+    for (const c of want.add ?? []) assert.ok(!before['qualified-for'].includes(c), `${pr.id} lacked ${c} before its addition`);
+    if (want.add || want.remove) {
+      assert.deepEqual([after['qualified-at'], after.reviewer], ['2026-10-18', HP4_REVIEWER], `${pr.id}: a qualification added or removed in host-policy-4`);
+    } else {
+      assert.deepEqual([after['qualified-at'], after.reviewer], [before['qualified-at'], before.reviewer], `${pr.id}: unchanged, gains the entries`);
+    }
+    assert.equal(after.expires, '2027-01-15', pr.id);
+    // host-policy-3's evidence kept verbatim, then exactly the run-3 entries
+    assert.deepEqual(after.evidence, [...before.evidence, ...hp4NewEntries(pr.id, o)], `${pr.id} evidence`);
+  }
+  assert.equal(seen.size, 15, 'every profile was calibrated in run 3');
+  // the grade entries are exactly the three runs' grades, each run with its run id
+  const accepted = acceptedTokens();
+  for (const pr of raw.profiles) {
+    const obs = [CAL1, CAL2, CAL3].map((cal) => Object.values(cal).filter((o) => calProfileAny(live, o)?.id === pr.id));
+    const grades = obs.flatMap((list, i) => list.flatMap((o) => gradeEntries(i + 1, o)));
+    assert.deepEqual(pr.evidence.filter((e) => e.startsWith('calibration-')).sort(), grades.sort(), `${pr.id}: no grade entry beyond the three runs'`);
+    obs.forEach((list, i) => { if (list.length) assert.ok(pr.evidence.some((e) => e.startsWith({ ...RUN_IDS, 3: RUN3_ID }[i + 1])), `${pr.id} lacks the calibration-${i + 1} run id`); });
+    // headroom-tested: the largest completed run (three calibration runs, accepted outcomes), rounded up to the next
+    // thousand, never lowered below host-policy-3's
+    const runs = obs.flat().flatMap((o) => ['pin', 'fix', 'review'].map((t) => o.usage?.[t]).filter((u) => u && u.state === 'done').map((u) => u.tokens));
+    const before = hp3.profiles.find((p) => p.id === pr.id)['headroom-tested'];
+    assert.equal(pr['headroom-tested'], Math.max(before, Math.ceil(Math.max(...runs, accepted[pr.id] ?? 0) / 1000) * 1000), `${pr.id} headroom rule`);
+    // run 3 raises nothing: every run-3 cell is below the profile's current figure
+    const run3 = obs[2].flatMap((o) => ['pin', 'fix', 'review'].map((t) => o.usage?.[t]).filter((u) => u && u.state === 'done').map((u) => u.tokens));
+    assert.ok(Math.max(...run3) < pr['headroom-tested'], `${pr.id}: run 3 max ${Math.max(...run3)} below ${pr['headroom-tested']}`);
+  }
+  // the brief's largest run-3 cells, spelled out
+  const cell = (key, task) => CAL3[key].usage[task].tokens;
+  assert.deepEqual([cell('sonnet-xhigh', 'review'), cell('opus-max', 'review'), cell('fable-max', 'review'), cell('haiku-high', 'fix')], [227264, 266339, 189364, 142418]);
+  assert.deepEqual(['cc-sonnet-xhigh', 'cc-opus-max', 'cc-fable-max', 'cc-haiku-high'].map((id) => live.profiles.find((p) => p.id === id)['headroom-tested']), [328000, 307000, 230000, 726000]);
+  // the demotion and the block are recorded on their profiles only
+  for (const [id, entry] of Object.entries(HP4_EXTRA)) {
+    assert.deepEqual(raw.profiles.filter((p) => p.evidence.includes(entry)).map((p) => p.id), [id], entry);
+  }
+  assert.ok(raw.profiles.find((p) => p.id === 'cc-fable-medium').evidence.includes('calibration-3: pin-tests FAIL (n=1)'));
+  assert.ok(!raw.profiles.some((p) => p.evidence.some((e) => / PARTIAL /.test(e) && e.startsWith('calibration-3:'))), 'no PARTIAL in run 3');
+});
+
+const hp4Req = (category, over = {}) => reqFor(loadPolicy(LIVE_OFF_PATH), category, over);
+test('host-policy-4 routing: pin-tests -> cc-haiku-low; fix -> cc-haiku-high with cc-sonnet-xhigh the reviewer; review -> cc-sonnet-xhigh; the demoted, blocked and one-later-pass profiles alone are blocked', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  // pin-tests: unchanged, cc-haiku-low at $1.06; cc-fable-medium no longer qualified
+  const pin = computeDecision(hp4Req('pin-tests'), live, []);
+  assert.deepEqual([pin.route, pin.profile, pin['all-in-bound-usd'], pin['review-profile']], ['delegate', 'cc-haiku-low', 1.06, null]);
+  assert.equal(pin.candidates['cc-fable-medium'].reason, 'cc-fable-medium not qualified for pin-tests');
+  // fix (193000): cc-haiku-low gone, cc-haiku-medium's 183000 does not admit it, so cc-haiku-high; the required reviewer is
+  // now the cheapest review-qualified profile whose headroom admits the 209000-token median: cc-sonnet-xhigh
+  const fix = computeDecision(hp4Req('fix'), live, []);
+  assert.deepEqual([fix.route, fix.profile, fix['review-profile']], ['delegate', 'cc-haiku-high', 'cc-sonnet-xhigh']);
+  const c = fix.candidates['cc-haiku-high'];
+  assert.deepEqual([c['work-bound-usd'], c['review-bound-usd'], c['overhead-bound-usd'], c['all-in-bound-usd']], [0.0965, 2.09, 1, 3.1865]);
+  assert.deepEqual(fix['eligible-ordered'], ['cc-haiku-high', 'cc-opus-high', 'cc-opus-xhigh', 'cc-fable-high']);
+  assert.deepEqual(['cc-opus-high', 'cc-opus-xhigh', 'cc-fable-high'].map((id) => fix.candidates[id]['all-in-bound-usd']), [6.95, 6.95, 12.74]);
+  assert.equal(fix.candidates['cc-haiku-low'].reason, 'cc-haiku-low not qualified for fix; context: 193000 tokens not below headroom-tested 175000 on cc-haiku-low');
+  assert.equal(fix.candidates['cc-haiku-medium'].reason, 'context: 193000 tokens not below headroom-tested 183000 on cc-haiku-medium');
+  // review (209000): the newly qualified cc-sonnet-xhigh is the cheapest whose headroom admits it; cc-sonnet-low and
+  // cc-sonnet-high are qualified and fail Gate 2 on headroom
+  const review = computeDecision(hp4Req('review'), live, []);
+  assert.deepEqual([review.route, review.profile, review['all-in-bound-usd']], ['delegate', 'cc-sonnet-xhigh', 3.09]);
+  const s = review.candidates['cc-sonnet-xhigh'];
+  assert.deepEqual([s['work-bound-usd'], s['review-bound-usd'], s['overhead-bound-usd']], [2.09, 0, 1]);
+  assert.deepEqual(review['eligible-ordered'], ['cc-sonnet-xhigh', 'cc-opus-high', 'cc-opus-xhigh', 'cc-opus-max', 'cc-fable-high', 'cc-fable-max']);
+  for (const [id, h] of [['cc-sonnet-low', 114000], ['cc-sonnet-high', 183000], ['cc-fable-medium', 172000]]) {
+    assert.equal(review.candidates[id].reason, `context: 209000 tokens not below headroom-tested ${h} on ${id}`, id);
+  }
+  // one later pass is not a qualification: these five alone route blocked at Gate 2
+  const five = ['cc-haiku-low', 'cc-haiku-medium', 'cc-haiku-high', 'cc-sonnet-medium', 'cc-opus-medium'];
+  const later = computeDecision(hp4Req('review', { candidates: five }), live, []);
+  assert.equal(later.route, 'blocked');
+  for (const id of five) {
+    assert.equal(later.candidates[id]['first-failing-gate'], 2, id);
+    assert.match(later.candidates[id].reason, new RegExp(`^${id} not qualified for review`), id);
+  }
+  // demoted: cc-haiku-low alone routes a fix blocked; blocked: cc-fable-medium alone routes a pin blocked
+  const demoted = computeDecision(hp4Req('fix', { candidates: ['cc-haiku-low'] }), live, []);
+  assert.deepEqual([demoted.route, demoted.candidates['cc-haiku-low']['first-failing-gate']], ['blocked', 2]);
+  assert.match(demoted.candidates['cc-haiku-low'].reason, /^cc-haiku-low not qualified for fix/);
+  const pinBlocked = computeDecision(hp4Req('pin-tests', { candidates: ['cc-fable-medium'] }), live, []);
+  assert.deepEqual([pinBlocked.route, pinBlocked.candidates['cc-fable-medium']['first-failing-gate'], pinBlocked.candidates['cc-fable-medium'].reason],
+    ['blocked', 2, 'cc-fable-medium not qualified for pin-tests']);
+  // the CLI on the live policy agrees (feature-off derivative, as the other live-policy decisions)
+  for (const [category, profile] of [['fix', 'cc-haiku-high'], ['review', 'cc-sonnet-xhigh'], ['pin-tests', 'cc-haiku-low']]) {
+    const decided = cliDecide(hp4Req(category, { taskId: `hp4-${category}` }), LIVE_OFF_PATH);
+    assert.equal(decided.bindings['policy-revision'], 'host-policy-4', category);
+    assert.deepEqual([decided.decision.route, decided.decision.profile], ['delegate', profile], category);
+  }
+});
+
+test('host-policy-4 routing: the stored build request, after a fresh synthetic reading, delegates to cc-opus-high with cc-sonnet-xhigh the required reviewer ($9.41, the golden\'s $11.50 less the review difference)', () => {
+  const trace = tmp();
+  const at = STORED_BUILD.request.now;
+  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05, fiveResetMs: 4 * HOUR, sevenResetMs: 144 * HOUR }), at, COMMITTED_POLICY_PATH);
+  assert.equal(r.code, 0, r.stderr);
+  const d = decideOn(STORED_BUILD.request, trace, COMMITTED_POLICY_PATH);
+  assert.deepEqual([d.route, d.decision.profile, d.decision['review-profile']], ['delegate', 'cc-opus-high', 'cc-sonnet-xhigh']);
+  const c = d.decision.candidates['cc-opus-high'];
+  assert.deepEqual([c['work-bound-usd'], c['review-bound-usd'], c['overhead-bound-usd'], c['all-in-bound-usd']], [6.32, 2.09, 1, 9.41]);
+  assert.equal(STORED_BUILD.decision['all-in-bound-usd'], 11.5, 'the golden: the same work and overhead with the review at cc-opus-high ($4.18)');
+  assert.deepEqual(d.decision['eligible-ordered'], STORED_BUILD.decision['eligible-ordered']);
+  // the usage projection counts tokens, not the reviewer's price: work + the review median + overhead, as before
+  assert.equal(d.decision['usage-tokens'], 545000);
+  assert.equal(d.decision.usage['reading-ts'], at);
+});
+
 // ---------------------------------------------------------------------------------------------
 // SmartRouter Item 4 (accepted upstream 2026-10-18): a null cash counter or spend carries its estimate-only marker
 // ---------------------------------------------------------------------------------------------
