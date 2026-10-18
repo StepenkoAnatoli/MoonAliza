@@ -237,3 +237,4 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Usage 20:08:42Z: five_hour 0.03 (window reset 19:20Z), seven_day 0.73 (0.71 before the unit).
 - Lead's mistake at integration: the F3 README edit was committed with its message before the edit had applied (the pattern spanned a line break); caught by re-reading the diff, fixed by amending the unpushed commit. Impact: none delivered.
 - Next: upstream refresh PR (hosts/claude-code at revision 5), then the onboarding units (#102), then run 4 stage 4a.
+- 20:35 UTC: upstream refresh PR opened as draft, SmartRouter #105 (`hosts/claude-code-revision-5` at 8a375a2 from main 7f7fc75); gate green locally (119 node tests, artifacts 5 OK, conform_spec record and outcome CONFORMANT, run_regression PASS). Subscribed. Next: the onboarding units (#102).
