@@ -2667,6 +2667,67 @@ test('host-policy-4 routing: the stored build request, after a fresh synthetic r
   assert.equal(d.decision.usage['reading-ts'], at);
 });
 
+// deliverable C: a demotion proposal concerns a qualified profile. Once the lead ratified it (cc-haiku-low no longer
+// holds fix), the same ledger proposes nothing for that pair - a proposal that outlived its ratification would be
+// re-proposed forever - and the outcome stats still count the two verification-failed fixes
+const DEMOTE_HAIKU_LOW = 'PROPOSAL demote cc-haiku-low from fix: 2 consecutive verification-failed (fix-u7-r3, fix-x2-2); not applied — the lead ratifies by editing host-policy.json';
+test('rate (host-policy-4): no demotion proposal for cc-haiku-low from fix once it no longer holds the category; the host-policy-3 fixture still proposes it from the same ledger; the stats keep the two failures', () => {
+  const at = '2026-10-18T09:30:00Z';
+  const before = cli(['rate', '--trace', frozenTrace(FREEZE_HP3), '--now', at, '--policy', HP3_POLICY_PATH]);
+  assert.equal(before.code, 0, before.stderr);
+  assert.ok(before.stdout.split('\n').includes(DEMOTE_HAIKU_LOW), before.stdout);
+  const trace = frozenTrace(FREEZE_HP3);
+  const after = cli(['rate', '--trace', trace, '--now', at, '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(after.code, 0, after.stderr);
+  assert.ok(!/^PROPOSAL (demote|qualify|re-qualify) cc-haiku-low /m.test(after.stdout), after.stdout);
+  const r = rate({ traceDir: frozenTrace(FREEZE_HP3), policyPath: COMMITTED_POLICY_PATH, now: at });
+  assert.deepEqual(r.proposals, [], 'no outcome proposal under host-policy-4');
+  assert.deepEqual(r.headroomProposals, [], 'no headroom raise either');
+  const doc = JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8'));
+  assert.equal(doc['policy-revision'], 'host-policy-4');
+  assert.deepEqual(doc.proposals, []);
+  assert.equal(doc.stats['cc-haiku-low'].fix['verification-failed'], 2, 'the history is kept; only the proposal is gone');
+});
+
+test('rate (host-policy-4): the CALIBRATION lines count calibration-1, -2 and -3 per profile and category - the counts the lead\'s table turns on', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const r = rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3]), policyPath: LIVE_OFF_PATH, now: NOW });
+  const lines = r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  const want = {};
+  for (const [run, obs] of [[1, CAL1], [2, CAL2], [3, CAL3]]) {
+    for (const o of Object.values(obs)) {
+      for (const e of gradeEntries(run, o)) {
+        const [, cat, word] = /^calibration-\d+: (\S+) (\S+) /.exec(e);
+        const c = ((want[calProfileAny(live, o).id] ??= {})[cat] ??= { pass: 0, partial: 0, fail: 0, runs: [] });
+        c[word.toLowerCase()] += 1;
+        c.runs.push(`calibration-${run}`);
+      }
+    }
+  }
+  const expected = Object.keys(want).sort().flatMap((id) => ['pin-tests', 'fix', 'review'].filter((cat) => want[id][cat])
+    .map((cat) => { const c = want[id][cat]; return `CALIBRATION ${id} ${cat}: ${c.pass} pass, ${c.partial} partial, ${c.fail} fail (${c.runs.join(', ')})`; }));
+  assert.deepEqual(lines, expected, r.text);
+  const all = '(calibration-1, calibration-2, calibration-3)';
+  for (const line of [
+    `CALIBRATION cc-sonnet-high review: 2 pass, 0 partial, 1 fail ${all}`,
+    `CALIBRATION cc-sonnet-low review: 2 pass, 1 partial, 0 fail ${all}`,
+    'CALIBRATION cc-sonnet-xhigh review: 2 pass, 0 partial, 0 fail (calibration-2, calibration-3)',
+    'CALIBRATION cc-opus-max review: 2 pass, 0 partial, 0 fail (calibration-2, calibration-3)',
+    'CALIBRATION cc-fable-max review: 2 pass, 0 partial, 0 fail (calibration-2, calibration-3)',
+    `CALIBRATION cc-sonnet-medium review: 2 pass, 0 partial, 1 fail ${all}`,
+    `CALIBRATION cc-opus-medium review: 2 pass, 0 partial, 1 fail ${all}`,
+    `CALIBRATION cc-haiku-low review: 1 pass, 0 partial, 2 fail ${all}`,
+    `CALIBRATION cc-haiku-medium review: 1 pass, 0 partial, 2 fail ${all}`,
+    `CALIBRATION cc-haiku-high review: 1 pass, 0 partial, 2 fail ${all}`,
+    `CALIBRATION cc-haiku-low fix: 3 pass, 0 partial, 0 fail ${all}`,
+    `CALIBRATION cc-fable-medium pin-tests: 2 pass, 0 partial, 1 fail ${all}`
+  ]) assert.ok(lines.includes(line), `missing: ${line}`);
+  // the committed trace (all three runs under trace/) prints the same lines
+  const committed = rate({ traceDir: frozenTrace(FREEZE_HP3), policyPath: LIVE_OFF_PATH, now: NOW });
+  assert.deepEqual(committed.text.split('\n').filter((l) => l.startsWith('CALIBRATION ')), expected);
+  assert.deepEqual(r.proposals, [], 'calibration counts never propose');
+});
+
 // ---------------------------------------------------------------------------------------------
 // SmartRouter Item 4 (accepted upstream 2026-10-18): a null cash counter or spend carries its estimate-only marker
 // ---------------------------------------------------------------------------------------------
