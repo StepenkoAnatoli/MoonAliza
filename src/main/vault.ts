@@ -88,7 +88,14 @@ export class Vault {
       try { await file.writeFile(encrypted); await file.sync(); }
       finally { await file.close(); }
       this.index.entries[ref] = { state: 'staged', createdAt: Date.now() };
-      await this.persist();
+      try { await this.persist(); }
+      catch (error) {
+        // No index names the file and the caller never gets the ref: drop both, then rethrow the persist's own error.
+        // A failed unlink does not replace that error; the file it leaves is the one a later sweep would have to find.
+        delete this.index.entries[ref];
+        await unlink(this.secretPath(ref)).catch(() => undefined);
+        throw error;
+      }
       return ref;
     });
   }

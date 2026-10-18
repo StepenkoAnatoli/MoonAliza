@@ -146,4 +146,22 @@ describe('credential lifecycle', () => {
     }
     expect(await vault.redact('value=secret-short-long or secret-short')).toBe('value=[redacted] or [redacted]');
   });
+
+  test('a staging whose index persist fails leaves no file and no index entry (X2-2)', async () => {
+    const { directory, vault } = await fixture();
+    const target = vault as unknown as { persist: () => Promise<void> };
+    const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
+    const before = await bins();
+    target.persist = async () => { throw new Error('EIO'); };
+    await expect(vault.saveStaged('never-indexed')).rejects.toThrow('EIO');
+    delete (target as unknown as Record<string, unknown>).persist;
+    expect(await bins()).toEqual(before);
+    const ref = await vault.saveStaged('kept');
+    await vault.commit(ref);
+    expect(await vault.has(ref)).toBe(true);
+    const onDisk = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')) as { entries: Record<string, unknown> };
+    expect(Object.keys(onDisk.entries)).toEqual([ref]);
+    await vault.reconcile(new Set([ref]));
+    expect(await bins()).toHaveLength(before.length + 1);
+  });
 });
