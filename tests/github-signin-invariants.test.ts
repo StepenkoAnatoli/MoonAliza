@@ -367,7 +367,7 @@ async function journey(options: { pendingPlant?: string } = {}) {
     { target: 'argv', label: 'process.argv and execArgv', bytes: Buffer.from([...process.argv, ...process.execArgv].join('\n'), 'utf8') },
   ];
   return { root, vaultDir, accountFile, database, vault, accountStore, service, store, app, session, clock, pairs, leaked, secrets, REPO_TEXT,
-    captured, ipc, engine, inferred, outputs, rejections, envDuringRequests, state, planted, started, loginControl, snapshot, converse, all };
+    captured, ipc, engine, inferred, outputs, rejections, envDuringRequests, state, planted, started, loginControl, snapshot, converse, all, recorder };
 }
 
 test('T-6: through sign-in, a read, an expiry refresh, a 401 refresh, a parse failure and sign-out, no marker reaches any place S-1 names', async () => {
@@ -464,6 +464,19 @@ test('T-6 mutation: each scan turns red when a marker is written where it scans'
   process.env.MOONALIZA_U7_PLANTED = planted['process.env'];
   process.argv.push(planted.argv); plantedArgv.push(planted.argv);   // S-1 names argv (U7-R4)
   j.snapshot('planted');
+  // U7-R18: the recorder's own positive controls. (1) The swap reached a src importer: the account file's write went through the
+  // swapped atomicJson. (2) A write and a directory made through the swapped exports outside userData, named and filled with
+  // markers, are hits: nothing else scans outside userData, so with the swap removed both go silent.
+  expect(j.recorder.writes.some(write => write.label === 'atomicJson: github/account.json')).toBe(true);
+  const outside = await mkdtemp(join(tmpdir(), 'moonaliza-u7-outside-'));
+  const recorded = { recValue: plant(), recName: plant() };
+  try {
+    await artifactFiles.atomicJson(join(outside, 'rec.json'), { value: recorded.recValue });
+    await artifactFiles.privateDirectory(join(outside, `d-${recorded.recName}`));
+    const seen = scan(j.recorder.writes, recorded)['other userData files'];
+    expect(seen).toContain(`recValue in atomicJson: ${join(outside, 'rec.json')} (UTF-8)`);
+    expect(seen).toContain(`recName in privateDirectory: name ${join(outside, `d-${recorded.recName}`)} (UTF-8)`);
+  } finally { await rm(outside, { recursive: true, force: true }); }
 
   const hits = scan(j.all(), Object.fromEntries(TARGETS.map(target => [target, planted[target]])));
   for (const target of TARGETS) {
@@ -556,12 +569,18 @@ const moduleLines = (source: string) => [...source.matchAll(FORBIDDEN)].map(matc
  *  U7-R15: an import that renames it (`{ atomicJson as aj }`) and a namespace import of artifact-files (whose export is read under a
  *  computed name) hold the same function under another name, so each is a finding too. */
 const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+// U7-R17: every export the recorder swaps is held to the same rule (privateDirectory is swapped since U7-R16), so a directory made
+// through a reference taken at module load is a finding like a write through one. Known limit (U7-R19, S4): a string-named import
+// specifier (`{ "atomicJson" as aj }`) and a dynamic import of artifact-files read under a computed name still pass; the fix that
+// closes the whole by-reference class is recording at the fs or FileHandle level, set aside with U7-R11 and U7-R15.
+const SWAPPED_EXPORTS = ['atomicJson', 'privateDirectory'] as const;
 const atomicJsonByReference = (source: string) => {
   const code = withoutComments(source);
-  const renamed = [...code.matchAll(/\batomicJson\s+as\b/g)].map(match => match[0]);
+  const names = SWAPPED_EXPORTS.join('|');
+  const renamed = [...code.matchAll(new RegExp(`\\b(?:${names})\\s+as\\b`, 'g'))].map(match => match[0]);
   const namespace = [...code.matchAll(/\bimport\s*\*\s*as\s+[\w$]+\s+from\s*['"`]\.\.\/models\/artifact-files['"`]/g)].map(match => match[0]);
   const stripped = code.replace(/\bimport\b[^{};]*\{[^}]*\}\s*from\b/g, '');
-  return [...renamed, ...namespace, ...[...stripped.matchAll(/\batomicJson\b(?!\s*(?:\?\.)?\s*\()/g)].map(match => match[0])];
+  return [...renamed, ...namespace, ...[...stripped.matchAll(new RegExp(`\\b(?:${names})\\b(?!\\s*(?:\\?\\.)?\\s*\\()`, 'g'))].map(match => match[0])];
 };
 /** U7-R12: the new modules import only what is listed here, today's imports and nothing else. A module not on the list (better-sqlite3,
  *  node:fs/promises, a dynamic import) is a finding until it is added on purpose, and a require or import with a computed name is one
@@ -606,6 +625,8 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
   expect(atomicJsonByReference("import { atomicJson, removeFile } from '../models/artifact-files';\n// atomicJson renames last\nawait atomicJson(p, v);\nconst persist = atomicJson;")).toEqual(['atomicJson']);
   // U7-R15: a rename at the import is a finding (the alias is the reference), and so is a namespace import of the module.
   expect(atomicJsonByReference("import { atomicJson as aj } from '../models/artifact-files';\nconst p = aj;")).toEqual(['atomicJson as']);
+  expect(atomicJsonByReference("import { privateDirectory } from '../models/artifact-files';\nawait privateDirectory(d);\nconst mk = privateDirectory;")).toEqual(['privateDirectory']);   // U7-R17
+  expect(atomicJsonByReference("import { privateDirectory as pd } from '../models/artifact-files';\nconst mk = pd;")).toEqual(['privateDirectory as']);
   expect(atomicJsonByReference("import * as af from '../models/artifact-files';\nconst p = (af as any)['atomic' + 'Json'];")).toEqual(["import * as af from '../models/artifact-files'"]);
   // The import control (U7-R12): an allowed module and Buffer.from are not findings; a module off the list and a computed name are.
   expect(importFindings("import Database from 'better-sqlite3';\nconst fs = await import('node:fs/promises');\nconst x = require(name);\nimport { randomUUID } from 'node:crypto';\nconst h = Buffer.from('6869', 'hex');")).toEqual(['better-sqlite3', 'node:fs/promises', 'non-literal require(']);
