@@ -277,24 +277,17 @@
         "run": "calibration-2"
       },
       {
-        "observations-sha256": "d4bcb504428532ccaa89a42a38758fed933d8ad285f86ddb4ab4c72f99b1b371",
+        "observations-sha256": "beffbc603dae33d9a08861bba82c01c994a207c98e5ae5db929aca980afafcaf",
         "run": "calibration-3"
       }
     ]
   },
   "headroom-proposals": [],
-  "ledger-sha256": "7f05d6221eaf67de6ded60169ac0412fd33a3e0be8bd74c0899c0e651066f76b",
-  "outcome-records": 16,
-  "outcomes-counted": 14,
-  "policy-revision": "host-policy-3",
-  "proposals": [
-    {
-      "category": "fix",
-      "kind": "demote",
-      "profile": "cc-haiku-low",
-      "reason": "2 consecutive verification-failed (fix-u7-r3, fix-x2-2)"
-    }
-  ],
+  "ledger-sha256": "2a50cd15abe6bad2cf7b51a8d1f9b097b14746373a9392f007d6f85d7fe81818",
+  "outcome-records": 17,
+  "outcomes-counted": 15,
+  "policy-revision": "host-policy-4",
+  "proposals": [],
   "stats": {
     "cc-fable-high": {
       "review": {
@@ -334,7 +327,7 @@
     },
     "cc-opus-high": {
       "build-ui": {
-        "accepted": 4,
+        "accepted": 5,
         "blocked": 0,
         "cancelled": 0,
         "cost-overrun": 0,
@@ -374,10 +367,10 @@
       "ratified-at": "2026-10-18T01:23:32Z",
       "skipped": {
         "negative-delta": 0,
-        "reset": 2,
+        "reset": 3,
         "spanning": 7,
         "unknown-tokens": 0,
-        "zero-tokens": 5
+        "zero-tokens": 6
       }
     },
     "seven_day": {
@@ -391,10 +384,10 @@
         "reset": 1,
         "spanning": 7,
         "unknown-tokens": 0,
-        "zero-tokens": 6
+        "zero-tokens": 8
       }
     }
   },
   "usage-proposals": [],
-  "usage-sha256": "0cf8efd0c972c6c2767ef0cbbddea6b29b49c4b05e5fd87a0cce897d956f55dd"
+  "usage-sha256": "8158470c28cd5a6bba24e98a1b346eced3b55b3af4a325438571d393395074a7"
 }
