@@ -34,6 +34,10 @@ const HP3_POLICY_PATH = join(HERE, 'trace', 'policies', 'host-policy-3.json');
 // README routing consequence of run 3, its rate tests) run on it, so revision 5 of the live policy never moves them.
 // The live policy has its own tests (host-policy-5)
 const HP4_POLICY_PATH = join(HERE, 'trace', 'policies', 'host-policy-4.json');
+// host-policy-5, frozen by unit sr-policy-6 (never edited): the host-policy-5 assertions (its table, its routing, the
+// README tiers section's routing consequence, its rate and dispatch tests) run on it, so revision 6 of the live policy
+// never moves them. The live policy has its own tests (host-policy-6)
+const HP5_POLICY_PATH = join(HERE, 'trace', 'policies', 'host-policy-5.json');
 const USAGE_POLICY_PATH = HP2_POLICY_PATH;
 const USAGE_POLICY = JSON.parse(readFileSync(USAGE_POLICY_PATH, 'utf8'));
 const BASE_POLICY = JSON.parse(readFileSync(join(HERE, 'trace', 'policies', 'host-policy-1.json'), 'utf8'));
@@ -1822,6 +1826,10 @@ const hp3PolicyWith = (mutate) => {
 // fixture exists, as HP3_OFF_PATH is
 const HP4_OFF_PATH = join(tmp(), 'host-policy-4-off.json');
 if (existsSync(HP4_POLICY_PATH)) writeFileSync(HP4_OFF_PATH, featureOff(JSON.parse(readFileSync(HP4_POLICY_PATH, 'utf8'))));
+// the host-policy-5 fixture's feature-off derivative (R1(a)), for the host-policy-5 assertions; written only when the
+// fixture exists, as HP4_OFF_PATH is
+const HP5_OFF_PATH = join(tmp(), 'host-policy-5-off.json');
+if (existsSync(HP5_POLICY_PATH)) writeFileSync(HP5_OFF_PATH, featureOff(JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8'))));
 const CAL1 = JSON.parse(readFileSync(join(HERE, 'trace', 'calibration-1', 'observations.json'), 'utf8'));
 // the calibration tasks and the categories they represent (rule 4: the pin task is pin-tests, not build-tests)
 const CAL_TASKS = [['pin-tests', 'pin', (o) => o.pin.score], ['fix', 'fix', (o) => o.fix.score], ['review', 'review', (o) => o['review-grade'].score]];
@@ -3284,10 +3292,10 @@ const HP5_TABLE = {
 };
 const HAIKU_HIGH_LINE = 'fix-x2-1 seq 3 accepted (five files, src/main and tests), would be T3 by the table: one pass at T3, not a qualification (rule 2.3)';
 
-test('host-policy-5: the lead\'s table applied - "difficulty-tiers": "enforced", the production-derived entries re-declared at their units\' tier with the evidence lines, calibration-derived entries bare; nothing else changes', () => {
-  const raw = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'));
+test('host-policy-5 (fixture): the lead\'s table applied - "difficulty-tiers": "enforced", the production-derived entries re-declared at their units\' tier with the evidence lines, calibration-derived entries bare; nothing else changes', () => {
+  const raw = JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8'));
   const hp4 = JSON.parse(readFileSync(HP4_POLICY_PATH, 'utf8'));
-  const live = loadPolicy(COMMITTED_POLICY_PATH);
+  const live = loadPolicy(HP5_POLICY_PATH);
   assert.equal(live['policy-revision'], 'host-policy-5');
   assert.equal(live['difficulty-tiers'], 'enforced');
   // the key sits after the revision; headroom, categories, economics, prices, usage windows, harness, authorization,
@@ -3339,10 +3347,10 @@ test('host-policy-5: the lead\'s table applied - "difficulty-tiers": "enforced",
   assert.deepEqual(tiered.sort(), Object.entries(HP5_TABLE).flatMap(([id, { tiers }]) => Object.entries(tiers).map(([c, t]) => `${id} ${c}@${t}`)).sort());
 });
 
-const hp5Req = (category, over = {}) => reqFor(loadPolicy(LIVE_OFF_PATH), category, over);
+const hp5Req = (category, over = {}) => reqFor(loadPolicy(HP5_OFF_PATH), category, over);
 const FIX_HOLDERS_T1 = ['cc-fable-medium', 'cc-opus-xhigh', 'cc-opus-medium', 'cc-sonnet-high', 'cc-sonnet-medium', 'cc-sonnet-low', 'cc-haiku-high', 'cc-haiku-medium'];
-test('host-policy-5 routing (deliverable D): fix@T1 -> cc-haiku-high, fix@T2 -> cc-opus-high, undeclared fix (T3) and review (T3) blocked at Gate 2 by tier, review@T1 -> cc-sonnet-xhigh, undeclared build-ui (T2) -> cc-opus-high, docs-mechanical@T3 blocked', () => {
-  const live = loadPolicy(LIVE_OFF_PATH);
+test('host-policy-5 routing (fixture, deliverable D): fix@T1 -> cc-haiku-high, fix@T2 -> cc-opus-high, undeclared fix (T3) and review (T3) blocked at Gate 2 by tier, review@T1 -> cc-sonnet-xhigh, undeclared build-ui (T2) -> cc-opus-high, docs-mechanical@T3 blocked', () => {
+  const live = loadPolicy(HP5_OFF_PATH);
   const decideLive = (category, over) => computeDecision(hp5Req(category, over), live, []);
   // fix 193000 at T1: unchanged from host-policy-4 - cc-haiku-high, with cc-sonnet-xhigh the reviewer (walked at review@T1)
   const t1 = decideLive('fix', { difficultyTier: 'T1' });
@@ -3390,54 +3398,56 @@ test('host-policy-5 routing (deliverable D): fix@T1 -> cc-haiku-high, fix@T2 -> 
     assert.deepEqual([decideLive(category).route, decideLive(category)['difficulty-tier']], ['blocked', 'T2'], category);
     assert.deepEqual([decideLive(category, { difficultyTier: 'T1' }).route, decideLive(category, { difficultyTier: 'T1' }).profile], ['delegate', 'cc-haiku-low'], category);
   }
-  // the CLI on the live policy agrees, and records the revision and the tier
+  // the CLI on the fixture agrees, and records the revision and the tier
   for (const [category, over, profile, tier] of [['fix', { difficultyTier: 'T1' }, 'cc-haiku-high', 'T1'], ['fix', { difficultyTier: 'T2' }, 'cc-opus-high', 'T2'], ['review', { difficultyTier: 'T1' }, 'cc-sonnet-xhigh', 'T1'], ['build-ui', { estimatedTokens: 250000 }, 'cc-opus-high', 'T2']]) {
-    const decided = cliDecide(hp5Req(category, { taskId: `hp5-${category}`, ...over }), LIVE_OFF_PATH);
+    const decided = cliDecide(hp5Req(category, { taskId: `hp5-${category}`, ...over }), HP5_OFF_PATH);
     assert.deepEqual([decided.bindings['policy-revision'], decided.decision.route, decided.decision.profile, decided.decision['difficulty-tier'], decided.brief['difficulty-tier']], ['host-policy-5', 'delegate', profile, tier, tier], category);
   }
 });
 
-test('host-policy-5: a decision made under revision 5 dispatches - the committed policy with a fresh synthetic reading, the recheck accepting the Brief with difficulty-tier; the decision record carries the tier', () => {
+test('host-policy-5 (fixture): a decision made under revision 5 dispatches - the fixture with a fresh synthetic reading, the recheck accepting the Brief with difficulty-tier; the decision record carries the tier', () => {
   const trace = tmp();
   const at = '2026-10-18T19:00:00Z';
-  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05 }), at, COMMITTED_POLICY_PATH);
+  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05 }), at, HP5_POLICY_PATH);
   assert.equal(r.code, 0, r.stderr);
-  const request = reqFor(COMMITTED_POLICY, 'build-ui', { taskId: 'hp5-rt', estimatedTokens: 250000, now: at, deadline: '2026-10-19T03:00:00Z' });
-  const d = decide(request, { traceDir: trace, policyPath: COMMITTED_POLICY_PATH });
+  const request = reqFor(JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8')), 'build-ui', { taskId: 'hp5-rt', estimatedTokens: 250000, now: at, deadline: '2026-10-19T03:00:00Z' });
+  const d = decide(request, { traceDir: trace, policyPath: HP5_POLICY_PATH });
   assert.deepEqual([d.route, d.decision.profile, d.brief['difficulty-tier'], d.record['difficulty-tier'], d.record['usage-tokens']], ['delegate', 'cc-opus-high', 'T2', 'T2', 479000]);
   assert.match(d.text, /\nDifficultyTier: {4}T2\n/);
-  const disp = cli(['dispatch', 'hp5-rt', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', '2026-10-18T19:05:00Z', '--policy', COMMITTED_POLICY_PATH]);
+  const disp = cli(['dispatch', 'hp5-rt', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', '2026-10-18T19:05:00Z', '--policy', HP5_POLICY_PATH]);
   assert.equal(disp.code, 0, disp.stderr);
   assert.equal(ledgerLines(trace).pop()['brief-fingerprint'], d.briefFingerprint);
 });
 
-test('rate (host-policy-5): CALIBRATION lines for runs 1-3 carry no tier; a fix observation with tier T3 prints fix@T3; two consecutive verification-failed fixes at T2 propose demote cc-opus-high from fix@T2', () => {
+test('rate (host-policy-5 fixture): CALIBRATION lines for runs 1-3 carry no tier; a fix observation with tier T3 prints fix@T3; two consecutive verification-failed fixes at T2 propose demote cc-opus-high from fix@T2', () => {
   const lines = (r) => r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
-  const committed = rate({ traceDir: frozenTrace(FREEZE_HP4), policyPath: LIVE_OFF_PATH, now: NOW });
+  const committed = rate({ traceDir: frozenTrace(FREEZE_HP4), policyPath: HP5_OFF_PATH, now: NOW });
   assert.ok(lines(committed).length > 0 && lines(committed).every((l) => !/@T/.test(l)), lines(committed).join('\n'));
   assert.deepEqual(lines(committed), lines(rate({ traceDir: frozenTrace(FREEZE_HP4), policyPath: HP4_OFF_PATH, now: NOW })), 'the same lines as under host-policy-4');
   const o = CAL3['opus-high'];
   const run4 = { 'opus-high': { profile: 'opus-high', fix: { ...o.fix, tier: 'T3' }, usage: o.usage } };
-  const tiered = lines(rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3, run4]), policyPath: LIVE_OFF_PATH, now: NOW }));
+  const tiered = lines(rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3, run4]), policyPath: HP5_OFF_PATH, now: NOW }));
   assert.ok(tiered.includes('CALIBRATION cc-opus-high fix@T3: 1 pass, 0 partial, 0 fail (calibration-4)'), tiered.join('\n'));
   const trace = tmp();
-  for (const id of ['d-1', 'd-2']) tieredCycle(trace, LIVE_OFF_PATH, id, 'fix', 'T2', 'cc-opus-high', 'verification-failed');
-  const r = cli(['rate', '--trace', trace, '--now', LATE, '--policy', LIVE_OFF_PATH]);
+  for (const id of ['d-1', 'd-2']) tieredCycle(trace, HP5_OFF_PATH, id, 'fix', 'T2', 'cc-opus-high', 'verification-failed');
+  const r = cli(['rate', '--trace', trace, '--now', LATE, '--policy', HP5_OFF_PATH]);
   assert.equal(r.code, 0, r.stderr);
   assert.ok(r.stdout.split('\n').includes('PROPOSAL demote cc-opus-high from fix@T2: 2 consecutive verification-failed (d-1, d-2); not applied — the lead ratifies by editing host-policy.json'), r.stdout);
   assert.equal(JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8')).stats['cc-opus-high']['fix@T2']['verification-failed'], 2);
 });
 
-// deliverable E: the README's qualification table is the live policy verbatim (P2-2), tiered entries included
-test('README: the host-policy-5 qualification table matches host-policy.json row for row (15 rows), the tiered qualified-for entries in policy order, the three runs\' grades', () => {
+// deliverable E of sr-policy-5: the README's host-policy-5 qualification table is that policy verbatim (P2-2), tiered
+// entries included; pinned to the host-policy-5 fixture by sr-policy-6
+test('README: the host-policy-5 qualification table matches the host-policy-5 fixture row for row (15 rows), the tiered qualified-for entries in policy order, the three runs\' grades', () => {
   const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const hp5 = JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8'));
   const start = readme.indexOf('### The table (host-policy-5');
   assert.ok(start >= 0, 'the README carries the host-policy-5 table');
   const section = readme.slice(start, readme.indexOf('\n#', start + 1));
   const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
   assert.equal(rows.length, 15);
-  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
-  for (const p of COMMITTED_POLICY.profiles) {
+  assert.deepEqual(rows.map((r) => r[0]), hp5.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of hp5.profiles) {
     const [, , qual, headroom, run1, run2, run3] = rows.find((r) => r[0] === `\`${p.id}\``);
     assert.equal(qual, p['qualified-for'].join(', ') || 'none', `${p.id} qualified-for`);
     assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
@@ -3450,7 +3460,7 @@ test('README: the host-policy-5 qualification table matches host-policy.json row
 
 // deliverable E: the tiers section quotes the proposal's predicate table, states the floor, D5 and D6's pending note,
 // carries the re-declaration table and the rubric, and quotes decide's own output for the deliverable-D requests
-test('README: Difficulty tiers (host-policy-5) - the predicate table, the floor, D5, the pending-decision note, the re-declaration table, the rubric, and the routing consequence as decide prints it; rule 5, D1-D9 and friction item 21', () => {
+test('README: Difficulty tiers (host-policy-5 fixture) - the predicate table, the floor, D5, the pending-decision note, the re-declaration table, the rubric, and the routing consequence as decide prints it; rule 5, D1-D9 and friction item 21', () => {
   const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
   const start = readme.indexOf('## Difficulty tiers (host-policy-5)');
   assert.ok(start >= 0, 'the README carries the tiers section');
@@ -3480,15 +3490,16 @@ test('README: Difficulty tiers (host-policy-5) - the predicate table, the floor,
   for (const cat of ['`fix`, `build-core`, `build-ui`, `build-tests`:', '`pin-tests`:', '`review`:', '`research-collect`:', '`docs-mechanical`:']) {
     assert.ok(section.includes(`\n- ${cat}`), `the rubric lacks ${cat}`);
   }
-  // the routing consequence: decide's own lines on the live policy (feature-off derivative), model elided
-  const live = loadPolicy(LIVE_OFF_PATH);
+  // the routing consequence: decide's own lines on host-policy-5 (its fixture's feature-off derivative since
+  // sr-policy-6), model elided
+  const live = loadPolicy(HP5_OFF_PATH);
   const quoted = [
     ['fix', { difficultyTier: 'T1' }, false], ['fix', { difficultyTier: 'T2' }, true], ['fix', {}, true],
     ['review', { difficultyTier: 'T1' }, false], ['review', {}, false], ['build-ui', { estimatedTokens: 250000 }, false], ['docs-mechanical', { difficultyTier: 'T3' }, false]
   ];
   for (const [i, [category, over, walked]] of quoted.entries()) {
     const trace = tmp();
-    const r = cli(['decide', writeJson(hp5Req(category, { taskId: `readme5-${i}`, ...over })), '--trace', trace, '--policy', LIVE_OFF_PATH]);
+    const r = cli(['decide', writeJson(hp5Req(category, { taskId: `readme5-${i}`, ...over })), '--trace', trace, '--policy', HP5_OFF_PATH]);
     assert.equal(r.code, 0, r.stderr);
     const out = r.stdout.split('\n');
     const pick = (k) => out.find((l) => l.startsWith(`${k}:`));
@@ -3502,7 +3513,7 @@ test('README: Difficulty tiers (host-policy-5) - the predicate table, the floor,
       assert.ok(section.includes(`\n${walk.join('\n')}\n`), `${category} ${JSON.stringify(over)}: README lacks the gate walk`);
     }
   }
-  const refused = cli(['decide', writeJson(hp5Req('fix', { taskId: 'readme5-x', permittedEffects: FIVE_FILES, difficultyTier: 'T1' })), '--trace', tmp(), '--policy', LIVE_OFF_PATH]);
+  const refused = cli(['decide', writeJson(hp5Req('fix', { taskId: 'readme5-x', permittedEffects: FIVE_FILES, difficultyTier: 'T1' })), '--trace', tmp(), '--policy', HP5_OFF_PATH]);
   assert.equal(refused.code, 2);
   assert.ok(section.includes(`\n${refused.stderr.trim()}\n`), `README lacks the floor refusal\n${refused.stderr}`);
   // Qualification rules gain rule 5 (proposal 2.3-2.5, quoted)
@@ -3547,4 +3558,21 @@ test('README (F1): the proposal\'s status clause ("not normative ... hosts MUST 
   for (const s of ['until then hosts MUST NOT emit or require them', '`' + TIERS_REVIEW_ROW + '`', 'PR #100', 'policy finding 7']) {
     assert.ok(f22flat.includes(s), `friction item 22 lacks: ${s}`);
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// host-policy-6 (unit sr-policy-6): calibration-first evidence (SmartRouter docs/proposals/calibration-first-onboarding.md,
+// merged as PR #102) under the lead's decisions E1-E7 (briefs/policy6-builder.md); the host-policy-5 assertions above stay
+// on the host-policy-5 fixture
+// ---------------------------------------------------------------------------------------------
+test('fixture: trace/policies/host-policy-5.json is the pre-revision policy, byte-identical to the policy the sr-policy-6 decisions were bound to', () => {
+  assert.ok(existsSync(HP5_POLICY_PATH), 'the host-policy-5 fixture exists');
+  const digest = createHash('sha256').update(readFileSync(HP5_POLICY_PATH)).digest('hex');
+  for (const seq of [1, 2]) {
+    const bound = JSON.parse(readFileSync(join(goldenDir, `sr-policy-6-${seq}.json`), 'utf8')).bindings;
+    assert.equal(bound['policy-revision'], 'host-policy-5', `sr-policy-6-${seq}`);
+    assert.equal(digest, bound['policy-sha256'], `sr-policy-6-${seq}`);
+  }
+  assert.equal(loadPolicy(HP5_POLICY_PATH)['policy-revision'], 'host-policy-5');
+  assert.equal(JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8')).request, undefined, 'a policy, never a decision');
 });
