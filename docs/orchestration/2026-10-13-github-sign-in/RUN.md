@@ -151,3 +151,24 @@ Decisions and why:
 - Commit trailer: no `Claude-Session` line, since this desktop session has no claude.ai/code URL.
 
 Open items: as at 15:55, except item 2 is now "push `hosts/claude-code-revision-4` and open the draft PR with `reports/sr-refresh-pr-body.md`". For item 4 (MoonAliza fix unit) on this host, the 74-failure baseline is Linux-only; a Windows baseline is needed first.
+
+## Resume point 2026-10-18 17:30 UTC (Windows host session, fresh from the 17:15 point)
+
+State:
+- Refresh unit delivered as a draft: `hosts/claude-code-revision-4` is on origin at `41f7366`, and draft PR #104 to main is open (https://github.com/StepenkoAnatoli/SmartRouter/pull/104, "Claude Code adapter: host policy revision 4 (calibration run 3 applied) and the run-3 trace"). The session that wrote the 17:15 point pushed and opened it at 17:25:42Z, after that point; this session found it done and repeated nothing. Its body equals `reports/sr-refresh-pr-body.md` (one trailing newline aside). CI on `41f7366`: regression-gate, claude-code-adapter-tests, watcher-once-proof SUCCESS; onboarding-proof, strict-canary SKIPPED; mergeable. No review requested or posted.
+- Delta reviews of #100-#102: still none (checked 17:27Z: no reviews, no inline comments, last activity 09:11Z; heads `6a75383`, `b63e140`, `96c6823` unchanged). #103 unchanged (`e9e511c`). No pushes to any of them.
+- Usage 17:28:39Z recorded with `route.mjs usage` (plan card via get_usage, as at 16:02Z): five_hour 0.09 (resets 19:20Z, headroom 11.2 Mtok), seven_day 0.71 (resets 2026-10-24T18:00Z, headroom 6 Mtok), weekly Fable 0.76. Both under 0.85; nothing launched.
+
+Decisions and why:
+- #104 accepted as opened, not reopened or reverted: its head is the verified `41f7366` and its body is the prepared one. This ledger does not record the operator's go; the opening session does.
+- #104 stays a draft until #101's delta review, because the `trace/calibration-3/` resync after that review is a stated limit in its body (17:15 decision).
+
+Open items (numbering as at 15:55):
+1. Delta reviews of #100, #101, #102: when they land, disposition every finding on its PR, push the fixes to that PR's branch, re-request review; then per verdict, as at 15:55 (#100 -> tiered-qualification unit and run 4 stage 4a; #102 -> its five units).
+2. #104: after #101's delta review, resync `trace/calibration-3/` from #101 if its files changed (regression gate in the background, about 25 min on Windows), then mark ready for review on the operator's word. The fbe7bca binding stays unless the mirrored files change.
+3. Run 4 preparation (G-2 forbidden prong, A-1 no relayed chat): unchanged.
+4. MoonAliza fix unit (C-1..C-3) and Stages 6-9: unchanged; on this host a Windows baseline comes first.
+5. Operator decisions (Research-Kit branch move, UD-1, key rotation): unchanged.
+6. #103's stale body line for #102: unchanged.
+
+Before any launch: refresh the reading (this one is stale at 17:58:39Z); stop at 0.90, launch nothing past 0.85.
