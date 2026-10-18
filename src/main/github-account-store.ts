@@ -97,6 +97,8 @@ export class GitHubAccountStore {
   }
   /** open() dropped an account issued to another client ID (4.4, DC-15). */
   openedAppChanged(): boolean { return this.appChanged; }
+  /** The file could not be read at open(), so references() is incomplete and the startup reconcile must keep staged entries. */
+  unreadAtOpen(): boolean { return this.unread; }
   /** The live account's refs, for the startup reconcile. */
   references(): string[] { return refsOf(this.live); }
   /** Never throws (4.4). Runs after the reconcile, which has deleted every tombstoned entry. */

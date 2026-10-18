@@ -166,6 +166,17 @@ const grantRead = (vault: Vault, ref: string) => {
   const binding = { epoch: 'epoch-1', purpose: 'github' as const, contextId: `github:read:${randomUUID()}`, secretRef: ref };
   return { binding, capability: vault.grant({ ...binding, expiresAt: Date.now() + 30_000 }) };
 };
+/** A start as restart() runs it, except that open() cannot read the account file (EBUSY). With keepBusy, lstat keeps failing for the
+ *  file until the caller runs `restore`, which it must do in a finally. */
+async function unreadStart(dir: string, keepBusy = false) {
+  const file = join(dir, 'github', 'account.json');
+  const vault = new Vault(join(dir, 'vault'), cryptor); await vault.initialize('epoch-2');
+  const store = new GitHubAccountStore(file, vault, CLIENT, () => T0 + 3_600_000);
+  const restore = busyLstat(file);
+  try { await store.open(); } finally { if (!keepBusy) restore(); }
+  await vault.reconcile(new Set(store.references()), { keepStaged: store.unreadAtOpen() }); await store.finishStartup();
+  return { file, vault, store, restore };
+}
 
 describe('write order (4.3)', () => {
   test('a refresh stages, writes the file, commits, sets live, retires the old refs, then rewrites the file', async () => {
@@ -753,18 +764,6 @@ describe('startup checks (4.4)', () => {
     await expectConsistent(dir, refsOf(a));
   });
 
-  /** A start as restart() runs it, except that open() cannot read the account file (EBUSY). With keepBusy, lstat keeps failing for the
-   *  file until the caller runs `restore`, which it must do in a finally. */
-  async function unreadStart(dir: string, keepBusy = false) {
-    const file = join(dir, 'github', 'account.json');
-    const vault = new Vault(join(dir, 'vault'), cryptor); await vault.initialize('epoch-2');
-    const store = new GitHubAccountStore(file, vault, CLIENT, () => T0 + 3_600_000);
-    const restore = busyLstat(file);
-    try { await store.open(); } finally { if (!keepBusy) restore(); }
-    await vault.reconcile(new Set(store.references())); await store.finishStartup();
-    return { file, vault, store, restore };
-  }
-
   // Such a start shows no account, so the next step is a sign-in in the same session. It re-reads the file under the lock, so the pair
   // the file names is retired, not written over and left committed in the vault for good (the reconcile never deletes it) (U2-R13).
   test('a sign-in after a start that could not read a valid file re-reads it, so the pair it names is retired, not left in the vault', async () => {
@@ -851,6 +850,22 @@ describe('crash windows (S-7, 4.5)', () => {
     expect(await h.signOut()).toBe('durable');
     await expectConsistent(dir!, null);
   });
+
+  // X2-1, the double fault: a crash after step 4 leaves the new pair staged and named by the file. The next start cannot read that file
+  // (EBUSY), so its references are unknown, and its reconcile must keep the staged pair; the readable start after it then commits the pair.
+  for (const kind of ['sign-in', 'refresh'] as const) {
+    test(`${kind}: a crash after the file write, then a start that cannot read the file, leaves the staged pair for the next start (X2-1)`, async () => {
+      const h = await harness(); const { account: a } = await h.signIn();
+      let dir: string | undefined; h.spy.on('commit', (_ref, count) => { if (count === 3) dir = h.snapshot(); });
+      const next = await h.store.replace(issued(), T0, kind, kind === 'sign-in' ? h.signInAdmit() : h.refreshAdmit(a));
+      expect(dir).toBeDefined(); expect(refsOf(next)).toHaveLength(2);
+      const file = join(dir!, 'github', 'account.json'); const before = readFileSync(file, 'utf8');
+      const { store } = await unreadStart(dir!);
+      expect(store.current()).toBeNull();                                        // this start reads no account
+      expect(readFileSync(file, 'utf8')).toBe(before);                           // and does not rewrite the file (U2-R9)
+      await expectConsistent(dir!, refsOf(next));
+    });
+  }
 });
 
 describe('concurrency (L-6)', () => {

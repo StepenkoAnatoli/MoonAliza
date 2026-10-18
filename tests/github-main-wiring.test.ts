@@ -78,7 +78,7 @@ test('the store and the service are built straight after the collector settings 
 
 test('the reconcile set keeps the account refs, and githubStore.finishStartup() follows the collector settings', () => {
   const all = lines(source).filter(code);
-  const reconcile = all.indexOf('await vault.reconcile(new Set([...references, ...collectorSettings.references(), ...githubStore.references()]));');
+  const reconcile = all.indexOf('await vault.reconcile(new Set([...references, ...collectorSettings.references(), ...githubStore.references()]), { keepStaged: githubStore.unreadAtOpen() });');
   expect(reconcile, 'the reconcile line, whole').toBeGreaterThan(-1);
   expect(count('vault.reconcile('), 'one reconcile').toBe(1);
   expect(all[reconcile + 1]).toBe('await collectorSettings.finishStartup();');

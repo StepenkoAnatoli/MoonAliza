@@ -33,6 +33,16 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
+/** The index's state for each ref, as the disk holds it. */
+async function states(directory: string): Promise<Record<string, string>> {
+  const index = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')) as { entries: Record<string, { state: string }> };
+  return Object.fromEntries(Object.entries(index.entries).map(([ref, entry]) => [ref, entry.state]));
+}
+/** The entry files on disk. */
+async function bins(directory: string): Promise<string[]> {
+  return (await readdir(directory)).filter(name => name.endsWith('.bin')).sort();
+}
+
 describe('credential lifecycle', () => {
   test('a research grant lives at most 30 seconds, as a provider test does', async () => {
     const { vault } = await fixture();
@@ -75,6 +85,25 @@ describe('credential lifecycle', () => {
     await reopened.reconcile(new Set([committedInStore]));
     expect(await reopened.has(committedInStore)).toBe(true);
     expect(await reopened.has(orphan)).toBe(false);
+  });
+
+  test('reconcile with keepStaged keeps an unreferenced staged entry and its file, commits a referenced one and deletes a tombstoned one (X2-1)', async () => {
+    const { directory, vault, cryptor } = await fixture();
+    const referenced = await vault.saveStaged('referenced');
+    const orphan = await vault.saveStaged('orphan');
+    const gone = await vault.saveStaged('gone'); await vault.commit(gone); await vault.tombstone(gone);
+    const reopened = new Vault(directory, cryptor);
+    await reopened.initialize('epoch-2');
+    await reopened.reconcile(new Set([referenced]), { keepStaged: true });
+    expect(await states(directory)).toEqual({ [referenced]: 'committed', [orphan]: 'staged' });
+    expect(await bins(directory)).toEqual([`${orphan}.bin`, `${referenced}.bin`].sort());
+    expect(await reopened.has(referenced)).toBe(true);
+    // The next start, without the option, deletes the orphan it kept (4.5).
+    const next = new Vault(directory, cryptor);
+    await next.initialize('epoch-3');
+    await next.reconcile(new Set([referenced]));
+    expect(await states(directory)).toEqual({ [referenced]: 'committed' });
+    expect(await bins(directory)).toEqual([`${referenced}.bin`]);
   });
 
   test('tombstone invalidates previously issued capabilities before ciphertext is removed', async () => {

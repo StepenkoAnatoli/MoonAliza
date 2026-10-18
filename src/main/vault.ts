@@ -103,13 +103,15 @@ export class Vault {
     });
   }
 
-  reconcile(committedReferences: ReadonlySet<string>): Promise<void> {
+  /** keepStaged: an unreferenced staged entry is neither committed nor deleted, file included, for a start whose reference set is
+   *  incomplete (the GitHub store's file could not be read). Referenced staged entries are still committed and tombstones still deleted. */
+  reconcile(committedReferences: ReadonlySet<string>, options?: { keepStaged?: boolean }): Promise<void> {
     return this.serial(async () => {
       for (const [ref, entry] of Object.entries(this.index.entries)) {
         if (entry.state === 'staged' && committedReferences.has(ref)) {
           await access(this.secretPath(ref));
           entry.state = 'committed';
-        } else if (entry.state === 'tombstoned' || (entry.state === 'staged' && !committedReferences.has(ref))) {
+        } else if (entry.state === 'tombstoned' || (entry.state === 'staged' && !committedReferences.has(ref) && !options?.keepStaged)) {
           await unlink(this.secretPath(ref)).catch((error: NodeJS.ErrnoException) => {
             if (error.code !== 'ENOENT') throw error;
           });
