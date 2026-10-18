@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ADVISORY, CASH_UNCERTAINTY, RouterError, TIERS_OFF, briefFingerprint, computeDecision, decide, dispatch,
+  ADVISORY, CASH_UNCERTAINTY, RouterError, TIERS, TIERS_OFF, briefFingerprint, computeDecision, decide, dispatch,
   loadPolicy, rate, readLedger, recordOutcome, requestTier, status, validateBrief
 } from './route.mjs';
 
@@ -3031,5 +3031,113 @@ test('tiers D1/D3: an untiered policy behaves as today - a declared tier is chec
     const a = computeDecision(reqFor(off, category), off, []);
     const b = computeDecision(reqFor(off, category), tieredOff, []);
     assert.deepEqual([b.route, b.profile, b['review-profile'], b['eligible-ordered']], [a.route, a.profile, a['review-profile'], a['eligible-ordered']], category);
+  }
+});
+
+// an enforced derivative of the host-policy-4 fixture whose production-derived profiles hold tiered entries in the
+// shape of revision 5's table (the live revision 5 is tested on its own below)
+const TIERED_PATH = hp4PolicyWith((p) => {
+  enforce(p);
+  profileOf(p, 'cc-opus-high')['qualified-for'] = ['build-core@T3', 'build-ui@T3', 'build-tests@T3', 'review@T1', 'fix@T2', 'research-collect@T2', 'pin-tests'];
+  profileOf(p, 'cc-fable-high')['qualified-for'] = ['review@T1', 'fix@T2', 'pin-tests'];
+  const fx = profileOf(p, 'cc-fable-xhigh');
+  fx['qualified-for'] = fx['qualified-for'].map((c) => `${c}@T3`);
+});
+
+test('tiers D4: Gate 2 passes a profile only at a tier >= the request\'s (tier k covers lower tiers), with the tier reason; the empty set stays blocked and the outside hint names who would pass', () => {
+  const pol = loadPolicy(TIERED_PATH);
+  const fix = (tier, over = {}) => computeDecision(reqFor(pol, 'fix', { ...(tier ? { difficultyTier: tier } : {}), ...over }), pol, []);
+  const t1 = fix('T1');
+  assert.deepEqual([t1.route, t1.profile, t1['review-profile']], ['delegate', 'cc-haiku-high', 'cc-sonnet-xhigh']);
+  const t2 = fix('T2');
+  assert.deepEqual([t2.route, t2.profile], ['delegate', 'cc-opus-high']);
+  assert.deepEqual(t2['eligible-ordered'], ['cc-opus-high', 'cc-fable-high']);
+  assert.equal(t2.candidates['cc-haiku-high'].reason, 'cc-haiku-high not qualified for fix@T2 (holds fix@T1)');
+  assert.equal(t2.candidates['cc-haiku-medium'].reason, 'cc-haiku-medium not qualified for fix@T2 (holds fix@T1); context: 193000 tokens not below headroom-tested 183000 on cc-haiku-medium');
+  assert.equal(t2.candidates['cc-fable-max'].reason, 'cc-fable-max not qualified for fix');
+  for (const t3 of [fix('T3'), fix(null)]) {
+    assert.equal(t3.route, 'blocked');
+    assert.equal(t3.candidates['cc-opus-high'].reason, 'cc-opus-high not qualified for fix@T3 (holds fix@T2)');
+    assert.equal(t3.candidates['cc-fable-high'].reason, 'cc-fable-high not qualified for fix@T3 (holds fix@T2)');
+    assert.deepEqual([t3.candidates['cc-fable-xhigh']['first-failing-gate'], t3.candidates['cc-fable-xhigh'].reason], [5, 'direct unsuitable: 193000 tokens > direct-max-tokens 15000']);
+  }
+  // T3 covers T1 and T2: build-ui@T3 passes at every tier
+  for (const tier of TIERS) assert.equal(computeDecision(reqFor(pol, 'build-ui', { difficultyTier: tier }), pol, []).profile, 'cc-opus-high', tier);
+  // no eligible candidate at the tier: blocked (no new route, no recommend-escalation), and the existing hint names the
+  // profile outside the candidates that would pass (proposal Item 3's "names it"); cc-sonnet-xhigh is among the
+  // candidates as the required reviewer, which is drawn from them
+  const outside = fix('T2', { candidates: ['cc-haiku-low', 'cc-haiku-high', 'cc-sonnet-xhigh'] });
+  assert.equal(outside['review-profile'], 'cc-sonnet-xhigh');
+  assert.equal(outside.route, 'blocked');
+  assert.deepEqual(outside['eligible-outside-candidates'], ['cc-opus-high', 'cc-fable-high']);
+  assert.ok(outside.uncertainty.some((u) => u.startsWith('not among candidates: cc-opus-high, cc-fable-high would pass all five gates')), outside.uncertainty.join('\n'));
+  assert.equal(outside.candidates['cc-haiku-high'].reason, 'cc-haiku-high not qualified for fix@T2 (holds fix@T1)');
+  // the same requests under the untiered fixture: Gate 2 per category, as before
+  const off = loadPolicy(HP4_OFF_PATH);
+  assert.equal(computeDecision(reqFor(off, 'fix', { difficultyTier: 'T3' }), off, []).profile, 'cc-haiku-high');
+});
+
+test('tiers D5: the required reviewer is walked at review@T1 whatever the unit\'s tier; a T3 unit is reviewed by a review@T1 profile', () => {
+  const pol = loadPolicy(TIERED_PATH);
+  const build = computeDecision(reqFor(pol, 'build-core'), pol, []);
+  assert.deepEqual([build.route, build.profile, build['review-profile'], build['difficulty-tier']], ['delegate', 'cc-opus-high', 'cc-sonnet-xhigh', 'T3']);
+  assert.equal(build['review-candidates']['cc-sonnet-xhigh'], null);
+  assert.equal(build['review-candidates']['cc-haiku-high'], 'gate 2: cc-haiku-high not qualified for review');
+  // on this policy every review entry is bare or @T1, so the walk at review@T1 is the untiered walk, profile for profile
+  const off = loadPolicy(HP4_OFF_PATH);
+  const untiered = computeDecision(reqFor(off, 'build-core'), off, []);
+  assert.deepEqual(build['review-candidates'], untiered['review-candidates']);
+});
+
+test('tiers D6: under an enforced policy the DifficultyTier line follows Difficulty, and difficulty-tier is recorded on the decision, the Brief and the ledger decision record; the Brief round-trips through the pre-dispatch recheck', () => {
+  const trace = tmp();
+  const pol = loadPolicy(TIERED_PATH);
+  const r = cli(['decide', writeJson(reqFor(pol, 'fix', { taskId: 'dt-1', difficultyTier: 'T2' })), '--trace', trace, '--policy', TIERED_PATH]);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^Difficulty: {8}high-or-ambiguous\nDifficultyTier: {4}T2\nRoute: {13}delegate\n/);
+  const file = JSON.parse(readFileSync(join(trace, 'decisions', 'dt-1-1.json'), 'utf8'));
+  assert.equal(file.decision['difficulty-tier'], 'T2');
+  assert.equal(file.brief['difficulty-tier'], 'T2');
+  assert.match(r.stdout, /\n {2}"difficulty-tier": "T2"\n/);
+  const rec = ledgerLines(trace)[0];
+  assert.deepEqual([rec.kind, rec['difficulty-tier'], rec['brief-fingerprint']], ['decision', 'T2', briefFingerprint(file.brief)]);
+  // the recheck recomputes the Brief with the field: the decision dispatches as decided
+  const disp = cli(['dispatch', 'dt-1', 'cc-opus-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--policy', TIERED_PATH]);
+  assert.equal(disp.code, 0, disp.stderr);
+  assert.match(disp.stdout, /dispatch as decided \(decision seq 1\)/);
+  // a blocked decision carries the line and the fields too (no Brief)
+  const blocked = decide(reqFor(pol, 'fix', { taskId: 'dt-2' }), { traceDir: trace, policyPath: TIERED_PATH });
+  assert.equal(blocked.route, 'blocked');
+  assert.match(blocked.text, /^Difficulty: {8}high-or-ambiguous\nDifficultyTier: {4}T3\nRoute: {13}blocked\n/);
+  assert.deepEqual([blocked.decision['difficulty-tier'], blocked.record['difficulty-tier'], blocked.brief], ['T3', 'T3', null]);
+  // untiered: no line, no field anywhere, a declared tier included
+  const off = decide(reqFor(pol, 'fix', { taskId: 'dt-3', difficultyTier: 'T1' }), { traceDir: trace, policyPath: HP4_OFF_PATH });
+  assert.equal(off.route, 'delegate');
+  assert.doesNotMatch(off.text, /DifficultyTier/);
+  assert.equal(JSON.stringify(off.decision).includes('difficulty-tier'), false);
+  assert.equal('difficulty-tier' in off.brief, false);
+  assert.equal('difficulty-tier' in off.record, false);
+  // a decision made untiered does not dispatch under the enforced policy: the recomputed Brief gains the field (the
+  // README's pending-decision note), even where the route is unchanged
+  const stale = cli(['dispatch', 'dt-3', 'cc-haiku-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--policy', TIERED_PATH]);
+  assert.equal(stale.code, 3, stale.stdout);
+  assert.match(stale.stderr, /pre-dispatch recheck: the Brief changed since decision seq 1; decide again \(changed: difficulty-tier\)/);
+  // and under the policy it was decided by, it dispatches
+  assert.equal(cli(['dispatch', 'dt-3', 'cc-haiku-high', '--project-stop', CLEAR_JSON, '--trace', trace, '--now', NOW, '--policy', HP4_OFF_PATH]).code, 0);
+});
+
+// D6: a decision taken under an untiered revision cannot be dispatched under the enforced one (its Brief changes), so
+// the ledger must hold no pending decision when revision 5 lands: every task's latest decision is blocked or dispatched
+test('tiers D6: the committed ledger at the base commit holds no undispatched decision (every task\'s latest decision is blocked or followed by a dispatch)', () => {
+  const records = readLedger(frozenTrace(FREEZE_HP4));
+  const tasks = [...new Set(records.map((r) => r['task-id']))];
+  assert.equal(tasks.length, 16, 'the sixteen tasks of the base commit');
+  for (const t of tasks) {
+    const own = records.filter((r) => r['task-id'] === t);
+    const last = own.filter((r) => r.kind === 'decision').pop();
+    if (!last) continue;
+    const blocked = /^route blocked/.test(last.detail);
+    const dispatched = own.some((r) => r.kind === 'dispatch' && r.seq > last.seq);
+    assert.ok(blocked || dispatched, `${t}: decision seq ${last.seq} (${last.detail}) is pending`);
   }
 });

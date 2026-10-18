@@ -760,13 +760,16 @@ function fingerprintProblem(nowMs, pr) {
   return null;
 }
 
-// the capability walk for one role: the work itself, or the required review (category 'review', its median, its tools)
-function capabilities(ctx, pr, id, { category, tokens, tools }) {
+// the capability walk for one role: the work itself, or the required review (category 'review', its median, its tools).
+// tier: the tier the role needs under an enforced policy (D4: held at that tier or above), null when untiered
+function capabilities(ctx, pr, id, { category, tokens, tools, tier }) {
   // collect every capability reason, then fail once (run_gates in the fixture runner)
   const reasons = [];
   const fp = fingerprintProblem(ctx.nowMs, pr);
   if (fp) reasons.push(fp);
-  if (heldTier(pr, category) === 0) reasons.push(`${id} not qualified for ${category}`);
+  const held = heldTier(pr, category);
+  if (held === 0) reasons.push(`${id} not qualified for ${category}`);
+  else if (tier && held < tierRank(tier)) reasons.push(`${id} not qualified for ${category}@${tier} (holds ${category}@T${held})`);
   const missing = pr.tools === true ? [] : Array.isArray(pr.tools) ? tools.filter((t) => !pr.tools.includes(t)) : tools;
   if (missing.length) reasons.push(`required tools missing on ${id}: ${missing.join(', ')}`);
   if (ctx.req.needsVision && pr.vision !== true) reasons.push(`vision required, ${id} lacks it`);
@@ -777,7 +780,7 @@ function capabilities(ctx, pr, id, { category, tokens, tools }) {
 }
 
 function gate2(ctx, pr, id) {
-  return capabilities(ctx, pr, id, { category: ctx.req.category, tokens: ctx.tokens, tools: ctx.requiredTools });
+  return capabilities(ctx, pr, id, { category: ctx.req.category, tokens: ctx.tokens, tools: ctx.requiredTools, tier: ctx.tier });
 }
 
 function gate3(ctx) {
@@ -884,7 +887,9 @@ const byEconomics = (a, b) => a._allIn - b._allIn || a._rate - b._rate || a._eff
 
 // gates.md: the gates apply to every profile under consideration, the reviewer included. The required reviewer is
 // drawn from the request's candidates (never the lead-direct profile) and walked through Gate 1 and Gate 2 for the
-// review category, with headroom against the review median; an unpriced reviewer cannot bound the review.
+// review category, with headroom against the review median; an unpriced reviewer cannot bound the review. Under an
+// enforced policy the walk requires review@T1 (D5): the review of a unit is its own request when the lead dispatches it,
+// with its own declared tier, so the unit's tier is not the reviewer's
 function reviewerFor(ctx, ids, leadId) {
   const rev = ctx.policy.categories.review;
   const walk = {};
@@ -894,7 +899,7 @@ function reviewerFor(ctx, ids, leadId) {
     const pr = ctx.policy.profiles.find((p) => p.id === id);
     if (!pr) continue;
     const g1 = gate1(ctx, pr, id, 'delegate');
-    const g2 = g1 || !rev ? null : capabilities(ctx, pr, id, { category: 'review', tokens: rev['median-tokens'], tools: rev['required-tools'] });
+    const g2 = g1 || !rev ? null : capabilities(ctx, pr, id, { category: 'review', tokens: rev['median-tokens'], tools: rev['required-tools'], tier: ctx.tier ? 'T1' : null });
     const why = g1 ? `gate 1: ${g1}` : !rev ? 'gate 2: the policy has no review category' : g2 ? `gate 2: ${g2}` : outRate(ctx.policy, pr) === null ? `gate 4: unknown price for ${pr.model}` : null;
     walk[id] = why;
     if (!why) pool.push(pr);
@@ -929,7 +934,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
     tokens: req.estimatedTokens ?? category?.['median-tokens'] ?? 0,
     requiredTools: req.requiredTools ?? category?.['required-tools'] ?? [],
     reviewer: null, reviewWalk: {},
-    usage: null
+    usage: null, tier: tiering.tier
   };
   if (policy['usage-windows']) {
     const reading = latestReading(readings, nowMs);
@@ -1027,7 +1032,9 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
       ],
       ownership: 'worker',
       'nested-allowed': false,
-      'max-nesting-depth': 1
+      'max-nesting-depth': 1,
+      // D6: additive (spec-v2 §13); the recheck recomputes it, so the fingerprint binds the tier
+      ...(tiering.tier ? { 'difficulty-tier': tiering.tier } : {})
     };
     validateBrief(brief, { callsRemaining: st.callsLimit - st.callsUsed, repairsAllowed: st.repairsAllowed, now: req.now });
     fingerprint = briefFingerprint(brief);
@@ -1052,7 +1059,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   const maxDepth = optIns['nested-allowed'] ? 0 : optIns['max-nesting-depth'];
 
   const lines = [
-    ['Difficulty', difficulty], ['Route', route], ['Profile', profileLine], ['Isolation', isolation],
+    ['Difficulty', difficulty], ...(tiering.tier ? [['DifficultyTier', tiering.tier]] : []), ['Route', route], ['Profile', profileLine], ['Isolation', isolation],
     ['IsolationReason', isolationReason], ['Owner', owner], ['HumanGate', optIns['human-gate']], ['NestedAllowed', 'no'],
     ['MaxNestingDepth', String(maxDepth)], ['Reservations', reservations],
     ['Calls', `${st.callsUsed} / ${st.callsLimit}`], ['Deadline', deadlineLine], ['Uncertainty', uncertainty.join('; ')]
@@ -1070,7 +1077,7 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   return {
     route, profile: route === 'blocked' ? null : chosen.id, 'profile-tuple': route === 'blocked' ? null : profileTuple(policy, pr),
     isolation, 'isolation-reason': isolationReason, owner, 'human-gate': optIns['human-gate'], 'nested-allowed': false,
-    'max-nesting-depth': maxDepth, difficulty, 'estimated-tokens': ctx.tokens,
+    'max-nesting-depth': maxDepth, difficulty, ...(tiering.tier ? { 'difficulty-tier': tiering.tier } : {}), 'estimated-tokens': ctx.tokens,
     'all-in-bound-usd': allIn, candidates: Object.fromEntries(results.map((r) => [r.id, strip(r)])),
     'eligible-ordered': eligible.map((r) => r.id), 'eligible-outside-candidates': outside, 'speculative-set': specSet, uncertainty,
     advisory: ADVISORY_TEXT, 'pending-proposals': pending, deadline: deadlineIso, 'deadline-capped': capped,
@@ -1114,6 +1121,8 @@ export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TR
     'task-id': req.taskId, seq, kind: 'decision', ts: req.now, profile: d['profile-tuple'], counters: ctr,
     deadline: d.deadline, 'brief-fingerprint': fp, detail: `route ${d.route}`,
     'outcome-ref': null,
+    // additive (spec-v2 §13, D6): the request's difficulty tier under an enforced policy
+    ...('difficulty-tier' in d ? { 'difficulty-tier': d['difficulty-tier'] } : {}),
     // additive (spec-v2 §13): the tokens Gate 4 projected for the chosen profile, so dispatch re-checks that count
     ...('usage-tokens' in d ? { 'usage-tokens': d['usage-tokens'] } : {}),
     ...(d['speculative-set'] ? { 'speculative-profiles': d['speculative-set'].candidates.map((c) => c.profile), 'speculative-calls': d['speculative-set']['shared-budget'].calls } : {})
