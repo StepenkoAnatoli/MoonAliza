@@ -7,6 +7,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspect } from 'node:util';
 import Database from 'better-sqlite3';
+import * as artifactFiles from '../src/models/artifact-files';
 import { Vault } from '../src/main/vault';
 import { GitHubAccountStore } from '../src/main/github-account-store';
 import { DEVICE_PAGE_URL } from '../src/main/github-app';
@@ -145,12 +146,32 @@ function call<M extends MethodName>(app: Application, method: M, params: MethodP
 }
 
 const plantedArgv: string[] = [];
+let unhook: (() => void) | null = null;
 const opened: Array<{ root: string; service: GitHubSignIn; store: Store }> = [];
 afterEach(async () => {
+  unhook?.(); unhook = null;
   delete process.env.MOONALIZA_U7_PLANTED;
   for (const value of plantedArgv.splice(0)) { const i = process.argv.indexOf(value); if (i >= 0) process.argv.splice(i, 1); }
   for (const { root, service, store } of opened.splice(0)) { service.cancel(); await service.close(); store.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+/** U7-R9: atomicJson is swapped on its module object for the run, so each call's value is recorded before it is written, whatever
+ *  the path and however briefly the file lives (a staging file removed inside one commit point is in no snapshot). The importers read
+ *  the export at each call, so the swap reaches them; the value is kept in UTF-8 and UTF-16LE, as the other scans read it. */
+function recordAtomicJson(root: string, targetOf: (file: string) => Target): { writes: Captured[]; restore: () => void } {
+  const writes: Captured[] = [];
+  const real = artifactFiles.atomicJson;
+  const exported = (path: string, value: unknown) => {
+    const json = JSON.stringify(value);
+    const inside = path.startsWith(root + sep);
+    const label = `atomicJson: ${inside ? relative(root, path).split(sep).join('/') : path}`;
+    writes.push({ target: targetOf(path), label, bytes: Buffer.from(json, 'utf8') }, { target: targetOf(path), label, bytes: Buffer.from(json, 'utf16le') });
+    return real(path, value);
+  };
+  const define = (value: unknown) => Object.defineProperty(artifactFiles, 'atomicJson', { configurable: true, enumerable: true, writable: true, value });
+  define(exported);
+  return { writes, restore: () => define(real) };
+}
 
 /** Builds the stack, runs the journey and returns everything it saw. `pendingPlant`: the mutation test's plant for the pending window
  *  (U7-R5), written in clear to a file under userData as the device-code poll goes out and removed when its answer is back, so it
@@ -158,6 +179,10 @@ afterEach(async () => {
 async function journey(options: { pendingPlant?: string } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'moonaliza-github-invariants-'));
   const vaultDir = join(root, 'vault'); const accountFile = join(root, 'github', 'account.json'); const database = join(root, 'state.sqlite');
+  // Every file under userData (root), walked recursively, so a clear token in any file is found, not only in the named ones (U7-R1).
+  const named = new Map<string, Target>([[database, 'state.sqlite'], [`${database}-wal`, 'state.sqlite-wal'], [`${database}-shm`, 'state.sqlite-shm'], [accountFile, 'account file']]);
+  const targetOf = (file: string): Target => named.get(file) ?? (file.startsWith(vaultDir + sep) ? 'vault directory' : 'other userData files');
+  const recorder = recordAtomicJson(root, targetOf); unhook = recorder.restore;
   const vault = new Vault(vaultDir, cryptor); await vault.initialize('epoch-1');
   const accountStore = new GitHubAccountStore(accountFile, vault, CLIENT);
   await accountStore.open();
@@ -251,9 +276,6 @@ async function journey(options: { pendingPlant?: string } = {}) {
     ipc.push({ method, result: value });
     return value;
   };
-  // Every file under userData (root), walked recursively, so a clear token in any file is found, not only in the named ones (U7-R1).
-  const named = new Map<string, Target>([[database, 'state.sqlite'], [`${database}-wal`, 'state.sqlite-wal'], [`${database}-shm`, 'state.sqlite-shm'], [accountFile, 'account file']]);
-  const targetOf = (file: string): Target => named.get(file) ?? (file.startsWith(vaultDir + sep) ? 'vault directory' : 'other userData files');
   const filesUnder = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const path = join(dir, entry.name);
     return entry.isDirectory() ? filesUnder(path) : entry.isFile() ? [path] : [];
@@ -321,6 +343,7 @@ async function journey(options: { pendingPlant?: string } = {}) {
   /** Everything captured so far, as the scan reads it: the file snapshots plus the in-memory channels and process.env now. */
   const all = (): Captured[] => [
     ...captured,
+    ...recorder.writes,
     { target: 'IPC results and DTOs', label: 'IPC results', bytes: Buffer.from(JSON.stringify(ipc), 'utf8') },
     { target: 'engine messages and events', label: 'engine', bytes: Buffer.from(JSON.stringify(engine), 'utf8') },
     { target: 'infer messages', label: 'infer()', bytes: Buffer.from(JSON.stringify(inferred), 'utf8') },
