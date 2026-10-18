@@ -398,7 +398,7 @@
    "tools": true,
    "vision": true,
    "context-tested": 1000000,
-   "headroom-tested": 848000,
+   "headroom-tested": 1030000,
    "qualified-for": [
     "build-core@T3",
     "build-ui@T3",
@@ -429,7 +429,8 @@
     "build-tests@T3: pre-adapter test units of U1-U5 (RUN.md), new harnesses (fakes, recorders), would be T3 by the table; host-declared (lead), not independent",
     "review@T1: accepted outcomes sr-host-review seq 3, sr-host-rereview1 seq 3, sr-host-rereview2 seq 3 (one module against gates.md with the shipped tests), would be T1 by the table; calibration-1..3 review PASS",
     "fix@T2: accepted outcomes sr-host-fix1 seq 4, sr-host-fix2 seq 4 (three files, one module, cause named by the findings, existing harness), would be T2 by the table; two passes at T2 (rule 2.3)",
-    "research-collect@T2: 26 research runs this session (RUN.md), 20-page budgets with enumerated unknowns, would be T2 by the table (budget over ten pages); host-declared (lead), not independent"
+    "research-collect@T2: 26 research runs this session (RUN.md), 20-page budgets with enumerated unknowns, would be T2 by the table (budget over ten pages); host-declared (lead), not independent",
+    "sr-policy-5 outcome accepted 2026-10-18T20:10:00Z: 1029194 tokens completed (trace/outcomes/sr-policy-5-3.json); rate proposed headroom-tested 848000 -> 1030000, ratified by the lead at integration (largest completed run, rounded up, never lowered)"
    ],
    "qualified-at": "2026-10-18",
    "expires": "2027-01-15",

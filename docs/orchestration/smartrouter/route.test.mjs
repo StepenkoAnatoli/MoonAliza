@@ -3299,14 +3299,24 @@ test('host-policy-5: the lead\'s table applied - "difficulty-tiers": "enforced",
   assert.deepEqual(rest(raw), rest(hp4), 'only the revision, the key and the profiles change');
   assert.deepEqual(raw.profiles.map((p) => p.id), hp4.profiles.map((p) => p.id), 'the fifteen profiles of host-policy-4, in order');
   const fixed = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['qualified-for', 'qualified-at', 'evidence'].includes(k)));
+  // the one headroom change of this revision: rate's proposal on the accepted sr-policy-5 outcome (1029194 tokens, the
+  // unit that built this revision), ratified by the lead at integration under the never-lowered rule; its line closes
+  // the profile's evidence
+  const RATIFIED = { 'cc-opus-high': { from: 848000, to: 1030000, line: /^sr-policy-5 outcome accepted .*: 1029194 tokens completed \(trace\/outcomes\/sr-policy-5-3\.json\); rate proposed headroom-tested 848000 -> 1030000, ratified by the lead at integration/ } };
   for (const after of raw.profiles) {
     const before = hp4.profiles.find((p) => p.id === after.id);
-    assert.deepEqual(fixed(after), fixed(before), `${after.id}: model, effort, config, tools, vision, context, headroom, expires, reviewer unchanged`);
+    const rat = RATIFIED[after.id];
+    assert.deepEqual(fixed(after), { ...fixed(before), ...(rat ? { 'headroom-tested': rat.to } : {}) }, `${after.id}: model, effort, config, tools, vision, context, headroom (but the ratified raise), expires, reviewer unchanged`);
+    if (rat) {
+      assert.equal(before['headroom-tested'], rat.from, `${after.id} headroom before the raise`);
+      assert.match(after.evidence.at(-1), rat.line, `${after.id}: the ratification line closes its evidence`);
+    }
+    const evidence = rat ? after.evidence.slice(0, -1) : after.evidence;
     const want = HP5_TABLE[after.id];
     if (want) {
       assert.deepEqual(after['qualified-for'], before['qualified-for'].map((c) => (want.tiers[c] ? `${c}@${want.tiers[c]}` : c)), `${after.id} qualified-for`);
       for (const c of Object.keys(want.tiers)) assert.ok(before['qualified-for'].includes(c), `${after.id} held ${c} in host-policy-4`);
-      assert.deepEqual(after.evidence, [...before.evidence, ...want.lines], `${after.id} evidence`);
+      assert.deepEqual(evidence, [...before.evidence, ...want.lines], `${after.id} evidence`);
       assert.equal(after['qualified-at'], '2026-10-18', `${after.id} re-declared`);
       assert.equal(after.reviewer, HD, `${after.id} keeps its reviewer line`);
     } else {
@@ -3314,7 +3324,7 @@ test('host-policy-5: the lead\'s table applied - "difficulty-tiers": "enforced",
       assert.deepEqual(after['qualified-for'], before['qualified-for'], `${after.id} qualified-for`);
       assert.ok(after['qualified-for'].every((c) => !c.includes('@')), `${after.id}: bare entries`);
       assert.equal(after['qualified-at'], before['qualified-at'], after.id);
-      assert.deepEqual(after.evidence, [...before.evidence, ...(after.id === 'cc-haiku-high' ? [HAIKU_HIGH_LINE] : [])], `${after.id} evidence`);
+      assert.deepEqual(evidence, [...before.evidence, ...(after.id === 'cc-haiku-high' ? [HAIKU_HIGH_LINE] : [])], `${after.id} evidence`);
     }
   }
   // pin-tests stays bare on the re-declared profiles that hold it from calibration
