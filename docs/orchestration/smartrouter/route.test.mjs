@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync, cpSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, appendFileSync, cpSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -3694,6 +3694,62 @@ test('E1: references resolve against the policy file\'s directory, never against
   assert.match(refusedCli.stderr, /^route\.mjs: invalid policy: profile cc-opus-high evidence 'outcome: ref-t2 fix@T2 accepted 2026-10-18 \(trace\/outcomes\/ref-t2-3\.json\)' cannot be resolved: /);
   const ok = cli(['decide', request('here-1'), '--trace', tmp(), '--policy', withLine('cc-opus-high', REF_T2)]);
   assert.equal(ok.code, 0, ok.stderr);
+});
+
+// sr-policy-6 fix round 1, F1: a reference's path cannot leave the policy file's directory - not by '..' (either
+// spelling) and not through a symlink - so a store that is never committed with the policy (a temp trace) cannot back
+// a qualification; and rate prints no paste line for an outcome store outside the policy file's directory
+test('E1 (F1): a reference whose path leaves the policy file\'s directory is refused (exit 2) - \'../<dir>/trace/...\', \'trace/../../<dir>/trace/...\' and a symlinked trace/ - while a \'..\' that stays inside resolves', () => {
+  refStore();
+  const root = tmp();
+  const pol = join(root, 'pol');
+  mkdirSync(pol);
+  cpSync(REF_TRACE, join(root, 'elsewhere', 'trace'), { recursive: true });
+  const leaves = (line, path) => exit2(() => loadPolicy(withLine('cc-opus-high', line, pol)), new RegExp(`^invalid policy: profile cc-opus-high evidence '${esc(line)}' cannot be resolved: ${esc(`${path} leaves the policy file's directory ${pol}: a reference names an outcome file under it`)}$`));
+  // by its spelling, whether or not the file is there
+  for (const path of ['../elsewhere/trace/outcomes/ref-t2-3.json', 'trace/../../elsewhere/trace/outcomes/ref-t2-3.json', '../nowhere/trace/outcomes/ref-t2-3.json']) {
+    leaves(`outcome: ref-t2 fix@T2 accepted 2026-10-18 (${path})`, path);
+  }
+  // the absolute spelling of the same file stays a form refusal
+  exit2(() => loadPolicy(withLine('cc-opus-high', `outcome: ref-t2 fix@T2 accepted 2026-10-18 (${join(root, 'elsewhere', 'trace', 'outcomes', 'ref-t2-3.json')})`, pol)), /must be relative to the policy file's directory/);
+  // a trace/ beside the policy that is a symlink to the store elsewhere leaves it too
+  symlinkSync(join(root, 'elsewhere', 'trace'), join(pol, 'trace'), 'dir');
+  leaves(REF_T2, 'trace/outcomes/ref-t2-3.json');
+  // a '..' that stays inside the directory is only a spelling: it resolves
+  assert.equal(loadPolicy(withLine('cc-opus-high', 'outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/../trace/outcomes/ref-t2-3.json)'))['policy-revision'], 'host-policy-5');
+});
+
+test('E7 (F1): rate prints no typed evidence to paste when the outcome store (--trace) is outside the policy file\'s directory, and says why; the stats file carries no references', () => {
+  const root = tmp();
+  const policyPath = join(root, 'pol', 'host-policy.json');
+  mkdirSync(dirname(policyPath));
+  writeFileSync(policyPath, readFileSync(TIERED_PATH));
+  const q = join(root, 'forge', 'trace');
+  const pol = loadPolicy(policyPath);
+  const h = profileOf(pol, 'cc-haiku-high');
+  for (const id of ['q-1', 'q-2', 'q-3']) {
+    const d = decide(reqFor(pol, 'fix', { taskId: id, difficultyTier: 'T2', now: LATE }), { traceDir: q, policyPath });
+    appendFileSync(join(q, 'ledger.jsonl'), `${JSON.stringify({ 'task-id': id, seq: 2, kind: 'dispatch', ts: LATE, profile: `(${h.id}, ${pol.harness.id}, anthropic, ${h.model}, ${h.effort}, ${h.config})`, counters: { 'calls-used': 1, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: d.decision.deadline, 'brief-fingerprint': null, detail: 'host deviation: qualification run recorded by hand', 'outcome-ref': null, deviation: true, 'decision-seq': 1 })}\n`);
+    recordOutcome(outcome({ 'task-id': id, outcome: 'accepted', 'owner-profile': 'cc-haiku-high', 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: q, policyPath, now: LATE });
+  }
+  const r = cli(['rate', '--trace', q, '--now', LATE, '--policy', policyPath]);
+  assert.equal(r.code, 0, r.stderr);
+  const want = `PROPOSAL qualify cc-haiku-high for fix@T2: 3 accepted while unqualified (host deviations: q-1, q-2, q-3); not applied — the lead ratifies by editing host-policy.json; no typed evidence to paste: the outcome store ${q} is outside the policy file's directory ${dirname(policyPath)}, and a reference cannot leave it (E1)`;
+  assert.ok(r.stdout.split('\n').includes(want), r.stdout);
+  assert.doesNotMatch(r.stdout, /\.\.\/forge/);
+  const doc = JSON.parse(readFileSync(join(q, 'qualification-stats.json'), 'utf8'));
+  assert.deepEqual(doc.proposals.map((p) => [p.kind, p.category, p.references]), [['qualify', 'fix@T2', undefined]]);
+});
+
+test('README (F1): the calibration-first section says a reference\'s path cannot leave the policy file\'s directory, and the E7 bullets say rate offers nothing to paste for a store outside it', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+  const start = readme.indexOf('## Calibration-first evidence (host-policy-6)');
+  const section = readme.slice(start, readme.indexOf(' ## ', start + 1));
+  for (const s of ["The path **cannot leave the policy file's directory**", "`<path> leaves the policy file's directory <dir>`", 'a store that is never committed with the policy, such as a temp trace, cannot back a qualification', "the file must lie inside the policy file's directory (F1)"]) {
+    assert.ok(section.includes(s), `the calibration-first section lacks: ${s}`);
+  }
+  const note = "; no typed evidence to paste: the outcome store <dir> is outside the policy file's directory <dir>, and a reference cannot leave it (E1)";
+  assert.equal(readme.split(note).length - 1, 2, 'the note in the applied E7 bullet and in the learning loop');
 });
 
 // E2/E3: the adopting switch "evidence": "typed" (absent: the old behaviour) and the supported-entry rule

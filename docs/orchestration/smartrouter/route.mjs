@@ -12,8 +12,8 @@
 //       options: --trace <dir> --policy <file> --now <iso> --deviation <reason>
 // Exit: 0 done (any decided route, blocked included), 2 invalid input, 3 refused, 4 ledger integrity.
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -147,6 +147,18 @@ function referenceForm(e, categories) {
   return { ref: { task, category, tier: tier ?? null, date, path, note: note ?? '', seq: Number(seq) } };
 }
 
+// whether `path` lies inside the directory `dir`, by its spelling and, when both exist, after symlinks. A reference
+// cannot leave the policy file's directory (E1, sr-policy-6 F1): a store never committed with the policy (a temp
+// trace) could otherwise back a qualification
+function inside(dir, path) {
+  const under = (d, p) => {
+    const r = relative(d, p);
+    return !isAbsolute(r) && r !== '..' && !r.startsWith(`..${sep}`);
+  };
+  if (!under(resolve(dir), resolve(path))) return false;
+  return !(existsSync(dir) && existsSync(path)) || under(realpathSync(dir), realpathSync(path));
+}
+
 // one outcome store (a trace directory: ledger.jsonl, decisions/), read once per validation
 function storeOf(stores, dir) {
   if (!stores.has(dir)) {
@@ -156,12 +168,13 @@ function storeOf(stores, dir) {
 }
 
 // E1: resolve a well-formed reference against the store it names, relative to the policy file's directory: null when it
-// resolves, else the reason. The file must be an Outcome of that task, owned by the referencing profile, `accepted`,
+// resolves, else the reason. The file must lie inside that directory (F1: no '..' out of it, no symlink out of it), be an Outcome of that task, owned by the referencing profile, `accepted`,
 // recorded on the date (its own ts, else its outcome record's), and the task decided in the reference's category; the
 // tier must be the decision's when the decision carries one, and a tier declared on a pre-tier decision must be the
 // host's stated reading ('would be T<k> by the table')
 function resolveReference(ref, pr, baseDir, stores) {
   const file = resolve(baseDir, ref.path);
+  if (!inside(baseDir, file)) return `${ref.path} leaves the policy file's directory ${baseDir}: a reference names an outcome file under it`;
   if (!existsSync(file)) return `${ref.path} does not exist (resolved against the policy file's directory ${baseDir})`;
   let o;
   try { o = JSON.parse(readFileSync(file, 'utf8')); } catch { return `${ref.path} is not JSON`; }
@@ -1589,8 +1602,10 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const records = readLedger(traceDir);
   // E7: a typed reference to an outcome record, its path relative to the policy file's directory (where E1 resolves it)
   const policyDir = dirname(resolve(policyPath));
+  // F1: an outcome store outside the policy file's directory cannot be referenced, so nothing is offered to paste
+  const storeInside = inside(policyDir, traceDir);
   const reference = (o, category) => {
-    if (!isInt(o.seq, 1) || o.ms === null) return null;
+    if (!storeInside || !isInt(o.seq, 1) || o.ms === null) return null;
     const path = relative(policyDir, join(resolve(traceDir), 'outcomes', `${o.task}-${o.seq}.json`)).split(sep).join('/');
     return `outcome: ${o.task} ${category}${o.declared ? `@${o.declared}` : ''} accepted ${isoOf(o.ms).slice(0, 10)} (${path})`;
   };
@@ -1618,7 +1633,11 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const flags = expiryFlags(policy, isoMs(now));
   const lines = [`${statsPath} regenerated (${doc['outcomes-counted']} outcomes)`];
   if (calibration) lines.push(...calibration.lines);
-  for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json${p.references ? `; typed evidence to paste: ${p.references.map((x) => JSON.stringify(x)).join(', ')}` : ''}`);
+  const paste = (p) => {
+    if (p.references) return `; typed evidence to paste: ${p.references.map((x) => JSON.stringify(x)).join(', ')}`;
+    return p.kind === 'qualify' && !storeInside ? `; no typed evidence to paste: the outcome store ${resolve(traceDir)} is outside the policy file's directory ${policyDir}, and a reference cannot leave it (E1)` : '';
+  };
+  for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json${paste(p)}`);
   for (const h of headroom) lines.push(`PROPOSAL profiles.${h.profile}.headroom-tested: ${h.from} -> ${h.to} (accepted outcome ${h.task} completed ${h.tokens} tokens); not applied — the lead ratifies by editing host-policy.json`);
   for (const p of usageProposals) lines.push(`PROPOSAL usage-windows.windows.${p.window}.utilization-per-mtok: ${p.from} -> ${p.to} (${p.reason}); not applied — the lead ratifies by editing host-policy.json`);
   for (const f of flags) lines.push(`FLAG ${f.profile}: ${f.reason}`);

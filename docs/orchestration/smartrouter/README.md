@@ -387,11 +387,15 @@ friction item 22 applies to this proposal as it did to the tiers one).
 - (b) the **typed production reference**: `outcome: <task-id> <category>[@T<k>] accepted <ISO date> (<path>)`,
   optionally followed by `; <note>`. `<path>` is the outcome file the host writes, `trace/outcomes/<task>-<seq>.json`,
   relative to the policy file's directory, never to `--trace`, so a test's temp trace does not interfere and an
-  upstream copy of the policy with its trace resolves. `<ISO date>` is a day, `YYYY-MM-DD`.
+  upstream copy of the policy with its trace resolves. The path **cannot leave the policy file's directory**: a `..`
+  that climbs out of it (`../x/trace/outcomes/...`, `trace/../../x/trace/outcomes/...`) or a symlink that points out
+  of it is refused (exit 2, `<path> leaves the policy file's directory <dir>`), whether or not the file is there, so
+  a store that is never committed with the policy, such as a temp trace, cannot back a qualification (sr-policy-6 fix
+  round 1, F1); a `..` that stays inside is only a spelling. `<ISO date>` is a day, `YYYY-MM-DD`.
 
 Any evidence line that starts `outcome:` is checked for form from the policy alone (the literal `accepted`, a tier
 T1-T3, a category the policy has, a calendar day, a relative `/`-separated path naming `outcomes/<task-id>-<seq>.json`)
-and then **resolved**: the file must exist, parse as a §10.3 Outcome of that task, be `accepted`, be owned by the
+and then **resolved**: the file must lie inside the policy file's directory (F1), exist, parse as a §10.3 Outcome of that task, be `accepted`, be owned by the
 referencing profile, have been recorded on that day (the Outcome's own `ts`, else its outcome record `<task> seq
 <seq>` in the store's `ledger.jsonl`; this host's Outcomes carry no `ts`), and the task must have been decided in that
 category (its decision file under the store's `decisions/`, as `categoryMap()` reads it). The tier on a reference is
@@ -818,7 +822,10 @@ evidence') under the lead's decisions, which bind where the proposal leaves a ch
   they all validate; no new command or flag. A `qualify` proposal's `PROPOSAL` line now ends with
   `; typed evidence to paste: "<line>", ...`: one typed reference per accepted outcome behind it (the decision's tier
   when it declares one, else bare), JSON strings ready for the `evidence` array, resolvable as pasted; the stats file
-  carries them as `references`.
+  carries them as `references`. When the outcome store (`--trace`) is outside the policy file's directory, no
+  reference to it could resolve (E1, F1), so the line ends instead with `; no typed evidence to paste: the outcome
+  store <dir> is outside the policy file's directory <dir>, and a reference cannot leave it (E1)` and the proposal
+  carries no `references`.
 
 ### The table (host-policy-6, generated from `host-policy.json`)
 
@@ -970,6 +977,8 @@ writes the policy.
   add evidence'). The `PROPOSAL` line ends with the typed references the lead would paste, one per accepted outcome
   (host-policy-6, E7):
   `PROPOSAL qualify <id> for <category>[@T<k>]: 3 accepted while unqualified (host deviations: ...); not applied — the lead ratifies by editing host-policy.json; typed evidence to paste: "outcome: <task> <category>[@T<k>] accepted <YYYY-MM-DD> (<path>)", ...`.
+  With `--trace` outside the policy file's directory there is nothing to paste: the line ends with
+  `; no typed evidence to paste: the outcome store <dir> is outside the policy file's directory <dir>, and a reference cannot leave it (E1)`.
 - It proposes a **`headroom-tested` raise** when an accepted outcome (the latest per dispatch) completed more tokens
   than its profile's current value:
   `PROPOSAL profiles.<id>.headroom-tested: <current> -> <tokens rounded up to the next thousand> (accepted outcome <task> completed <tokens> tokens); not applied — the lead ratifies by editing host-policy.json`.
