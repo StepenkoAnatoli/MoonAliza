@@ -1799,7 +1799,12 @@ test('SW-7: a unit dispatched before the reading and still running counts at its
 // host-policy-2 (unit sr-policy-2): calibration-1 evidence under the lead's qualification rules
 // (briefs/policy2-builder.md); the live policy is decided on its feature-off derivative (R1(a))
 // ---------------------------------------------------------------------------------------------
-const LIVE_OFF_PATH = join(tmp(), 'host-policy-live-off.json');
+// since host-policy-6 the live policy's typed references resolve against the policy file's directory (E1), so its
+// derivative is written beside a copy of the committed store (ledger, decisions, outcomes), as an upstream copy would be
+const LIVE_OFF_DIR = tmp();
+for (const d of ['decisions', 'outcomes']) cpSync(join(HERE, 'trace', d), join(LIVE_OFF_DIR, 'trace', d), { recursive: true });
+cpSync(join(HERE, 'trace', 'ledger.jsonl'), join(LIVE_OFF_DIR, 'trace', 'ledger.jsonl'));
+const LIVE_OFF_PATH = join(LIVE_OFF_DIR, 'host-policy-live-off.json');
 writeFileSync(LIVE_OFF_PATH, featureOff(COMMITTED_POLICY));
 // the host-policy-2 fixture's feature-off derivative (R1(a)), for the host-policy-2 assertions below
 const HP2_OFF_PATH = join(tmp(), 'host-policy-2-off.json');
@@ -3757,4 +3762,162 @@ test('E3: the lead-direct profile (economics.lead-direct-profile) is exempt from
   assert.ok(loadPolicy(refPolicy((p) => { typedHp5(p); p.economics['lead-direct-profile'] = 'cc-opus-high'; profileOf(p, 'cc-fable-xhigh')['qualified-for'] = ['review', 'fix', 'pin-tests']; profileOf(p, 'cc-opus-high')['qualified-for'].unshift('build-core@T3'); })));
   // E1 still applies to the exempt profile's typed lines
   exit2(() => loadPolicy(refPolicy((p) => { typedHp5(p); profileOf(p, 'cc-fable-xhigh').evidence.push(REF_T2); })), /^invalid policy: profile cc-fable-xhigh evidence '.*' cannot be resolved: trace\/outcomes\/ref-t2-3\.json is an outcome of cc-opus-high, not cc-fable-xhigh$/);
+});
+
+// ---------------------------------------------------------------------------------------------
+// host-policy-6: the lead's table (E5) applied to the live policy, and its routing consequence (E6)
+// ---------------------------------------------------------------------------------------------
+const DROPPED = '; entry dropped in host-policy-6 (no outcome row to reference)';
+const PRE_TIER = 'the decision predates revision 5 and carries no tier';
+const HP6_HAIKU_HIGH_LINE = 'outcome: fix-x2-1 fix@T3 accepted 2026-10-18 (trace/outcomes/fix-x2-1-3.json); would be T3 by the table: one pass at T3, not a qualification';
+const HP6_TABLE = {
+  'cc-opus-high': {
+    qualified: ['build-ui@T3', 'review@T1', 'fix@T2', 'pin-tests'],
+    dropped: ['build-core@T3', 'build-tests@T3', 'research-collect@T2'],
+    refs: [
+      `outcome: sr-policy-2 build-ui@T3 accepted 2026-10-17 (trace/outcomes/sr-policy-2-3.json); would be T3 by the table (five permitted files; ${PRE_TIER})`,
+      `outcome: sr-policy-3 build-ui@T3 accepted 2026-10-18 (trace/outcomes/sr-policy-3-5.json); would be T3 by the table (five permitted files; ${PRE_TIER})`,
+      `outcome: sr-policy-4 build-ui@T3 accepted 2026-10-18 (trace/outcomes/sr-policy-4-4.json); would be T3 by the table (five permitted files; ${PRE_TIER})`,
+      `outcome: sr-ci-item4 build-ui@T3 accepted 2026-10-18 (trace/outcomes/sr-ci-item4-3.json); would be T3 by the table (nine permitted files; ${PRE_TIER})`,
+      `outcome: sr-policy-5 build-ui@T3 accepted 2026-10-18 (trace/outcomes/sr-policy-5-3.json); would be T3 by the table (six permitted files; ${PRE_TIER})`,
+      `outcome: sr-host-review review@T1 accepted 2026-10-17 (trace/outcomes/sr-host-review-3.json); would be T1 by the table (one module against gates.md with the shipped tests; ${PRE_TIER})`,
+      `outcome: sr-host-rereview1 review@T1 accepted 2026-10-17 (trace/outcomes/sr-host-rereview1-3.json); would be T1 by the table (one module against gates.md with the shipped tests; ${PRE_TIER})`,
+      `outcome: sr-host-rereview2 review@T1 accepted 2026-10-17 (trace/outcomes/sr-host-rereview2-3.json); would be T1 by the table (one module against gates.md with the shipped tests; ${PRE_TIER})`,
+      `outcome: sr-host-fix1 fix@T2 accepted 2026-10-17 (trace/outcomes/sr-host-fix1-4.json); would be T2 by the table (three files, one module, cause named by the findings; ${PRE_TIER})`,
+      `outcome: sr-host-fix2 fix@T2 accepted 2026-10-17 (trace/outcomes/sr-host-fix2-4.json); would be T2 by the table (three files, one module, cause named by the findings; ${PRE_TIER})`
+    ]
+  },
+  'cc-fable-high': {
+    qualified: ['review@T1', 'fix', 'pin-tests'],
+    dropped: ['fix@T2'],
+    refs: [`outcome: gsi-u5-rereview4 review@T1 accepted 2026-10-17 (trace/outcomes/gsi-u5-rereview4-3.json); would be T1 by the table (one module with the shipped tests; ${PRE_TIER})`]
+  },
+  'cc-haiku-high': { rewritten: [HAIKU_HIGH_LINE, HP6_HAIKU_HIGH_LINE] },
+  'cc-haiku-low': { qualified: ['pin-tests'], droppedLines: ['one completed mechanical extraction dispatch this session (91k tokens, done)'] }
+};
+
+test('host-policy-6: the lead\'s table applied - "evidence": "typed", revision 5\'s production-derived entries rewritten into references or dropped with their lines kept as prose, the lead-direct profile and the calibration-derived profiles unchanged; every reference resolves against the committed store', () => {
+  const raw = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'));
+  const hp5 = JSON.parse(readFileSync(HP5_POLICY_PATH, 'utf8'));
+  const live = loadPolicy(COMMITTED_POLICY_PATH);   // the validator resolves every reference against trace/ beside it
+  assert.deepEqual([live['policy-revision'], live.evidence, live['difficulty-tiers']], ['host-policy-6', 'typed', 'enforced']);
+  // the key sits after "difficulty-tiers"; nothing else at the top level changes
+  const keys = Object.keys(hp5);
+  keys.splice(keys.indexOf('difficulty-tiers') + 1, 0, 'evidence');
+  assert.deepEqual(Object.keys(raw), keys);
+  const rest = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['policy-revision', 'evidence', 'profiles'].includes(k)));
+  assert.deepEqual(rest(raw), rest(hp5), 'only the revision, the key and the profiles change');
+  assert.deepEqual(raw.profiles.map((p) => p.id), hp5.profiles.map((p) => p.id), 'the fifteen profiles of host-policy-5, in order');
+  const fixed = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !['qualified-for', 'evidence', 'qualified-at'].includes(k)));
+  for (const after of raw.profiles) {
+    const before = hp5.profiles.find((p) => p.id === after.id);
+    const want = HP6_TABLE[after.id];
+    if (!want) {
+      assert.deepEqual(after, before, `${after.id}: unchanged (the lead-direct profile, E3, and every calibration-derived profile)`);
+      continue;
+    }
+    assert.deepEqual(fixed(after), fixed(before), `${after.id}: model, effort, config, tools, vision, context, headroom, expires, reviewer unchanged`);
+    assert.equal(after['qualified-at'], '2026-10-18', `${after.id} re-declared`);
+    assert.deepEqual(after['qualified-for'], want.qualified ?? before['qualified-for'], `${after.id} qualified-for`);
+    // the evidence: revision 5's lines in place (free text kept as prose, E4), each line of a dropped entry suffixed,
+    // cc-haiku-high's line rewritten into form (b), then the references
+    const droppedLine = (e) => (want.dropped ?? []).some((c) => e.startsWith(`${c}: `)) || (want.droppedLines ?? []).includes(e);
+    const kept = before.evidence.map((e) => (droppedLine(e) ? `${e}${DROPPED}` : want.rewritten && e === want.rewritten[0] ? want.rewritten[1] : e));
+    assert.deepEqual(after.evidence, [...kept, ...(want.refs ?? [])], `${after.id} evidence`);
+    for (const c of want.dropped ?? []) assert.ok(before['qualified-for'].includes(c) && !after['qualified-for'].includes(c), `${after.id} drops ${c}`);
+    assert.equal(before.evidence.filter(droppedLine).length, (want.dropped ?? []).length + (want.droppedLines ?? []).length, `${after.id}: one prose line per dropped entry`);
+  }
+  assert.ok(raw.profiles.find((p) => p.id === 'cc-haiku-high').evidence.includes(HP6_HAIKU_HIGH_LINE));
+  assert.ok(!raw.profiles.find((p) => p.id === 'cc-haiku-high').evidence.includes(HAIKU_HIGH_LINE), 'rewritten, not duplicated');
+  // no delegate holds build-core, build-tests, research-collect or docs-mechanical any more (E6)
+  const lead = raw.economics['lead-direct-profile'];
+  for (const cat of ['build-core', 'build-tests', 'research-collect', 'docs-mechanical']) {
+    assert.deepEqual(raw.profiles.filter((p) => p.id !== lead && p['qualified-for'].some((c) => c.split('@')[0] === cat)).map((p) => p.id), [], cat);
+  }
+});
+
+test('host-policy-6: every calibration-derived entry is supported by its own PASS grade entries (the validator checks each: without them it refuses the entry), and the production entries by their references', () => {
+  const lead = COMMITTED_POLICY.economics['lead-direct-profile'];
+  const beside = (mutate) => {
+    const p = JSON.parse(readFileSync(LIVE_OFF_PATH, 'utf8'));
+    mutate(p);
+    const path = join(LIVE_OFF_DIR, `host-policy-hp6-${refN += 1}.json`);
+    writeFileSync(path, JSON.stringify(p, null, 2));
+    return path;
+  };
+  assert.ok(loadPolicy(LIVE_OFF_PATH));
+  let checked = 0;
+  for (const pr of COMMITTED_POLICY.profiles) {
+    if (pr.id === lead) continue;
+    for (const entry of pr['qualified-for']) {
+      const [cat, tier] = entry.split('@');
+      const hasRef = pr.evidence.some((e) => e.startsWith(`outcome: `) && e.split(' ')[2].split('@')[0] === cat);
+      // strip every PASS grade of the category: an entry held on grades alone is now refused; one held at T2 or T3 on
+      // references survives it (the grades are T1)
+      const path = beside((p) => { const q = p.profiles.find((x) => x.id === pr.id); q.evidence = q.evidence.filter((e) => !new RegExp(`^calibration-\\d+: ${cat}(@T\\d)? PASS `).test(e)); });
+      if (hasRef) assert.ok(loadPolicy(path), `${pr.id} ${entry} stands on its references`);
+      else exit2(() => loadPolicy(path), unsupported(pr.id, entry, cat, tier ?? 'T1'));
+      // and without its references, an entry above T1 is refused
+      if (hasRef && tier && tier !== 'T1') {
+        const noRefs = beside((p) => { const q = p.profiles.find((x) => x.id === pr.id); q.evidence = q.evidence.filter((e) => !(e.startsWith('outcome: ') && e.split(' ')[2].split('@')[0] === cat)); });
+        exit2(() => loadPolicy(noRefs), unsupported(pr.id, entry, cat, tier));
+      }
+      checked += 1;
+    }
+  }
+  assert.equal(checked, 30, 'every qualified-for entry of the fourteen delegate profiles');
+});
+
+const hp6Req = (category, over = {}) => reqFor(loadPolicy(LIVE_OFF_PATH), category, over);
+test('host-policy-6 routing (E6): fix@T1 -> cc-haiku-high, fix@T2 -> cc-opus-high, review@T1 -> cc-sonnet-xhigh, undeclared build-ui -> cc-opus-high, pin-tests@T1 -> cc-haiku-low as under revision 5; build-core, build-tests, research-collect and docs-mechanical above direct-max-tokens blocked - no delegate holds them', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const decideLive = (category, over) => computeDecision(hp6Req(category, over), live, []);
+  const hp5 = loadPolicy(HP5_OFF_PATH);
+  const decideHp5 = (category, over) => computeDecision(hp5Req(category, over), hp5, []);
+  const pick = (d) => [d.route, d.profile, d['review-profile'], d['difficulty-tier'], d['all-in-bound-usd']];
+  // the five routes of revision 5, unchanged
+  for (const [category, over, want] of [
+    ['fix', { difficultyTier: 'T1' }, ['delegate', 'cc-haiku-high', 'cc-sonnet-xhigh', 'T1', 3.1865]],
+    ['fix', { difficultyTier: 'T2' }, ['delegate', 'cc-opus-high', 'cc-sonnet-xhigh', 'T2', 6.95]],
+    ['review', { difficultyTier: 'T1' }, ['delegate', 'cc-sonnet-xhigh', null, 'T1', 3.09]],
+    ['build-ui', { estimatedTokens: 250000 }, ['delegate', 'cc-opus-high', 'cc-sonnet-xhigh', 'T2', 8.09]],
+    ['pin-tests', { difficultyTier: 'T1' }, ['delegate', 'cc-haiku-low', null, 'T1', 1.06]]
+  ]) {
+    assert.deepEqual(pick(decideLive(category, over)), want, `${category} ${JSON.stringify(over)}`);
+    assert.deepEqual(pick(decideHp5(category, over)), want, `${category} ${JSON.stringify(over)} under host-policy-5`);
+  }
+  // fix@T1 keeps its eligible set (cc-fable-high's bare fix covers T1); fix@T2 loses cc-fable-high (fix dropped to bare)
+  assert.deepEqual(decideLive('fix', { difficultyTier: 'T1' })['eligible-ordered'], ['cc-haiku-high', 'cc-opus-high', 'cc-opus-xhigh', 'cc-fable-high']);
+  const t2 = decideLive('fix', { difficultyTier: 'T2' });
+  assert.deepEqual(t2['eligible-ordered'], ['cc-opus-high']);
+  assert.equal(t2.candidates['cc-fable-high'].reason, 'cc-fable-high not qualified for fix@T2 (holds fix@T1)');
+  assert.deepEqual(decideLive('build-ui', { estimatedTokens: 250000 })['eligible-ordered'], ['cc-opus-high']);
+  // the four categories no delegate holds: blocked at their medians, every delegate failing Gate 2 for holding nothing of
+  // the category, the lead-direct profile failing Gate 5 on direct-max-tokens; nobody outside the candidates would pass
+  for (const [category, over, tier, tokens] of [['build-core', {}, 'T3', 316000], ['build-tests', {}, 'T2', 250000], ['research-collect', {}, 'T2', 232000], ['docs-mechanical', {}, 'T2', 92000], ['docs-mechanical', { difficultyTier: 'T1' }, 'T1', 92000], ['build-core', { difficultyTier: 'T1', estimatedTokens: 16000 }, 'T1', 16000]]) {
+    const d = decideLive(category, over);
+    assert.deepEqual([d.route, d['difficulty-tier'], d['eligible-outside-candidates'], d['eligible-ordered']], ['blocked', tier, [], []], `${category} ${JSON.stringify(over)}`);
+    for (const [id, c] of Object.entries(d.candidates)) {
+      if (id === 'cc-fable-xhigh') assert.deepEqual([c['first-failing-gate'], c.reason], [5, `direct unsuitable: ${tokens} tokens > direct-max-tokens 15000`], `${category} ${id}`);
+      else {
+        // the Gate 2 reason leads with the qualification (a headroom shortfall may follow it, '; context: ...')
+        assert.equal(c['first-failing-gate'], 2, `${category} ${id}`);
+        assert.match(c.reason, new RegExp(`^${esc(id)} not qualified for ${category}(;|$)`), `${category} ${id}`);
+      }
+    }
+    // at or below direct-max-tokens the lead takes it inline
+    const small = decideLive(category, { ...over, estimatedTokens: 15000 });
+    assert.deepEqual([small.route, small.profile], ['direct', 'cc-fable-xhigh'], `${category} at 15000`);
+  }
+  // under revision 5 the same requests delegated (cc-opus-high held build-core@T3, build-tests@T3, research-collect@T2;
+  // cc-haiku-low docs-mechanical): the consequence of E4's drops
+  for (const [category, profile] of [['build-core', 'cc-opus-high'], ['build-tests', 'cc-opus-high'], ['research-collect', 'cc-opus-high']]) {
+    assert.deepEqual([decideHp5(category).route, decideHp5(category).profile], ['delegate', profile], `${category} under host-policy-5`);
+  }
+  assert.deepEqual([decideHp5('docs-mechanical', { difficultyTier: 'T1' }).route, decideHp5('docs-mechanical', { difficultyTier: 'T1' }).profile], ['delegate', 'cc-haiku-low']);
+  // the CLI on the live policy agrees, and records the revision
+  for (const [category, over, route, profile] of [['fix', { difficultyTier: 'T2' }, 'delegate', 'cc-opus-high'], ['build-ui', { estimatedTokens: 250000 }, 'delegate', 'cc-opus-high'], ['build-core', {}, 'blocked', null], ['docs-mechanical', { difficultyTier: 'T1' }, 'blocked', null]]) {
+    const decided = cliDecide(hp6Req(category, { taskId: `hp6-${category}`, ...over }), LIVE_OFF_PATH);
+    assert.deepEqual([decided.bindings['policy-revision'], decided.decision.route, decided.decision.profile], ['host-policy-6', route, profile], category);
+  }
 });
