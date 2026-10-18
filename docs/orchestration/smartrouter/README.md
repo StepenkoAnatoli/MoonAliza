@@ -133,6 +133,7 @@ operator's decision to merge PR #100 without the delta review and the lead's D1-
 22). A policy turns the rules on with the top-level
 key `"difficulty-tiers": "enforced"`; any other value is invalid (exit 2), and without the key a policy is untiered
 and the adapter behaves exactly as before: no `DifficultyTier` line, no `difficulty-tier` field, Gate 2 per category.
+One exception: `rate` splits a calibration observation that carries a tier under any policy (D8, below).
 The fixtures host-policy-1..4 are untiered, so every golden and every assertion on them is unchanged.
 
 **The tier scale** (proposal Item 1, quoted). "Three tiers, the same names for every category, with **predicates per
@@ -201,7 +202,11 @@ tier): `qualification-stats.json` keys read `fix@T1`, the demotion proposal `dem
 ...` and the qualify proposal `qualify <profile> for <category>@T<k>: ...`. An outcome counts at the tier of the
 decision its dispatch was made under; a decision without a tier (every one before host-policy-5) counts at `T1`. A
 calibration observation's task object (`pin`, `fix`, `review`) may carry `"tier": "T2" | "T3"` (run 4 will); its
-`CALIBRATION` line then reads `<category>@T<k>` and counts apart. Runs 1-3 carry none and print as before.
+`CALIBRATION` line then reads `<category>@T<k>` and counts apart. Runs 1-3 carry none and print as before. The split
+applies under any policy, tiered or not: an observation's tier is a fact of the cell, not of the policy, so under an
+untiered policy a tiered observation also prints `<category>@T<k>` and is not counted in the bare line. Before
+host-policy-5 such an observation counted in the bare line; no committed trace holds one, so no untiered output
+changes (the lead may gate the split on an enforced policy instead, if D1 is read as overriding D8).
 
 **The lead's declaration rubric.** Before declaring T1, the lead checks, per category (a request that fails a T1 check
 is T2, and one that meets any T3 test in the table is T3):
@@ -632,7 +637,8 @@ decisions, which bind where the proposal leaves a choice:
   dispatch was made under, so a failed T1 dispatch followed by a raised-tier decision of the same task stays a T1
   failure (policy finding 3 below).
 - **D8.** `rate`: the CALIBRATION lines of runs 1-3 keep their format; a task carrying `tier` T2 or T3 counts and
-  prints apart as `<category>@T<k>`.
+  prints apart as `<category>@T<k>`. The split applies under any policy, untiered included (D8 is unconditional; D1's
+  "exactly as before" holds for every committed observation, none of which carries a tier).
 - **D9.** Revision 5 is revision 4 plus the key and the re-declaration table; calibration-derived entries stay bare;
   headroom, categories, economics, prices, usage windows, harness, authorization, isolation and accounting untouched.
 

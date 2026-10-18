@@ -3246,6 +3246,16 @@ test('tiers D8: rate prints a CALIBRATION line per (category, tier) for an obser
   }
 });
 
+// sr-policy-5 fix round 1, F2: rate splits a tiered calibration observation under any policy (the D8 test pins the
+// behaviour on the untiered fixture); the README says so where it claims untiered behaves as before, and in D8
+test('README (F2): the observation-tier split of rate applies under any policy, untiered included - said in the tiers opening, the learning-loop paragraph and the D8 bullet', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const flat = (a, b) => { const i = readme.indexOf(a); assert.ok(i >= 0, a); return readme.slice(i, readme.indexOf(b, i + 1)).replace(/\s+/g, ' '); };
+  assert.ok(flat('## Difficulty tiers (host-policy-5)', '**The tier scale**').includes('Gate 2 per category. One exception: `rate` splits a calibration observation that carries a tier under any policy (D8, below).'), 'the tiers opening');
+  assert.ok(flat('**The learning loop and `rate`** (D7, D8).', '**The lead\'s declaration rubric.**').includes('The split applies under any policy, tiered or not: an observation\'s tier is a fact of the cell, not of the policy, so under an untiered policy a tiered observation also prints `<category>@T<k>` and is not counted in the bare line.'), 'the learning-loop paragraph');
+  assert.ok(flat('- **D8.**', '- **D9.**').includes('The split applies under any policy, untiered included (D8 is unconditional; D1\'s "exactly as before" holds for every committed observation, none of which carries a tier).'), 'the D8 bullet');
+});
+
 // the lead's re-declaration table (briefs/policy5-builder.md): per profile, the tier each production-derived entry is
 // re-declared at, and the evidence lines it gains (in addition to the lines it carries); every entry not named stays bare
 const HD = 'host-declared (lead), not independent';
