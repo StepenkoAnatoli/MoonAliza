@@ -282,15 +282,7 @@
       }
     ]
   },
-  "headroom-proposals": [
-    {
-      "from": 1030000,
-      "profile": "cc-opus-high",
-      "task": "sr-kit",
-      "to": 1263000,
-      "tokens": 1262204
-    }
-  ],
+  "headroom-proposals": [],
   "ledger-sha256": "4517c5677972989dbaa10fec07929790df31c1121c450c644ea04592f3112e27",
   "outcome-records": 20,
   "outcomes-counted": 18,

@@ -3935,14 +3935,19 @@ test('host-policy-6: the lead\'s table applied - "evidence": "typed", revision 5
       assert.deepEqual(after, before, `${after.id}: unchanged (the lead-direct profile, E3, and every calibration-derived profile)`);
       continue;
     }
-    assert.deepEqual(fixed(after), fixed(before), `${after.id}: model, effort, config, tools, vision, context, headroom, expires, reviewer unchanged`);
+    // the one headroom change since the fixture: rate's proposal on the accepted sr-kit outcome (1262204 tokens),
+    // ratified by the lead at integration under the never-lowered rule; its line closes the profile's evidence
+    const rat = ({ 'cc-opus-high': { from: 1030000, to: 1263000, line: /^sr-kit outcome accepted .*: 1262204 tokens completed \(trace\/outcomes\/sr-kit-4\.json\); rate proposed headroom-tested 1030000 -> 1263000, ratified by the lead at integration/ } })[after.id];
+    assert.deepEqual(fixed(after), { ...fixed(before), ...(rat ? { 'headroom-tested': rat.to } : {}) }, `${after.id}: model, effort, config, tools, vision, context, headroom (but the ratified raise), expires, reviewer unchanged`);
+    if (rat) { assert.equal(before['headroom-tested'], rat.from, `${after.id} headroom before the raise`); assert.match(after.evidence.at(-1), rat.line, `${after.id}: the ratification line closes its evidence`); }
+    const evidence = rat ? after.evidence.slice(0, -1) : after.evidence;
     assert.equal(after['qualified-at'], '2026-10-18', `${after.id} re-declared`);
     assert.deepEqual(after['qualified-for'], want.qualified ?? before['qualified-for'], `${after.id} qualified-for`);
     // the evidence: revision 5's lines in place (free text kept as prose, E4), each line of a dropped entry suffixed,
     // cc-haiku-high's line rewritten into form (b), then the references
     const droppedLine = (e) => (want.dropped ?? []).some((c) => e.startsWith(`${c}: `)) || (want.droppedLines ?? []).includes(e);
     const kept = before.evidence.map((e) => (droppedLine(e) ? `${e}${DROPPED}` : want.rewritten && e === want.rewritten[0] ? want.rewritten[1] : e));
-    assert.deepEqual(after.evidence, [...kept, ...(want.refs ?? [])], `${after.id} evidence`);
+    assert.deepEqual(evidence, [...kept, ...(want.refs ?? [])], `${after.id} evidence`);
     for (const c of want.dropped ?? []) assert.ok(before['qualified-for'].includes(c) && !after['qualified-for'].includes(c), `${after.id} drops ${c}`);
     assert.equal(before.evidence.filter(droppedLine).length, (want.dropped ?? []).length + (want.droppedLines ?? []).length, `${after.id}: one prose line per dropped entry`);
   }
