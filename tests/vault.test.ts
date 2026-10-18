@@ -194,4 +194,24 @@ describe('credential lifecycle', () => {
     expect(await bins()).toHaveLength(1);
     expect(await restarted.has(ref)).toBe(true);
   });
+
+  test('a failed persist whose file is already gone drops the staging, so redaction still works (X2-2, ENOENT)', async () => {
+    const { directory, vault } = await fixture();
+    const target = vault as unknown as { persist: () => Promise<void> };
+    const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
+    const before = await bins();
+    const failure = Object.assign(new Error('EIO'), { code: 'EIO' });
+    // The persist removes the new file itself, then fails: the unlink in saveStaged's catch then meets ENOENT.
+    target.persist = async () => {
+      for (const file of (await bins()).filter(file => !before.includes(file))) await rm(join(directory, file));
+      throw failure;
+    };
+    await expect(vault.saveStaged('gone')).rejects.toBe(failure);
+    delete (target as unknown as Record<string, unknown>).persist;
+    expect(await vault.redact('plain')).toBe('plain');
+    const ref = await vault.saveStaged('kept');
+    await vault.commit(ref);
+    const onDisk = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')) as { entries: Record<string, unknown> };
+    expect(Object.keys(onDisk.entries)).toEqual([ref]);
+  });
 });
