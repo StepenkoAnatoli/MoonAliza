@@ -3741,6 +3741,35 @@ test('E7 (F1): rate prints no typed evidence to paste when the outcome store (--
   assert.deepEqual(doc.proposals.map((p) => [p.kind, p.category, p.references]), [['qualify', 'fix@T2', undefined]]);
 });
 
+// sr-policy-6 fix round 1, F2: one outcome per dispatch (spec-v2 §10.5, decision-trace.md §4, latestOutcomes): a
+// reference to an outcome record that a later record for the same dispatch supersedes is refused, as rate counts it
+test('E1 (F2): a reference to an accepted outcome that a later outcome record for the same dispatch supersedes is refused (exit 2) naming the superseding record; the latest resolves', () => {
+  refStore();
+  // a copy of REF_STORE (the shared store stays as the other tests read it), with ref-t2's Outcome recorded again
+  const dir = tmp();
+  cpSync(REF_TRACE, join(dir, 'trace'), { recursive: true });
+  const trace = join(dir, 'trace');
+  const first = JSON.parse(readFileSync(join(trace, 'outcomes', 'ref-t2-3.json'), 'utf8'));
+  const again = (value) => recordOutcome({ ...first, outcome: value }, { traceDir: trace, policyPath: HP5_OFF_PATH, now: LATE });
+  const counted = () => {
+    const c = rate({ traceDir: trace, policyPath: HP5_OFF_PATH, now: LATE }).stats.stats['cc-opus-high']['fix@T2'];
+    return [c.accepted, c['verification-failed']];
+  };
+  assert.deepEqual(counted(), [1, 1], 'ref-t2 accepted, ref-fail verification-failed');
+  assert.equal(again('verification-failed').detail, 'outcome verification-failed (dispatch seq 2)');
+  const cannot = (line, why) => exit2(() => loadPolicy(withLine('cc-opus-high', line, dir)), new RegExp(`^invalid policy: profile cc-opus-high evidence '${esc(line)}' cannot be resolved: ${esc(why)}$`));
+  cannot(REF_T2, 'trace/outcomes/ref-t2-3.json is superseded by outcome record ref-t2 seq 4 (verification-failed) for the same dispatch (seq 2)');
+  // rate on the same store counts ref-t2's dispatch once, now as verification-failed: the resolver and the learning loop agree
+  assert.deepEqual(counted(), [0, 2], 'ref-t2 and ref-fail both verification-failed');
+  // accepted again: the latest record resolves; the first is superseded by it, whatever its value
+  again('accepted');
+  assert.ok(loadPolicy(withLine('cc-opus-high', 'outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-5.json)', dir)));
+  cannot(REF_T2, 'trace/outcomes/ref-t2-3.json is superseded by outcome record ref-t2 seq 5 (accepted) for the same dispatch (seq 2)');
+  cannot('outcome: ref-t2 fix@T2 accepted 2026-10-18 (trace/outcomes/ref-t2-4.json)', 'trace/outcomes/ref-t2-4.json records outcome verification-failed, not accepted');
+  // the shared store is untouched: REF_T2 still resolves beside it
+  assert.ok(loadPolicy(withLine('cc-opus-high', REF_T2)));
+});
+
 test('README (F1): the calibration-first section says a reference\'s path cannot leave the policy file\'s directory, and the E7 bullets say rate offers nothing to paste for a store outside it', () => {
   const readme = readFileSync(join(HERE, 'README.md'), 'utf8').replace(/\s+/g, ' ');
   const start = readme.indexOf('## Calibration-first evidence (host-policy-6)');
@@ -3750,6 +3779,16 @@ test('README (F1): the calibration-first section says a reference\'s path cannot
   }
   const note = "; no typed evidence to paste: the outcome store <dir> is outside the policy file's directory <dir>, and a reference cannot leave it (E1)";
   assert.equal(readme.split(note).length - 1, 2, 'the note in the applied E7 bullet and in the learning loop');
+});
+
+test('README (F2): the calibration-first section and the applied E1 bullet say a reference must be the latest outcome record of its dispatch', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+  const start = readme.indexOf('## Calibration-first evidence (host-policy-6)');
+  const section = readme.slice(start, readme.indexOf(' ## ', start + 1));
+  for (const s of ['be the **latest outcome record of its dispatch**', 'spec-v2 §10.5 and decision-trace.md §4', '`<path> is superseded by outcome record <task> seq <n> (<value>) for the same dispatch (seq <d>)`']) {
+    assert.ok(section.includes(s), `the calibration-first section lacks: ${s}`);
+  }
+  assert.ok(readme.includes('One from fix round 1 (F2): the outcome record must be the latest of its dispatch, as `rate` counts it.'), 'the applied E1 bullet');
 });
 
 // E2/E3: the adopting switch "evidence": "typed" (absent: the old behaviour) and the supported-entry rule

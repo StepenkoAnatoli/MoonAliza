@@ -168,7 +168,8 @@ function storeOf(stores, dir) {
 }
 
 // E1: resolve a well-formed reference against the store it names, relative to the policy file's directory: null when it
-// resolves, else the reason. The file must lie inside that directory (F1: no '..' out of it, no symlink out of it), be an Outcome of that task, owned by the referencing profile, `accepted`,
+// resolves, else the reason. The file must lie inside that directory (F1: no '..' out of it, no symlink out of it), be
+// the latest outcome record of its dispatch (F2), be an Outcome of that task, owned by the referencing profile, `accepted`,
 // recorded on the date (its own ts, else its outcome record's), and the task decided in the reference's category; the
 // tier must be the decision's when the decision carries one, and a tier declared on a pre-tier decision must be the
 // host's stated reading ('would be T<k> by the table')
@@ -186,6 +187,10 @@ function resolveReference(ref, pr, baseDir, stores) {
   const store = storeOf(stores, dir);
   if (store.error) return `the outcome store ${dir} is unreadable (${store.error})`;
   const rec = store.records.find((r) => r.kind === 'outcome' && r['task-id'] === ref.task && r.seq === ref.seq);
+  // one outcome per dispatch (spec-v2 §10.5, decision-trace.md §4), the rule rate counts by (latestOutcomes): a later
+  // outcome record for the same dispatch supersedes this one, whatever its value (F2)
+  const last = rec && latestOutcomes(store.records).find((r) => outcomeKey(r) === outcomeKey(rec));
+  if (last && last !== rec) return `${ref.path} is superseded by outcome record ${ref.task} seq ${last.seq} (${outcomeValue(last) ?? last.detail}) for the same dispatch (seq ${rec['dispatch-seq']})`;
   const ts = isoMs(o.ts) !== null ? o.ts : rec?.ts;
   if (isoMs(ts) === null) return `${ref.path} has no recorded time (no ts in the Outcome, no outcome record ${ref.task} seq ${ref.seq} in ${ledgerPath(dir)})`;
   if (isoOf(isoMs(ts)).slice(0, 10) !== ref.date) return `${ref.path} was recorded ${ts}, not on ${ref.date}`;
@@ -762,11 +767,13 @@ function outcomeValue(r) {
 
 // one outcome per dispatch: a later outcome for the same (task, dispatch seq) supersedes the earlier one
 // (spec-v2 §10.5, decision-trace.md §4), so streams count dispatches, not records
+// the dispatch an outcome record answers (a record without dispatch-seq stands alone)
+const outcomeKey = (r) => `${r['task-id']}#${isInt(r['dispatch-seq'], 1) ? r['dispatch-seq'] : `record-${r.seq}`}`;
 function latestOutcomes(records) {
   const latest = new Map();
   for (const r of records) {
     if (r.kind !== 'outcome') continue;
-    const key = `${r['task-id']}#${isInt(r['dispatch-seq'], 1) ? r['dispatch-seq'] : `record-${r.seq}`}`;
+    const key = outcomeKey(r);
     latest.delete(key); // re-inserted at the superseding record's place in ledger order
     latest.set(key, r);
   }

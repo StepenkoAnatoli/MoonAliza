@@ -395,8 +395,11 @@ friction item 22 applies to this proposal as it did to the tiers one).
 
 Any evidence line that starts `outcome:` is checked for form from the policy alone (the literal `accepted`, a tier
 T1-T3, a category the policy has, a calendar day, a relative `/`-separated path naming `outcomes/<task-id>-<seq>.json`)
-and then **resolved**: the file must lie inside the policy file's directory (F1), exist, parse as a §10.3 Outcome of that task, be `accepted`, be owned by the
-referencing profile, have been recorded on that day (the Outcome's own `ts`, else its outcome record `<task> seq
+and then **resolved**: the file must lie inside the policy file's directory (F1), exist, parse as a §10.3 Outcome of
+that task, be `accepted`, be owned by the referencing profile, be the **latest outcome record of its dispatch** (one
+outcome per dispatch, spec-v2 §10.5 and decision-trace.md §4, the rule `rate` counts by: a later outcome record for
+the same dispatch supersedes it whatever its value, and the reference is refused as `<path> is superseded by outcome
+record <task> seq <n> (<value>) for the same dispatch (seq <d>)`; F2), have been recorded on that day (the Outcome's own `ts`, else its outcome record `<task> seq
 <seq>` in the store's `ledger.jsonl`; this host's Outcomes carry no `ts`), and the task must have been decided in that
 category (its decision file under the store's `decisions/`, as `categoryMap()` reads it). The tier on a reference is
 the host's declaration: when the task's decision carries `difficulty-tier` the two must match; when it does not (every
@@ -805,7 +808,8 @@ evidence') under the lead's decisions, which bind where the proposal leaves a ch
   then resolved: exists, an Outcome of that task, `accepted`, recorded that day (the Outcome's `ts`, else its outcome
   record), decided in that category (`categoryMap()`), the tier equal to a tiered decision's, or any tier with
   `would be T<k> by the table` against a pre-tier decision. One check beyond E1's list, by the builder's choice: the
-  Outcome's `owner-profile` must be the referencing profile (policy finding 4). Unresolvable: exit 2 naming the entry.
+  Outcome's `owner-profile` must be the referencing profile (policy finding 4). One from fix round 1 (F2): the
+  outcome record must be the latest of its dispatch, as `rate` counts it. Unresolvable: exit 2 naming the entry.
 - **E2.** `"evidence": "typed"` adopts the supported-entry rule: every `qualified-for` entry needs a PASS grade entry
   or an accepted reference for its category at its tier or above (untiered: of its category); PARTIAL and FAIL support
   nothing; extra references are allowed. Absent, the old behaviour; the fixtures host-policy-1..5 load unchanged.
