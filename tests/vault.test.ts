@@ -152,8 +152,9 @@ describe('credential lifecycle', () => {
     const target = vault as unknown as { persist: () => Promise<void> };
     const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
     const before = await bins();
-    target.persist = async () => { throw new Error('EIO'); };
-    await expect(vault.saveStaged('never-indexed')).rejects.toThrow('EIO');
+    const failure = Object.assign(new Error('EIO'), { code: 'EIO' });
+    target.persist = async () => { throw failure; };
+    await expect(vault.saveStaged('never-indexed')).rejects.toBe(failure);
     delete (target as unknown as Record<string, unknown>).persist;
     expect(await bins()).toEqual(before);
     const ref = await vault.saveStaged('kept');
