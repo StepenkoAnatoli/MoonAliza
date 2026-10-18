@@ -531,6 +531,12 @@ const FORBIDDEN = /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\}\s*=\s*proc
 const moduleFindings = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => match[0]);
 /** The same findings with their line, so a red guard names the module and the line it found (U7-R10). */
 const moduleLines = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => `${source.slice(0, match.index ?? 0).split('\n').length}: ${match[0]}`);
+/** U7-R11: atomicJson is called, never held. A reference taken at module load (`const persist = atomicJson`) keeps the real function,
+ *  so a write through it is never recorded. Comments are stripped; an import clause is the only other place the name may stand. */
+const atomicJsonByReference = (source: string) => {
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1').replace(/\bimport\b[^{};]*\{[^}]*\}\s*from\b/g, '');
+  return [...code.matchAll(/\batomicJson\b(?!\s*(?:\?\.)?\s*\()/g)].map(match => match[0]);
+};
 const panelFindings = (source: string) => [...source.matchAll(/localStorage|sessionStorage|clipboard/g)].map(match => match[0]);
 
 test('S-1 static guard: the new src/main/github-*.ts modules have no console, process.env or direct file write, and the panel no web storage or clipboard', () => {
@@ -538,6 +544,8 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
   // The guard reads every github-*.ts module there is, so a new one cannot escape it unnoticed.
   expect(readdirSync(join(root, 'src', 'main')).filter(name => /^github-.*\.ts$/.test(name)).map(name => `src/main/${name}`).sort()).toEqual(NEW_MODULES);
   for (const file of NEW_MODULES) expect(moduleLines(readFileSync(join(root, file), 'utf8')), file).toEqual([]);
+  // atomicJson by reference (U7-R11): the recorder swaps the export on the module object, so only a call through it is recorded.
+  for (const file of NEW_MODULES) expect(atomicJsonByReference(readFileSync(join(root, file), 'utf8')), `${file} atomicJson by reference`).toEqual([]);
   expect(panelFindings(readFileSync(join(root, PANEL), 'utf8'))).toEqual([]);
   // The guard's own control: each forbidden form is found.
   // Other spellings of the same forms are found too (U7-R4): a bracketed or destructured console, a bracketed env, the direct writes
@@ -554,5 +562,7 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
     .toEqual(['console', 'console', 'console', 'process.env', "process[ 'env", 'writeFile', 'appendFileSync', 'createWriteStream', 'writeSync(', 'write(', 'copyFile', 'copyFileSync',
       '} = process', '} = process', '} = process', "from 'node:process'", 'from "process"', "require('node:process'", "import('process'", 'writevSync(', 'writev(',
       "'node:child_process'", 'spawnSync(', '"worker_threads"']);
+  // The by-reference control (U7-R11): an import, a comment and a call are not findings; the held reference is.
+  expect(atomicJsonByReference("import { atomicJson, removeFile } from '../models/artifact-files';\n// atomicJson renames last\nawait atomicJson(p, v);\nconst persist = atomicJson;")).toEqual(['atomicJson']);
   expect(panelFindings('localStorage.setItem(); sessionStorage.x; navigator.clipboard.writeText(code);')).toEqual(['localStorage', 'sessionStorage', 'clipboard']);
 });
