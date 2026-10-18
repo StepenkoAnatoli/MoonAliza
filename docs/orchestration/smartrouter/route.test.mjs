@@ -2436,16 +2436,27 @@ test('usage (host-policy-3): with no file it prints the headroom from the ratifi
   assert.equal(s.code, 0, s.stderr);
   assert.match(s.stdout, /^ {2}five_hour: utilization 0\.6, resets 2026-10-17T23:00:00Z, headroom 1 Mtok \(\(0\.9 - 0\.25 - 0\.6\) \/ 0\.05\)$/m);
   assert.match(s.stdout, /^ {2}seven_day: utilization 0\.05, resets 2026-10-23T19:00:00Z, headroom 50 Mtok \(\(0\.9 - 0\.1 - 0\.05\) \/ 0\.015\)$/m);
-  // the committed readings (copied): the latest is 01:30:06, and the sr-policy-3 dispatch (829000 usage-tokens) is after it
+  // the committed readings (copied), pinned to two instants no later record can change: readings are monotonic and the
+  // trace already holds later ones, so the latest at or before 01:35:00 is 01:30:06 for good, with nothing dispatched after
+  // it yet (the sr-policy-3 dispatch is at 01:38:00); at 01:38:30 the latest is 01:37:37 and that dispatch (829000
+  // usage-tokens) is after it (the lead's P3-L1: the builder's --now 01:45 picked up every later reading).
   const real = tmp();
   cpSync(join(HERE, 'trace'), real, { recursive: true });
-  const live = cli(['usage', '--trace', real, '--now', '2026-10-18T01:45:00Z', '--policy', COMMITTED_POLICY_PATH]);
+  const live = cli(['usage', '--trace', real, '--now', '2026-10-18T01:35:00Z', '--policy', COMMITTED_POLICY_PATH]);
   assert.equal(live.code, 0, live.stderr);
   assert.equal(live.stdout, [
-    'latest usage reading 2026-10-18T01:30:06Z (age 14.9 min, max 30)',
+    'latest usage reading 2026-10-18T01:30:06Z (age 4.9 min, max 30)',
+    '  five_hour: utilization 0.42, resets 2026-10-18T04:00:00Z, headroom 4.6 Mtok ((0.9 - 0.25 - 0.42) / 0.05)',
+    '  seven_day: utilization 0.36, resets 2026-10-24T18:00:00Z, headroom 29.3333 Mtok ((0.9 - 0.1 - 0.36) / 0.015)',
+    ''
+  ].join('\n'));
+  const dispatched = cli(['usage', '--trace', real, '--now', '2026-10-18T01:38:30Z', '--policy', COMMITTED_POLICY_PATH]);
+  assert.equal(dispatched.code, 0, dispatched.stderr);
+  assert.equal(dispatched.stdout, [
+    'latest usage reading 2026-10-18T01:37:37Z (age 0.88 min, max 30)',
     '  dispatched and not in the reading: 829000 tokens (829000 since the reading, 0 in flight from before it)',
-    '  five_hour: utilization 0.42, resets 2026-10-18T04:00:00Z, headroom 3.771 Mtok ((0.9 - 0.25 - 0.42) / 0.05 - 0.829 dispatched and not in the reading)',
-    '  seven_day: utilization 0.36, resets 2026-10-24T18:00:00Z, headroom 28.5043 Mtok ((0.9 - 0.1 - 0.36) / 0.015 - 0.829 dispatched and not in the reading)',
+    '  five_hour: utilization 0.47, resets 2026-10-18T04:00:00Z, headroom 2.771 Mtok ((0.9 - 0.25 - 0.47) / 0.05 - 0.829 dispatched and not in the reading)',
+    '  seven_day: utilization 0.38, resets 2026-10-24T18:00:00Z, headroom 27.171 Mtok ((0.9 - 0.1 - 0.38) / 0.015 - 0.829 dispatched and not in the reading)',
     ''
   ].join('\n'));
 });
