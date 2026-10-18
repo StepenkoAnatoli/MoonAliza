@@ -227,3 +227,13 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
   table), request `sr-policy-5`, dispatched through the adapter. The Windows host session does not start it.
 - The two calibration-3 trace files are resynced (950790f); open item 2's resync clause is done.
 - Usage reading 18:43:02Z: five_hour 0.11, seven_day 0.71. Launch allowed (both below 0.85).
+
+## 2026-10-18 20:20 UTC (originating session) - unit sr-policy-5 accepted and integrated
+
+- Workflow wf_5612a4ff-96e (cc-opus-high: build, refute-first review FIX on F1 S3 and F2 S4, fix round 1, re-review ACCEPT with F3 S4 wording): 1,029,194 harness tokens, 4 agents. Reports: `reports/sr-policy-5-{1,review-1,fix-1,rereview-1}.md`.
+- Integrated by fast-forward: 46591ab, 2393e33, 40c586f, 0abd430, f87362f, 48b5f9e, 782b05a, b82496c, then the lead's F3 commit a507612 (reports included), the outcome commit and the headroom ratification.
+- Host policy is revision 5, tiers enforced. Routing: fix@T1 193k -> cc-haiku-high; fix@T2 -> cc-opus-high; undeclared fix or review (reads T3) -> blocked; review@T1 -> cc-sonnet-xhigh; undeclared build-ui (T2) -> cc-opus-high. **Every request from now on declares `difficultyTier`.**
+- Outcome sr-policy-5 seq 3 accepted, 1,029,194 tokens; rate proposed cc-opus-high headroom-tested 848000 -> 1030000, ratified at integration.
+- Usage 20:08:42Z: five_hour 0.03 (window reset 19:20Z), seven_day 0.73 (0.71 before the unit).
+- Lead's mistake at integration: the F3 README edit was committed with its message before the edit had applied (the pattern spanned a line break); caught by re-reading the diff, fixed by amending the unpushed commit. Impact: none delivered.
+- Next: upstream refresh PR (hosts/claude-code at revision 5), then the onboarding units (#102), then run 4 stage 4a.
