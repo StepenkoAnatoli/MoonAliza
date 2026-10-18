@@ -957,9 +957,10 @@ Revision 4's table, untiered, kept as the record of what revision 5 re-declared 
    A decision not yet dispatched is rechecked against the edited policy at `dispatch`, so a demotion or a
    revocation takes effect on pending decisions too. When a revision changes what the goldens or the base tests
    assume, freeze the previous policy as `trace/policies/host-policy-<n>.json` and keep them on it (never in
-   `trace/decisions/`, whose file names belong to decisions). A policy with typed references does not load from
-   `trace/policies/` as it stands, because its paths resolve against the policy file's directory (policy finding 5 of
-   host-policy-6).
+   `trace/decisions/`, whose file names belong to decisions). A policy with typed references loads from
+   `trace/policies/` too: a fixture under `<root>/trace/policies/` resolves its references against `<root>`, the
+   directory holding that trace (`policyRoot`, the lead's integration fix of policy finding 5 of host-policy-6); the
+   two directory names are the rule, and a copy anywhere else resolves against its own directory.
 4. A profile with `qualified-at: null` or a past `expires` fails Gate 2 until this is done.
 
 ## The learning loop
@@ -1223,7 +1224,9 @@ Found while building revision 6 (unit sr-policy-6). The lead decides.
    the policy file's directory, so `trace/policies/host-policy-6.json` would look for
    `trace/policies/trace/outcomes/...` and be refused (exit 2). The revision that freezes host-policy-6 has to write the
    fixture's test derivatives beside a copy of the store, as these tests do for the live policy (`LIVE_OFF_DIR`), or
-   the lead decides another resolution base for fixtures. Nothing in this revision needs it.
+   the lead decides another resolution base for fixtures. Nothing in this revision needs it. **Resolved at
+   integration (lead):** `policyRoot` resolves a policy under `<root>/trace/policies/` against `<root>`; the test
+   "E1 (fixture root)" pins it, so the revision that freezes host-policy-6 pins its assertions as every revision did.
 6. **Four categories have no delegate** (E6). `build-core`, `build-tests`, `research-collect` and `docs-mechanical`
    requests above 15000 tokens are blocked until run 4's host-pack cells qualify a profile; the github-sign-in run's
    remaining build units in those categories are affected (the RUN.md consequence is the lead's).

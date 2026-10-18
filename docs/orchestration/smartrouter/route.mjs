@@ -13,7 +13,7 @@
 // Exit: 0 done (any decided route, blocked included), 2 invalid input, 3 refused, 4 ledger integrity.
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -125,10 +125,18 @@ function readJsonFile(path, what) {
 // ---------------------------------------------------------------------------------------------
 // policy
 // ---------------------------------------------------------------------------------------------
+// the directory a policy file's typed references resolve against (E1): the file's own directory, except that a
+// fixture copy under <root>/trace/policies/ (where every revision's goldens are pinned) resolves against <root>, the
+// directory holding that trace; the two directory names are the rule, so <root>/policies/ resolves against itself
+export function policyRoot(path) {
+  const dir = dirname(resolve(path));
+  return basename(dir) === 'policies' && basename(dirname(dir)) === 'trace' ? dirname(dirname(dir)) : dir;
+}
+
 export function loadPolicy(path = DEFAULT_POLICY) {
   const p = readJsonFile(path, 'policy');
   // typed production references resolve against the policy file's directory, never against --trace (E1)
-  validatePolicy(p, dirname(resolve(path)));
+  validatePolicy(p, policyRoot(path));
   return p;
 }
 

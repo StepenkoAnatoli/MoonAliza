@@ -3696,6 +3696,30 @@ test('E1: references resolve against the policy file\'s directory, never against
   assert.equal(ok.code, 0, ok.stderr);
 });
 
+// lead's integration fix of sr-policy-6 (the builder's second note): a fixture copy of a typed policy under
+// <root>/trace/policies/ (where every revision's goldens are pinned) resolves its references against <root>, the
+// directory that holds that trace, so revision 7 can pin the revision-6 assertions to trace/policies/host-policy-6.json;
+// the same copy anywhere else still resolves against its own directory and is refused
+test('E1 (fixture root): a typed policy placed at <root>/trace/policies/<name>.json resolves its references against <root>; placed elsewhere under <root> it does not', () => {
+  const root = tmp();
+  cpSync(join(HERE, 'trace'), join(root, 'trace'), { recursive: true });
+  mkdirSync(join(root, 'trace', 'policies'), { recursive: true });
+  const fixture = join(root, 'trace', 'policies', 'host-policy-6.json');
+  cpSync(COMMITTED_POLICY_PATH, fixture);
+  const p = loadPolicy(fixture);
+  assert.equal(p['policy-revision'], 'host-policy-6');
+  assert.equal(p.evidence, 'typed');
+  const elsewhere = join(root, 'elsewhere', 'host-policy-6.json');
+  mkdirSync(dirname(elsewhere), { recursive: true });
+  cpSync(COMMITTED_POLICY_PATH, elsewhere);
+  exit2(() => loadPolicy(elsewhere), /cannot be resolved: trace\/outcomes\/.* does not exist \(resolved against the policy file's directory /);
+  // the rule is the two directory names, not any 'policies' folder: <root>/policies/<name>.json resolves against itself
+  const flat = join(root, 'policies', 'host-policy-6.json');
+  mkdirSync(dirname(flat), { recursive: true });
+  cpSync(COMMITTED_POLICY_PATH, flat);
+  exit2(() => loadPolicy(flat), /cannot be resolved: trace\/outcomes\/.* does not exist/);
+});
+
 // sr-policy-6 fix round 1, F1: a reference's path cannot leave the policy file's directory - not by '..' (either
 // spelling) and not through a symlink - so a store that is never committed with the policy (a temp trace) cannot back
 // a qualification; and rate prints no paste line for an outcome store outside the policy file's directory
