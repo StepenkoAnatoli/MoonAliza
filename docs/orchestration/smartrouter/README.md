@@ -149,7 +149,7 @@ the lead when editing the policy. The adapter checks only the form of the entrie
 | `cc-fable-xhigh` | xhigh, **direct only** (the lead), up to 15k tokens | build-core, build-ui, build-tests, review, fix, docs-mechanical, research-collect, pin-tests | 460k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
 | `cc-fable-high` | high | review, fix, pin-tests | 352k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
 | `cc-fable-medium` | medium | pin-tests | 139k | PASS / PASS / PASS | calibration-1 only |
-| `cc-opus-high` | high | build-core, build-ui, build-tests, review, fix, research-collect, pin-tests | 514k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1 |
+| `cc-opus-high` | high | build-core, build-ui, build-tests, review, fix, research-collect, pin-tests | 771k | PASS / PASS / PASS | session runs (host-policy-1) + calibration-1; headroom from the accepted sr-policy-2 outcome (770527 tokens) |
 | `cc-opus-medium` | medium | pin-tests | 115k | PASS / PASS / PASS | calibration-1 only |
 | `cc-sonnet-high` | high | pin-tests | 163k | PASS / PASS / FAIL | calibration-1 only |
 | `cc-sonnet-medium` | medium | pin-tests | 121k | PASS / PASS / PASS | calibration-1 only |

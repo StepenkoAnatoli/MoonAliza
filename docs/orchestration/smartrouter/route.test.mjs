@@ -1790,6 +1790,17 @@ const CAL1 = JSON.parse(readFileSync(join(HERE, 'trace', 'calibration-1', 'obser
 const CAL_TASKS = [['pin-tests', 'pin', (o) => o.pin.score], ['fix', 'fix', (o) => o.fix.score], ['review', 'review', (o) => o['review-grade'].score]];
 // an observation's profile is the policy profile with its model and effort (the observation key ends in the effort)
 const calProfile = (policy, o) => policy.profiles.find((x) => x.model === o.usage.pin.model && x.effort === o.profile.split('-').pop()) ?? null;
+// the largest tokens an accepted outcome in the committed ledger completed, per profile id (outcome records carry the
+// additive field tokens, null when unknown)
+function acceptedTokens() {
+  const max = {};
+  for (const r of readLedger(join(HERE, 'trace'))) {
+    if (r.kind !== 'outcome' || !/^outcome accepted /.test(r.detail) || !Number.isInteger(r.tokens)) continue;
+    const id = /^\(([^,]+),/.exec(r.profile)[1];
+    max[id] = Math.max(max[id] ?? 0, r.tokens);
+  }
+  return max;
+}
 const NEW_PROFILES = ['cc-sonnet-low', 'cc-sonnet-medium', 'cc-sonnet-high', 'cc-opus-medium', 'cc-haiku-low', 'cc-haiku-medium', 'cc-haiku-high', 'cc-fable-medium'];
 
 test('fixture: trace/policies/host-policy-1.json is the pre-revision policy, byte-identical to the policy the sr-policy-2 decision was bound to', () => {
@@ -1850,12 +1861,14 @@ test('host-policy-2: the pin-tests category and qualified-for per the lead\'s ru
     }
   }
   assert.deepEqual(fails.sort(), ['cc-haiku-high review', 'cc-haiku-low review', 'cc-haiku-medium review', 'cc-sonnet-high review']);
-  // headroom is the largest completed calibration run, rounded up to the next thousand (the host-policy-1 basis:
-  // a 91k run gave 92000), and never lowered
+  // headroom is the largest completed run, rounded up to the next thousand (the host-policy-1 basis: a 91k run gave
+  // 92000), and never lowered: a calibration run, or an accepted outcome in the ledger (the policy maintenance of
+  // 490b7ed raised cc-opus-high to 771000 from the accepted sr-policy-2 outcome, 770527 tokens)
+  const accepted = acceptedTokens();
   for (const o of Object.values(CAL1)) {
     const pr = calProfile(live, o);
     if (!pr) continue;
-    const max = Math.max(...Object.values(o.usage).filter((u) => u.state === 'done').map((u) => u.tokens));
+    const max = Math.max(...Object.values(o.usage).filter((u) => u.state === 'done').map((u) => u.tokens), accepted[pr.id] ?? 0);
     const before = fixture.profiles.find((x) => x.id === pr.id)?.['headroom-tested'] ?? 0;
     assert.equal(pr['headroom-tested'], Math.max(before, Math.ceil(max / 1000) * 1000), pr.id);
   }
