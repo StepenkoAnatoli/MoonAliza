@@ -1994,21 +1994,20 @@ test('host-policy-2 routing: a pin-tests request routes to cc-haiku-low at the o
 });
 
 // the README's qualification table is generated from host-policy.json: every row is the policy verbatim, in policy order (P2-2)
-test('README: the host-policy-3 qualification table matches the host-policy-3 fixture row for row (15 rows), qualified-for in policy order, both runs\' grades', () => {
+test('README: the host-policy-4 qualification table matches host-policy.json row for row (15 rows), qualified-for in policy order, the three runs\' grades', () => {
   const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
-  const hp3 = JSON.parse(readFileSync(HP3_POLICY_PATH, 'utf8'));
-  const start = readme.indexOf('### The table (host-policy-3');
-  assert.ok(start >= 0, 'the README carries the host-policy-3 table');
+  const start = readme.indexOf('### The table (host-policy-4');
+  assert.ok(start >= 0, 'the README carries the host-policy-4 table');
   const section = readme.slice(start, readme.indexOf('\n#', start + 1));
   const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
   assert.equal(rows.length, 15);
-  assert.deepEqual(rows.map((r) => r[0]), hp3.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
-  for (const p of hp3.profiles) {
-    const [, , qual, headroom, run1, run2] = rows.find((r) => r[0] === `\`${p.id}\``);
+  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of COMMITTED_POLICY.profiles) {
+    const [, , qual, headroom, run1, run2, run3] = rows.find((r) => r[0] === `\`${p.id}\``);
     assert.equal(qual, p['qualified-for'].join(', ') || 'none', `${p.id} qualified-for`);
     assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
     const grade = (run, cat) => (p.evidence.find((e) => e.startsWith(`calibration-${run}: ${cat} `)) ?? '').split(' ')[2] ?? '-';
-    for (const [run, cell] of [[1, run1], [2, run2]]) {
+    for (const [run, cell] of [[1, run1], [2, run2], [3, run3]]) {
       assert.equal(cell, ['pin-tests', 'fix', 'review'].map((cat) => grade(run, cat) || '-').join(' / '), `${p.id} calibration-${run} grades`);
     }
   }
@@ -2726,6 +2725,46 @@ test('rate (host-policy-4): the CALIBRATION lines count calibration-1, -2 and -3
   const committed = rate({ traceDir: frozenTrace(FREEZE_HP3), policyPath: LIVE_OFF_PATH, now: NOW });
   assert.deepEqual(committed.text.split('\n').filter((l) => l.startsWith('CALIBRATION ')), expected);
   assert.deepEqual(r.proposals, [], 'calibration counts never propose');
+});
+
+// deliverable D: the README's revision-4 section quotes decide on the live policy (feature-off derivative, as the tests
+// use): every gate-walk line, the Profile line (model elided) and the Reservations line of a default fix and a default
+// review, the bounds above each cheapest profile's headroom, and the sentences the brief asks for
+test('README: how calibration run 3 was applied (host-policy-4) - the routing consequence is decide\'s own output for a default fix and review, with the G-2 sentence, the demotion, the pin block and friction items 19-20', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const start = readme.indexOf('### How calibration run 3 was applied (host-policy-4)');
+  assert.ok(start >= 0, 'the README carries the run-3 section');
+  const section = readme.slice(start, readme.indexOf('\n### ', start + 1));
+  const live = loadPolicy(LIVE_OFF_PATH);
+  for (const category of ['fix', 'review']) {
+    const trace = tmp();
+    const r = cli(['decide', writeJson(hp4Req(category, { taskId: `readme-${category}` })), '--trace', trace, '--policy', LIVE_OFF_PATH]);
+    assert.equal(r.code, 0, r.stderr);
+    const out = r.stdout.split('\n');
+    const walk = out.slice(out.indexOf('Gate walk (per candidate):'), out.findIndex((l) => l.startsWith('Brief')));
+    assert.equal(walk.length, 1 + live.profiles.length, category);
+    const profile = out.find((l) => l.startsWith('Profile:'));
+    const model = live.profiles.find((p) => profile.includes(`(${p.id},`)).model;
+    for (const line of [out.find((l) => l.startsWith('Route:')), profile.replace(model, '<model>'), out.find((l) => l.startsWith('Reservations:')), ...walk]) {
+      assert.ok(section.includes(`\n${line}\n`), `${category}: README lacks the line\n${line}`);
+    }
+  }
+  const flat = section.replace(/\s+/g, ' ');
+  // above each cheapest profile's headroom: the bound decide computes
+  const bigFix = computeDecision(hp4Req('fix', { estimatedTokens: 726000 }), live, []);
+  const bigReview = computeDecision(hp4Req('review', { estimatedTokens: 328000 }), live, []);
+  assert.deepEqual([bigFix.profile, bigFix['all-in-bound-usd'], bigReview.profile, bigReview['all-in-bound-usd']], ['cc-opus-high', 17.61, 'cc-opus-high', 7.56]);
+  for (const sentence of [
+    'A fix estimated at 726000 tokens or more no longer fits `cc-haiku-high` (or `cc-opus-xhigh`, 246k) and goes to `cc-opus-high` ($17.61 at 726000).',
+    'A review estimated at 328000 tokens or more no longer fits `cc-sonnet-xhigh` (or `cc-opus-max`, 307k) and goes to `cc-opus-high` ($7.56 at 328000).',
+    'G-2 (lead-notes.md): two of the five adjudicated clusters rest on two prongs of the classification; under the full definition the run-3 review of cc-haiku-medium and cc-haiku-high would be FAIL. The preregistered score (PASS) is what the evidence entries record, and it changes nothing above (both profiles need two later passes either way).'
+  ]) assert.ok(flat.includes(sentence), `README lacks: ${sentence}`);
+  for (const part of ['fix-u7-r3 seq 4', 'fix-x2-2 seq 3', 'two later passes dated after 2026-10-18', '`pin-tests` for `cc-fable-medium`', 'required reviewer']) {
+    assert.ok(flat.includes(part), `the run-3 section names ${part}`);
+  }
+  const friction = readme.slice(readme.indexOf('## Friction log for SmartRouter upstream'));
+  assert.match(friction, /\n19\. \*\*The workflow harness relays the operator's latest chat message into every worker/);
+  assert.match(friction, /\n20\. \*\*The three-lens adjudication's output schema has no `forbidden` prong/);
 });
 
 // ---------------------------------------------------------------------------------------------
