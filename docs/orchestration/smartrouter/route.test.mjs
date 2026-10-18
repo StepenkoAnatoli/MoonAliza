@@ -26,6 +26,10 @@ const COMMITTED_POLICY = JSON.parse(readFileSync(COMMITTED_POLICY_PATH, 'utf8'))
 // and its profile set (the speculative pairs of SW-1/SW-2), and the host-policy-2 assertions are about it: they run on
 // this fixture, so revision 3 of the live policy never moves them. The live policy has its own tests (host-policy-3)
 const HP2_POLICY_PATH = join(HERE, 'trace', 'policies', 'host-policy-2.json');
+// host-policy-3, frozen by unit sr-policy-4 (never edited): the host-policy-3 assertions (its table, validation and
+// routing, the README routing consequence, its usage tests) run on it, so revision 4 of the live policy never moves
+// them. The live policy has its own tests (host-policy-4)
+const HP3_POLICY_PATH = join(HERE, 'trace', 'policies', 'host-policy-3.json');
 const USAGE_POLICY_PATH = HP2_POLICY_PATH;
 const USAGE_POLICY = JSON.parse(readFileSync(USAGE_POLICY_PATH, 'utf8'));
 const BASE_POLICY = JSON.parse(readFileSync(join(HERE, 'trace', 'policies', 'host-policy-1.json'), 'utf8'));
@@ -1388,16 +1392,19 @@ test('committed policy (i): with no reading, the stored build request is blocked
   assert.ok(d.decision.uncertainty.includes(LIVE_BASIS_LINE));
 });
 
-test('committed policy (ii): after a fresh synthetic reading, the stored build request delegates to cc-opus-high with the usage block filled', () => {
+// pinned to the host-policy-3 fixture by sr-policy-4: its last two assertions are the golden's bound and order, whose
+// required reviewer is cc-opus-high; under host-policy-4 the reviewer is cc-sonnet-xhigh (the live policy's own test is
+// 'host-policy-4 routing: the stored build request')
+test('committed policy (ii), host-policy-3 fixture: after a fresh synthetic reading, the stored build request delegates to cc-opus-high with the usage block filled', () => {
   const trace = tmp();
   const at = STORED_BUILD.request.now;
-  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05, fiveResetMs: 4 * HOUR, sevenResetMs: 144 * HOUR }), at, COMMITTED_POLICY_PATH);
+  const r = usageCli(trace, rateLimitInfo(at, { five: 0.2, seven: 0.05, fiveResetMs: 4 * HOUR, sevenResetMs: 144 * HOUR }), at, HP3_POLICY_PATH);
   assert.equal(r.code, 0, r.stderr);
-  const d = decideOn(STORED_BUILD.request, trace, COMMITTED_POLICY_PATH);
+  const d = decideOn(STORED_BUILD.request, trace, HP3_POLICY_PATH);
   assert.equal(d.route, 'delegate');
   assert.equal(d.decision.profile, 'cc-opus-high');
   assert.equal(d.decision.usage['reading-ts'], at);
-  const uw = COMMITTED_POLICY['usage-windows'].windows;
+  const uw = loadPolicy(HP3_POLICY_PATH)['usage-windows'].windows;
   for (const w of ['five_hour', 'seven_day']) {
     const u = d.decision.usage.windows[w];
     assert.equal(typeof u.projected, 'number', w);
@@ -1786,18 +1793,22 @@ test('SW-7: a unit dispatched before the reading and still running counts at its
 // ---------------------------------------------------------------------------------------------
 const LIVE_OFF_PATH = join(tmp(), 'host-policy-live-off.json');
 writeFileSync(LIVE_OFF_PATH, featureOff(COMMITTED_POLICY));
-const livePolicyWith = (mutate) => {
-  const p = JSON.parse(readFileSync(LIVE_OFF_PATH, 'utf8'));
-  mutate(p);
-  const path = join(tmp(), 'host-policy.json');
-  writeFileSync(path, JSON.stringify(p, null, 2));
-  return path;
-};
 // the host-policy-2 fixture's feature-off derivative (R1(a)), for the host-policy-2 assertions below
 const HP2_OFF_PATH = join(tmp(), 'host-policy-2-off.json');
 writeFileSync(HP2_OFF_PATH, featureOff(JSON.parse(readFileSync(HP2_POLICY_PATH, 'utf8'))));
 const hp2PolicyWith = (mutate) => {
   const p = JSON.parse(readFileSync(HP2_OFF_PATH, 'utf8'));
+  mutate(p);
+  const path = join(tmp(), 'host-policy.json');
+  writeFileSync(path, JSON.stringify(p, null, 2));
+  return path;
+};
+// the host-policy-3 fixture's feature-off derivative (R1(a)), for the host-policy-3 assertions; written only when the
+// fixture exists, so a missing fixture fails the tests that read it (ENOENT), not the whole file at load
+const HP3_OFF_PATH = join(tmp(), 'host-policy-3-off.json');
+if (existsSync(HP3_POLICY_PATH)) writeFileSync(HP3_OFF_PATH, featureOff(JSON.parse(readFileSync(HP3_POLICY_PATH, 'utf8'))));
+const hp3PolicyWith = (mutate) => {
+  const p = JSON.parse(readFileSync(HP3_OFF_PATH, 'utf8'));
   mutate(p);
   const path = join(tmp(), 'host-policy.json');
   writeFileSync(path, JSON.stringify(p, null, 2));
@@ -1814,6 +1825,9 @@ const calProfile = (policy, o) => policy.profiles.find((x) => x.model === o.usag
 // left out. 2026-10-18T01:45:00Z is after every record the host-policy-2 fixture was frozen with (sr-policy-3 seq 1-4)
 // and before that unit's accepted outcome (seq 5, 02:20), which raised cc-opus-high again (the lead's P3-L2).
 const FREEZE_HP2 = '2026-10-18T01:45:00Z';
+// The host-policy-3 fixture was frozen with every record of the sr-policy-4 base commit (the last, that unit's dispatch
+// at 09:07:43Z): its headroom figures are the accepted outcomes up to that instant, never a later one
+const FREEZE_HP3 = '2026-10-18T09:07:43Z';
 function frozenTrace(cutoff) {
   const dir = tmp();
   cpSync(join(HERE, 'trace'), dir, { recursive: true });
@@ -1980,15 +1994,16 @@ test('host-policy-2 routing: a pin-tests request routes to cc-haiku-low at the o
 });
 
 // the README's qualification table is generated from host-policy.json: every row is the policy verbatim, in policy order (P2-2)
-test('README: the host-policy-3 qualification table matches host-policy.json row for row (15 rows), qualified-for in policy order, both runs\' grades', () => {
+test('README: the host-policy-3 qualification table matches the host-policy-3 fixture row for row (15 rows), qualified-for in policy order, both runs\' grades', () => {
   const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const hp3 = JSON.parse(readFileSync(HP3_POLICY_PATH, 'utf8'));
   const start = readme.indexOf('### The table (host-policy-3');
   assert.ok(start >= 0, 'the README carries the host-policy-3 table');
   const section = readme.slice(start, readme.indexOf('\n#', start + 1));
   const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
   assert.equal(rows.length, 15);
-  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
-  for (const p of COMMITTED_POLICY.profiles) {
+  assert.deepEqual(rows.map((r) => r[0]), hp3.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of hp3.profiles) {
     const [, , qual, headroom, run1, run2] = rows.find((r) => r[0] === `\`${p.id}\``);
     assert.equal(qual, p['qualified-for'].join(', ') || 'none', `${p.id} qualified-for`);
     assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
@@ -2142,7 +2157,7 @@ test('fixture: trace/policies/host-policy-2.json is the pre-revision policy, byt
   assert.equal(bound['policy-revision'], 'host-policy-2');
   assert.equal(createHash('sha256').update(readFileSync(HP2_POLICY_PATH)).digest('hex'), bound['policy-sha256']);
   assert.equal(loadPolicy(HP2_POLICY_PATH)['policy-revision'], 'host-policy-2');
-  assert.equal(loadPolicy(COMMITTED_POLICY_PATH)['policy-revision'], 'host-policy-3');
+  assert.equal(loadPolicy(HP3_POLICY_PATH)['policy-revision'], 'host-policy-3');
 });
 
 test('host-policy-2 fixture routing (--policy): pin-tests -> cc-haiku-low, review -> cc-opus-high, fix -> cc-opus-high', () => {
@@ -2156,7 +2171,7 @@ test('host-policy-2 fixture routing (--policy): pin-tests -> cc-haiku-low, revie
 });
 
 test('host-policy-3: the lead\'s table applied - qualified-for, headroom-tested, both runs\' grade entries and run ids, the four new profiles', () => {
-  const live = loadPolicy(COMMITTED_POLICY_PATH);
+  const live = loadPolicy(HP3_POLICY_PATH);
   const hp2 = loadPolicy(HP2_POLICY_PATH);
   assert.equal(live['policy-revision'], 'host-policy-3');
   assert.deepEqual(live.profiles.map((p) => p.id).sort(), Object.keys(HP3_TABLE).sort(), 'fifteen profiles: the eleven of host-policy-2 and four new');
@@ -2185,8 +2200,8 @@ test('host-policy-3: the lead\'s table applied - qualified-for, headroom-tested,
     }
   }
   // the grade entries are exactly the two runs' grades (fails and partials included), each with its run id; headroom is
-  // the largest completed run rounded up to the next thousand, never lowered
-  const accepted = acceptedTokens();
+  // the largest completed run rounded up to the next thousand, never lowered (accepted outcomes up to the fixture's freeze)
+  const accepted = acceptedTokens(FREEZE_HP3);
   const seen = new Set();
   for (const [run, obs] of [[1, CAL1], [2, CAL2]]) {
     for (const o of Object.values(obs)) {
@@ -2211,11 +2226,11 @@ test('host-policy-3: the lead\'s table applied - qualified-for, headroom-tested,
 });
 
 test('host-policy-3 validation: PARTIAL is a grade word; any other word is refused (exit 2)', () => {
-  const ok = livePolicyWith((p) => { p.profiles.find((x) => x.id === 'cc-haiku-low').evidence.push('calibration-3: review PARTIAL (n=2)'); });
+  const ok = hp3PolicyWith((p) => { p.profiles.find((x) => x.id === 'cc-haiku-low').evidence.push('calibration-3: review PARTIAL (n=2)'); });
   assert.ok(loadPolicy(ok).profiles.find((x) => x.id === 'cc-haiku-low').evidence.includes('calibration-3: review PARTIAL (n=2)'));
   for (const word of ['partial', 'PARTIALLY', 'UNGRADED', 'PASS/PARTIAL']) {
     const entry = `calibration-2: review ${word} (n=1)`;
-    const path = livePolicyWith((p) => { p.profiles.find((x) => x.id === 'cc-sonnet-low').evidence.push(entry); });
+    const path = hp3PolicyWith((p) => { p.profiles.find((x) => x.id === 'cc-sonnet-low').evidence.push(entry); });
     const message = new RegExp(`profile cc-sonnet-low evidence '${entry.replace(/[()/]/g, '\\$&')}' is not 'calibration-<n>: <category> PASS\\|PARTIAL\\|FAIL \\(n=<k>\\)'`);
     assert.throws(() => loadPolicy(path), (e) => e instanceof RouterError && e.code === 2 && message.test(e.message), entry);
     const r = cli(['rate', '--trace', tmp(), '--policy', path]);
@@ -2225,7 +2240,7 @@ test('host-policy-3 validation: PARTIAL is a grade word; any other word is refus
 });
 
 test('host-policy-3 routing: pin-tests -> cc-haiku-low; review -> cc-opus-high (cc-opus-xhigh ties, loses on effort); fix -> cc-haiku-high (the economics); the review-only profiles alone are blocked', () => {
-  const live = loadPolicy(LIVE_OFF_PATH);
+  const live = loadPolicy(HP3_OFF_PATH);
   const pin = computeDecision(reqFor(live, 'pin-tests'), live, []);
   assert.deepEqual([pin.route, pin.profile, pin['all-in-bound-usd']], ['delegate', 'cc-haiku-low', 1.06]);
   const review = computeDecision(reqFor(live, 'review'), live, []);
@@ -2251,16 +2266,16 @@ test('host-policy-3 routing: pin-tests -> cc-haiku-low; review -> cc-opus-high (
     assert.equal(trio.candidates[id]['first-failing-gate'], 2, id);
     assert.match(trio.candidates[id].reason, new RegExp(`^${id} not qualified for review`), id);
   }
-  // the CLI on the live policy agrees (feature-off derivative, as the other live-policy decisions)
-  const decided = cliDecide(reqFor(live, 'fix', { taskId: 'hp3-fix' }), LIVE_OFF_PATH);
+  // the CLI on the host-policy-3 fixture agrees (feature-off derivative, as the other policy decisions; --policy)
+  const decided = cliDecide(reqFor(live, 'fix', { taskId: 'hp3-fix' }), HP3_OFF_PATH);
   assert.equal(decided.bindings['policy-revision'], 'host-policy-3');
   assert.equal(decided.decision.profile, 'cc-haiku-high');
 });
 
 // P3-R2: the README's 'routing consequence' names what decide does above cc-haiku-high's headroom, and no tie that never
 // decides: at 726000 tokens cc-opus-xhigh (246k) fails Gate 2 too, so cc-opus-high is the only opus left
-test('README: a fix at cc-haiku-high\'s headroom or above routes to cc-opus-high, and the routing-consequence sentence says so without a cc-opus-xhigh tie', () => {
-  const live = loadPolicy(LIVE_OFF_PATH);
+test('README: a fix at cc-haiku-high\'s headroom or above routes to cc-opus-high under host-policy-3, and the routing-consequence sentence says so without a cc-opus-xhigh tie', () => {
+  const live = loadPolicy(HP3_OFF_PATH);
   const haiku = live.profiles.find((p) => p.id === 'cc-haiku-high')['headroom-tested'];
   const xhigh = live.profiles.find((p) => p.id === 'cc-opus-xhigh')['headroom-tested'];
   const big = computeDecision(reqFor(live, 'fix', { estimatedTokens: haiku }), live, []);
@@ -2365,7 +2380,7 @@ test('rate: an accepted outcome above headroom-tested proposes the raise (the st
   const doc = JSON.parse(readFileSync(join(real, 'qualification-stats.json'), 'utf8'));
   assert.deepEqual(doc['headroom-proposals'], [{ profile: 'cc-opus-high', from: 514000, to: 771000, tokens: 770527, task: 'sr-policy-2' }]);
   // once raised (host-policy-2 after 490b7ed, and host-policy-3), the same ledger proposes nothing
-  for (const policy of [HP2_OFF_PATH, LIVE_OFF_PATH]) {
+  for (const policy of [HP2_OFF_PATH, HP3_OFF_PATH]) {
     const r = cli(['rate', '--trace', real, '--now', '2026-10-18T02:00:00Z', '--policy', policy]);
     assert.equal(r.code, 0, r.stderr);
     assert.deepEqual(headroomLines(r.stdout), [], policy);
@@ -2405,7 +2420,7 @@ test('rate: an accepted outcome above headroom-tested proposes the raise (the st
 // is unchanged, only the declared numbers and their basis
 const RUN2_TOKENS = 7872276; // trace/calibration-2/results-table.md 'Totals': the workflow's reported sub-agent tokens
 test('usage windows (host-policy-3): the coefficients ratified from run 2 (0.05, 0.015) are above the measured values, the lead reserve raised (0.25, 0.10), ratified-at the second reading, the basis names the measurement', () => {
-  const uw = COMMITTED_POLICY['usage-windows'];
+  const uw = loadPolicy(HP3_POLICY_PATH)['usage-windows'];
   const readings = readFileSync(join(HERE, 'trace', 'usage.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   const at = (ts) => readings.find((r) => r.ts === ts);
   const [from, to] = [at('2026-10-17T23:22:51Z'), at('2026-10-18T01:23:32Z')];
@@ -2424,7 +2439,7 @@ test('usage windows (host-policy-3): the coefficients ratified from run 2 (0.05,
     assert.ok(uw['coefficient-basis'].includes(part), `coefficient-basis names ${part}`);
   }
   // the gate's arithmetic: the limit is stop-at - lead-reserve, as before
-  const d = computeDecision(req({ category: 'build-core' }), loadPolicy(COMMITTED_POLICY_PATH), [], {}, { readings: [{ ts: NOW, windows: { five_hour: { utilization: 0.6, 'resets-at': isoAt(NOW_MS + 4 * HOUR) }, seven_day: { utilization: 0.05, 'resets-at': isoAt(NOW_MS + 144 * HOUR) } } }] });
+  const d = computeDecision(req({ category: 'build-core' }), loadPolicy(HP3_POLICY_PATH), [], {}, { readings: [{ ts: NOW, windows: { five_hour: { utilization: 0.6, 'resets-at': isoAt(NOW_MS + 4 * HOUR) }, seven_day: { utilization: 0.05, 'resets-at': isoAt(NOW_MS + 144 * HOUR) } } }] });
   assert.equal(d.route, 'delegate');
   assert.equal(d.usage.windows.five_hour.projected, 0.6273); // 0.6 + 0.545 x 0.05
   assert.equal(d.usage.windows.five_hour['headroom-mtok'], 1); // (0.9 - 0.25 - 0.6) / 0.05
@@ -2433,7 +2448,7 @@ test('usage windows (host-policy-3): the coefficients ratified from run 2 (0.05,
   // rate on the committed readings: the ratification is after every observation, so nothing is considered or proposed
   const real = tmp();
   cpSync(join(HERE, 'trace'), real, { recursive: true });
-  const r = rate({ traceDir: real, policyPath: COMMITTED_POLICY_PATH, now: '2026-10-18T02:00:00Z' });
+  const r = rate({ traceDir: real, policyPath: HP3_POLICY_PATH, now: '2026-10-18T02:00:00Z' });
   for (const w of ['five_hour', 'seven_day']) {
     assert.equal(r.stats.usage[w]['ratified-at'], '2026-10-18T01:23:32Z', w);
     assert.equal(r.stats.usage[w].considered, 0, w);
@@ -2443,8 +2458,8 @@ test('usage windows (host-policy-3): the coefficients ratified from run 2 (0.05,
 
 test('usage (host-policy-3): with no file it prints the headroom from the ratified coefficients and reserve, on a synthetic reading and on the committed readings', () => {
   const trace = tmp();
-  usageCli(trace, rateLimitInfo(NOW, { five: 0.6 }), NOW, COMMITTED_POLICY_PATH);
-  const s = cli(['usage', '--trace', trace, '--now', isoAt(NOW_MS + 12 * MIN), '--policy', COMMITTED_POLICY_PATH]);
+  usageCli(trace, rateLimitInfo(NOW, { five: 0.6 }), NOW, HP3_POLICY_PATH);
+  const s = cli(['usage', '--trace', trace, '--now', isoAt(NOW_MS + 12 * MIN), '--policy', HP3_POLICY_PATH]);
   assert.equal(s.code, 0, s.stderr);
   assert.match(s.stdout, /^ {2}five_hour: utilization 0\.6, resets 2026-10-17T23:00:00Z, headroom 1 Mtok \(\(0\.9 - 0\.25 - 0\.6\) \/ 0\.05\)$/m);
   assert.match(s.stdout, /^ {2}seven_day: utilization 0\.05, resets 2026-10-23T19:00:00Z, headroom 50 Mtok \(\(0\.9 - 0\.1 - 0\.05\) \/ 0\.015\)$/m);
@@ -2454,7 +2469,7 @@ test('usage (host-policy-3): with no file it prints the headroom from the ratifi
   // usage-tokens) is after it (the lead's P3-L1: the builder's --now 01:45 picked up every later reading).
   const real = tmp();
   cpSync(join(HERE, 'trace'), real, { recursive: true });
-  const live = cli(['usage', '--trace', real, '--now', '2026-10-18T01:35:00Z', '--policy', COMMITTED_POLICY_PATH]);
+  const live = cli(['usage', '--trace', real, '--now', '2026-10-18T01:35:00Z', '--policy', HP3_POLICY_PATH]);
   assert.equal(live.code, 0, live.stderr);
   assert.equal(live.stdout, [
     'latest usage reading 2026-10-18T01:30:06Z (age 4.9 min, max 30)',
@@ -2462,7 +2477,7 @@ test('usage (host-policy-3): with no file it prints the headroom from the ratifi
     '  seven_day: utilization 0.36, resets 2026-10-24T18:00:00Z, headroom 29.3333 Mtok ((0.9 - 0.1 - 0.36) / 0.015)',
     ''
   ].join('\n'));
-  const dispatched = cli(['usage', '--trace', real, '--now', '2026-10-18T01:38:30Z', '--policy', COMMITTED_POLICY_PATH]);
+  const dispatched = cli(['usage', '--trace', real, '--now', '2026-10-18T01:38:30Z', '--policy', HP3_POLICY_PATH]);
   assert.equal(dispatched.code, 0, dispatched.stderr);
   assert.equal(dispatched.stdout, [
     'latest usage reading 2026-10-18T01:37:37Z (age 0.88 min, max 30)',
@@ -2471,6 +2486,21 @@ test('usage (host-policy-3): with no file it prints the headroom from the ratifi
     '  seven_day: utilization 0.38, resets 2026-10-24T18:00:00Z, headroom 27.171 Mtok ((0.9 - 0.1 - 0.38) / 0.015 - 0.829 dispatched and not in the reading)',
     ''
   ].join('\n'));
+});
+
+// ---------------------------------------------------------------------------------------------
+// host-policy-4 (unit sr-policy-4): calibration-3 under the lead's qualification rules (briefs/policy4-builder.md);
+// the host-policy-3 assertions above stay on the host-policy-3 fixture
+// ---------------------------------------------------------------------------------------------
+test('fixture: trace/policies/host-policy-3.json is the pre-revision policy, byte-identical to the policy the sr-policy-4 decisions were bound to', () => {
+  assert.ok(existsSync(HP3_POLICY_PATH), 'the host-policy-3 fixture exists');
+  for (const seq of [1, 2]) {
+    const bound = JSON.parse(readFileSync(join(goldenDir, `sr-policy-4-${seq}.json`), 'utf8')).bindings;
+    assert.equal(bound['policy-revision'], 'host-policy-3', `sr-policy-4-${seq}`);
+    assert.equal(createHash('sha256').update(readFileSync(HP3_POLICY_PATH)).digest('hex'), bound['policy-sha256'], `sr-policy-4-${seq}`);
+  }
+  assert.equal(loadPolicy(HP3_POLICY_PATH)['policy-revision'], 'host-policy-3');
+  assert.equal(JSON.parse(readFileSync(HP3_POLICY_PATH, 'utf8')).request, undefined, 'a policy, never a decision');
 });
 
 // ---------------------------------------------------------------------------------------------
