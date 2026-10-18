@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import fsp from 'node:fs/promises';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Vault } from '../src/main/vault';
@@ -164,5 +166,32 @@ describe('credential lifecycle', () => {
     expect(Object.keys(onDisk.entries)).toEqual([ref]);
     await vault.reconcile(new Set([ref]));
     expect(await bins()).toHaveLength(before.length + 1);
+  });
+
+  test('a failed unlink after a failed persist keeps the staging, so the next persist and reconcile remove its file (X2-2, R1)', async () => {
+    const { directory, vault, cryptor } = await fixture();
+    const target = vault as unknown as { persist: () => Promise<void> };
+    const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
+    const realUnlink = fsp.unlink;
+    const failure = Object.assign(new Error('EIO'), { code: 'EIO' });
+    // The node project runs files in one worker without isolation, so no vi.mock: unlink is swapped on the builtin and synced to
+    // every importer (as tests/review-workspace-layers.test.ts:16-24 does), and restored in a finally.
+    target.persist = async () => { throw failure; };
+    (fsp as { unlink: unknown }).unlink = (path: string) => path.endsWith('.bin')
+      ? Promise.reject(Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' })) : realUnlink(path);
+    syncBuiltinESMExports();
+    try { await expect(vault.saveStaged('locked')).rejects.toBe(failure); }
+    finally {
+      (fsp as { unlink: unknown }).unlink = realUnlink; syncBuiltinESMExports();
+      delete (target as unknown as Record<string, unknown>).persist;
+    }
+    expect(await bins()).toHaveLength(1);
+    const ref = await vault.saveStaged('kept');
+    await vault.commit(ref);
+    const restarted = new Vault(directory, cryptor);
+    await restarted.initialize('epoch-1');
+    await restarted.reconcile(new Set([ref]));
+    expect(await bins()).toHaveLength(1);
+    expect(await restarted.has(ref)).toBe(true);
   });
 });

@@ -91,9 +91,10 @@ export class Vault {
       try { await this.persist(); }
       catch (error) {
         // No index names the file and the caller never gets the ref: drop both, then rethrow the persist's own error.
-        // A failed unlink does not replace that error; the file it leaves is the one a later sweep would have to find.
-        delete this.index.entries[ref];
-        await unlink(this.secretPath(ref)).catch(() => undefined);
+        // A failed unlink does not replace that error. Its entry then stays staged in memory, so the next persist names the file
+        // and the next reconcile deletes it; dropping the entry with the file still on disk would orphan it for good.
+        try { await unlink(this.secretPath(ref)); delete this.index.entries[ref]; }
+        catch (unlinkError) { if ((unlinkError as NodeJS.ErrnoException).code === 'ENOENT') delete this.index.entries[ref]; }
         throw error;
       }
       return ref;
