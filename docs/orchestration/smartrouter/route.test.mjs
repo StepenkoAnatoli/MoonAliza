@@ -1967,18 +1967,22 @@ test('host-policy-2 routing: a pin-tests request routes to cc-haiku-low at the o
 });
 
 // the README's qualification table is generated from host-policy.json: every row is the policy verbatim, in policy order (P2-2)
-test('README: the host-policy-2 qualification table matches host-policy.json row for row, qualified-for in policy order', () => {
+test('README: the host-policy-3 qualification table matches host-policy.json row for row (15 rows), qualified-for in policy order, both runs\' grades', () => {
   const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
-  const section = readme.slice(readme.indexOf('### The table (host-policy-2'));
+  const start = readme.indexOf('### The table (host-policy-3');
+  assert.ok(start >= 0, 'the README carries the host-policy-3 table');
+  const section = readme.slice(start, readme.indexOf('\n#', start + 1));
   const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
-  const hp2 = JSON.parse(readFileSync(HP2_POLICY_PATH, 'utf8'));
-  assert.deepEqual(rows.map((r) => r[0]), hp2.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
-  for (const p of hp2.profiles) {
-    const [, , qual, headroom, grades] = rows.find((r) => r[0] === `\`${p.id}\``);
-    assert.equal(qual, p['qualified-for'].join(', '), `${p.id} qualified-for`);
+  assert.equal(rows.length, 15);
+  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of COMMITTED_POLICY.profiles) {
+    const [, , qual, headroom, run1, run2] = rows.find((r) => r[0] === `\`${p.id}\``);
+    assert.equal(qual, p['qualified-for'].join(', ') || 'none', `${p.id} qualified-for`);
     assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
-    const grade = (cat) => (p.evidence.find((e) => e.startsWith(`calibration-1: ${cat} `)) ?? '').split(' ')[2] ?? '';
-    assert.equal(grades, ['pin-tests', 'fix', 'review'].map(grade).join(' / '), `${p.id} calibration-1 grades`);
+    const grade = (run, cat) => (p.evidence.find((e) => e.startsWith(`calibration-${run}: ${cat} `)) ?? '').split(' ')[2] ?? '-';
+    for (const [run, cell] of [[1, run1], [2, run2]]) {
+      assert.equal(cell, ['pin-tests', 'fix', 'review'].map((cat) => grade(run, cat) || '-').join(' / '), `${p.id} calibration-${run} grades`);
+    }
   }
 });
 
