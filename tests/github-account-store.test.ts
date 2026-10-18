@@ -853,16 +853,21 @@ describe('crash windows (S-7, 4.5)', () => {
 
   // X2-1, the double fault: a crash after step 4 leaves the new pair staged and named by the file. The next start cannot read that file
   // (EBUSY), so its references are unknown, and its reconcile must keep the staged pair; the readable start after it then commits the pair.
-  for (const kind of ['sign-in', 'refresh'] as const) {
-    test(`${kind}: a crash after the file write, then a start that cannot read the file, leaves the staged pair for the next start (X2-1)`, async () => {
+  // The snapshot is taken before commit `at` runs: 3 is before the first commit (both refs staged), 4 after it (the access ref committed).
+  for (const [kind, at, states] of [['sign-in', 3, ['staged', 'staged']], ['refresh', 3, ['staged', 'staged']],
+    ['refresh', 4, ['committed', 'staged']]] as const) {
+    test(`${kind}, crash before commit ${at}: a start that cannot read the file keeps the pair staged, and the next start commits it (X2-1)`, async () => {
       const h = await harness(); const { account: a } = await h.signIn();
-      let dir: string | undefined; h.spy.on('commit', (_ref, count) => { if (count === 3) dir = h.snapshot(); });
+      let dir: string | undefined; h.spy.on('commit', (_ref, count) => { if (count === at) dir = h.snapshot(); });
       const next = await h.store.replace(issued(), T0, kind, kind === 'sign-in' ? h.signInAdmit() : h.refreshAdmit(a));
       expect(dir).toBeDefined(); expect(refsOf(next)).toHaveLength(2);
       const file = join(dir!, 'github', 'account.json'); const before = readFileSync(file, 'utf8');
       const { store } = await unreadStart(dir!);
       expect(store.current()).toBeNull();                                        // this start reads no account
       expect(readFileSync(file, 'utf8')).toBe(before);                           // and does not rewrite the file (U2-R9)
+      const index = JSON.parse(readFileSync(join(dir!, 'vault', 'index.json'), 'utf8')) as { entries: Record<string, { state: string }> };
+      expect(refsOf(next).map(ref => index.entries[ref]?.state)).toEqual(states);  // still in the vault in the state the crash left,
+      for (const ref of refsOf(next)) expect(existsSync(join(dir!, 'vault', `${ref}.bin`))).toBe(true);   // and with its files
       await expectConsistent(dir!, refsOf(next));
     });
   }
