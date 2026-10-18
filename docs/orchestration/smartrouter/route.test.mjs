@@ -3407,3 +3407,96 @@ test('rate (host-policy-5): CALIBRATION lines for runs 1-3 carry no tier; a fix 
   assert.ok(r.stdout.split('\n').includes('PROPOSAL demote cc-opus-high from fix@T2: 2 consecutive verification-failed (d-1, d-2); not applied — the lead ratifies by editing host-policy.json'), r.stdout);
   assert.equal(JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8')).stats['cc-opus-high']['fix@T2']['verification-failed'], 2);
 });
+
+// deliverable E: the README's qualification table is the live policy verbatim (P2-2), tiered entries included
+test('README: the host-policy-5 qualification table matches host-policy.json row for row (15 rows), the tiered qualified-for entries in policy order, the three runs\' grades', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const start = readme.indexOf('### The table (host-policy-5');
+  assert.ok(start >= 0, 'the README carries the host-policy-5 table');
+  const section = readme.slice(start, readme.indexOf('\n#', start + 1));
+  const rows = section.split('\n').filter((l) => /^\| `cc-/.test(l)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
+  assert.equal(rows.length, 15);
+  assert.deepEqual(rows.map((r) => r[0]), COMMITTED_POLICY.profiles.map((p) => `\`${p.id}\``), 'one row per profile, in policy order');
+  for (const p of COMMITTED_POLICY.profiles) {
+    const [, , qual, headroom, run1, run2, run3] = rows.find((r) => r[0] === `\`${p.id}\``);
+    assert.equal(qual, p['qualified-for'].join(', ') || 'none', `${p.id} qualified-for`);
+    assert.equal(headroom, `${p['headroom-tested'] / 1000}k`, `${p.id} headroom-tested`);
+    const grade = (run, cat) => (p.evidence.find((e) => e.startsWith(`calibration-${run}: ${cat} `)) ?? '').split(' ')[2] ?? '-';
+    for (const [run, cell] of [[1, run1], [2, run2], [3, run3]]) {
+      assert.equal(cell, ['pin-tests', 'fix', 'review'].map((cat) => grade(run, cat) || '-').join(' / '), `${p.id} calibration-${run} grades`);
+    }
+  }
+});
+
+// deliverable E: the tiers section quotes the proposal's predicate table, states the floor, D5 and D6's pending note,
+// carries the re-declaration table and the rubric, and quotes decide's own output for the deliverable-D requests
+test('README: Difficulty tiers (host-policy-5) - the predicate table, the floor, D5, the pending-decision note, the re-declaration table, the rubric, and the routing consequence as decide prints it; rule 5, D1-D9 and friction item 21', () => {
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8');
+  const start = readme.indexOf('## Difficulty tiers (host-policy-5)');
+  assert.ok(start >= 0, 'the README carries the tiers section');
+  const section = readme.slice(start, readme.indexOf('\n## ', start + 1));
+  const flat = section.replace(/\s+/g, ' ');
+  for (const row of [
+    '| `fix`, `build-core`, `build-ui`, `build-tests` | the edit set (`permitted-effects` minus the architecture map) is at most two files in one module; the cause, or the rule, is named in the request; the acceptance checks run on an existing harness | the edit set spans more than three files or more than one seam; the cause is unknown; the acceptance checks need a new harness; the edit set includes the code that handles credentials, persistence, concurrency or an external service (the data class alone does not trigger it); `uncertainty` is `high` |',
+    '| `pin-tests` | one rule, one existing harness, one test file | the rule spans two modules, or the harness does not exist (a fake, a recorder, a process boundary) |',
+    '| `review` | one module against its own specification section, with the shipped tests as the harness for reproductions | two or more modules and their seam, where a finding can exist only in the interaction; or no shipped harness for reproductions; or the specification is incomplete and the review must say what it would have to say |',
+    '| `research-collect` | the unknowns are enumerated and each names its owning page; the budget is under ten pages | an unknown with no known owning page; a contradiction between primary sources to resolve; a budget over thirty pages |',
+    '| `docs-mechanical` | always T1 | never |'
+  ]) assert.ok(section.includes(`\n${row}\n`), `README lacks the predicate row\n${row}`);
+  for (const sentence of [
+    'The floor: `T3` when `uncertainty` is `"high"` or the edit set has more than three entries; `T2` when it has exactly three; `T1` otherwise; `docs-mechanical` is always `T1`.',
+    'The edit set is `permittedEffects` without the entries ending in `ARCHITECTURE.md`.',
+    'Under an enforced policy that walk requires `review@T1`, whatever the unit\'s tier: the review of a unit is its own request when the lead dispatches it, with its own declared tier.',
+    'A decision taken under an untiered revision cannot be dispatched under an enforced one:',
+    '`dispatch` refuses with `the Brief changed since decision seq N; decide again (changed: difficulty-tier)`'
+  ]) assert.ok(flat.includes(sentence), `README lacks: ${sentence}`);
+  // the re-declaration table: every evidence line the policy gained, verbatim
+  for (const line of [...Object.values(HP5_TABLE).flatMap((t) => t.lines), HAIKU_HIGH_LINE]) {
+    if (/^[a-z-]+@T3: the lead-direct profile/.test(line)) continue;   // the eight cc-fable-xhigh lines are one row
+    assert.ok(flat.includes(line), `README lacks the evidence line ${line}`);
+  }
+  assert.ok(flat.includes(FX_LINE('<category>')), 'the cc-fable-xhigh row');
+  // the rubric: one line per category
+  for (const cat of ['`fix`, `build-core`, `build-ui`, `build-tests`:', '`pin-tests`:', '`review`:', '`research-collect`:', '`docs-mechanical`:']) {
+    assert.ok(section.includes(`\n- ${cat}`), `the rubric lacks ${cat}`);
+  }
+  // the routing consequence: decide's own lines on the live policy (feature-off derivative), model elided
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const quoted = [
+    ['fix', { difficultyTier: 'T1' }, false], ['fix', { difficultyTier: 'T2' }, true], ['fix', {}, true],
+    ['review', { difficultyTier: 'T1' }, false], ['review', {}, false], ['build-ui', { estimatedTokens: 250000 }, false], ['docs-mechanical', { difficultyTier: 'T3' }, false]
+  ];
+  for (const [i, [category, over, walked]] of quoted.entries()) {
+    const trace = tmp();
+    const r = cli(['decide', writeJson(hp5Req(category, { taskId: `readme5-${i}`, ...over })), '--trace', trace, '--policy', LIVE_OFF_PATH]);
+    assert.equal(r.code, 0, r.stderr);
+    const out = r.stdout.split('\n');
+    const pick = (k) => out.find((l) => l.startsWith(`${k}:`));
+    const profile = pick('Profile');
+    const pr = live.profiles.find((p) => profile.includes(`(${p.id},`));
+    const head = [pick('Difficulty'), pick('DifficultyTier'), pick('Route'), pr ? profile.replace(pr.model, '<model>') : profile, pick('Reservations')].join('\n');
+    assert.ok(section.includes(`\n${head}\n`), `${category} ${JSON.stringify(over)}: README lacks\n${head}`);
+    if (walked) {
+      const walk = out.slice(out.findIndex((l) => l.startsWith('Gate walk')), out.findIndex((l, j) => j > 0 && (l.startsWith('Brief') || l === '')));
+      assert.equal(walk.length, 1 + live.profiles.length, `${category} walk`);
+      assert.ok(section.includes(`\n${walk.join('\n')}\n`), `${category} ${JSON.stringify(over)}: README lacks the gate walk`);
+    }
+  }
+  const refused = cli(['decide', writeJson(hp5Req('fix', { taskId: 'readme5-x', permittedEffects: FIVE_FILES, difficultyTier: 'T1' })), '--trace', tmp(), '--policy', LIVE_OFF_PATH]);
+  assert.equal(refused.code, 2);
+  assert.ok(section.includes(`\n${refused.stderr.trim()}\n`), `README lacks the floor refusal\n${refused.stderr}`);
+  // Qualification rules gain rule 5 (proposal 2.3-2.5, quoted)
+  const rules = readme.slice(readme.indexOf('### Qualification rules'), readme.indexOf('\n### ', readme.indexOf('### Qualification rules') + 1)).replace(/\n\s*>\s?/g, ' ').replace(/\s+/g, ' ');   // a blockquote's markers are not text
+  for (const quote of [
+    '5. **Per (category, tier)**',
+    'The two-pass rule applies per (category, tier): a high-risk category needs two independent passes **at that tier** (calibration cells of that tier, or an accepted production outcome whose request carried that tier).',
+    'A calibration FAIL or a `verification-failed` outcome at tier k is a fail for tier k and every higher tier of the category, and blocks them until two later passes at that tier; lower tiers keep their standing.',
+    'The return path after a block is **calibration, never production**:'
+  ]) assert.ok(rules.includes(quote), `rule 5 lacks: ${quote}`);
+  // the lead's decisions, named
+  const applied = readme.slice(readme.indexOf('### How the tiers proposal was applied (host-policy-5)'));
+  assert.ok(readme.includes('### How the tiers proposal was applied (host-policy-5)'));
+  for (const d of ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9']) assert.match(applied.slice(0, applied.indexOf('\n### ', 5)), new RegExp(`\\n- \\*\\*${d}\\.?\\*\\*`), d);
+  const friction = readme.slice(readme.indexOf('## Friction log for SmartRouter upstream'));
+  assert.match(friction, /\n21\. \*\*The proposal's Item 3 "names it" clause is the existing `eligible-outside-candidates` hint, and the reviewer-tier question \(D5\) is not addressed by the proposal\.\*\*/);
+});
