@@ -2297,3 +2297,56 @@ test('rate: CALIBRATION lines read both observation formats - run 1\'s boolean r
   assert.match(r2.text, /^CALIBRATION cc-sonnet-low review: 0 pass, 0 partial, 0 fail, 1 ungraded \(calibration-1\)$/m);
   assert.match(r2.text, /^CALIBRATION cc-sonnet-medium review: 0 pass, 0 partial, 1 fail \(calibration-1\)$/m);
 });
+
+// deliverable F: an accepted outcome that completed more tokens than the profile's headroom-tested proposes the raise
+// (headroom-tested is the largest completed run, rounded up to the next thousand, never lowered); proposed, never applied
+const HEADROOM_SUFFIX = 'not applied — the lead ratifies by editing host-policy.json';
+test('rate: an accepted outcome above headroom-tested proposes the raise (the stale cc-opus-high headroom behind sr-policy-3 seq 1); unknown or lower tokens propose nothing', () => {
+  // the committed trace under the policy the sr-policy-2 unit ran on (host-policy-1, cc-opus-high 514000): the
+  // accepted sr-policy-2 outcome completed 770527 tokens, and the raise the lead applied by hand in 490b7ed is proposed
+  const real = tmp();
+  cpSync(join(HERE, 'trace'), real, { recursive: true });
+  const policyBefore = readFileSync(FIXTURE_POLICY_PATH, 'utf8');
+  const r1 = cli(['rate', '--trace', real, '--now', '2026-10-18T02:00:00Z', '--policy', FIXTURE_POLICY_PATH]);
+  assert.equal(r1.code, 0, r1.stderr);
+  const headroomLines = (text) => text.split('\n').filter((l) => /^PROPOSAL profiles\./.test(l));
+  assert.deepEqual(headroomLines(r1.stdout), [`PROPOSAL profiles.cc-opus-high.headroom-tested: 514000 -> 771000 (accepted outcome sr-policy-2 completed 770527 tokens); ${HEADROOM_SUFFIX}`]);
+  assert.equal(readFileSync(FIXTURE_POLICY_PATH, 'utf8'), policyBefore, 'proposed, never applied');
+  const doc = JSON.parse(readFileSync(join(real, 'qualification-stats.json'), 'utf8'));
+  assert.deepEqual(doc['headroom-proposals'], [{ profile: 'cc-opus-high', from: 514000, to: 771000, tokens: 770527, task: 'sr-policy-2' }]);
+  // once raised (host-policy-2 after 490b7ed, and host-policy-3), the same ledger proposes nothing
+  for (const policy of [HP2_OFF_PATH, LIVE_OFF_PATH]) {
+    const r = cli(['rate', '--trace', real, '--now', '2026-10-18T02:00:00Z', '--policy', policy]);
+    assert.equal(r.code, 0, r.stderr);
+    assert.deepEqual(headroomLines(r.stdout), [], policy);
+  }
+
+  // synthetic outcomes on the base fixture (cc-opus-high headroom-tested 514000)
+  const trace = tmp();
+  const cycleWith = (taskId, value, tokens) => {
+    const d = run(req({ taskId }), { traceDir: trace });
+    dispatch(taskId, 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+    return recordOutcome(withTokens({ 'task-id': taskId, outcome: value, 'original-brief-fingerprint': d.briefFingerprint }, tokens), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  };
+  const rateHere = () => rate({ traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  cycleWith('h-unknown', 'accepted', null);       // tokens unknown
+  cycleWith('h-absent', 'accepted', undefined);   // tokens absent
+  cycleWith('h-below', 'accepted', 300000);
+  cycleWith('h-equal', 'accepted', 514000);       // completed exactly the headroom: nothing to raise
+  cycleWith('h-failed', 'verification-failed', 900000); // not accepted: not a completed run
+  assert.deepEqual(rateHere().headroomProposals, []);
+  assert.ok(!/PROPOSAL profiles\./.test(rateHere().text));
+  cycleWith('h-above', 'accepted', 600001);
+  cycleWith('h-most', 'accepted', 700500);
+  const r = rateHere();
+  // one proposal per profile, from its largest accepted run, rounded up to the next thousand
+  assert.deepEqual(r.headroomProposals, [{ profile: 'cc-opus-high', from: 514000, to: 701000, tokens: 700500, task: 'h-most' }]);
+  assert.match(r.text, new RegExp(`^PROPOSAL profiles\\.cc-opus-high\\.headroom-tested: 514000 -> 701000 \\(accepted outcome h-most completed 700500 tokens\\); ${HEADROOM_SUFFIX}$`, 'm'));
+  assert.ok(!/^no proposals$/m.test(r.text));
+  // a superseded outcome does not count: h-most's dispatch is re-recorded verification-failed, so h-above carries it
+  const most = readLedger(trace).filter((x) => x['task-id'] === 'h-most' && x.kind === 'outcome').pop();
+  recordOutcome(withTokens({ 'task-id': 'h-most', outcome: 'verification-failed', 'original-brief-fingerprint': most['brief-fingerprint'] }, 700500), { traceDir: trace, policyPath: POLICY_PATH, now: NOW });
+  assert.deepEqual(rateHere().headroomProposals, [{ profile: 'cc-opus-high', from: 514000, to: 601000, tokens: 600001, task: 'h-above' }]);
+  // decide is not changed by a headroom proposal: it routes by the policy as it stands
+  assert.deepEqual(run(req({ taskId: 'h-next' }), { traceDir: trace }).decision['pending-proposals'], []);
+});

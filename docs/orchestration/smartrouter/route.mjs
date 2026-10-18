@@ -614,6 +614,22 @@ function learn(policy, records, catMap) {
   return { stats, proposals };
 }
 
+// headroom-tested is the largest completed run, rounded up to the next thousand, never lowered: an accepted outcome
+// (one per dispatch, the latest) whose recorded tokens exceed the profile's current value proposes the raise to them,
+// rounded up. Unknown tokens (null) and other outcome values propose nothing. One proposal per profile, from its largest
+// accepted run; never applied (deliverable F of sr-policy-3: the stale cc-opus-high headroom blocked its seq-1 decision)
+function headroomProposals(policy, records) {
+  const best = new Map();
+  for (const r of latestOutcomes(records)) {
+    if (outcomeValue(r) !== 'accepted' || !isInt(r.tokens)) continue;
+    const pr = policy.profiles.find((p) => p.id === tupleId(r.profile));
+    if (!pr || !isInt(pr['headroom-tested']) || !(r.tokens > pr['headroom-tested'])) continue;
+    const prev = best.get(pr.id);
+    if (!prev || r.tokens > prev.tokens) best.set(pr.id, { profile: pr.id, from: pr['headroom-tested'], to: Math.ceil(r.tokens / 1000) * 1000, tokens: r.tokens, task: r['task-id'] });
+  }
+  return [...best.values()].sort((a, b) => (a.profile < b.profile ? -1 : 1));
+}
+
 function expiryFlags(policy, nowMs) {
   const flags = [];
   for (const pr of policy.profiles) {
@@ -1338,6 +1354,7 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const learned = policy['usage-windows'] ? usageLearning(policy['usage-windows'], readUsage(traceDir), records) : null;
   const usageProposals = learned ? learned.proposals : [];
   const calibration = calibrationEvidence(policy, traceDir);
+  const headroom = headroomProposals(policy, records);
   const path = ledgerPath(traceDir);
   const doc = {
     _comment: 'derived by route.mjs rate from ledger.jsonl and the decision files; regenerated on every run, never hand-edited',
@@ -1347,6 +1364,7 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
     'outcome-records': records.filter((r) => r.kind === 'outcome').length,
     stats,
     proposals,
+    'headroom-proposals': headroom,
     ...(learned ? { usage: learned.usage, 'usage-proposals': usageProposals, 'usage-sha256': existsSync(usagePath(traceDir)) ? sha256(readFileSync(usagePath(traceDir))) : null } : {}),
     ...(calibration ? { calibration: calibration.doc } : {})
   };
@@ -1357,10 +1375,11 @@ export function rate({ policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TRACE, no
   const lines = [`${statsPath} regenerated (${doc['outcomes-counted']} outcomes)`];
   if (calibration) lines.push(...calibration.lines);
   for (const p of proposals) lines.push(`PROPOSAL ${proposalText(p)}; not applied — the lead ratifies by editing host-policy.json`);
+  for (const h of headroom) lines.push(`PROPOSAL profiles.${h.profile}.headroom-tested: ${h.from} -> ${h.to} (accepted outcome ${h.task} completed ${h.tokens} tokens); not applied — the lead ratifies by editing host-policy.json`);
   for (const p of usageProposals) lines.push(`PROPOSAL usage-windows.windows.${p.window}.utilization-per-mtok: ${p.from} -> ${p.to} (${p.reason}); not applied — the lead ratifies by editing host-policy.json`);
   for (const f of flags) lines.push(`FLAG ${f.profile}: ${f.reason}`);
-  if (!proposals.length && !usageProposals.length && !flags.length) lines.push('no proposals');
-  return { stats: doc, proposals, usageProposals, flags, statsPath, text: `${lines.join('\n')}\n` };
+  if (!proposals.length && !headroom.length && !usageProposals.length && !flags.length) lines.push('no proposals');
+  return { stats: doc, proposals, headroomProposals: headroom, usageProposals, flags, statsPath, text: `${lines.join('\n')}\n` };
 }
 
 // ---------------------------------------------------------------------------------------------
