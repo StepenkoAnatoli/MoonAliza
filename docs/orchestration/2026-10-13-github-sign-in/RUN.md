@@ -174,3 +174,25 @@ Open items (numbering as at 15:55):
 Before any launch: refresh the reading (this one is stale at 17:58:39Z); stop at 0.90, launch nothing past 0.85.
 
 Update 17:35Z (operator decision, relayed by the originating session): SmartRouter #100, #101 and #102 go into main now, without the delta reviews ("incorporate 100-101-102"; offered the choices, the operator picked "Merge them into main"). The originating session does the merges and updates #104 afterwards; this session does not push to, comment on or merge those PRs, nor touch #104. Open item 1 becomes: merged without delta review, by operator decision 2026-10-18. At 17:35Z: #100 MERGED 17:31:07Z (`2e30291`); #101 MERGED 17:33:30Z (`72fe412`, head `5e18125`); #102 open, head now `26cd65d`. The next resume point records #102's merge commit and #104's update.
+
+## Resume point 2026-10-18 17:40 UTC (Windows host session; #100-#102 merged)
+
+State:
+- SmartRouter #100, #101, #102 MERGED into main by the operator's decision, without the delta reviews (offered the choices, the operator picked "Merge them into main"; relayed by the originating session, which did the merges). Merge commits: #100 `2e30291` (17:31:07Z, head `6a75383`); #101 `72fe412` (17:33:30Z, head `5e18125` after main was merged into its branch); #102 `bb3fa6c` (17:35:46Z, head `26cd65d`). main = `bb3fa6c`. Verified with gh at 17:38Z.
+- #104 (refresh, draft): the originating session merged main into it, head `398e91b` = merge of `41f7366` and `bb3fa6c` (`41f7366` is an ancestor, so no force-push). Its body now says #100-#102 are merged and that it stays a draft for the reviewer. CI on `398e91b`: regression-gate, claude-code-adapter-tests, watcher-once-proof SUCCESS; onboarding-proof, strict-canary SKIPPED. Adapter suite on the merged tree 100/100 locally (originating session's report, not rerun here). The local `sr-refresh` checkout is still at `41f7366`; fast-forward it (`git pull --ff-only`) before working there.
+- #103 (the reviewer's status note, `e9e511c`) untouched; it now describes merged PRs.
+- Usage: latest reading 17:28:39Z (five_hour 0.09, seven_day 0.71), stale at 17:58:39Z. Nothing launched.
+
+Decisions and why:
+- Item 1 closed by the operator's merge decision rather than by review verdicts, so the follow-on units are unblocked now instead of after the delta reviews.
+- #104 stays a draft for the reviewer (originating session's call, stated in its body); this session does not touch it.
+
+Open items:
+1. Follow-on units, now unblocked: #100 -> tiered-qualification adapter unit and run 4 stage 4a (fix@T3, 12 cells, 4.8M-9.6M tokens); #102 -> validator rule, kit path, shared subject pack, CI check, qualification table, each its own unit. Refresh the usage reading before any launch.
+2. #104: follow its CI and any review; push nothing without a review to answer. The `trace/calibration-3/` resync limit stands: #101 merged without a delta review, so resync from main's copy if it differs, under a review that asks for it.
+3. Run 4 preparation (G-2 forbidden prong, A-1 no relayed chat): unchanged.
+4. MoonAliza fix unit (C-1..C-3) and Stages 6-9: unchanged; on this host a Windows baseline comes first.
+5. Operator decisions (Research-Kit branch move, UD-1, key rotation): unchanged.
+6. #103 describes PRs that are now merged; the operator or reviewer updates or closes it.
+
+Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
