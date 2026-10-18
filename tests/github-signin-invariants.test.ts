@@ -533,9 +533,22 @@ const moduleFindings = (source: string) => [...source.matchAll(FORBIDDEN)].map(m
 const moduleLines = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => `${source.slice(0, match.index ?? 0).split('\n').length}: ${match[0]}`);
 /** U7-R11: atomicJson is called, never held. A reference taken at module load (`const persist = atomicJson`) keeps the real function,
  *  so a write through it is never recorded. Comments are stripped; an import clause is the only other place the name may stand. */
+const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
 const atomicJsonByReference = (source: string) => {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1').replace(/\bimport\b[^{};]*\{[^}]*\}\s*from\b/g, '');
+  const code = withoutComments(source).replace(/\bimport\b[^{};]*\{[^}]*\}\s*from\b/g, '');
   return [...code.matchAll(/\batomicJson\b(?!\s*(?:\?\.)?\s*\()/g)].map(match => match[0]);
+};
+/** U7-R12: the new modules import only what is listed here, today's imports and nothing else. A module not on the list (better-sqlite3,
+ *  node:fs/promises, a dynamic import) is a finding until it is added on purpose, and a require or import with a computed name is one
+ *  too, since its module cannot be read. A `from` after a dot (Buffer.from) is not an import. */
+const ALLOWED_IMPORTS = ['node:crypto', 'zod', '../shared', '../shared/github-account', '../models/artifact-files', './github-app', './github-oauth',
+  './github-credential', './github-account-store', './vault'];
+const importFindings = (source: string) => {
+  const code = withoutComments(source);
+  return [
+    ...[...code.matchAll(/(?<![.\w$])(?:from|import|require)\s*\(?\s*['"`]([^'"`]+)['"`]/g)].map(match => match[1]!).filter(name => !ALLOWED_IMPORTS.includes(name)),
+    ...[...code.matchAll(/(?<![.\w$])(?:require|import)\s*\(\s*(?!['"`])/g)].map(match => `non-literal ${match[0].trim()}`),
+  ];
 };
 const panelFindings = (source: string) => [...source.matchAll(/localStorage|sessionStorage|clipboard/g)].map(match => match[0]);
 
@@ -546,6 +559,8 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
   for (const file of NEW_MODULES) expect(moduleLines(readFileSync(join(root, file), 'utf8')), file).toEqual([]);
   // atomicJson by reference (U7-R11): the recorder swaps the export on the module object, so only a call through it is recorded.
   for (const file of NEW_MODULES) expect(atomicJsonByReference(readFileSync(join(root, file), 'utf8')), `${file} atomicJson by reference`).toEqual([]);
+  // The import allowlist (U7-R12): a write or a spawn through a module that is not on the list is a finding.
+  for (const file of NEW_MODULES) expect(importFindings(readFileSync(join(root, file), 'utf8')), `${file} imports outside the allowlist`).toEqual([]);
   expect(panelFindings(readFileSync(join(root, PANEL), 'utf8'))).toEqual([]);
   // The guard's own control: each forbidden form is found.
   // Other spellings of the same forms are found too (U7-R4): a bracketed or destructured console, a bracketed env, the direct writes
@@ -564,5 +579,7 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
       "'node:child_process'", 'spawnSync(', '"worker_threads"']);
   // The by-reference control (U7-R11): an import, a comment and a call are not findings; the held reference is.
   expect(atomicJsonByReference("import { atomicJson, removeFile } from '../models/artifact-files';\n// atomicJson renames last\nawait atomicJson(p, v);\nconst persist = atomicJson;")).toEqual(['atomicJson']);
+  // The import control (U7-R12): an allowed module and Buffer.from are not findings; a module off the list and a computed name are.
+  expect(importFindings("import Database from 'better-sqlite3';\nconst fs = await import('node:fs/promises');\nconst x = require(name);\nimport { randomUUID } from 'node:crypto';\nconst h = Buffer.from('6869', 'hex');")).toEqual(['better-sqlite3', 'node:fs/promises', 'non-literal require(']);
   expect(panelFindings('localStorage.setItem(); sessionStorage.x; navigator.clipboard.writeText(code);')).toEqual(['localStorage', 'sessionStorage', 'clipboard']);
 });
