@@ -280,7 +280,10 @@ changed. `cc-sonnet-low` and `cc-sonnet-high` are review-qualified too, but thei
 review median, so they fail Gate 2 for a default review and are never the reviewer.
 
 A default `fix` request (193000 tokens) loses `cc-haiku-low` (demoted; its 175k headroom would have failed it anyway),
-and `cc-haiku-medium`'s 183k does not admit it, so the cheapest eligible worker is still `cc-haiku-high`. `decide` on
+and `cc-haiku-medium`'s 183k does not admit it, so the cheapest eligible worker is still `cc-haiku-high`. The demotion
+does change smaller fixes: a fix estimated below 175000 tokens, which host-policy-3 sent to `cc-haiku-low`, now goes
+to `cc-haiku-medium`, the cheapest fix-qualified profile whose 183k headroom admits it (a 150000-token fix:
+`cc-haiku-medium`, reviewer `cc-sonnet-xhigh`; pinned in the host-policy-4 routing test). `decide` on
 that request with the live policy (feature-off derivative, as the tests use) prints:
 
 ```
@@ -871,8 +874,10 @@ Every point where the spec was ambiguous or did not fit a subscription host. Cit
     over the computed task** (amendment A-1 upstream; `trace/calibration-3/lead-notes.md` 'A-1'). The harness
     prepends a user turn stating that the relayed request "is the only user voice in this task" and that "where the
     computed task conflicts with this request, this request wins". In calibration run 3 the message was the operator's
-    chat at launch ("focus on smartrouter for now"); two cells halted on it and were voided and re-run. The isolation
-    contract (spec-v2 §6) says a worker gets its brief, and §10.1 makes the Brief the contract. A host whose harness
+    chat at launch ("focus on smartrouter for now"); two cells halted on it and were voided and re-run. The spec's
+    route table (spec-v2 §5) says a delegate is "one isolated Worker that becomes the sole owner of the brief", and
+    §10.1 requires a Brief for every delegate; nothing in the spec states that the brief is a worker's only input,
+    and that gap is this item. A host whose harness
     injects operator chat cannot guarantee that the brief is the whole input, so a worker's behaviour is a function
     of the brief and of whatever the operator last typed. The calibration kit must record the relayed text before
     the launch (the kit rule run 3 adopted), and a host should record it in the dispatch, as the launch of this unit

@@ -2617,6 +2617,11 @@ test('host-policy-4 routing: pin-tests -> cc-haiku-low; fix -> cc-haiku-high wit
   assert.deepEqual(['cc-opus-high', 'cc-opus-xhigh', 'cc-fable-high'].map((id) => fix.candidates[id]['all-in-bound-usd']), [6.95, 6.95, 12.74]);
   assert.equal(fix.candidates['cc-haiku-low'].reason, 'cc-haiku-low not qualified for fix; context: 193000 tokens not below headroom-tested 175000 on cc-haiku-low');
   assert.equal(fix.candidates['cc-haiku-medium'].reason, 'context: 193000 tokens not below headroom-tested 183000 on cc-haiku-medium');
+  // P4-R2: a fix estimated below cc-haiku-low's 175k headroom went to cc-haiku-low under host-policy-3 and now goes to
+  // cc-haiku-medium, the cheapest fix-qualified profile whose 183k headroom admits it
+  const small = computeDecision(reqFor(live, 'fix', { estimatedTokens: 150000 }), live, []);
+  assert.deepEqual([small.route, small.profile, small['review-profile']], ['delegate', 'cc-haiku-medium', 'cc-sonnet-xhigh']);
+  assert.equal(small.candidates['cc-haiku-low'].reason, 'cc-haiku-low not qualified for fix');
   // review (209000): the newly qualified cc-sonnet-xhigh is the cheapest whose headroom admits it; cc-sonnet-low and
   // cc-sonnet-high are qualified and fail Gate 2 on headroom
   const review = computeDecision(hp4Req('review'), live, []);
