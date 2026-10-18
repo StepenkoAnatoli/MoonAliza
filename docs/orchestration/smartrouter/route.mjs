@@ -609,6 +609,9 @@ function counters(st, calls = st.callsUsed, repairs = st.repairsUsed) {
   return { 'calls-used': calls, 'calls-limit': st.callsLimit, 'cash-spent': null, 'cash-cap': null, 'repairs-used': repairs, 'repairs-allowed': st.repairsAllowed };
 }
 
+// per task: the category and the difficulty tier from its decision files (D7), and the tier of each decision by its ledger
+// seq, so an outcome counts at the tier of the decision its dispatch was made under. A decision without a tier (every
+// one before host-policy-5, or under an untiered policy) counts at T1
 function categoryMap(traceDir) {
   const dir = join(traceDir, 'decisions');
   const map = {};
@@ -616,7 +619,14 @@ function categoryMap(traceDir) {
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
     let j;
     try { j = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { throw new RouterError(4, `decision file ${f} is unparseable`); }
-    if (isStr(j?.request?.taskId) && isStr(j.request.category)) map[j.request.taskId] = j.request.category;
+    if (!(isStr(j?.request?.taskId) && isStr(j.request.category))) continue;
+    const t = j.decision?.['difficulty-tier'];
+    if (t !== undefined && !TIERS.includes(t)) throw new RouterError(4, `decision file ${f}: difficulty-tier ${JSON.stringify(t)} is not T1, T2 or T3`);
+    const tier = t ?? 'T1';
+    const entry = (map[j.request.taskId] ??= { tiers: {} });
+    entry.category = j.request.category;
+    entry.tier = tier;
+    if (isInt(j['ledger-seq'], 1)) entry.tiers[j['ledger-seq']] = tier;
   }
   return map;
 }
@@ -642,7 +652,11 @@ function latestOutcomes(records) {
   return [...latest.values()];
 }
 
+// under an enforced policy the streams are per (profile, category, tier) (D7, proposal 2.3-2.4): stats keys and proposals
+// read '<category>@T<k>'; a profile is qualified at tier k when it holds the category at k or above. Untiered: per
+// (profile, category), as before
 function learn(policy, records, catMap) {
+  const tiered = tiersEnforced(policy);
   const stats = {};
   const streams = {};
   const dispatchBySeq = new Map(records.filter((r) => r.kind === 'dispatch').map((r) => [`${r['task-id']}#${r.seq}`, r]));
@@ -650,26 +664,32 @@ function learn(policy, records, catMap) {
     const value = outcomeValue(r);
     const pid = tupleId(r.profile);
     if (!value || !pid) continue;
-    const cat = catMap[r['task-id']] ?? 'unknown';
-    stats[pid] ??= {};
-    stats[pid][cat] ??= { ...Object.fromEntries(OUTCOMES.map((o) => [o, 0])), deviations: 0 };
-    const s = stats[pid][cat];
-    s[value] += 1;
+    const m = catMap[r['task-id']];
+    const entry = typeof m === 'string' ? { category: m, tier: 'T1', tiers: {} } : m;
+    const cat = entry?.category ?? 'unknown';
     const d = dispatchBySeq.get(`${r['task-id']}#${r['dispatch-seq']}`);
+    // the tier of the decision the dispatch was made under, else the task's (a dispatch recorded without decision-seq)
+    const tier = (d && entry?.tiers?.[d['decision-seq']]) || entry?.tier || 'T1';
+    const label = tiered && cat !== 'unknown' ? `${cat}@${tier}` : cat;
+    stats[pid] ??= {};
+    stats[pid][label] ??= { ...Object.fromEntries(OUTCOMES.map((o) => [o, 0])), deviations: 0 };
+    const s = stats[pid][label];
+    s[value] += 1;
     if (d && isDeviation(d)) s.deviations += 1;
     streams[pid] ??= {};
-    streams[pid][cat] ??= [];
-    streams[pid][cat].push({ value, task: r['task-id'], ms: isoMs(r.ts) });
+    streams[pid][label] ??= { cat, tier, list: [] };
+    streams[pid][label].list.push({ value, task: r['task-id'], ms: isoMs(r.ts) });
   }
   const proposals = [];
   for (const pid of Object.keys(streams).sort()) {
     const pr = policy.profiles.find((p) => p.id === pid);
     if (!pr) continue;
-    for (const cat of Object.keys(streams[pid]).sort()) {
+    for (const label of Object.keys(streams[pid]).sort()) {
+      const { cat, tier } = streams[pid][label];
       if (cat === 'unknown') continue;
-      const qualified = heldTier(pr, cat) > 0;
+      const qualified = tiered ? heldTier(pr, cat) >= tierRank(tier) : heldTier(pr, cat) > 0;
       const since = dayMs(pr['qualified-at']);
-      const list = streams[pid][cat].filter((o) => since === null || o.ms >= since);
+      const list = streams[pid][label].list.filter((o) => since === null || o.ms >= since);
       if (qualified) {
         let run = [];
         let hit = null;
@@ -678,11 +698,11 @@ function learn(policy, records, catMap) {
           if (run.length >= 2 && !hit) hit = run.slice(-2);
         }
         const overrun = list.filter((o) => o.value === 'cost-overrun').map((o) => o.task);
-        if (hit) proposals.push({ kind: 'demote', profile: pid, category: cat, reason: `2 consecutive verification-failed (${hit.join(', ')})` });
-        else if (overrun.length) proposals.push({ kind: 'demote', profile: pid, category: cat, reason: `cost-overrun (${overrun.join(', ')})` });
+        if (hit) proposals.push({ kind: 'demote', profile: pid, category: label, reason: `2 consecutive verification-failed (${hit.join(', ')})` });
+        else if (overrun.length) proposals.push({ kind: 'demote', profile: pid, category: label, reason: `cost-overrun (${overrun.join(', ')})` });
       } else {
         const acc = list.filter((o) => o.value === 'accepted').map((o) => o.task);
-        if (acc.length >= 3) proposals.push({ kind: 'qualify', profile: pid, category: cat, reason: `${acc.length} accepted while unqualified (host deviations: ${acc.join(', ')})` });
+        if (acc.length >= 3) proposals.push({ kind: 'qualify', profile: pid, category: label, reason: `${acc.length} accepted while unqualified (host deviations: ${acc.join(', ')})` });
       }
     }
   }
@@ -1392,7 +1412,10 @@ function reviewGrade(o) {
   if (g.result !== undefined) return ['PASS', 'PARTIAL', 'FAIL'].includes(g.result) ? g.result.toLowerCase() : 'ungraded';
   return scoreGrade(g);
 }
-const CALIBRATION_TASKS = [['pin-tests', (o) => scoreGrade(o?.pin)], ['fix', (o) => scoreGrade(o?.fix)], ['review', reviewGrade]];
+// D8: a task object (pin, fix, review) may carry "tier": "T2" | "T3" (run 4 will); absent or T1 counts as today, a tier
+// counts apart under '<category>@T<k>'
+const CALIBRATION_TASKS = [['pin-tests', (o) => scoreGrade(o?.pin), (o) => o?.pin?.tier], ['fix', (o) => scoreGrade(o?.fix), (o) => o?.fix?.tier], ['review', reviewGrade, (o) => o?.review?.tier]];
+const CALIBRATION_SUFFIXES = ['', '@T2', '@T3'];
 
 function calibrationEvidence(policy, traceDir) {
   if (!existsSync(traceDir)) return null;
@@ -1420,12 +1443,15 @@ function calibrationEvidence(policy, traceDir) {
       const name = isStr(o?.profile) ? o.profile : key;
       const pr = policy.profiles.find((p) => p.model === model && p.effort === name.split('-').pop());
       const label = pr ? pr.id : `${name} (no policy profile)`;
-      for (const [cat, grade] of CALIBRATION_TASKS) {
+      for (const [cat, grade, tierOf] of CALIBRATION_TASKS) {
         const g = grade(o);
         if (g === null) continue; // the task was not run for this profile: nothing to count
-        const c = ((profiles[label] ??= {})[cat] ??= { pass: 0, partial: 0, fail: 0, ungraded: 0 });
+        const t = tierOf(o);
+        if (t !== undefined && !TIERS.includes(t)) throw new RouterError(4, `${run}/observations.json: observation ${JSON.stringify(key)} ${cat} tier ${JSON.stringify(t)} is not T1, T2 or T3; refusing to rate (${path})`);
+        const k = t === undefined || t === 'T1' ? cat : `${cat}@${t}`;
+        const c = ((profiles[label] ??= {})[k] ??= { pass: 0, partial: 0, fail: 0, ungraded: 0 });
         c[g] += 1;
-        const r = ((seen[label] ??= {})[cat] ??= []);
+        const r = ((seen[label] ??= {})[k] ??= []);
         if (!r.includes(run)) r.push(run);
       }
     }
@@ -1433,9 +1459,12 @@ function calibrationEvidence(policy, traceDir) {
   const lines = [];
   for (const label of Object.keys(profiles).sort()) {
     for (const [cat] of CALIBRATION_TASKS) {
-      const c = profiles[label][cat];
-      if (!c) continue;
-      lines.push(`CALIBRATION ${label} ${cat}: ${c.pass} pass, ${c.partial} partial, ${c.fail} fail${c.ungraded ? `, ${c.ungraded} ungraded` : ''} (${seen[label][cat].join(', ')})`);
+      for (const suffix of CALIBRATION_SUFFIXES) {
+        const k = `${cat}${suffix}`;
+        const c = profiles[label][k];
+        if (!c) continue;
+        lines.push(`CALIBRATION ${label} ${k}: ${c.pass} pass, ${c.partial} partial, ${c.fail} fail${c.ungraded ? `, ${c.ungraded} ungraded` : ''} (${seen[label][k].join(', ')})`);
+      }
     }
   }
   return { doc: { runs, profiles }, lines };

@@ -3141,3 +3141,107 @@ test('tiers D6: the committed ledger at the base commit holds no undispatched de
     assert.ok(blocked || dispatched, `${t}: decision seq ${last.seq} (${last.detail}) is pending`);
   }
 });
+
+const proposalLine = (p) => `${p.kind === 'demote' ? `demote ${p.profile} from` : `qualify ${p.profile} for`} ${p.category}: ${p.reason}`;
+// after every profile's qualified-at (the learning streams count outcomes from it) and before DEADLINE
+const LATE = '2026-10-18T02:00:00Z';
+// one decide - dispatch - outcome cycle on a policy, at a declared tier (or none); returns the decision
+function tieredCycle(trace, policyPath, taskId, category, tier, profile, value, over = {}) {
+  const pol = loadPolicy(policyPath);
+  const d = decide(reqFor(pol, category, { taskId, now: LATE, ...(tier ? { difficultyTier: tier } : {}), ...over }), { traceDir: trace, policyPath });
+  assert.equal(d.decision.profile, profile, `${taskId}: decided ${d.decision.profile}`);
+  dispatch(taskId, profile, { projectStop: CLEAR, traceDir: trace, policyPath, now: LATE });
+  recordOutcome(outcome({ 'task-id': taskId, outcome: value, 'owner-profile': profile, 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: trace, policyPath, now: LATE });
+  return d;
+}
+
+test('tiers D7: the learning loop keys its streams by (profile, category, tier): stats keys and proposals read <category>@T<k>; a decision without a tier counts at T1; untiered output is unchanged', () => {
+  // two consecutive verification-failed fixes at T2 on cc-opus-high
+  const trace = tmp();
+  for (const id of ['f-1', 'f-2']) tieredCycle(trace, TIERED_PATH, id, 'fix', 'T2', 'cc-opus-high', 'verification-failed');
+  const r = rate({ traceDir: trace, policyPath: TIERED_PATH, now: LATE });
+  assert.deepEqual(r.proposals.map(proposalLine), ['demote cc-opus-high from fix@T2: 2 consecutive verification-failed (f-1, f-2)']);
+  assert.match(r.text, /^PROPOSAL demote cc-opus-high from fix@T2: 2 consecutive verification-failed \(f-1, f-2\); not applied/m);
+  assert.deepEqual(Object.keys(r.stats.stats['cc-opus-high']), ['fix@T2']);
+  assert.equal(JSON.parse(readFileSync(join(trace, 'qualification-stats.json'), 'utf8')).stats['cc-opus-high']['fix@T2']['verification-failed'], 2);
+  // the next decide names the pending proposal by its tier
+  const next = decide(reqFor(loadPolicy(TIERED_PATH), 'fix', { taskId: 'f-3', difficultyTier: 'T2', now: LATE }), { traceDir: trace, policyPath: TIERED_PATH });
+  assert.ok(next.decision.uncertainty.includes('pending proposal (not applied): demote cc-opus-high from fix@T2: 2 consecutive verification-failed (f-1, f-2)'), next.decision.uncertainty.join('\n'));
+  // the same ledger read by the untiered fixture: no tier anywhere (its decisions carry one, the policy reads none)
+  const off = rate({ traceDir: trace, policyPath: HP4_OFF_PATH, now: LATE });
+  assert.deepEqual(off.proposals.map(proposalLine), ['demote cc-opus-high from fix: 2 consecutive verification-failed (f-1, f-2)']);
+  assert.deepEqual(Object.keys(off.stats.stats['cc-opus-high']), ['fix']);
+  assert.doesNotMatch(off.text, /@T/);
+  // decisions taken untiered (no difficulty-tier) count at T1 under the enforced policy
+  const old = tmp();
+  for (const id of ['o-1', 'o-2']) tieredCycle(old, HP4_OFF_PATH, id, 'fix', null, 'cc-haiku-high', 'verification-failed');
+  const read = rate({ traceDir: old, policyPath: TIERED_PATH, now: LATE });
+  assert.deepEqual(read.proposals.map(proposalLine), ['demote cc-haiku-high from fix@T1: 2 consecutive verification-failed (o-1, o-2)']);
+  // a failure at a tier the profile does not hold proposes nothing (it was not qualified there); two at a tier it holds
+  // through a higher entry (cc-opus-high holds fix@T2, so fix@T1) demote that tier
+  const low = tmp();
+  for (const id of ['l-1', 'l-2']) tieredCycle(low, TIERED_PATH, id, 'fix', 'T1', 'cc-opus-high', 'verification-failed', { candidates: ['cc-opus-high', 'cc-sonnet-xhigh'] });
+  assert.deepEqual(rate({ traceDir: low, policyPath: TIERED_PATH, now: LATE }).proposals.map(proposalLine), ['demote cc-opus-high from fix@T1: 2 consecutive verification-failed (l-1, l-2)']);
+});
+
+test('tiers D7: an outcome counts at the tier of the decision its dispatch was made under, not the task\'s latest one; three accepted outcomes at a tier the profile does not hold propose qualify for <category>@T<k>', () => {
+  const trace = tmp();
+  const pol = loadPolicy(TIERED_PATH);
+  // g-1: a T1 fix fails on cc-haiku-high; the lead raises the tier and the fresh decision routes to cc-opus-high
+  tieredCycle(trace, TIERED_PATH, 'g-1', 'fix', 'T1', 'cc-haiku-high', 'verification-failed');
+  const failed = outcome({ 'task-id': 'g-1', outcome: 'verification-failed', 'owner-profile': 'cc-haiku-high', 'original-brief-fingerprint': readLedger(trace)[0]['brief-fingerprint'] });
+  const raised = decide(reqFor(pol, 'fix', { taskId: 'g-1', difficultyTier: 'T2', previousResult: failed, now: LATE }), { traceDir: trace, policyPath: TIERED_PATH });
+  assert.deepEqual([raised.decision.profile, raised.decision['difficulty-tier'], raised.record.seq], ['cc-opus-high', 'T2', 4]);
+  dispatch('g-1', 'cc-opus-high', { projectStop: CLEAR, traceDir: trace, policyPath: TIERED_PATH, now: LATE });
+  recordOutcome(outcome({ 'task-id': 'g-1', outcome: 'accepted', 'owner-profile': 'cc-opus-high', 'original-brief-fingerprint': raised.briefFingerprint }), { traceDir: trace, policyPath: TIERED_PATH, now: LATE });
+  tieredCycle(trace, TIERED_PATH, 'g-2', 'fix', 'T1', 'cc-haiku-high', 'verification-failed');
+  const r = rate({ traceDir: trace, policyPath: TIERED_PATH, now: LATE });
+  assert.deepEqual(r.proposals.map(proposalLine), ['demote cc-haiku-high from fix@T1: 2 consecutive verification-failed (g-1, g-2)']);
+  assert.deepEqual([r.stats.stats['cc-haiku-high']['fix@T1']['verification-failed'], r.stats.stats['cc-opus-high']['fix@T2'].accepted], [2, 1]);
+  assert.equal(r.stats.stats['cc-haiku-high']['fix@T2'], undefined, 'g-1\'s first outcome is not counted at the task\'s later tier');
+  // three accepted outcomes at T2 on cc-haiku-high (holds fix@T1), recorded by hand as host deviations (dispatch refuses
+  // a deviation that fails Gate 2, F3): qualify for fix@T2, the tier they were decided at
+  const q = tmp();
+  for (const id of ['q-1', 'q-2', 'q-3']) {
+    const d = decide(reqFor(pol, 'fix', { taskId: id, difficultyTier: 'T2', now: LATE }), { traceDir: q, policyPath: TIERED_PATH });
+    const h = profileOf(pol, 'cc-haiku-high');
+    appendFileSync(join(q, 'ledger.jsonl'), `${JSON.stringify({ 'task-id': id, seq: 2, kind: 'dispatch', ts: LATE, profile: `(${h.id}, ${pol.harness.id}, anthropic, ${h.model}, ${h.effort}, ${h.config})`, counters: { 'calls-used': 1, 'calls-limit': 6, 'cash-spent': null, 'cash-cap': null, 'repairs-used': 0, 'repairs-allowed': 1 }, deadline: d.decision.deadline, 'brief-fingerprint': null, detail: 'host deviation: qualification run recorded by hand', 'outcome-ref': null, deviation: true, 'decision-seq': 1 })}\n`);
+    recordOutcome(outcome({ 'task-id': id, outcome: 'accepted', 'owner-profile': 'cc-haiku-high', 'original-brief-fingerprint': d.briefFingerprint }), { traceDir: q, policyPath: TIERED_PATH, now: LATE });
+  }
+  assert.deepEqual(rate({ traceDir: q, policyPath: TIERED_PATH, now: LATE }).proposals.map(proposalLine), ['qualify cc-haiku-high for fix@T2: 3 accepted while unqualified (host deviations: q-1, q-2, q-3)']);
+  // a decision file whose difficulty-tier is not a tier is refused (exit 4), never read as T1
+  const bad = tmp();
+  cpSync(q, bad, { recursive: true });
+  const f = join(bad, 'decisions', 'q-1-1.json');
+  const j = JSON.parse(readFileSync(f, 'utf8'));
+  j.decision['difficulty-tier'] = 'T9';
+  writeFileSync(f, JSON.stringify(j));
+  assert.throws(() => rate({ traceDir: bad, policyPath: TIERED_PATH, now: LATE }), (e) => e instanceof RouterError && e.code === 4 && /decision file q-1-1\.json: difficulty-tier "T9" is not T1, T2 or T3/.test(e.message));
+});
+
+test('tiers D8: rate prints a CALIBRATION line per (category, tier) for an observation task carrying tier T2 or T3; absent or T1 prints as today; any other tier is exit 4', () => {
+  const o = CAL3['haiku-high'];
+  const run4 = { 'haiku-high': { profile: 'haiku-high', fix: { ...o.fix, tier: 'T3' }, pin: { ...o.pin, tier: 'T1' }, usage: o.usage } };
+  const base = rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3]), policyPath: TIERED_PATH, now: NOW }).text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  assert.ok(base.every((l) => !/@T/.test(l)), 'runs 1-3 print no tier');
+  const r = rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3, run4]), policyPath: TIERED_PATH, now: NOW });
+  const lines = r.text.split('\n').filter((l) => l.startsWith('CALIBRATION '));
+  const all = '(calibration-1, calibration-2, calibration-3)';
+  assert.ok(lines.includes(`CALIBRATION cc-haiku-high fix: 3 pass, 0 partial, 0 fail ${all}`), lines.join('\n'));
+  assert.ok(lines.includes('CALIBRATION cc-haiku-high fix@T3: 1 pass, 0 partial, 0 fail (calibration-4)'), lines.join('\n'));
+  assert.ok(lines.includes('CALIBRATION cc-haiku-high pin-tests: 4 pass, 0 partial, 0 fail (calibration-1, calibration-2, calibration-3, calibration-4)'), lines.join('\n'));
+  // the tiered line follows its category's untiered one; every other line is the three runs' own
+  const i = lines.indexOf(`CALIBRATION cc-haiku-high fix: 3 pass, 0 partial, 0 fail ${all}`);
+  assert.equal(lines[i + 1], 'CALIBRATION cc-haiku-high fix@T3: 1 pass, 0 partial, 0 fail (calibration-4)');
+  assert.deepEqual(lines.filter((l) => !l.startsWith('CALIBRATION cc-haiku-high ')), base.filter((l) => !l.startsWith('CALIBRATION cc-haiku-high ')));
+  assert.deepEqual(r.stats.calibration.profiles['cc-haiku-high']['fix@T3'], { pass: 1, partial: 0, fail: 0, ungraded: 0 });
+  assert.deepEqual(r.proposals, [], 'calibration counts never propose');
+  // the same under the untiered fixture: D8 reads the observation, not the policy
+  const off = rate({ traceDir: calibrationTrace([CAL1, CAL2, CAL3, run4]), policyPath: HP4_OFF_PATH, now: NOW });
+  assert.deepEqual(off.text.split('\n').filter((l) => l.startsWith('CALIBRATION ')), lines);
+  for (const bad of ['T4', 't3', 3, null]) {
+    const trace = calibrationTrace([{ 'haiku-high': { ...run4['haiku-high'], fix: { ...o.fix, tier: bad } } }]);
+    assert.throws(() => rate({ traceDir: trace, policyPath: TIERED_PATH, now: NOW }), (e) => e instanceof RouterError && e.code === 4 && e.message.includes(`calibration-1/observations.json: observation "haiku-high" fix tier ${JSON.stringify(bad)} is not T1, T2 or T3; refusing to rate`), JSON.stringify(bad));
+    assert.equal(existsSync(join(trace, 'qualification-stats.json')), false);
+  }
+});
