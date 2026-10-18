@@ -105,3 +105,19 @@ sonnet-high filed it S4).
 - reproduce: holds True, reachable yes, severity none. Literal behaviour reproduced at HEAD d3aaf21: after a refresh whose 1st commit fails, replace throws ReplaceFailure(true), the file names the new pair, live is still the old account, and setLogin(a.signInId) returns at src/main/github-account-store.ts:167 (account.accessRef !== live.accessRef) writing nothing; the login lands neither in the file nor in live. This is already pinned as intended at tests/github-account-
 - reachability: holds True, reachable no, severity none. Store reading (holds): src/main/github-account-store.ts:145 throws ReplaceFailure(true) before :152 updates live, so disk names the new pair and live the old; setLogin :167 then returns on `account.accessRef !== live.accessRef` without writing. That is what the claim says, independent of any caller. Barrier (reachability): at HEAD src/main/github-signin.ts does not exist and src/main/index.ts:181-184 never constructs
 - refute: holds False, reachable no, severity none. The store-level mechanics the claim describes are accurate: after ReplaceFailure(true) (github-account-store.ts:145) live still names the old pair and the file the new one, so setLogin returns at :167 on `account.accessRef !== live.accessRef` — and HEAD already pins exactly that as intended at tests/github-account-store.test.ts:862-872, whose comment says "The service clears the account next (X-9) (U2-R10)". The spec
+
+## Lead mistake L-5 (a false "verified" claim, and a red suite committed over)
+- **mistake**: commit 490b7ed's report says "node --test route.test.mjs 80 pass, 0 fail with the edited policy (verified)". The
+  suite was red at that commit: 78 pass, 2 fail ('host-policy-2: the pin-tests category ...' expected 514000 for cc-opus-high;
+  'README: the host-policy-2 qualification table ...' expected '771k'). The lead's shell printed no suite summary (the grep
+  pattern did not match the reporter's output) and the lead wrote "verified" without seeing a result.
+- **where**: the lead's policy-maintenance turn, 2026-10-18 01:36 UTC; commit 490b7ed and the two commits on top of it.
+- **impact**: build/github-sign-in carried a red adapter suite for about 30 minutes (490b7ed..f2036bd); the policy-3 builder
+  found it at the start of its unit and fixed it first (ca102ea: the README row and the test's headroom basis widened to
+  accepted outcomes). Nothing delivered elsewhere is affected; the policy value itself was right.
+- **cause**: a verification claim written from the expectation of the command, not its observed output; standing rule 5
+  (a red suite stops work) was not applied because the red was not seen.
+- **fix**: ca102ea cherry-picked onto build/github-sign-in ahead of the rest of the unit; from now on the lead captures the
+  suite's output to a file and quotes its summary line.
+- **verified**: before the cherry-pick `node --test` exit 1 (78 pass, 2 fail); after it exit 0 (80 pass, 0 fail) - both runs
+  captured to files and their summary lines read (this entry's commit report quotes them).
