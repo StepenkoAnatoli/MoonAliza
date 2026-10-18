@@ -210,8 +210,7 @@ Gate walk (per candidate):
 Gate 5's reason: `cc-haiku-high` has the lowest all-in bound among the four eligible delegates, $5.2765 (work
 193000 x the output rate / 1e6 = $0.0965, review $4.18, overhead $1.00), against $9.04 for `cc-opus-high` and
 `cc-opus-xhigh` and $14.83 for `cc-fable-high`. A fix estimated at 261000 tokens or more no longer fits
-`cc-haiku-high` and goes to `cc-opus-high` ($9.04 at the median; `cc-opus-xhigh` ties on the bound and loses on effort
-up to its 246k).
+`cc-haiku-high` (or `cc-opus-xhigh`, 246k) and goes to `cc-opus-high` ($10.40 at 261000).
 
 ### The table (host-policy-3, generated from `host-policy.json`)
 

@@ -2244,6 +2244,23 @@ test('host-policy-3 routing: pin-tests -> cc-haiku-low; review -> cc-opus-high (
   assert.equal(decided.decision.profile, 'cc-haiku-high');
 });
 
+// P3-R2: the README's 'routing consequence' names what decide does above cc-haiku-high's headroom, and no tie that never
+// decides: at 261000 tokens cc-opus-xhigh (246k) fails Gate 2 too, so cc-opus-high is the only opus left
+test('README: a fix at cc-haiku-high\'s headroom or above routes to cc-opus-high, and the routing-consequence sentence says so without a cc-opus-xhigh tie', () => {
+  const live = loadPolicy(LIVE_OFF_PATH);
+  const haiku = live.profiles.find((p) => p.id === 'cc-haiku-high')['headroom-tested'];
+  const xhigh = live.profiles.find((p) => p.id === 'cc-opus-xhigh')['headroom-tested'];
+  const big = computeDecision(reqFor(live, 'fix', { estimatedTokens: haiku }), live, []);
+  assert.deepEqual([big.route, big.profile], ['delegate', 'cc-opus-high']);
+  assert.equal(big.candidates['cc-opus-xhigh'].reason, `context: ${haiku} tokens not below headroom-tested ${xhigh} on cc-opus-xhigh`);
+  assert.equal(big.candidates['cc-haiku-high'].reason, `context: ${haiku} tokens not below headroom-tested ${haiku} on cc-haiku-high`);
+  const bound = big.candidates['cc-opus-high']['all-in-bound-usd'].toFixed(2);
+  const readme = readFileSync(join(HERE, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+  const sentence = `A fix estimated at ${haiku} tokens or more no longer fits \`cc-haiku-high\` (or \`cc-opus-xhigh\`, ${xhigh / 1000}k) and goes to \`cc-opus-high\` ($${bound} at ${haiku}).`;
+  assert.ok(readme.includes(sentence), `README lacks: ${sentence}`);
+  assert.ok(!/cc-opus-xhigh` ties on the bound and loses on effort up to/.test(readme), 'the tie that never decides a fix route is gone');
+});
+
 // rate reads both calibration formats: run 1 grades review with the boolean review-grade.score, run 2 with the
 // three-valued review-grade.result (PASS | PARTIAL | FAIL); a task an observation does not carry (run 2's review-only
 // profiles have pin and fix null) was not run and is not counted
