@@ -525,15 +525,19 @@ const PANEL = 'src/renderer/GitHubAccountPanel.tsx';
 // Any destructuring from process (env among it, at any nesting) and any import or require of process itself (U7-R7), beside
 // process.env and process['env'];
 // writev(Sync) and a handle's writev() beside write(Sync).
-const moduleFindings = (source: string) => [...source.matchAll(
-  /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\}\s*=\s*process\b|(?:\bfrom\s*|\b(?:require|import)\s*\(\s*)['"](?:node:)?process['"]|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bwritev(?:Sync)?\(|\bcopyFile(?:Sync)?\b/g)].map(match => match[0]);
+// Child processes and worker threads, by their module names and by the calls that spawn (U7-R10): a token in a child's argv or a worker's
+// message reaches a place no scan reads.
+const FORBIDDEN = /\bconsole\b|\bprocess\s*(?:\.|\[)\s*['"`]?env\b|\}\s*=\s*process\b|(?:\bfrom\s*|\b(?:require|import)\s*\(\s*)['"](?:node:)?process['"]|\b(?:writeFile|appendFile)(?:Sync)?\b|\bcreateWriteStream\b|(?<!\bthis\.|\basync |\bprivate )\bwrite(?:Sync)?\(|\bwritev(?:Sync)?\(|\bcopyFile(?:Sync)?\b|['"](?:node:)?(?:child_process|worker_threads)['"]|\b(?:spawn|execFile|fork|execSync|spawnSync|execFileSync)\s*\(/g;
+const moduleFindings = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => match[0]);
+/** The same findings with their line, so a red guard names the module and the line it found (U7-R10). */
+const moduleLines = (source: string) => [...source.matchAll(FORBIDDEN)].map(match => `${source.slice(0, match.index ?? 0).split('\n').length}: ${match[0]}`);
 const panelFindings = (source: string) => [...source.matchAll(/localStorage|sessionStorage|clipboard/g)].map(match => match[0]);
 
 test('S-1 static guard: the new src/main/github-*.ts modules have no console, process.env or direct file write, and the panel no web storage or clipboard', () => {
   const root = fileURLToPath(new URL('..', import.meta.url));
   // The guard reads every github-*.ts module there is, so a new one cannot escape it unnoticed.
   expect(readdirSync(join(root, 'src', 'main')).filter(name => /^github-.*\.ts$/.test(name)).map(name => `src/main/${name}`).sort()).toEqual(NEW_MODULES);
-  for (const file of NEW_MODULES) expect(moduleFindings(readFileSync(join(root, file), 'utf8')), file).toEqual([]);
+  for (const file of NEW_MODULES) expect(moduleLines(readFileSync(join(root, file), 'utf8')), file).toEqual([]);
   expect(panelFindings(readFileSync(join(root, PANEL), 'utf8'))).toEqual([]);
   // The guard's own control: each forbidden form is found.
   // Other spellings of the same forms are found too (U7-R4): a bracketed or destructured console, a bracketed env, the direct writes
@@ -544,8 +548,11 @@ test('S-1 static guard: the new src/main/github-*.ts modules have no console, pr
     'copyFileSync(p, q);', 'written = await this.write(account, retired);', 'private async write(account, retiredRefs) {', 'private write(a) {',
     // The destructured and imported env, any import of process, and the gathered writes (U7-R7).
     'const { env } = process;', 'const { argv, env: e } = process;', 'const { env: { HOME } } = process;', "import { env } from 'node:process';", 'import * as p from "process";',
-    "const q = require('node:process');", "const r = await import('process');", 'fs.writevSync(fd, bufs);', 'await fh.writev(bufs);'].join(' ')))
+    "const q = require('node:process');", "const r = await import('process');", 'fs.writevSync(fd, bufs);', 'await fh.writev(bufs);',
+    // The child processes and worker threads, by module and by call (U7-R10).
+    "import { spawn } from 'node:child_process';", "spawnSync('git', [t]);", 'const w = require("worker_threads");'].join(' ')))
     .toEqual(['console', 'console', 'console', 'process.env', "process[ 'env", 'writeFile', 'appendFileSync', 'createWriteStream', 'writeSync(', 'write(', 'copyFile', 'copyFileSync',
-      '} = process', '} = process', '} = process', "from 'node:process'", 'from "process"', "require('node:process'", "import('process'", 'writevSync(', 'writev(']);
+      '} = process', '} = process', '} = process', "from 'node:process'", 'from "process"', "require('node:process'", "import('process'", 'writevSync(', 'writev(',
+      "'node:child_process'", 'spawnSync(', '"worker_threads"']);
   expect(panelFindings('localStorage.setItem(); sessionStorage.x; navigator.clipboard.writeText(code);')).toEqual(['localStorage', 'sessionStorage', 'clipboard']);
 });
