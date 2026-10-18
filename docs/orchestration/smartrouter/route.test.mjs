@@ -10,8 +10,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ADVISORY, CASH_UNCERTAINTY, RouterError, briefFingerprint, computeDecision, decide, dispatch,
-  loadPolicy, rate, readLedger, recordOutcome, status, validateBrief
+  ADVISORY, CASH_UNCERTAINTY, RouterError, TIERS_OFF, briefFingerprint, computeDecision, decide, dispatch,
+  loadPolicy, rate, readLedger, recordOutcome, requestTier, status, validateBrief
 } from './route.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -2907,4 +2907,129 @@ test('fixture: trace/policies/host-policy-4.json is the pre-revision policy, byt
   assert.equal(createHash('sha256').update(readFileSync(HP4_POLICY_PATH)).digest('hex'), bound['policy-sha256']);
   assert.equal(loadPolicy(HP4_POLICY_PATH)['policy-revision'], 'host-policy-4');
   assert.equal(JSON.parse(readFileSync(HP4_POLICY_PATH, 'utf8')).request, undefined, 'a policy, never a decision');
+});
+
+// an enforced or untiered derivative of the host-policy-4 fixture (feature-off, R1(a)), mutated; revision 5 itself is
+// tested on the live policy below
+const hp4PolicyWith = (mutate) => {
+  const p = JSON.parse(readFileSync(HP4_OFF_PATH, 'utf8'));
+  mutate(p);
+  const path = join(tmp(), 'host-policy.json');
+  writeFileSync(path, JSON.stringify(p, null, 2));
+  return path;
+};
+const enforce = (p) => { p['difficulty-tiers'] = 'enforced'; };
+const profileOf = (p, id) => p.profiles.find((x) => x.id === id);
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const exit2 = (fn, re) => assert.throws(fn, (e) => e instanceof RouterError && e.code === 2 && re.test(e.message), String(re));
+const FIVE_FILES = ['src/a.ts', 'src/b.ts', 'src/c.ts', 'tests/a.test.ts', 'tests/b.test.ts'];
+
+test('tiers D1/D2: "difficulty-tiers" is "enforced" or absent; tiered qualified-for and grade entries load under both, a malformed or doubled entry is refused (exit 2)', () => {
+  assert.equal(loadPolicy(hp4PolicyWith(enforce))['difficulty-tiers'], 'enforced');
+  for (const bad of ['on', 'Enforced', true, null, 1]) {
+    exit2(() => loadPolicy(hp4PolicyWith((p) => { p['difficulty-tiers'] = bad; })), new RegExp(`^invalid policy: difficulty-tiers must be "enforced" when present \\(absent: untiered\\); got ${JSON.stringify(bad)}$`));
+  }
+  // the tiered forms, and a tiered grade entry, load under an enforced and an untiered policy alike (the form is checked)
+  const tiered = (p) => {
+    profileOf(p, 'cc-opus-high')['qualified-for'] = ['build-core@T3', 'build-ui@T3', 'build-tests@T2', 'review@T1', 'fix@T2', 'research-collect', 'pin-tests'];
+    profileOf(p, 'cc-opus-high').evidence.push('calibration-4: fix@T3 PASS (n=1)', 'calibration-4: review@T2 PARTIAL (n=1)');
+  };
+  for (const mode of [enforce, () => {}]) {
+    const pol = loadPolicy(hp4PolicyWith((p) => { mode(p); tiered(p); }));
+    assert.deepEqual(profileOf(pol, 'cc-opus-high')['qualified-for'].slice(0, 2), ['build-core@T3', 'build-ui@T3']);
+  }
+  for (const mode of [enforce, () => {}]) {
+    for (const entry of ['fix@T4', 'fix@t2', 'fix@', 'fix@T1@T2', 'fix T2']) {
+      exit2(() => loadPolicy(hp4PolicyWith((p) => { mode(p); profileOf(p, 'cc-haiku-high')['qualified-for'] = [entry]; })),
+        new RegExp(`^invalid policy: profile cc-haiku-high qualified-for entry '${esc(entry)}' is not '<category>' or '<category>@T1\\|T2\\|T3'$`));
+    }
+    exit2(() => loadPolicy(hp4PolicyWith((p) => { mode(p); profileOf(p, 'cc-haiku-high')['qualified-for'] = ['astrology@T2']; })),
+      /^invalid policy: profile cc-haiku-high qualified-for names unknown category 'astrology'$/);
+    for (const pair of [['fix', 'fix@T2'], ['fix@T1', 'fix@T3'], ['fix', 'fix']]) {
+      exit2(() => loadPolicy(hp4PolicyWith((p) => { mode(p); profileOf(p, 'cc-haiku-high')['qualified-for'] = ['pin-tests', ...pair]; })),
+        new RegExp(`^invalid policy: profile cc-haiku-high qualified-for names fix twice \\('${pair[0]}', '${pair[1]}'\\): one entry per category$`));
+    }
+    for (const entry of ['calibration-4: fix@T4 PASS (n=1)', 'calibration-4: fix@ PASS (n=1)', 'calibration-4: fix @T2 PASS (n=1)']) {
+      exit2(() => loadPolicy(hp4PolicyWith((p) => { mode(p); profileOf(p, 'cc-haiku-high').evidence.push(entry); })),
+        new RegExp(`^invalid policy: profile cc-haiku-high evidence '${esc(entry)}' is not 'calibration-<n>: <category> PASS\\|PARTIAL\\|FAIL \\(n=<k>\\)'`));
+    }
+    exit2(() => loadPolicy(hp4PolicyWith((p) => { mode(p); profileOf(p, 'cc-haiku-high').evidence.push('calibration-4: astrology@T3 PASS (n=1)'); })),
+      /^invalid policy: profile cc-haiku-high evidence 'calibration-4: astrology@T3 PASS \(n=1\)' names unknown category 'astrology'$/);
+  }
+  // the CLI refuses such a policy before deciding anything
+  const r = cli(['decide', writeJson(req({ taskId: 'tp-1' })), '--trace', tmp(), '--policy', hp4PolicyWith((p) => { p['difficulty-tiers'] = 'on'; })]);
+  assert.equal(r.code, 2, r.stdout);
+  assert.match(r.stderr, /difficulty-tiers must be "enforced" when present/);
+});
+
+test('tiers D3: difficultyTier is T1, T2 or T3 when present; the floor is mechanical (uncertainty, the edit set without the architecture map, docs-mechanical T1); undeclared reads T3 high-risk, T2 otherwise, raised to the floor', () => {
+  const on = loadPolicy(hp4PolicyWith(enforce));
+  const off = loadPolicy(HP4_OFF_PATH);
+  for (const pol of [on, off]) {
+    for (const bad of ['T4', 't1', 'T0', '', 1, null, ['T1']]) {
+      exit2(() => computeDecision(reqFor(pol, 'fix', { difficultyTier: bad }), pol, []), new RegExp(`^${esc(`invalid request: difficultyTier must be "T1", "T2" or "T3" when present (got ${JSON.stringify(bad)})`)}$`));
+    }
+  }
+  const tierOf = (category, over = {}) => requestTier(reqFor(on, category, over), on);
+  // undeclared: the proposal's default, raised to the floor
+  assert.deepEqual(tierOf('fix'), { tier: 'T3', declared: null, floor: 'T1', default: 'T3' });
+  assert.deepEqual(tierOf('review'), { tier: 'T3', declared: null, floor: 'T1', default: 'T3' });
+  assert.deepEqual(tierOf('build-core'), { tier: 'T3', declared: null, floor: 'T1', default: 'T3' });
+  assert.deepEqual(tierOf('build-ui'), { tier: 'T2', declared: null, floor: 'T1', default: 'T2' });
+  assert.deepEqual(tierOf('pin-tests'), { tier: 'T2', declared: null, floor: 'T1', default: 'T2' });
+  assert.deepEqual(tierOf('docs-mechanical'), { tier: 'T2', declared: null, floor: 'T1', default: 'T2' });
+  assert.deepEqual(tierOf('build-ui', { permittedEffects: FIVE_FILES }), { tier: 'T3', declared: null, floor: 'T3', default: 'T2' });
+  assert.deepEqual(tierOf('build-ui', { permittedEffects: FIVE_FILES.slice(0, 3) }), { tier: 'T2', declared: null, floor: 'T2', default: 'T2' });
+  assert.deepEqual(tierOf('pin-tests', { uncertainty: 'high' }), { tier: 'T3', declared: null, floor: 'T3', default: 'T2' });
+  // docs-mechanical is always T1 at the floor, whatever the edit set or the uncertainty
+  assert.deepEqual(tierOf('docs-mechanical', { permittedEffects: FIVE_FILES, uncertainty: 'high', difficultyTier: 'T1' }), { tier: 'T1', declared: 'T1', floor: 'T1', default: 'T2' });
+  // declared at or above the floor: accepted as given
+  assert.deepEqual(tierOf('fix', { difficultyTier: 'T1' }), { tier: 'T1', declared: 'T1', floor: 'T1', default: 'T3' });
+  assert.deepEqual(tierOf('build-ui', { difficultyTier: 'T3' }), { tier: 'T3', declared: 'T3', floor: 'T1', default: 'T2' });
+  assert.deepEqual(tierOf('docs-mechanical', { difficultyTier: 'T3' }), { tier: 'T3', declared: 'T3', floor: 'T1', default: 'T2' });
+  // the architecture map is not in the edit set: four entries, one the map, is an edit set of three
+  const withMap = [...FIVE_FILES.slice(0, 3), 'docs/ARCHITECTURE.md'];
+  assert.deepEqual(tierOf('fix', { permittedEffects: withMap, difficultyTier: 'T2' }), { tier: 'T2', declared: 'T2', floor: 'T2', default: 'T3' });
+  assert.deepEqual(tierOf('fix', { permittedEffects: FIVE_FILES.slice(0, 2), difficultyTier: 'T1' }).floor, 'T1');
+  // declared below the floor: an invalid request naming both and the reason (exit 2), under the API and the CLI
+  const below = [
+    [{ permittedEffects: FIVE_FILES, difficultyTier: 'T1' }, 'difficultyTier T1 is below the floor T3 (edit set of 5 files, more than three)'],
+    [{ permittedEffects: FIVE_FILES, difficultyTier: 'T2' }, 'difficultyTier T2 is below the floor T3 (edit set of 5 files, more than three)'],
+    [{ permittedEffects: withMap, difficultyTier: 'T1' }, 'difficultyTier T1 is below the floor T2 (edit set of exactly three files)'],
+    [{ uncertainty: 'high', difficultyTier: 'T2' }, 'difficultyTier T2 is below the floor T3 (uncertainty high)'],
+    [{ uncertainty: 'high', permittedEffects: FIVE_FILES, difficultyTier: 'T1' }, 'difficultyTier T1 is below the floor T3 (uncertainty high; edit set of 5 files, more than three)']
+  ];
+  for (const [over, why] of below) {
+    const tail = '; a declared tier above the floor is accepted as given, one below it never';
+    exit2(() => computeDecision(reqFor(on, 'fix', over), on, []), new RegExp(`^invalid request: ${why.replace(/[()]/g, '\\$&')}${tail}$`));
+    const trace = tmp();
+    const r = cli(['decide', writeJson(reqFor(on, 'fix', { ...over, taskId: 'floor-1' })), '--trace', trace, '--policy', hp4PolicyWith(enforce)]);
+    assert.equal(r.code, 2, r.stdout);
+    assert.ok(r.stderr.includes(why), r.stderr);
+    assert.equal(existsSync(join(trace, 'ledger.jsonl')), false, 'nothing appended');
+    assert.equal(existsSync(join(trace, 'decisions')), false, 'no decision file');
+  }
+});
+
+test('tiers D1/D3: an untiered policy behaves as today - a declared tier is checked for form only (no floor), adds the not-enforced Uncertainty clause and nothing else; a tiered entry qualifies for its category', () => {
+  const off = loadPolicy(HP4_OFF_PATH);
+  const base = computeDecision(reqFor(off, 'fix'), off, []);
+  assert.equal(requestTier(reqFor(off, 'fix', { difficultyTier: 'T1' }), off).tier, null);
+  assert.equal(base.uncertainty.includes(TIERS_OFF), false, 'no clause without a declared tier');
+  assert.equal(TIERS_OFF, 'difficulty tiers: not enforced by this policy');
+  // a tier below the floor is no error here: nothing is enforced
+  const declared = computeDecision(reqFor(off, 'fix', { difficultyTier: 'T1', permittedEffects: FIVE_FILES }), off, []);
+  const same = computeDecision(reqFor(off, 'fix', { permittedEffects: FIVE_FILES }), off, []);
+  assert.deepEqual(declared.uncertainty, [...same.uncertainty, TIERS_OFF]);
+  const strip = (d) => ({ ...d, uncertainty: null, text: d.text.replace(`; ${TIERS_OFF}`, '') });
+  assert.deepEqual(strip(declared), strip(same), 'the rest of the decision is the undeclared one');
+  // tiered entries under an untiered policy: the tier is ignored, the category qualifies (a tiered policy that loses its key)
+  const tieredOff = loadPolicy(hp4PolicyWith((p) => {
+    for (const pr of p.profiles) pr['qualified-for'] = pr['qualified-for'].map((c) => `${c}@T${1 + (pr.id.length % 3)}`);
+  }));
+  for (const category of ['fix', 'review', 'pin-tests', 'build-core']) {
+    const a = computeDecision(reqFor(off, category), off, []);
+    const b = computeDecision(reqFor(off, category), tieredOff, []);
+    assert.deepEqual([b.route, b.profile, b['review-profile'], b['eligible-ordered']], [a.route, a.profile, a['review-profile'], a['eligible-ordered']], category);
+  }
 });

@@ -33,9 +33,32 @@ const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 const TUPLE = /^\([^,()]+(, [^,()]+){5}\)$/;
 const EXPIRY_WARN_DAYS = 14;
-// a calibration grade in a profile's evidence: 'calibration-<run>: <category> PASS|PARTIAL|FAIL (n=<count>)'. PARTIAL
-// (host-policy-3) is calibration-2's third review grade: one of the two ground-truth findings, no false blocking one
-const CALIBRATION_ENTRY = /^calibration-([1-9]\d*): (\S+) (PASS|PARTIAL|FAIL) \(n=([1-9]\d*)\)$/;
+// a calibration grade in a profile's evidence: 'calibration-<run>: <category>[@T<k>] PASS|PARTIAL|FAIL (n=<count>)'.
+// PARTIAL (host-policy-3) is calibration-2's third review grade: one of the two ground-truth findings, no false blocking
+// one. The tier (difficulty tiers, proposal 2.6) is optional: a tierless entry reads @T1
+const CALIBRATION_ENTRY = /^calibration-([1-9]\d*): ([^\s@]+)(?:@(T[1-3]))? (PASS|PARTIAL|FAIL) \(n=([1-9]\d*)\)$/;
+// difficulty tiers (SmartRouter docs/proposals/difficulty-tiers.md, the lead's decisions D1-D9 in briefs/policy5-builder.md).
+// A policy turns them on with "difficulty-tiers": "enforced" (D1); absent, the policy is untiered and behaves as before
+export const TIERS = ['T1', 'T2', 'T3'];
+export const TIERS_ENFORCED = 'enforced';
+export const TIERS_OFF = 'difficulty tiers: not enforced by this policy';
+const tierRank = (t) => TIERS.indexOf(t) + 1;
+const tiersEnforced = (policy) => policy['difficulty-tiers'] === TIERS_ENFORCED;
+// a qualified-for entry is '<category>' or '<category>@T1|T2|T3' (D2)
+const QUALIFICATION = /^([^\s@]+)(?:@(T[1-3]))?$/;
+function parseQualification(entry) {
+  const m = QUALIFICATION.exec(entry);
+  return m ? { category: m[1], tier: m[2] ?? null } : null;
+}
+// the tier at which a profile holds a category: 1-3, or 0 when it holds nothing of it. A bare entry reads @T1 (proposal
+// 2.2); under an untiered policy only "holds it or not" is read (D1: the form is checked, the tier ignored)
+function heldTier(pr, category) {
+  for (const e of pr['qualified-for']) {
+    const q = parseQualification(e);
+    if (q && q.category === category) return q.tier ? tierRank(q.tier) : 1;
+  }
+  return 0;
+}
 
 export class RouterError extends Error {
   constructor(code, message) {
@@ -110,6 +133,7 @@ function validatePolicy(p) {
   if (!s || !isInt(s['calls-per-task'], 1) || !isInt(s['same-profile-repairs-per-task']) || !(s['deadline-per-task-hours'] > 0)) fail('accounting.strict incomplete');
   if (!p.prices || typeof p.prices !== 'object') fail('prices missing');
   if (!p.categories || typeof p.categories !== 'object') fail('categories missing');
+  if (p['difficulty-tiers'] !== undefined && p['difficulty-tiers'] !== TIERS_ENFORCED) fail(`difficulty-tiers must be "${TIERS_ENFORCED}" when present (absent: untiered); got ${JSON.stringify(p['difficulty-tiers'])}`);
   for (const [id, c] of Object.entries(p.categories)) {
     if (!isStrArray(c.verification) || !isStrArray(c['required-tools']) || !isInt(c['median-tokens'], 1) || !isStr(c.risk)) fail(`category ${id} incomplete`);
   }
@@ -119,8 +143,16 @@ function validatePolicy(p) {
     if (!isStr(pr.id) || !isStr(pr.model) || !isStr(pr.effort) || !isStr(pr.config) || !isStrArray(pr['qualified-for'])) fail(`profile ${pr.id} incomplete`);
     if (ids.has(pr.id)) fail(`duplicate profile ${pr.id}`);
     ids.add(pr.id);
-    // a qualification names a category the policy has: a misspelt one would silently never qualify
-    for (const c of pr['qualified-for']) if (!Object.hasOwn(p.categories, c)) fail(`profile ${pr.id} qualified-for names unknown category '${c}'`);
+    // a qualification names a category the policy has: a misspelt one would silently never qualify. An entry may carry
+    // a tier (D2), and a category is held once: two entries for it (bare and tiered, or two tiers) would make the tier ambiguous
+    const held = new Map();
+    for (const c of pr['qualified-for']) {
+      const q = parseQualification(c);
+      if (!q) fail(`profile ${pr.id} qualified-for entry '${c}' is not '<category>' or '<category>@T1|T2|T3'`);
+      if (!Object.hasOwn(p.categories, q.category)) fail(`profile ${pr.id} qualified-for names unknown category '${q.category}'`);
+      if (held.has(q.category)) fail(`profile ${pr.id} qualified-for names ${q.category} twice ('${held.get(q.category)}', '${c}'): one entry per category`);
+      held.set(q.category, c);
+    }
     if (pr.evidence !== undefined && !isStrArray(pr.evidence)) fail(`profile ${pr.id} evidence must be an array of strings`);
     // a calibration grade entry (host-policy-2) is counted by the lead's qualification rules, so its form is fixed
     for (const e of pr.evidence ?? []) {
@@ -283,6 +315,37 @@ function validateRequest(r, policy) {
   if (r.hostOptIns !== undefined && (typeof r.hostOptIns !== 'object' || r.hostOptIns === null)) fail('hostOptIns');
   if (r.uncertainty !== undefined && typeof r.uncertainty !== 'string') fail('uncertainty');
   if (r.requiredIsolation !== undefined && !ISOLATION.includes(r.requiredIsolation)) fail('requiredIsolation');
+  // D3: the form is checked under any policy; the floor only under an enforced one (requestTier)
+  if (r.difficultyTier !== undefined && !TIERS.includes(r.difficultyTier)) fail(`difficultyTier must be "T1", "T2" or "T3" when present (got ${JSON.stringify(r.difficultyTier)})`);
+}
+
+// the floor (D3, proposal Item 1 rule 1): the mechanical part of the tier predicates, from the request's structural
+// fields only. The edit set is permittedEffects without the architecture map; docs-mechanical is always T1
+function tierFloor(r) {
+  if (r.category === 'docs-mechanical') return { tier: 'T1', reason: 'docs-mechanical is always T1' };
+  const edits = r.permittedEffects.filter((p) => !p.endsWith('ARCHITECTURE.md')).length;
+  const t3 = [];
+  if (r.uncertainty === 'high') t3.push('uncertainty high');
+  if (edits > 3) t3.push(`edit set of ${edits} files, more than three`);
+  if (t3.length) return { tier: 'T3', reason: t3.join('; ') };
+  if (edits === 3) return { tier: 'T2', reason: 'edit set of exactly three files' };
+  return { tier: 'T1', reason: `edit set of ${edits} file${edits === 1 ? '' : 's'}` };
+}
+
+// the request's difficulty tier under the policy (D3). Untiered: tier null, nothing enforced. Enforced: a declared tier
+// below the floor is an invalid request; at or above it, it is accepted as given; undeclared reads the proposal's
+// default (T3 for a high-risk category - an unknown one counts as high, as Difficulty does - T2 otherwise), raised to the floor
+export function requestTier(r, policy) {
+  const declared = r.difficultyTier ?? null;
+  if (!tiersEnforced(policy)) return { tier: null, declared, floor: null, default: null };
+  const floor = tierFloor(r);
+  if (declared && tierRank(declared) < tierRank(floor.tier)) {
+    throw invalid(`invalid request: difficultyTier ${declared} is below the floor ${floor.tier} (${floor.reason}); a declared tier above the floor is accepted as given, one below it never`);
+  }
+  const category = Object.hasOwn(policy.categories, r.category) ? policy.categories[r.category] : null;
+  const def = !category || category.risk === 'high' ? 'T3' : 'T2';
+  const tier = declared ?? (tierRank(floor.tier) > tierRank(def) ? floor.tier : def);
+  return { tier, declared, floor: floor.tier, default: def };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -604,7 +667,7 @@ function learn(policy, records, catMap) {
     if (!pr) continue;
     for (const cat of Object.keys(streams[pid]).sort()) {
       if (cat === 'unknown') continue;
-      const qualified = pr['qualified-for'].includes(cat);
+      const qualified = heldTier(pr, cat) > 0;
       const since = dayMs(pr['qualified-at']);
       const list = streams[pid][cat].filter((o) => since === null || o.ms >= since);
       if (qualified) {
@@ -703,7 +766,7 @@ function capabilities(ctx, pr, id, { category, tokens, tools }) {
   const reasons = [];
   const fp = fingerprintProblem(ctx.nowMs, pr);
   if (fp) reasons.push(fp);
-  if (!pr['qualified-for'].includes(category)) reasons.push(`${id} not qualified for ${category}`);
+  if (heldTier(pr, category) === 0) reasons.push(`${id} not qualified for ${category}`);
   const missing = pr.tools === true ? [] : Array.isArray(pr.tools) ? tools.filter((t) => !pr.tools.includes(t)) : tools;
   if (missing.length) reasons.push(`required tools missing on ${id}: ${missing.join(', ')}`);
   if (ctx.req.needsVision && pr.vision !== true) reasons.push(`vision required, ${id} lacks it`);
@@ -846,6 +909,7 @@ function reviewerFor(ctx, ids, leadId) {
 // ---------------------------------------------------------------------------------------------
 export function computeDecision(req, policy, records = [], catMap = {}, { probe = null, readings = [] } = {}) {
   validateRequest(req, policy);
+  const tiering = requestTier(req, policy);
   const optIns = optInsOf(policy, req.hostOptIns);
   const category = Object.hasOwn(policy.categories, req.category) ? policy.categories[req.category] : null;
   const leadId = policy.economics['lead-direct-profile'];
@@ -927,6 +991,8 @@ export function computeDecision(req, policy, records = [], catMap = {}, { probe 
   const { proposals } = learn(policy, records, catMap);
   const pending = [...proposals, ...expiryFlags(policy, nowMs)].filter((p) => chosen && p.profile === chosen.id);
   for (const p of pending) uncertainty.push(`pending proposal (not applied): ${proposalText(p)}`);
+  // D3: a declared tier against an untiered policy has no effect, and says so
+  if (tiering.tier === null && tiering.declared) uncertainty.push(TIERS_OFF);
 
   const isolation = route === 'blocked' ? 'none' : requiredIsolation(ctx, route === 'direct' ? 'direct' : 'delegate');
   const isolationReason = {
