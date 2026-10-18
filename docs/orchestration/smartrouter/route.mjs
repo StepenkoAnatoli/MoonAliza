@@ -309,12 +309,22 @@ export function readLedger(traceDir = DEFAULT_TRACE) {
   });
 }
 
-function appendRecord(traceDir, rec) {
-  const why = validateLedgerRecord(rec);
+// SmartRouter Item 4 (docs/proposals/usage-windows-gate4.md, accepted upstream 2026-10-18): §10.5's null cash counters
+// conform only beside counters["cash-basis"] == "estimate-only", and §10.3's null actual-spend only beside
+// evidence["actual-spend-basis"] == "estimate-only". The policy's accounting.mode says whether this host is estimate-only
+export const ESTIMATE_ONLY = 'estimate-only';
+const estimateOnly = (policy) => policy.accounting?.mode === ESTIMATE_ONLY;
+
+// every record goes through here, so every record of an estimate-only host carries the marker; decision files and
+// status keep §10.5's six counters (the marker is additive to records, spec-v2 §13). Lines already in the ledger are
+// never rewritten: those written before Item 4 stay unmarked
+function appendRecord(traceDir, policy, rec) {
+  const marked = estimateOnly(policy) ? { ...rec, counters: { ...rec.counters, 'cash-basis': ESTIMATE_ONLY } } : rec;
+  const why = validateLedgerRecord(marked);
   if (why) throw new RouterError(2, `refusing to append an invalid LedgerRecord (${why})`);
   mkdirSync(traceDir, { recursive: true });
-  appendFileSync(ledgerPath(traceDir), `${JSON.stringify(rec)}\n`);
-  return rec;
+  appendFileSync(ledgerPath(traceDir), `${JSON.stringify(marked)}\n`);
+  return marked;
 }
 
 const isDeviation = (r) => r.deviation === true || /^host deviation/.test(r.detail);
@@ -1032,7 +1042,7 @@ export function decide(req, { policyPath = DEFAULT_POLICY, traceDir = DEFAULT_TR
   mkdirSync(dir, { recursive: true });
   const decisionPath = join(dir, `${req.taskId}-${seq}.json`);
   writeFileSync(decisionPath, `${JSON.stringify(file, null, 1)}\n`, { flag: 'wx' });
-  const record = appendRecord(traceDir, {
+  const record = appendRecord(traceDir, policy, {
     'task-id': req.taskId, seq, kind: 'decision', ts: req.now, profile: d['profile-tuple'], counters: ctr,
     deadline: d.deadline, 'brief-fingerprint': fp, detail: `route ${d.route}`,
     'outcome-ref': null,
@@ -1176,7 +1186,7 @@ export function dispatch(taskId, profileId, { policyPath = DEFAULT_POLICY, trace
   }
   recheck({ traceDir, policy, records, readings, taskId, dec, route, profileId, now, projectStop, deviation: !asDecided });
   const detail = asDecided ? `${repair ? 'same-profile repair dispatch' : 'dispatch'} as decided (decision seq ${dec.seq})` : `host deviation: ${deviation}; route said ${decided.join(', ')}`;
-  return appendRecord(traceDir, {
+  return appendRecord(traceDir, policy, {
     'task-id': taskId, seq: st.lastSeq + 1, kind: 'dispatch', ts: now, profile: profileTuple(policy, pr),
     counters: counters(st, st.callsUsed + 1, st.repairsUsed + (repair ? 1 : 0)), deadline: dec.deadline,
     'brief-fingerprint': dec['brief-fingerprint'], detail, 'outcome-ref': null,
@@ -1203,7 +1213,7 @@ export function recordOutcome(o, { policyPath = DEFAULT_POLICY, traceDir = DEFAU
   const dir = join(traceDir, 'outcomes');
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${o['task-id']}-${seq}.json`), `${JSON.stringify(o, null, 1)}\n`, { flag: 'wx' });
-  return appendRecord(traceDir, {
+  return appendRecord(traceDir, policy, {
     'task-id': o['task-id'], seq, kind: 'outcome', ts: now, profile: profileTuple(policy, pr), counters: counters(st),
     deadline: st.lastDecision?.deadline ?? null, 'brief-fingerprint': FINGERPRINT.test(fp) ? fp : null,
     detail: `outcome ${o.outcome} (dispatch seq ${disp.seq})`, 'outcome-ref': o['task-id'], 'dispatch-seq': disp.seq,
