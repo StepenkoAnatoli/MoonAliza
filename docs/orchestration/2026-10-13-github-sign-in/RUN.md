@@ -267,3 +267,11 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - sr-evidence (the evidence check and the qualification table, `briefs/evidence-check-builder.md`): decision seq 1 delegate cc-opus-high (build-ui@T3), dispatch seq 2, workflow wf_2f45f911-b10's sibling (id in the next entry), worktree sr-evidence on `tools/calibration-evidence-check`, also stacked on the kit.
 - Usage 21:59:28Z: five_hour 0.15, seven_day 0.76. Gate 4 admitted both (projection with both in flight about 0.78, under the 0.80 limit for seven_day). **Run 4 stage 4a (4.8M-9.6M tokens) does not fit the seven-day window before its reset on 2026-10-24 18:00Z**: with the week at 0.76 and the stop rule at 0.90, it waits for the reset or the operator's call.
 - The PR #105 adapter copy lags the host by the sr-kit, sr-pack and sr-evidence trace rows and the 1263000 headroom; they ride the next refresh.
+
+## 2026-10-18 23:20 UTC (originating session) - unit sr-pack accepted, SmartRouter PR #107 opened
+
+- Workflow wf_15173ede-7d9 (cc-opus-high: build, review FIX R-1 S2/R-2 S4/R-3 S4, fix 1, re-review FIX N-1 S3/N-2 S4, fix 2, re-review FIX with N-3 S2 left): 1,110,316 harness tokens, 6 agents. The lead closed N-3 at integration with the reviewer's one-token pin change (aa10cb2, red-first, guard proof). Reports: `reports/sr-pack-{1,review-1,fix-1,rereview-1,fix-2,rereview-2}.md`.
+- SmartRouter branch `tools/calibration-shared-pack` at aa10cb2, draft PR #107 stacked on #106 (base `tools/calibration-kit`; retarget to main when #106 merges), subscribed.
+- Outcome sr-pack seq 3 accepted; no headroom proposal (1,110,316 < 1,263,000).
+- Lesson for the host pack: the pack's discriminating power is its accepted pin; four review rounds each found a wrong fix the previous pin let through. The host pack brief must ask for the wrong-fix matrix up front.
+- sr-evidence (wf_799c944d-ef8) in its first fix round (F1, F2).
