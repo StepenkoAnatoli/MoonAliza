@@ -282,10 +282,18 @@
       }
     ]
   },
-  "headroom-proposals": [],
-  "ledger-sha256": "e414d2f8639e1c8154fd9abeaeb04eff17db004e9e55380ef100a87b5abb0ee0",
-  "outcome-records": 19,
-  "outcomes-counted": 17,
+  "headroom-proposals": [
+    {
+      "from": 1030000,
+      "profile": "cc-opus-high",
+      "task": "sr-kit",
+      "to": 1263000,
+      "tokens": 1262204
+    }
+  ],
+  "ledger-sha256": "4517c5677972989dbaa10fec07929790df31c1121c450c644ea04592f3112e27",
+  "outcome-records": 20,
+  "outcomes-counted": 18,
   "policy-revision": "host-policy-6",
   "proposals": [],
   "stats": {
@@ -337,7 +345,7 @@
         "verification-failed": 1
       },
       "build-ui@T3": {
-        "accepted": 1,
+        "accepted": 2,
         "blocked": 0,
         "cancelled": 0,
         "cost-overrun": 0,

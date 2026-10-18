@@ -253,3 +253,10 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Outcome sr-policy-6 seq 4 accepted, 965,306 tokens (below the 1,030,000 headroom: no proposal). Usage 21:14:19Z: five_hour 0.11, seven_day 0.75.
 - Next: refresh PR #105 with revision 6 (same branch, retitled), then the kit unit's result (wf_2f45f911-b10, in flight).
 - 21:25 UTC: PR #105 refreshed with revision 6 (fe89efd on `hosts/claude-code-revision-5`, gate green locally: 141 node tests, artifacts OK, conform_spec CONFORMANT, run_regression PASS); PR retitled to cover revisions 5 and 6. Kit unit sr-kit (wf_2f45f911-b10) in its fix round.
+
+## 2026-10-18 22:05 UTC (originating session) - unit sr-kit accepted, SmartRouter PR #106 opened
+
+- Workflow wf_2f45f911-b10 (cc-opus-high: build, review FIX F1-F3, fix 1, re-review FIX N1-N2, fix 2, re-review FIX with one S4 left): 1,262,204 harness tokens, 6 agents. Reports: `reports/sr-kit-{1,review-1,fix-1,rereview-1,fix-2,rereview-2}.md`. The remaining S4 (N3: a leading `//` or a `.` segment spelled a path past the isolation guards) the lead fixed red-first at integration (229aa1f, two guard proofs).
+- SmartRouter branch `tools/calibration-kit` at 229aa1f (23 files, 57 kit tests, gate green through the hook on every commit), draft PR #106, subscribed.
+- Outcome sr-kit seq 4 accepted, 1,262,204 tokens; rate proposes cc-opus-high headroom-tested 1030000 -> 1263000, ratified in the next commit.
+- Next: the shared synthetic subject pack (3c), the CI check (3d), the qualification table (3e); then run 4 stage 4a with the host-pack T1 cells for the four undelegatable categories.
