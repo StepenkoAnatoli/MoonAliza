@@ -88,3 +88,11 @@ node route.mjs decide briefs/requests/sr-kit-cases.json
 
 Each request declares `difficultyTier` (T3: edit sets above three files, new harness parts). Worktrees: SmartRouter
 units from `tools/calibration-kit` (or main after #106); the adapter unit from MoonAliza `build/github-sign-in`.
+
+## Follow-ups recorded from the re-review of 2026-10-19
+
+- Kit hardening after run 4 (reviewer's R-2 decision): `historyless-checkout.sh` and the launch step refuse a TARGET or
+  checkout root that can realpath-reach the kit's own `subject-pack/*/trees/accepted/`, so a host checking out inside
+  the kit tree is caught by the kit rather than by its README. Not before run 4: it needs the kit to know its install
+  root.
+- The four dropped entries stay dropped until the T1 host-pack cells qualify a profile (the operator's decision).
