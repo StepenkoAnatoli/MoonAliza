@@ -9,8 +9,8 @@ scheduled trigger it held for SmartRouter (the run 4 reminder, the #109 check-in
 | What | Where | State |
 |------|-------|-------|
 | MoonAliza build branch | `StepenkoAnatoli/MoonAliza` `build/github-sign-in` (this file's commit is its head) | the run ledger `docs/orchestration/2026-10-13-github-sign-in/RUN.md` (read the last three entries), the adapter `docs/orchestration/smartrouter/` (route.mjs, host-policy-6, trace), the run 4 plan and briefs under `docs/orchestration/smartrouter/briefs/` |
-| SmartRouter main | `StepenkoAnatoli/SmartRouter` `main` at `ac2a7bb` | #105 (adapter revisions 5-6), #106 (calibration kit), #107 (shared pack), #108 (evidence check + table) all merged 2026-10-19 by the lead on the reviewer's approval; gate green on main (`python3 tools/run_regression.py`) |
-| SmartRouter open PR | #109 `hosts/claude-code-refresh-6` at `c76ccb7` (the operator's main merge on top of 1a26f46) | the adapter refresh with the sr-kit/sr-pack/sr-evidence traces, the 1492000 headroom and the pinned usage-windows test; draft, waiting on the reviewer; merge when CI is green and the reviewer approves (`merge` method, as every merge in this repo) |
+| SmartRouter main | `StepenkoAnatoli/SmartRouter` `main` at `311c36f` | #105 (adapter revisions 5-6), #106 (calibration kit), #107 (shared pack), #108 (evidence check + table) all merged 2026-10-19 by the lead on the reviewer's approval; gate green on main (`python3 tools/run_regression.py`) |
+| SmartRouter #109 | `hosts/claude-code-refresh-6` merged 2026-10-19 03:37Z -> main `311c36f` | the adapter mirror is current: `hosts/claude-code` equals MoonAliza `docs/orchestration/smartrouter/` minus `briefs/` at 28fc944; no open SmartRouter PR remains. The policy's `smartrouter.revision` binding (fbe7bca) moves to `311c36f` at the next adapter revision (host-policy-7) |
 | Usage windows | reading 2026-10-19T03:01:34Z: five_hour 0.05, seven_day 0.80 | **Gate 4 blocks every adapter dispatch until the seven-day reset at 2026-10-24 18:00 UTC** (limit = stop-at 0.90 minus lead-reserve 0.10 = 0.80, reached). The operator may override by saying so; the lead never does |
 | Research-Kit | branch `claude/compassionate-lovelace-n9ow86`, untouched, far behind origin/main | nothing pending there |
 
@@ -27,8 +27,7 @@ clones under `/home/user/`; Node 24 at `/versions/node/v24.21.0/bin`; the SmartR
 > the adapter (`docs/orchestration/smartrouter/route.mjs decide | dispatch | outcome`, with a usage reading under 30
 > minutes old from `list_events kinds=["rate_limit_event"]` pasted with `route.mjs usage`); nothing is dispatched while
 > Gate 4 blocks (seven_day at 0.80 until the reset on 2026-10-24 18:00 UTC) unless I override; stop and save at 0.90,
-> no new launch past 0.85. First: check SmartRouter #109 (merge it when CI is green and the reviewer approves; it is
-> the adapter mirror and the policy binding's next refresh). At the reset: fresh reading, `decide` and `dispatch`
+> no new launch past 0.85. No SmartRouter PR is open (#105-#109 merged). At the reset: fresh reading, `decide` and `dispatch`
 > `sr-pack-4a` and `sr-kit-cases` from `briefs/requests/` (fill `now` and `deadline`), worktrees from SmartRouter
 > `main`; then `sr-policy-7` and `sr-packs-t1`; then freeze and launch stage 4a per the plan. Write less text; report
 > at the end of each phase; merge as you decide, carefully; do not lower quality.
