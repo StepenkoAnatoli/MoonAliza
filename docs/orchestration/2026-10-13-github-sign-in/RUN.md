@@ -311,3 +311,11 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Every scheduled trigger this session held for SmartRouter is cancelled (#106/#107/#108 check-ins, the #109 check-in, the run 4 reminder): the new chats own them.
 - Next action: see `NEXT-CHAT.md` (Chat A: SmartRouter run 4, starting with #109; Chat B: MoonAliza items 4 and 5). Nothing is dispatchable before the seven-day reset on 2026-10-24 18:00Z unless the operator overrides.
 - 03:37 UTC: #109 merged (311c36f) after the operator marked it ready and CI was green at c76ccb7 (mergeable clean); no SmartRouter PR remains open. NEXT-CHAT.md updated: Chat A starts at the reset.
+
+## 2026-10-19 03:50 UTC (Chat A, Windows desktop) - reading taken, Gate 4 still blocks, the reset trigger armed
+
+- Usage 03:46Z (desktop `get_usage`; not recorded in `trace/usage.jsonl`, no decision taken): five_hour 0.11 (resets 05:20Z), seven_day 0.82 (resets 2026-10-24 18:00Z), weekly Fable 0.87 (same reset). Gate 4 blocks every dispatch; nothing dispatched.
+- Reading source on this host: the desktop exposes plan windows through `get_usage` (percent used, reset time), not `list_events kinds=["rate_limit_event"]`; the lead maps 5-hour -> five_hour and weekly all-models -> seven_day and records the source in the reading's `note`. The weekly Fable window is not modelled by the policy; the 4a Fable cells draw on it.
+- Armed: a one-time local scheduled task `smartrouter-run4-at-reset` at 2026-10-24 18:07Z (fresh reading, then sr-pack-4a and sr-kit-cases per R4-7; it stops if another session already dispatched them). Prepared: MoonAliza `npm ci` in this clone for the packs' `MOONALIZA_CLONE` tests (lockfile identical at 16f637f, 01a8604 and the head).
+- Machine notes: `python3` is the broken Store alias here (the SmartRouter hook calls `python`, which works); bash scripts run under Git Bash.
+- Next action: at the reset, the scheduled task (or this chat, if the operator returns first): fresh reading, decide and dispatch sr-pack-4a and sr-kit-cases.
