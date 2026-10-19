@@ -4,6 +4,7 @@ import { EventSchema } from './events';
 import { HardwareSchema } from './contracts';
 import { ContextStateSchema, UsageUpdateSchema } from './context';
 import { PublicErrorSchema } from './errors';
+import { GitHubAccountStatusSchema, GitHubOpenTargetSchema } from './github-account';
 
 const Empty = z.object({}).strict();
 const Deleted = z.object({ deleted: z.literal(true) }).strict();
@@ -18,6 +19,7 @@ const projectResult = z.object({ project: ProjectSchema }).strict();
 const sessionResult = z.object({ session: SessionSchema }).strict();
 const runResult = z.object({ run: RunSchema }).strict();
 const profileResult = z.object({ profile: ProfileSchema }).strict();
+const githubAccountResult = z.object({ account: GitHubAccountStatusSchema }).strict();
 const Page = { after: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0), limit: z.number().int().min(1).max(1000).default(500) };
 export const RunEventsParams = z.object({ runId: IdSchema, ...Page }).strict();
 export const ProfileSaveParams = z.object({
@@ -136,6 +138,12 @@ export const MethodSpec = {
   'research.document.read': method(ResearchDocumentReadParams, ResearchDocumentSchema, 'main', 'read', 'project-member'),
   // Deletes a finished job's retained package bytes; the job and its journal stay (docs/specification/research-purge.md).
   'research.purge': method(ResearchId, ResearchPurgeResultSchema, 'main', 'write', 'project-member'),
+  // GitHub sign-in (docs/specification/github-sign-in.md 3.3): main-owned; flow outcomes are data in the account status, never thrown.
+  'github.account.read': method(Empty, githubAccountResult, 'main', 'read', 'authenticated'),
+  'github.signIn.start': method(Empty, githubAccountResult, 'main', 'network', 'user-confirmed'),
+  'github.signIn.cancel': method(Empty, githubAccountResult, 'main', 'lifecycle', 'authenticated'),
+  'github.signOut': method(Empty, githubAccountResult, 'main', 'write', 'user-confirmed'),
+  'github.open': method(z.object({ target: GitHubOpenTargetSchema }).strict(), z.object({ opened: z.literal(true) }).strict(), 'main', 'native', 'user-confirmed'),
   'skill.list': method(ProjectId, z.object({ skills: z.array(SkillSchema).max(1000) }).strict(), 'engine', 'read', 'project-member'),
   'mission.create': method(z.object({ projectId: IdSchema, profileId: IdSchema, title: z.string().trim().min(1).max(256), instructions: z.string().trim().min(1).max(65536), modelStepBudget: z.number().int().min(1).max(1000).default(120), maxAgents: z.number().int().min(1).max(5).default(5) }).strict(), missionResult, 'engine', 'write', 'trusted-project'),
   'mission.read': method(MissionId, missionResult, 'engine', 'read', 'mission-owner'),

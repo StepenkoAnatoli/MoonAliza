@@ -1,0 +1,52 @@
+{
+  "taskId": "review-int-spec",
+  "objective": "Integration review of GitHub sign-in, spec reviewer, at the integration head after fix-c1-c3 and U8 (base 6ac1007): every spec rule in the code or recorded as built, every REQUIREMENTS row with a test that exercises it, the As built claims true at head, U0 unchanged, X2-1/X2-2 text, the docs-unit input list (briefs/integration-review.md).",
+  "category": "review",
+  "unit": "integration-review",
+  "estimatedTokens": 400000,
+  "difficultyTier": "T3",
+  "permittedEffects": [
+    "docs/orchestration/2026-10-13-github-sign-in/reports/integration-review-spec-*.md"
+  ],
+  "sources": [
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/integration-review.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/common.md",
+    "docs/specification/github-sign-in.md",
+    "docs/orchestration/2026-10-13-github-sign-in/REQUIREMENTS.md",
+    "docs/orchestration/2026-10-13-github-sign-in/BREAKDOWN.md",
+    "docs/orchestration/2026-10-13-github-sign-in/DECISIONS.md",
+    "docs/orchestration/2026-10-13-github-sign-in/MANDATE.md"
+  ],
+  "nonGoals": [
+    "no commit, no push",
+    "no tracked file left changed (scratch tests and mutations restored, sha256 checked)",
+    "no network",
+    "never --no-verify",
+    "no re-review of a unit the brief marks accepted beyond the rows assigned to this role",
+    "no calibration item recorded as not real re-raised without a new reproduction"
+  ],
+  "acceptanceChecks": [
+    {
+      "command": "each finding reproduced at head with the shipped harness",
+      "expect": "findings carry reproductions; proofs re-run"
+    },
+    {
+      "command": "git status --porcelain",
+      "expect": "empty at the end, the report excepted"
+    }
+  ],
+  "dataClasses": [
+    "repo-code",
+    "run-docs"
+  ],
+  "needsVision": false,
+  "projectStop": {
+    "redSuite": false,
+    "gateOff": false,
+    "researchGateFailing": false
+  },
+  "previousResult": null,
+  "deadline": "{{dispatch time + 8h, ISO-8601}}",
+  "now": "{{dispatch time, ISO-8601}}"
+}

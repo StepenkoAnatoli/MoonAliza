@@ -1,4 +1,8 @@
 import { GitHubReader } from './github';
+import { GitHubAccountStore } from './github-account-store';
+import { GITHUB_APP } from './github-app';
+import { lateFetch } from './github-credential';
+import { GitHubSignIn } from './github-signin';
 import { type GitHubInput } from '../shared/github';
 import { app, BrowserWindow, ipcMain, dialog, safeStorage, session, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
@@ -40,6 +44,7 @@ let window: BrowserWindow | undefined;
 let engine: Engine | undefined;
 let quitting = false;
 let collector: CollectorSupervisor | undefined;
+let github: GitHubSignIn | undefined;
 let review: ReviewSupervisor | undefined;
 let researchKit: ResearchKit | null = null;
 const active = new Map<string, { run: Run; stop: AbortController; github: GitHubReader }>();
@@ -55,6 +60,13 @@ if (ownsInstance) void app.whenReady().then(async () => {
   const researchData = join(data, 'research-kit'); await mkdir(researchData, { recursive: true });
   const collectorSettings = new CollectorSettings(join(researchData, 'collector.json'), vault);
   await collectorSettings.open();
+  // GitHub sign-in (docs/specification/github-sign-in.md 9, 10): the account file holds vault refs only; nothing is sent at startup
+  // (L-2), and lateFetch looks globalThis.fetch up per call, so an e2e patch made after startup still catches every request.
+  const githubStore = new GitHubAccountStore(join(data, 'github', 'account.json'), vault, GITHUB_APP.clientId);
+  await githubStore.open();
+  const githubSignIn = new GitHubSignIn({ store: githubStore, vault, epoch: () => engine?.epoch ?? '',
+    encryptionAvailable: () => safeStorage.isEncryptionAvailable(), fetcher: lateFetch });
+  github = githubSignIn;
   // No installation file means research is not installed; an invalid one is treated the same, and jobs refuse with RESEARCH_KIT_UNAVAILABLE.
   const installation = await readResearchInstallation(join(researchData, 'installation.json')).catch(() => null);
   researchKit = installation ? new ResearchKit({ ...installation, storageRoot: join(researchData, 'storage'), helperPath }) : null;
@@ -179,9 +191,11 @@ if (ownsInstance) void app.whenReady().then(async () => {
   });
   engine.start();
   const references = z.array(z.string()).parse(await engine.control({ method: 'vault.references' }));
-  // The collector token lives outside the engine database: its reference must survive the reconcile.
-  await vault.reconcile(new Set([...references, ...collectorSettings.references()]));
+  // The collector token and the GitHub sign-in's pair live outside the engine database: their references must survive the reconcile.
+  // When the GitHub store could not read its file, its references are unknown, so this start keeps every unreferenced staged entry; the next readable start deletes them.
+  await vault.reconcile(new Set([...references, ...collectorSettings.references(), ...githubStore.references()]), { keepStaged: githubStore.unreadAtOpen() });
   await collectorSettings.finishStartup();
+  await githubStore.finishStartup();
   void supervisor.attach();
   // project.policy.update and run.start share a per-project lock; the research switch refuses before stopping anything.
   const policyRoute = createPolicyRoute({
@@ -190,7 +204,8 @@ if (ownsInstance) void app.whenReady().then(async () => {
     active, revokeContext: runId => vault.revokeContext(runId),
     holdCollector: projectId => supervisor.hold(projectId), holdReview: projectId => reviewSupervisor.hold(projectId),
     commandsExecuting: () => executingCommands.size > 0,
-    admit: run => { active.set(run.id, { run, stop: new AbortController(), github: new GitHubReader() }); },
+    // A conversation run's reader signs its reads when the user is signed in to GitHub, and redacts private file text (spec 7).
+    admit: run => { active.set(run.id, { run, stop: new AbortController(), github: new GitHubReader(undefined, githubSignIn, text => vault.redact(text)) }); },
   });
 
   async function handle(request: Request): Promise<unknown> {
@@ -298,6 +313,12 @@ if (ownsInstance) void app.whenReady().then(async () => {
       // A finished job's retained ZIPs; references read under the kit's storage lock (docs/specification/research-purge.md).
       case 'research.purge': return purgeResearch({ control: control => { if (!engine) throw new Error('ENGINE_UNAVAILABLE'); return engine.control(control); }, kit: researchKit }, request.params.researchId);
       case 'external.open': await shell.openExternal(request.params.url); return { opened: true };
+      // GitHub sign-in (spec 3.3): outcomes are data in the status, never thrown; github.open opens a constant, never a renderer URL.
+      case 'github.account.read': return { account: githubSignIn.status() };
+      case 'github.signIn.start': return { account: await githubSignIn.start() };
+      case 'github.signIn.cancel': return { account: githubSignIn.cancel() };
+      case 'github.signOut': return { account: await githubSignIn.signOut() };
+      case 'github.open': await shell.openExternal(githubSignIn.openTarget(request.params.target)); return { opened: true };
       default: throw new Error('NOT_IMPLEMENTED');
     }
   }
@@ -324,13 +345,16 @@ app.on('window-all-closed', () => app.quit());
 app.on('before-quit', event => {
   if (quitting || !engine) return;
   event.preventDefault(); quitting = true;
+  // Before the abort loop and any await: close()'s synchronous part ends a pending GitHub sign-in now; the quit then waits for a
+  // refresh or a commit point in flight, at most quitWaitMs (spec 9).
+  const githubClosed = github?.close().catch(() => {}) ?? Promise.resolve();
   for (const item of active.values()) item.stop.abort();
   // The supervisor first, while the engine can still take a started dispatcher's commit; then the kit's children, then the engine.
   const currentEngine = engine;
-  void (async () => {
+  void Promise.all([(async () => {
     await collector?.close().catch(() => {});
     await review?.close().catch(() => {});
     await researchKit?.close().catch(() => {});
     await currentEngine.close();
-  })().finally(() => app.quit());
+  })(), githubClosed]).finally(() => app.quit());
 });

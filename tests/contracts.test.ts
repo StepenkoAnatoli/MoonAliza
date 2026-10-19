@@ -1,9 +1,11 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, expectTypeOf, test } from 'vitest';
 import {
-  ApprovalSchema, EventSchema, HostMessageSchema, MethodSpec, ModelChunkSchema,
+  ApprovalSchema, EventSchema, GitHubAccountStatusSchema, GitHubOpenTargetSchema, HostMessageSchema, MethodSpec, ModelChunkSchema,
   ProfileSchema, ProjectSchema, ProviderWireStateSchema, RequestSchema, ResponseSchema,
   RunEventsParams, authorizeHostMessage, parseResult, wireStateMatches,
 } from '../src/shared/index';
+import type { HostMessage } from '../src/shared/index';
+import type { CredentialBinding } from '../src/main/vault';
 
 const at = '2026-09-24T12:00:00.000Z';
 const project = {
@@ -50,6 +52,7 @@ describe('public renderer contracts', () => {
       'settings.read', 'settings.save', 'diagnostics.export', 'external.open', 'changes.list', 'changes.read', 'changes.undo',
       'storage.read', 'recovery.list', 'recovery.inspect', 'recovery.acknowledge',
       'hardware.read', 'runtime.inspect',
+      'github.account.read', 'github.signIn.start', 'github.signIn.cancel', 'github.signOut', 'github.open',
     ];
     expect(Object.keys(MethodSpec).sort()).toEqual(expected.sort());
     for (const spec of Object.values(MethodSpec)) {
@@ -161,5 +164,76 @@ describe('main-owned host capabilities', () => {
       { purpose: 'provider-test' as const }, { profileRevisionId: 'revision-2' },
       { capabilities: [] },
     ]) expect(authorizeHostMessage(message, { ...grant, ...mismatch })).toBe(false);
+  });
+});
+
+// GitHub sign-in, U0 (docs/specification/github-sign-in.md 3.2, 3.3, 3.8; REQUIREMENTS F-19, F-21, F-22, S-1, S-3, T-7).
+describe('GitHub sign-in contracts', () => {
+  const methods = ['github.account.read', 'github.signIn.start', 'github.signIn.cancel', 'github.signOut', 'github.open'] as const;
+  const at = '2026-10-13T12:00:00.000Z';
+  const states = [
+    { state: 'not-configured' },
+    { state: 'signed-out', ended: null, signOutIncomplete: false, lastOutcome: null },
+    { state: 'signed-out', ended: null, signOutIncomplete: true, lastOutcome: 'cancelled' },
+    { state: 'signed-out', ended: 'sign-in-ended', signOutIncomplete: false, lastOutcome: null },
+    { state: 'signed-out', ended: 'app-changed', signOutIncomplete: false, lastOutcome: null },
+    { state: 'signed-out', ended: 'client-rejected', signOutIncomplete: false, lastOutcome: 'client-rejected' },
+    { state: 'pending', userCode: 'WDJB-MJHT', codeExpiresAt: at, committed: false, account: null },
+    { state: 'pending', userCode: 'WDJB-MJHT', codeExpiresAt: at, committed: true, account: { login: 'octo-user' } },
+    { state: 'pending', userCode: 'WDJB-MJHT', codeExpiresAt: at, committed: false, account: { login: null } },
+    { state: 'signed-in', login: 'octo-user', renewalHeld: false, lastOutcome: null },
+    { state: 'signed-in', login: null, renewalHeld: true, lastOutcome: 'denied' },
+  ] as const;
+
+  test('every account state parses, and every state refuses token, device-code, vault and client fields', () => {
+    for (const status of states) {
+      expect(GitHubAccountStatusSchema.safeParse(status).success, status.state).toBe(true);
+      for (const field of ['accessToken', 'refreshToken', 'deviceCode', 'device_code', 'secretRef', 'verificationUri', 'interval', 'clientId']) {
+        expect(GitHubAccountStatusSchema.safeParse({ ...status, [field]: 'x' }).success, `${status.state}.${field}`).toBe(false);
+      }
+    }
+    for (const outcome of GitHubAccountStatusSchema.options[1].shape.lastOutcome.unwrap().options) {
+      expect(GitHubAccountStatusSchema.safeParse({ state: 'signed-in', login: 'octo-user', renewalHeld: false, lastOutcome: outcome }).success).toBe(true);
+    }
+    // A pending account carries only its login; a user code is validated, never free text.
+    expect(GitHubAccountStatusSchema.safeParse({ ...states[7], account: { login: 'octo-user', accessToken: 'x' } }).success).toBe(false);
+    for (const userCode of ['', 'WDJB MJHT', 'WDJB-', '-WDJB', 'A'.repeat(33)]) expect(GitHubAccountStatusSchema.safeParse({ ...states[6], userCode }).success, userCode).toBe(false);
+    for (const login of ['', '-octo', 'octo user', 'o'.repeat(101)]) expect(GitHubAccountStatusSchema.safeParse({ ...states[9], login }).success, login).toBe(false);
+    expect(GitHubAccountStatusSchema.safeParse({ state: 'signed-out', ended: 'revoked', signOutIncomplete: false, lastOutcome: null }).success).toBe(false);
+  });
+
+  test('the five methods are main-owned, take no credential field, and return only the strict account result', () => {
+    for (const name of methods) {
+      const spec = MethodSpec[name];
+      expect(spec.owner, name).toBe('main');
+      const params = name === 'github.open' ? { target: 'device' } : {};
+      expect(spec.params.safeParse(params).success, name).toBe(true);
+      for (const field of ['token', 'secret', 'deviceCode', 'device_code', 'secretRef']) expect(spec.params.safeParse({ ...params, [field]: 'x' }).success, `${name}.${field}`).toBe(false);
+    }
+    for (const name of methods.filter(name => name !== 'github.open')) {
+      for (const status of states) expect(MethodSpec[name].result.safeParse({ account: status }).success, `${name} ${status.state}`).toBe(true);
+      expect(MethodSpec[name].result.safeParse({ account: states[9], accessToken: 'x' }).success).toBe(false);
+    }
+    expect(MethodSpec['github.signIn.start'].authorization).toBe('user-confirmed');
+    expect(MethodSpec['github.signOut'].authorization).toBe('user-confirmed');
+    expect(MethodSpec['github.open'].authorization).toBe('user-confirmed');
+  });
+
+  test('github.open names a target, never a URL', () => {
+    const open = MethodSpec['github.open'];
+    expect(GitHubOpenTargetSchema.options).toEqual(['device', 'install']);
+    expect(open.params.safeParse({ target: 'install' }).success).toBe(true);
+    for (const params of [{ url: 'https://github.com/login/device' }, { target: 'https://github.com/login/device' }, { target: 'device', url: 'https://example.test' }, {}]) {
+      expect(open.params.safeParse(params).success, JSON.stringify(params)).toBe(false);
+    }
+    expect(open.result.safeParse({ opened: true }).success).toBe(true);
+    expect(open.result.safeParse({ opened: false }).success).toBe(false);
+  });
+
+  test('the engine cannot name a GitHub credential: host purposes stay a subset of the vault purposes, without github (DC-8)', () => {
+    type HostPurpose = HostMessage['payload']['purpose'];
+    expectTypeOf<HostPurpose>().toMatchTypeOf<CredentialBinding['purpose']>();
+    expectTypeOf<Extract<HostPurpose, 'github'>>().toEqualTypeOf<never>();
+    expect(HostMessageSchema.shape.payload.shape.purpose.safeParse('github').success).toBe(false);
   });
 });

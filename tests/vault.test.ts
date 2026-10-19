@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import fsp from 'node:fs/promises';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Vault } from '../src/main/vault';
@@ -33,6 +35,16 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
+/** The index's state for each ref, as the disk holds it. */
+async function states(directory: string): Promise<Record<string, string>> {
+  const index = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')) as { entries: Record<string, { state: string }> };
+  return Object.fromEntries(Object.entries(index.entries).map(([ref, entry]) => [ref, entry.state]));
+}
+/** The entry files on disk. */
+async function bins(directory: string): Promise<string[]> {
+  return (await readdir(directory)).filter(name => name.endsWith('.bin')).sort();
+}
+
 describe('credential lifecycle', () => {
   test('a research grant lives at most 30 seconds, as a provider test does', async () => {
     const { vault } = await fixture();
@@ -41,6 +53,15 @@ describe('credential lifecycle', () => {
     expect(() => vault.grant({ ...binding, expiresAt: Date.now() + 60_000 })).toThrow('CREDENTIAL_CAPABILITY_DENIED');
     const capability = vault.grant({ ...binding, expiresAt: Date.now() + 30_000 });
     expect(await vault.withSecret(capability, binding, value => value)).toBe('collector-token');
+  });
+
+  test('a github grant lives at most 30 seconds (GitHub sign-in, spec 3.8, DC-14)', async () => {
+    const { vault } = await fixture();
+    const ref = await vault.saveStaged('github-access-value'); await vault.commit(ref);
+    const binding = { epoch: 'epoch-1', purpose: 'github' as const, contextId: 'github:read:1', secretRef: ref };
+    expect(() => vault.grant({ ...binding, expiresAt: Date.now() + 60_000 })).toThrow('CREDENTIAL_CAPABILITY_DENIED');
+    const capability = vault.grant({ ...binding, expiresAt: Date.now() + 30_000 });
+    expect(await vault.withSecret(capability, binding, value => value)).toBe('github-access-value');
   });
 
   test('stores encrypted bytes and grants access only to its live bound purpose', async () => {
@@ -66,6 +87,25 @@ describe('credential lifecycle', () => {
     await reopened.reconcile(new Set([committedInStore]));
     expect(await reopened.has(committedInStore)).toBe(true);
     expect(await reopened.has(orphan)).toBe(false);
+  });
+
+  test('reconcile with keepStaged keeps an unreferenced staged entry and its file, commits a referenced one and deletes a tombstoned one (X2-1)', async () => {
+    const { directory, vault, cryptor } = await fixture();
+    const referenced = await vault.saveStaged('referenced');
+    const orphan = await vault.saveStaged('orphan');
+    const gone = await vault.saveStaged('gone'); await vault.commit(gone); await vault.tombstone(gone);
+    const reopened = new Vault(directory, cryptor);
+    await reopened.initialize('epoch-2');
+    await reopened.reconcile(new Set([referenced]), { keepStaged: true });
+    expect(await states(directory)).toEqual({ [referenced]: 'committed', [orphan]: 'staged' });
+    expect(await bins(directory)).toEqual([`${orphan}.bin`, `${referenced}.bin`].sort());
+    expect(await reopened.has(referenced)).toBe(true);
+    // The next start, without the option, deletes the orphan it kept (4.5).
+    const next = new Vault(directory, cryptor);
+    await next.initialize('epoch-3');
+    await next.reconcile(new Set([referenced]));
+    expect(await states(directory)).toEqual({ [referenced]: 'committed' });
+    expect(await bins(directory)).toEqual([`${referenced}.bin`]);
   });
 
   test('tombstone invalidates previously issued capabilities before ciphertext is removed', async () => {
@@ -107,5 +147,71 @@ describe('credential lifecycle', () => {
       await vault.commit(ref);
     }
     expect(await vault.redact('value=secret-short-long or secret-short')).toBe('value=[redacted] or [redacted]');
+  });
+
+  test('a staging whose index persist fails leaves no file and no index entry (X2-2)', async () => {
+    const { directory, vault } = await fixture();
+    const target = vault as unknown as { persist: () => Promise<void> };
+    const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
+    const before = await bins();
+    const failure = Object.assign(new Error('EIO'), { code: 'EIO' });
+    target.persist = async () => { throw failure; };
+    await expect(vault.saveStaged('never-indexed')).rejects.toBe(failure);
+    delete (target as unknown as Record<string, unknown>).persist;
+    expect(await bins()).toEqual(before);
+    const ref = await vault.saveStaged('kept');
+    await vault.commit(ref);
+    expect(await vault.has(ref)).toBe(true);
+    const onDisk = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')) as { entries: Record<string, unknown> };
+    expect(Object.keys(onDisk.entries)).toEqual([ref]);
+    await vault.reconcile(new Set([ref]));
+    expect(await bins()).toHaveLength(before.length + 1);
+  });
+
+  test('a failed unlink after a failed persist keeps the staging, so the next persist and reconcile remove its file (X2-2, R1)', async () => {
+    const { directory, vault, cryptor } = await fixture();
+    const target = vault as unknown as { persist: () => Promise<void> };
+    const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
+    const realUnlink = fsp.unlink;
+    const failure = Object.assign(new Error('EIO'), { code: 'EIO' });
+    // The node project runs files in one worker without isolation, so no vi.mock: unlink is swapped on the builtin and synced to
+    // every importer (as tests/review-workspace-layers.test.ts:16-24 does), and restored in a finally.
+    target.persist = async () => { throw failure; };
+    (fsp as { unlink: unknown }).unlink = (path: string) => path.endsWith('.bin')
+      ? Promise.reject(Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' })) : realUnlink(path);
+    syncBuiltinESMExports();
+    try { await expect(vault.saveStaged('locked')).rejects.toBe(failure); }
+    finally {
+      (fsp as { unlink: unknown }).unlink = realUnlink; syncBuiltinESMExports();
+      delete (target as unknown as Record<string, unknown>).persist;
+    }
+    expect(await bins()).toHaveLength(1);
+    const ref = await vault.saveStaged('kept');
+    await vault.commit(ref);
+    const restarted = new Vault(directory, cryptor);
+    await restarted.initialize('epoch-1');
+    await restarted.reconcile(new Set([ref]));
+    expect(await bins()).toHaveLength(1);
+    expect(await restarted.has(ref)).toBe(true);
+  });
+
+  test('a failed persist whose file is already gone drops the staging, so redaction still works (X2-2, ENOENT)', async () => {
+    const { directory, vault } = await fixture();
+    const target = vault as unknown as { persist: () => Promise<void> };
+    const bins = async () => (await readdir(directory)).filter(file => file.endsWith('.bin'));
+    const before = await bins();
+    const failure = Object.assign(new Error('EIO'), { code: 'EIO' });
+    // The persist removes the new file itself, then fails: the unlink in saveStaged's catch then meets ENOENT.
+    target.persist = async () => {
+      for (const file of (await bins()).filter(file => !before.includes(file))) await rm(join(directory, file));
+      throw failure;
+    };
+    await expect(vault.saveStaged('gone')).rejects.toBe(failure);
+    delete (target as unknown as Record<string, unknown>).persist;
+    expect(await vault.redact('plain')).toBe('plain');
+    const ref = await vault.saveStaged('kept');
+    await vault.commit(ref);
+    const onDisk = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')) as { entries: Record<string, unknown> };
+    expect(Object.keys(onDisk.entries)).toEqual([ref]);
   });
 });

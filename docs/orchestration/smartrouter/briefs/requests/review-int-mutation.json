@@ -1,0 +1,52 @@
+{
+  "taskId": "review-int-mutation",
+  "objective": "Integration review of GitHub sign-in, mutation reviewer, at the integration head after fix-c1-c3 and U8 (base 6ac1007): at most 25 single-edit mutants across the five unit seams, survivors re-run on the full suite, and the U1-R11, U2-R15 (RBNOCAP, RBCAP0) and U5-R18 (M16-above) proofs re-run (briefs/integration-review.md).",
+  "category": "review",
+  "unit": "integration-review",
+  "estimatedTokens": 400000,
+  "difficultyTier": "T3",
+  "permittedEffects": [
+    "docs/orchestration/2026-10-13-github-sign-in/reports/integration-review-mutation-*.md"
+  ],
+  "sources": [
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/integration-review.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/common.md",
+    "docs/specification/github-sign-in.md",
+    "docs/orchestration/2026-10-13-github-sign-in/REQUIREMENTS.md",
+    "docs/orchestration/2026-10-13-github-sign-in/BREAKDOWN.md",
+    "docs/orchestration/2026-10-13-github-sign-in/DECISIONS.md",
+    "docs/orchestration/2026-10-13-github-sign-in/MANDATE.md"
+  ],
+  "nonGoals": [
+    "no commit, no push",
+    "no tracked file left changed (scratch tests and mutations restored, sha256 checked)",
+    "no network",
+    "never --no-verify",
+    "no re-review of a unit the brief marks accepted beyond the rows assigned to this role",
+    "no calibration item recorded as not real re-raised without a new reproduction"
+  ],
+  "acceptanceChecks": [
+    {
+      "command": "each mutant run against the test files that own its seam, survivors against the full suite",
+      "expect": "findings carry reproductions; proofs re-run"
+    },
+    {
+      "command": "git status --porcelain",
+      "expect": "empty at the end, the report excepted"
+    }
+  ],
+  "dataClasses": [
+    "repo-code",
+    "run-docs"
+  ],
+  "needsVision": false,
+  "projectStop": {
+    "redSuite": false,
+    "gateOff": false,
+    "researchGateFailing": false
+  },
+  "previousResult": null,
+  "deadline": "{{dispatch time + 8h, ISO-8601}}",
+  "now": "{{dispatch time, ISO-8601}}"
+}

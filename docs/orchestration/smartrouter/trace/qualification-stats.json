@@ -1,0 +1,403 @@
+{
+  "_comment": "derived by route.mjs rate from ledger.jsonl and the decision files; regenerated on every run, never hand-edited",
+  "calibration": {
+    "profiles": {
+      "cc-fable-high": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        }
+      },
+      "cc-fable-max": {
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        }
+      },
+      "cc-fable-medium": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 1,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        }
+      },
+      "cc-fable-xhigh": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        }
+      },
+      "cc-haiku-high": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 2,
+          "partial": 0,
+          "pass": 1,
+          "ungraded": 0
+        }
+      },
+      "cc-haiku-low": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 2,
+          "partial": 0,
+          "pass": 1,
+          "ungraded": 0
+        }
+      },
+      "cc-haiku-medium": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 2,
+          "partial": 0,
+          "pass": 1,
+          "ungraded": 0
+        }
+      },
+      "cc-opus-high": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        }
+      },
+      "cc-opus-max": {
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        }
+      },
+      "cc-opus-medium": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 1,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        }
+      },
+      "cc-opus-xhigh": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        }
+      },
+      "cc-sonnet-high": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 1,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        }
+      },
+      "cc-sonnet-low": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 0,
+          "partial": 1,
+          "pass": 2,
+          "ungraded": 0
+        }
+      },
+      "cc-sonnet-medium": {
+        "fix": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "pin-tests": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 3,
+          "ungraded": 0
+        },
+        "review": {
+          "fail": 1,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        }
+      },
+      "cc-sonnet-xhigh": {
+        "review": {
+          "fail": 0,
+          "partial": 0,
+          "pass": 2,
+          "ungraded": 0
+        }
+      }
+    },
+    "runs": [
+      {
+        "observations-sha256": "460342423f9c05d271f35939d4e5656508411abf13903c96c2f90a3b25ab3da2",
+        "run": "calibration-1"
+      },
+      {
+        "observations-sha256": "f794c1fd58b742b4e2c6f9e2f9245908912d252b6ca4bf6f5ba6da0533713a24",
+        "run": "calibration-2"
+      },
+      {
+        "observations-sha256": "beffbc603dae33d9a08861bba82c01c994a207c98e5ae5db929aca980afafcaf",
+        "run": "calibration-3"
+      }
+    ]
+  },
+  "headroom-proposals": [],
+  "ledger-sha256": "db4ffbc7ebe270e516acda009ae5dbbbcf69031a2840e0a23cdb375f5d984f64",
+  "outcome-records": 22,
+  "outcomes-counted": 20,
+  "policy-revision": "host-policy-6",
+  "proposals": [],
+  "stats": {
+    "cc-fable-high": {
+      "review@T1": {
+        "accepted": 1,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 1,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      }
+    },
+    "cc-haiku-high": {
+      "fix@T1": {
+        "accepted": 1,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      }
+    },
+    "cc-haiku-low": {
+      "fix@T1": {
+        "accepted": 0,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 2
+      }
+    },
+    "cc-opus-high": {
+      "build-ui@T1": {
+        "accepted": 6,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 1
+      },
+      "build-ui@T3": {
+        "accepted": 4,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      },
+      "fix@T1": {
+        "accepted": 2,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      },
+      "review@T1": {
+        "accepted": 3,
+        "blocked": 0,
+        "cancelled": 0,
+        "cost-overrun": 0,
+        "deviations": 0,
+        "escalated": 0,
+        "partial": 0,
+        "verification-failed": 0
+      }
+    }
+  },
+  "usage": {
+    "five_hour": {
+      "considered": 0,
+      "current": 0.05,
+      "max-observed": null,
+      "observed": [],
+      "ratified-at": "2026-10-18T01:23:32Z",
+      "skipped": {
+        "negative-delta": 0,
+        "reset": 5,
+        "spanning": 10,
+        "unknown-tokens": 0,
+        "zero-tokens": 8
+      }
+    },
+    "seven_day": {
+      "considered": 0,
+      "current": 0.015,
+      "max-observed": null,
+      "observed": [],
+      "ratified-at": "2026-10-18T01:23:32Z",
+      "skipped": {
+        "negative-delta": 0,
+        "reset": 2,
+        "spanning": 11,
+        "unknown-tokens": 0,
+        "zero-tokens": 10
+      }
+    }
+  },
+  "usage-proposals": [],
+  "usage-sha256": "194fc1e9647f694f2553c110ab1bd47e1ad6b79451c89a74ca59a6d3179bab32"
+}

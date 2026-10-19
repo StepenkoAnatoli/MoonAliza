@@ -1,0 +1,95 @@
+{
+ "workflow": "github-sign-in-wave2",
+ "run": "wf_31ad2302-ae7",
+ "stage": "review",
+ "result": {
+  "verdict": "FIX",
+  "findings": [
+   {
+    "id": "U5-R1",
+    "severity": "S2",
+    "problem": "Two rules that keep a healthy account signed in have no test. Removing either one wrongly ends the account, and all 120 shipped tests stay green. (a) freshRejects must reset when a request's token is accepted (anything other than 401). Spec 6.4 says it is 'reset only by a request whose token is answered other than 401', and L-12 says the clear happens on the third 401 'in a row'. The reset is at src/main/github-signin.ts:224. (b) sameError must reset on any refresh answer that is not 'error' or 'unusable' ('only consecutive identical answers count', 6.5). That reset is at src/main/github-signin.ts:441.",
+    "evidence": "I mutated the private copy at scratchpad/u5rev/wt; the worktree was never touched. Runner: scratchpad/u5rev/mine/mutate2.py, results in mine/results.json. X01 deletes `this.freshRejects = 0` at :224; on both test files that is 'ran 66 red 0'. X07 deletes line :441: 'ran 66 red 0'. My scratch tests (scratchpad/u5rev/wt/tests/zz-u5-review.test.ts) pass on HEAD, 3 runs out of 3, and fail under the mutations (mine2/results.json). R-A covers three refresh windows, each with a slow new token (the GS-1 'slow new token' case, repeated). Under X01 its outcomes become [..., 'GITHUB_SIGN_IN_REQUIRED', '200:signed-out'] in the third window: the account is wrongly ended. R-B sends unknown code, 500, code, code. Under X07 it gets GITHUB_SIGN_IN_REQUIRED instead of GITHUB_RENEWAL_UNAVAILABLE, another wrong clear.",
+    "fix": "Add both cases to tests/github-signin-refresh.test.ts. For case 10 (GS-1): three refresh windows, each with a slow new token (401 for 8 s after issue) and an accepted read in between, never clear the account. For case 4 (DC-1): unknown code, transient, code, code keeps the account. Record the X01 and X07 removal proofs in the commit report."
+   },
+   {
+    "id": "U5-R2",
+    "severity": "S2",
+    "problem": "The 401 path's hold check (L-13; spec 6.4 'if holdActive() -> throw hold.reason') has no test. Without it, a read sent during a rate-limit hold with a still-valid token (the GS-4 path) that gets a 401 starts a refresh while GitHub is rate-limiting. That repeats on every such read, which is the ban risk the hold exists to prevent (E-15 l.36, pre-mortem 4). The check is at src/main/github-signin.ts:236. A smaller gap of the same kind: the refreshValid condition at :233, so that a 401 on a token whose refresh token has expired clears with no refresh request (T-4), is also untested.",
+    "evidence": "X18 deletes line :236: 'ran 66 red 0'. X20 drops `|| !this.refreshPossible(...)` from :233: 'ran 66 red 0'. Scratch test R-E seeds a token with 210 s left and a 429 with retry-after 120. A read 10 s later is sent with that token and gets a 401. On HEAD it gives GITHUB_RATE_LIMIT, 1 refresh request, and the account is kept. Under X18: \"expected ... /^GITHUB_RATE_LIMIT$/ but got 'GITHUB_RENEWAL_UNAVAILABLE'\", because a second refresh request was sent during the hold. R-H (a 401 with the refresh token expired) expects 0 refreshes and ENDED; it fails under X20.",
+    "fix": "Add R-E and R-H as refresh case 10 tests, and record the X18 and X20 proofs."
+   },
+   {
+    "id": "U5-R3",
+    "severity": "S2",
+    "problem": "The rotation paths have no test. withAccess returns 'stale' when its ref was rotated between the grant and the decrypt (spec 6.4 withAccess step 4, src/main/github-signin.ts:380). withRefresh returns the current account in the same case (:494). Without the first, a read that overlaps another call's refresh fails with a spurious GITHUB_RENEWAL_UNAVAILABLE. Without the second, a refresh racing a sign-in commit puts a spurious hold on the new account.",
+    "evidence": "X08 deletes :380: 'ran 66 red 0'. X09 deletes :494: 'ran 66 red 0'. Scratch test R-F: read A's withSecret hook starts read B, whose 401 triggers a refresh that commits and removes the old ref. On HEAD, A then retries with the new pair: 200, with 1 refresh. Under X08, A fails with 'Error: GITHUB_RENEWAL_UNAVAILABLE'.",
+    "fix": "Add R-F as a refresh test (case 2 or 10). Add a case for withRefresh's rotation: a sign-in that commits between refreshSingleFlight and the refresh's grant leaves no hold. Record the proofs."
+   },
+   {
+    "id": "U5-R4",
+    "severity": "S2",
+    "problem": "Three waiting races from spec 2.5 have no test. pause() races the read signal and accountChanged before a fresh-token resend (src/main/github-signin.ts:399). clearIf aborts accountChanged so that waiters re-read the account at once (6.4, :415). Only sign-out during a refresh is tested (G08). Without these guards, Stop, a sign-out or an app clear releases the waiter only after the pause (up to 3 s) or the refresh (up to 20 s). No token is sent, because the grant is revoked, so the cost is latency, not a leak.",
+    "evidence": "X02 (pause not racing accountChanged), X03 (pause not racing the read signal) and X04 (clearIf not aborting accountChanged) are each 'ran 66 red 0'. On HEAD, scratch tests R-G1 (sign-out during a gated pause), R-G2 (Stop during a pause) and R-G3 (another call's 401 clear, with the refresh token expired, during a pause) each reject within 1 s with one resource request. Under X02, X03 and X04 each one is 'Error: still pending after 1000 ms'.",
+    "fix": "Add R-G1, R-G2 and R-G3 to refresh cases 11 and 12 (the gated Clock needs a wake() helper, as the device file's has). List them under 'the accountChanged race' in the guard proofs."
+   },
+   {
+    "id": "U5-R5",
+    "severity": "S2",
+    "problem": "Two hold resets have no test. A successful refresh must reset `failures` (spec 6.5 'Clearing the hold', :472). A sign-in commit must reset hold, failures, sameError, freshRejects and endedReason (6.3 step 2, :305). Without the first, each later transient failure holds twice as long (30 s, then 60 s, ...) even when a success came between. Without the second, 'Sign in again' inherits the old account's hold: renewalHeld shows true and refreshes stay blocked for up to an hour. The new sign-in also inherits the old account's error and 401 counts, so it can be cleared sooner.",
+    "evidence": "X06 (drop `this.failures = 0` in adopt) is 'ran 66 red 0'. X11 (drop the reset line in commitPoint) is 'ran 120 red 0' across both files. Scratch test R-C: fail, then succeed, then fail. On HEAD a read 30 s after the second failure refreshes (4 refreshes in total); under X06 it is held. R-D: Sign in again while a hold is active. On HEAD the status is renewalHeld:false; under X11 it is renewalHeld:true.",
+    "fix": "Add R-C to refresh case 5 and R-D to device case 11 or 14. Record the X06 and X11 proofs."
+   },
+   {
+    "id": "U5-R6",
+    "severity": "S3",
+    "problem": "L-7 is broken in memory. The suspended `async commitAndLogin` frame keeps its `tokens` parameter, which holds the plaintext access and refresh tokens, reachable for the whole login read (F5, up to requestTimeoutMs). L-7 says MoonAliza code holds a token only between receipt and saveStaged, and never in a closure. The commit report also claims the tail call ends 'this frame, which held the pair', which is true of poll() but not of commitAndLogin. Nothing crosses a boundary (no disk, IPC, log or error), and refresh 19's inspect() cannot see a frame, so this is S3, not S1.",
+    "evidence": "Scratch probe R-J holds a WeakRef to the IssuedTokens object passed to store.replace and forces gc (vm/v8 --expose-gc) while GET /user is gated. On HEAD, 3 runs out of 3 printed {\"reachableDuringF5\":true,\"reachableAfter\":false}. I then made commitAndLogin a non-async function: `return this.commitPoint(flow, tokens, receivedAt).then(account => account ? this.readLogin(flow, account) : undefined).catch(() => { if (this.flow === flow) this.flow = null; })`. That gave {\"reachableDuringF5\":false,...} in 2 runs out of 2, and tests/github-signin.test.ts stayed 54/54. The file was restored to sha256 e08c3382...674be1a.",
+    "fix": "Apply the non-async commitAndLogin above, so that only commitPoint's frame holds the pair and it ends when the store write ends. Optionally keep R-J as a test. Correct the L-7 sentence in the commit report."
+   },
+   {
+    "id": "U5-R7",
+    "severity": "S3",
+    "problem": "Clock steps backward while a hold is active. hold.until is an absolute time, so a backward step lengthens the hold by the size of the step. The fresh-token test `now() - obtainedAt < freshTokenMs` is also true for a negative age. Spec 6.8 promises that 'the skew rule refreshes before use' when the clock steps back more than 300 s. Here, for the whole length of the step, every read instead sends the expired access token three times (with 1 s and 2 s pauses), fails with GITHUB_RENEWAL_UNAVAILABLE, and shows renewalHeld. No refresh is ever tried. The spec's pseudo-code uses the same formulas, so the fix needs a lead note.",
+    "evidence": "Scratch probe R-I: the access token is past expiry and the refresh answers 500, which sets a 30 s hold. The injected clock then steps back one day, and reads run at +0, +1 h, +12 h and +23 h59. Output: {\"out\":[4 x \"GITHUB_RENEWAL_UNAVAILABLE\"],\"resourceRequests\":9,\"markers\":[9 x \"oldAccess\"],\"refreshes\":1,\"status\":{\"state\":\"signed-in\",\"renewalHeld\":true}}.",
+    "fix": "Store the time the hold was set. Treat a hold as inactive when now() is before that time, or when hold.until - now() exceeds rateLimitCeilingMs. In the 401 rule, treat a negative token age (now() < obtainedAt) as not fresh (or as skewed). Add R-I as refresh case 15, and record the change in the spec's As built section."
+   },
+   {
+    "id": "U5-R8",
+    "severity": "S3",
+    "problem": "Three behaviours have no test: two the builder added and one spec guard. (a) close() waits for a commit point being stored (:204). The builder added this from L-8 and claims it in the report. (b) usable() never starts a second refresh in one call, the `!budget.refreshed` condition at :358. The builder added it for L-14. (c) refreshSingleFlight refuses a refresh while closing (spec 6.5, :428). Case (c) is reachable when a read in flight at quit gets a 401.",
+    "evidence": "X22 (drop `if (flow.storing) work.push(flow.storing)`) is 'ran 120 red 0'. X26 (drop `&& !budget.refreshed`) is 'ran 66 red 0'. X25 (drop the closing check in refreshSingleFlight) is 'ran 66 red 0'.",
+    "fix": "Add one test for each case: close() during a gated F4 waits for the store's write; a 'stale' retry onto an account inside the margin, after the call has already refreshed, makes no second refresh; a 401 that arrives after close() sends no refresh. Or drop the two builder-added behaviours and say so."
+   },
+   {
+    "id": "U5-R9",
+    "severity": "S4",
+    "problem": "The spec contradicts itself, and the builder resolved it toward the frozen contract and disclosed the choice. The spec's test list (refresh 4, incorrect_client_credentials) says 'the next read throws GITHUB_SIGN_IN_REQUIRED with no request'. Spec 6.4 line 1, 3.4 and L-10 make a read after an app clear a signed-out read, request(undefined). The builder implemented the second, at tests/github-signin-refresh.test.ts:298-301. In the same spirit, send() after close() throws GITHUB_RENEWAL_UNAVAILABLE even when signed out or not configured (:216), against 3.4's 'signed out or not configured: calls request(undefined) exactly once'. That only matters after before-quit, and spec test 16 asks for the refusal.",
+    "evidence": "docs/specification/github-sign-in.md:1241 against :687 (6.4 line 1) and :95 (3.4). The commit message's 'Why' section discloses both choices.",
+    "fix": "Lead: align the spec's line 1241 with 6.4 in the As built section. Either state that close() refuses every send() (a quit-only departure from L-10), or move the closing check after the signed-out branch at :216-218."
+   },
+   {
+    "id": "U5-R10",
+    "severity": "S4",
+    "problem": "A late answer from a refresh of an earlier account updates the current account's bookkeeping. failed(), sameOrFail() and the rate-limit hold in renew() (:444, :455-459) apply even when generation !== g0. A refresh still in flight when a 'Sign in again' commits (or after a sign-out and a new sign-in) can then set a hold, or count sameError, against the new account. The spec's pseudo-code has the same gap, and the impact is low: only refreshes are held, and the new token is valid for 8 h.",
+    "evidence": "Code reading of renew() at src/main/github-signin.ts:436-464: only the clear branches check `this.generation === g0`.",
+    "fix": "In renew(), apply hold, failures and sameError only while `this.generation === g0`; otherwise just throw. Note it in As built."
+   }
+  ],
+  "checked": [
+   "Read briefs/unit-reviewer.md, briefs/common.md, briefs/u5-builder.md, BREAKDOWN (U5 row, pre-mortem, traceability), and spec 2 (all), 3.4-3.9, 4.3, 5, 6 (all), Known limits and Tests the builders owe",
+   "Read the commit (git log dae1c65..HEAD: one commit, 8e3ce77), src/main/github-signin.ts in full, both test files in full, and U1 github-oauth.ts, U2 github-account-store.ts and vault.ts",
+   "Scope: git diff dae1c65..HEAD touches only github-signin.ts, the two test files and one ARCHITECTURE.md line. U0 files have no diff since 8f86232, and U1/U2 have none since dae1c65",
+   "No token-shaped literal or client_secret in the commit (grep of git show)",
+   "Identity and attribution lines are present; no --no-verify",
+   "Pre-mortem 1-9, each checked against the code and its guard proof: (1) G06; (2) G08, and the waiting races the shipped tests miss are in U5-R4; (3) G40, with grants from Date.now() in all three places; (4) G11, plus G25, with the 401-path gap in U5-R2; (5) G09; (6) G26; (7) G18/G19, with the reset gap in U5-R1; (8) G32/G33; (9) G27/G28/G29, with the reset gap in U5-R1",
+   "Re-ran all 56 of the builder's guard-removal proofs with their own mutate.py, from my own copy of the proof list: 56 of 56 red, every file restored, sha256 checked (scratchpad/u5rev/guards-rerun.json)",
+   "My own 21 mutations in a private copy of the tree (scratchpad/u5rev/wt): 3 caught by the suite (X05, X30, and X27 by reasoning about 15b); 4 redundant with other checks (X13, X31, X32, X33); the rest are findings U5-R1..R5 and R8",
+   "10 scratch tests, all green on HEAD 3 runs out of 3, each red under its mutation (scratchpad/u5rev/mine2/results.json); heap probe R-J and backward-clock probe R-I",
+   "Both test files re-run: 54/54 and 66/66 green; no PromiseRejectionHandledWarning or unhandled rejection from either file",
+   "Commit claims re-run: typecheck 0, lint 0, eslint e2e 0, token-literals 2/2, app-constants 4/4. The builder's full-suite JSON through compare.py: 2110 total, 2030 passed, 74 failed, all 74 in the baseline, no new failures, no file without results, 6 Windows-only skips",
+   "Token invariant: every error the service originates is a bare code with no cause; the DTO carries only userCode and login; the device code is dropped at the end and at the commit point (G55). The only retention found is U5-R6, which stays in main's memory and is not visible through the service or store objects (refresh 19)",
+   "Worktree left exactly at HEAD: git diff --quiet HEAD, and sha256 of all six files checked against the values before review"
+  ]
+ }
+}

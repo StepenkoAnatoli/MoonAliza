@@ -1,0 +1,52 @@
+{
+  "taskId": "review-int-breaker",
+  "objective": "Integration review of GitHub sign-in, breaker reviewer, at the integration head after fix-c1-c3 and U8 (base 6ac1007): the whole e2e in real Electron on this Windows host, adverse journeys through a scratch spec, and the three prongs for the awaited-cancel sibling sites (briefs/integration-review.md).",
+  "category": "review",
+  "unit": "integration-review",
+  "estimatedTokens": 400000,
+  "difficultyTier": "T3",
+  "permittedEffects": [
+    "docs/orchestration/2026-10-13-github-sign-in/reports/integration-review-breaker-*.md"
+  ],
+  "sources": [
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/integration-review.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/common.md",
+    "docs/specification/github-sign-in.md",
+    "docs/orchestration/2026-10-13-github-sign-in/REQUIREMENTS.md",
+    "docs/orchestration/2026-10-13-github-sign-in/BREAKDOWN.md",
+    "docs/orchestration/2026-10-13-github-sign-in/DECISIONS.md",
+    "docs/orchestration/2026-10-13-github-sign-in/MANDATE.md"
+  ],
+  "nonGoals": [
+    "no commit, no push",
+    "no tracked file left changed (scratch tests and mutations restored, sha256 checked)",
+    "no network",
+    "never --no-verify",
+    "no re-review of a unit the brief marks accepted beyond the rows assigned to this role",
+    "no calibration item recorded as not real re-raised without a new reproduction"
+  ],
+  "acceptanceChecks": [
+    {
+      "command": "npm run native:build; npm run build; npm run test:e2e on the Windows host, then the scratch journeys",
+      "expect": "findings carry reproductions; proofs re-run"
+    },
+    {
+      "command": "git status --porcelain",
+      "expect": "empty at the end, the report excepted"
+    }
+  ],
+  "dataClasses": [
+    "repo-code",
+    "run-docs"
+  ],
+  "needsVision": false,
+  "projectStop": {
+    "redSuite": false,
+    "gateOff": false,
+    "researchGateFailing": false
+  },
+  "previousResult": null,
+  "deadline": "{{dispatch time + 8h, ISO-8601}}",
+  "now": "{{dispatch time, ISO-8601}}"
+}

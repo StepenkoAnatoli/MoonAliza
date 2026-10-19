@@ -1,0 +1,61 @@
+{
+  "taskId": "u8-build",
+  "objective": "Build U8, the Windows e2e for GitHub sign-in (e2e/github-sign-in.spec.ts): journey A always, journey B a visible skip while isConfigured(GITHUB_APP) is false, every unrouted GitHub URL refused, the shell.openExternal stub proved first; reuse e2e/github-reading.spec.ts and e2e/anthropic.spec.ts (briefs/u8-builder.md, BREAKDOWN row U8).",
+  "category": "build-tests",
+  "unit": "u8",
+  "estimatedTokens": 400000,
+  "difficultyTier": "T1",
+  "permittedEffects": [
+    "e2e/github-sign-in.spec.ts",
+    "docs/orchestration/2026-10-13-github-sign-in/reports/u8-*.md"
+  ],
+  "sources": [
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/u8-builder.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/common.md",
+    "docs/orchestration/2026-10-13-github-sign-in/BREAKDOWN.md",
+    "docs/specification/github-sign-in.md",
+    "e2e/github-reading.spec.ts",
+    "e2e/anthropic.spec.ts"
+  ],
+  "nonGoals": [
+    "no push",
+    "no change outside e2e/github-sign-in.spec.ts and the report",
+    "no real github.com request",
+    "never --no-verify"
+  ],
+  "acceptanceChecks": [
+    {
+      "command": "npm run typecheck",
+      "expect": "typecheck exit 0"
+    },
+    {
+      "command": "npx eslint e2e",
+      "expect": "lint exit 0"
+    },
+    {
+      "command": "npm run native:build; npm run build; npx playwright test e2e/github-sign-in.spec.ts on the Windows host",
+      "expect": "the new tests green, guard-removal proofs"
+    },
+    {
+      "command": "the full suite as the launch prompt names it, compared with the dispatching host's baseline file",
+      "expect": "full-suite comparison vs baseline: no new failures, no file without results"
+    },
+    {
+      "command": "refute-first review",
+      "expect": "refute-first review ACCEPT after at most two fix rounds"
+    }
+  ],
+  "dataClasses": [
+    "repo-code",
+    "run-docs"
+  ],
+  "needsVision": false,
+  "projectStop": {
+    "redSuite": false,
+    "gateOff": false,
+    "researchGateFailing": false
+  },
+  "previousResult": null,
+  "deadline": "{{dispatch time + 8h, ISO-8601}}",
+  "now": "{{dispatch time, ISO-8601}}"
+}

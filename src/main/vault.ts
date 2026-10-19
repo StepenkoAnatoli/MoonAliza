@@ -10,7 +10,7 @@ export interface SecretCryptor {
 
 export interface CredentialBinding {
   epoch: string;
-  purpose: 'inference' | 'provider-test' | 'research' | 'provision';
+  purpose: 'inference' | 'provider-test' | 'research' | 'provision' | 'github';
   contextId: string;
   secretRef: string;
   profileRevisionId?: string;
@@ -88,7 +88,15 @@ export class Vault {
       try { await file.writeFile(encrypted); await file.sync(); }
       finally { await file.close(); }
       this.index.entries[ref] = { state: 'staged', createdAt: Date.now() };
-      await this.persist();
+      try { await this.persist(); }
+      catch (error) {
+        // No index names the file and the caller never gets the ref: drop both, then rethrow the persist's own error.
+        // A failed unlink does not replace that error. Its entry then stays staged in memory, so the next persist names the file
+        // and the next reconcile deletes it; dropping the entry with the file still on disk would orphan it for good.
+        try { await unlink(this.secretPath(ref)); delete this.index.entries[ref]; }
+        catch (unlinkError) { if ((unlinkError as NodeJS.ErrnoException).code === 'ENOENT') delete this.index.entries[ref]; }
+        throw error;
+      }
       return ref;
     });
   }
@@ -103,13 +111,15 @@ export class Vault {
     });
   }
 
-  reconcile(committedReferences: ReadonlySet<string>): Promise<void> {
+  /** keepStaged: an unreferenced staged entry is neither committed nor deleted, file included, for a start whose reference set is
+   *  incomplete (the GitHub store's file could not be read). Referenced staged entries are still committed and tombstones still deleted. */
+  reconcile(committedReferences: ReadonlySet<string>, options?: { keepStaged?: boolean }): Promise<void> {
     return this.serial(async () => {
       for (const [ref, entry] of Object.entries(this.index.entries)) {
         if (entry.state === 'staged' && committedReferences.has(ref)) {
           await access(this.secretPath(ref));
           entry.state = 'committed';
-        } else if (entry.state === 'tombstoned' || (entry.state === 'staged' && !committedReferences.has(ref))) {
+        } else if (entry.state === 'tombstoned' || (entry.state === 'staged' && !committedReferences.has(ref) && !options?.keepStaged)) {
           await unlink(this.secretPath(ref)).catch((error: NodeJS.ErrnoException) => {
             if (error.code !== 'ENOENT') throw error;
           });
@@ -132,7 +142,7 @@ export class Vault {
       this.index.entries[binding.secretRef]?.state !== 'committed') {
       throw new Error('CREDENTIAL_CAPABILITY_DENIED');
     }
-    if ((binding.purpose === 'provider-test' || binding.purpose === 'research') && binding.expiresAt > Date.now() + 30_000) {
+    if ((binding.purpose === 'provider-test' || binding.purpose === 'research' || binding.purpose === 'github') && binding.expiresAt > Date.now() + 30_000) {
       throw new Error('CREDENTIAL_CAPABILITY_DENIED');
     }
     const id = randomUUID();
