@@ -3935,12 +3935,20 @@ test('host-policy-6: the lead\'s table applied - "evidence": "typed", revision 5
       assert.deepEqual(after, before, `${after.id}: unchanged (the lead-direct profile, E3, and every calibration-derived profile)`);
       continue;
     }
-    // the one headroom change since the fixture: rate's proposal on the accepted sr-kit outcome (1262204 tokens),
-    // ratified by the lead at integration under the never-lowered rule; its line closes the profile's evidence
-    const rat = ({ 'cc-opus-high': { from: 1030000, to: 1263000, line: /^sr-kit outcome accepted .*: 1262204 tokens completed \(trace\/outcomes\/sr-kit-4\.json\); rate proposed headroom-tested 1030000 -> 1263000, ratified by the lead at integration/ } })[after.id];
-    assert.deepEqual(fixed(after), { ...fixed(before), ...(rat ? { 'headroom-tested': rat.to } : {}) }, `${after.id}: model, effort, config, tools, vision, context, headroom (but the ratified raise), expires, reviewer unchanged`);
-    if (rat) { assert.equal(before['headroom-tested'], rat.from, `${after.id} headroom before the raise`); assert.match(after.evidence.at(-1), rat.line, `${after.id}: the ratification line closes its evidence`); }
-    const evidence = rat ? after.evidence.slice(0, -1) : after.evidence;
+    // the headroom changes since the fixture: rate's proposals on the accepted sr-kit (1262204 tokens) and sr-evidence
+    // (1491793) outcomes, each ratified by the lead at integration under the never-lowered rule; their lines close the
+    // profile's evidence, in that order
+    const rat = ({ 'cc-opus-high': { from: 1030000, to: 1492000, lines: [
+      /^sr-kit outcome accepted .*: 1262204 tokens completed \(trace\/outcomes\/sr-kit-4\.json\); rate proposed headroom-tested 1030000 -> 1263000, ratified by the lead at integration/,
+      /^sr-evidence outcome accepted .*: 1491793 tokens completed \(trace\/outcomes\/sr-evidence-3\.json\); rate proposed headroom-tested 1263000 -> 1492000, ratified by the lead at integration/
+    ] } })[after.id];
+    assert.deepEqual(fixed(after), { ...fixed(before), ...(rat ? { 'headroom-tested': rat.to } : {}) }, `${after.id}: model, effort, config, tools, vision, context, headroom (but the ratified raises), expires, reviewer unchanged`);
+    if (rat) {
+      assert.equal(before['headroom-tested'], rat.from, `${after.id} headroom before the raises`);
+      const tail = after.evidence.slice(-rat.lines.length);
+      rat.lines.forEach((re, i) => assert.match(tail[i], re, `${after.id}: ratification line ${i + 1} closes its evidence`));
+    }
+    const evidence = rat ? after.evidence.slice(0, -rat.lines.length) : after.evidence;
     assert.equal(after['qualified-at'], '2026-10-18', `${after.id} re-declared`);
     assert.deepEqual(after['qualified-for'], want.qualified ?? before['qualified-for'], `${after.id} qualified-for`);
     // the evidence: revision 5's lines in place (free text kept as prose, E4), each line of a dropped entry suffixed,
