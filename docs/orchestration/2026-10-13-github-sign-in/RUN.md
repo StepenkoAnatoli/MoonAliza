@@ -319,35 +319,57 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Armed: a one-time local scheduled task `smartrouter-run4-at-reset` at 2026-10-24 18:07Z (fresh reading, then sr-pack-4a and sr-kit-cases per R4-7; it stops if another session already dispatched them). Prepared: MoonAliza `npm ci` in this clone for the packs' `MOONALIZA_CLONE` tests (lockfile identical at 16f637f, 01a8604 and the head).
 - Machine notes: `python3` is the broken Store alias here (the SmartRouter hook calls `python`, which works); bash scripts run under Git Bash.
 - Next action: at the reset, the scheduled task (or this chat, if the operator returns first): fresh reading, decide and dispatch sr-pack-4a and sr-kit-cases.
-## Resume point 2026-10-19 04:00 UTC (Chat B, Windows host; item 4 lead work done; context past 150k)
+## Resume point 2026-10-19 09:40 UTC (Chat B, Windows host; items 4 and 5 lead work done; context past 150k)
 
 State:
-- Item 4 (fix unit for calibration run 3's C-1..C-3): brief `briefs/fix-c1-c3.md` written (the lead's design D1-D7:
-  race the fetch and every body read against the bounded signal, never await a body cancel, bound reads as well as
-  bytes; six rejected alternatives; red-first tests per cluster with guard proofs G1-G4; pre-mortem (a)-(f)); request
-  `docs/orchestration/smartrouter/briefs/requests/fix-c1-c3.json` (category fix, `difficultyTier` T2, edit set: the
-  module, its test file, the map, the report; `now` and `deadline` are placeholders filled at dispatch).
-- Dry run of `decide` against a scratch copy of the trace (real ledger untouched): Gates 1-3 pass for cc-opus-high;
-  Gate 4 blocks (seven_day projected 0.8294 > 0.80). Reading 03:57Z from the plan card (get_usage): five_hour 0.11
-  (resets 05:20Z), seven_day 0.82 (resets 2026-10-24 18:00Z), weekly Fable 0.87. Not recorded in `trace/usage.jsonl`
-  (a trace record is a suite input; the dispatch takes its own fresh reading).
-- Planned base (stage 4b subject): the integration head at dispatch; until then the module and test file are unchanged
-  from this branch's head, blobs `src/main/github-oauth.ts` 1316a4b4 and `tests/github-oauth.test.ts` 5189699a. The
-  accepted revision is recorded here when the unit is accepted.
-- Node 24.20.0 on this host; `node_modules` installed with `npm ci` (no Windows baseline measured yet).
+- Item 4 (fix-c1-c3, calibration run 3's C-1..C-3): `briefs/fix-c1-c3.md` and the request
+  `smartrouter/briefs/requests/fix-c1-c3.json` (fix, T2) were written in `b566e81`. A dry run passes Gates 1-3 for
+  cc-opus-high, and Gate 4 blocks it until the seven-day reset. Planned base, which is also the run 4 stage 4b subject:
+  the integration head at dispatch. Until then the module and its test are unchanged (blobs
+  `src/main/github-oauth.ts` 1316a4b4, `tests/github-oauth.test.ts` 5189699a). The accepted revision is recorded here
+  when it lands.
+- Item 5, lead work done in this step:
+  - `briefs/u5-themes-reviewer.md`: one reviewer per theme T1-T8, answering three questions (holds, reachable,
+    forbidden), then the decision space.
+  - `briefs/integration-review.md`: four reviewers (spec, invariants, mutation, breaker), with a table that assigns
+    each earlier finding to one reviewer: U1-R11 `348aa2d`, U2-R15 `97b0b9e`, U5-R18, U6-R2, U7-R17/R18 `b32af8d`
+    (never fresh-reviewed), U7-R19, X2-1/X2-2, the calibration items recorded as not real, and the sibling sites.
+  - 13 requests in `smartrouter/briefs/requests/`: `review-u5-t1..t8`, `review-int-{spec,invariants,mutation,breaker}`,
+    `u8-build`.
+  - The PR text `reports/pr-body-github-sign-in.md`; the draft PR for `build/github-sign-in` is opened from it.
+  - This clone is no longer shallow, so the reviewers can diff from `6ac1007`.
+- Usage at 09:28Z (plan card): five_hour 0.06, seven_day 0.84 (resets 2026-10-24 18:00Z), weekly Fable 0.87. Not
+  recorded in the trace.
+- The Units table's U7 row still says "fix round 1 running". U7 is integrated (`77b2205`; ten cherry-picks ending
+  `b32af8d`). The ledger is append-only, so this line is the correction.
 
 Decisions and why:
-- Cancels are fire-and-forget, not raced: a race holds a decided result (a 429's wait) up to requestTimeoutMs; an
-  outer race per call would turn that 429 into transient. The read-count bound (more reads than maxBodyBytes) closes
-  the zero-length-chunk loop that a timer cannot end (microtask-only), without a timing dependency.
-- Same pattern outside the edit set, recorded for the integration review, not fixed in this unit:
-  `src/main/github-signin.ts:228`, `src/main/github.ts:19,57,59`, `src/main/inference.ts`, `src/main/ollama-locality.ts`.
+- Tiers follow the adapter's review table. T1-T4 and T8 are review@T3, because the spec is inconsistent or silent and
+  the review must say what it would have to say. T5-T7 are review@T1: one module against its own L-rules, with the
+  shipped harness. The four integration reviewers are review@T3, because their findings live at the seams. U8 is
+  build-tests@T1: one file, the rules named in the spec, and the existing Playwright harness.
+- Routing found in the dry run, on a scratch copy of the trace (decide only, real ledger untouched):
+  - Under host-policy-6, no delegate holds review@T3 or build-tests at any tier. cc-fable-xhigh holds them, but the
+    adapter walks it only as `direct`, which is capped at 15,000 tokens, and a deviation must still pass Gate 2.
+  - So 9 of the 13 requests (T1-T4, T8, the four integration reviewers) and `u8-build` are blocked at Gate 2 whatever
+    the usage. They can be routed only after run 4 qualifies profiles there: stage 4b review@T3, and the T1 host-pack
+    cells with sr-policy-7. That work is Chat A's.
+  - T5-T7 reach Gate 4 on six review@T1 delegates, so they can be routed at the reset.
+  - The lead does not lower a tier to get a route.
+- Order after the reset:
+  1. Routable now: fix-c1-c3, then T5-T7 in parallel.
+  2. After run 4's policy revision: U8, then T1-T4 and T8.
+  3. Then the integration review on the head that has fix-c1-c3 and U8.
+  4. Then the integration fix round. Its likely tier, fix@T3, also has no delegate under policy 6. Then the docs unit,
+     the PR made ready for review, and Stages 6-9.
 
 Open items (in order):
-1. At the reset (2026-10-24 18:00Z) or on the operator's override: fresh reading (`route.mjs usage --now <event ts>`),
-   fill `now`/`deadline`, `decide` and `dispatch` fix-c1-c3 to cc-opus-high from the integration head (record the base
-   here), with a refute-first review and up to two fix rounds; a Windows host needs its own full-suite baseline first.
-2. Item 5, lead-only now: briefs for the U5 extras re-verification (`reports/u5-extras-themes.md`, T1-T8, one reviewer
-   per theme) and the integration review (four reviewers, with U5-R18, U1-R11, U2-R15 re-reviews, U6-R2, the
-   calibration-1/2 extras, the sibling sites above); the draft PR text for `build/github-sign-in`. Delegated parts wait
-   for the reset; then auto-build Stages 6-9.
+1. At the reset (2026-10-24 18:00Z), or on the operator's override:
+   - take a fresh reading and fill `now`/`deadline` in each request;
+   - `decide` and `dispatch` fix-c1-c3 from the integration head, and record its base here;
+   - then T5-T7.
+   A Windows host needs its own full-suite baseline first. The PR's Windows CI run is the first full Windows run of
+   the head.
+2. The operator decides how the review@T3, build-tests and fix@T3 work proceeds before run 4 qualifies those profiles:
+   wait for run 4 (the lead's recommendation), or have the lead do it inline.
+3. Watch the draft PR's Windows CI. Do not merge before the merge rule in AGENTS.md holds.

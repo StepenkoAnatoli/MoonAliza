@@ -1,0 +1,49 @@
+{
+  "taskId": "review-u5-t4",
+  "objective": "Re-verify U5 extras theme T4 at the integration head (reports/u5-extras-themes.md): the 6.5 pseudo-code lacks renew()'s live-account check after the answer, so read literally a late 500 for the old account holds the new one. Answer holds (a reproduction with the shipped harness), reachable (through the app's flows) and forbidden (the spec sentence), then set out the lead's decision space (briefs/u5-themes-reviewer.md).",
+  "category": "review",
+  "unit": "u5-themes",
+  "estimatedTokens": 200000,
+  "difficultyTier": "T3",
+  "permittedEffects": [
+    "docs/orchestration/2026-10-13-github-sign-in/reports/u5-theme-T4-*.md"
+  ],
+  "sources": [
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/u5-themes-reviewer.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/unit-reviewer.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/common.md",
+    "docs/orchestration/2026-10-13-github-sign-in/reports/u5-extras-themes.md",
+    "docs/orchestration/2026-10-13-github-sign-in/reports/calibration-1-extra-findings.md",
+    "docs/specification/github-sign-in.md"
+  ],
+  "nonGoals": [
+    "no commit, no push",
+    "no tracked file left changed (scratch tests and mutations restored, sha256 checked)",
+    "no network",
+    "never --no-verify",
+    "no other theme, no calibration-2 item recorded as not real"
+  ],
+  "acceptanceChecks": [
+    {
+      "command": "a scratch reproduction of T4 with the shipped harness (tests/github-signin*.test.ts), run with a private TMPDIR, then deleted",
+      "expect": "findings carry reproductions; proofs re-run"
+    },
+    {
+      "command": "git status --porcelain",
+      "expect": "empty at the end, the report excepted"
+    }
+  ],
+  "dataClasses": [
+    "repo-code",
+    "run-docs"
+  ],
+  "needsVision": false,
+  "projectStop": {
+    "redSuite": false,
+    "gateOff": false,
+    "researchGateFailing": false
+  },
+  "previousResult": null,
+  "deadline": "{{dispatch time + 8h, ISO-8601}}",
+  "now": "{{dispatch time, ISO-8601}}"
+}
