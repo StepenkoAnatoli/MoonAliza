@@ -275,3 +275,12 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Outcome sr-pack seq 3 accepted; no headroom proposal (1,110,316 < 1,263,000).
 - Lesson for the host pack: the pack's discriminating power is its accepted pin; four review rounds each found a wrong fix the previous pin let through. The host pack brief must ask for the wrong-fix matrix up front.
 - sr-evidence (wf_799c944d-ef8) in its first fix round (F1, F2).
+
+## 2026-10-19 00:45 UTC (originating session) - unit sr-evidence accepted, SmartRouter PR #108 opened; the onboarding units are all delivered
+
+- Workflow wf_799c944d-ef8 (cc-opus-high: build, review FIX F1 S2/F2 S3/F3-F6 S4, fix 1, re-review FIX N1 S2/N2 S3/N3 S4, fix 2, re-review FIX with N4 S3 left): 1,491,793 harness tokens, 6 agents, the largest unit so far. The lead closed N4 at integration (a19b3ae: the legacy class closed to runs 1-3 by run id; three failed cuts before it landed, the gate refusing two, all recorded in its message). Reports: `reports/sr-evidence-{1,review-1,fix-1,rereview-1,fix-2,rereview-2}.md`.
+- SmartRouter branch `tools/calibration-evidence-check` at a19b3ae, draft PR #108 stacked on #106 (base `tools/calibration-kit`), subscribed.
+- Outcome sr-evidence seq 3 accepted; rate proposed cc-opus-high headroom-tested 1263000 -> 1492000, ratified.
+- Item 3 (the onboarding units) is complete: 3a revision 6 (on PR #105), 3b the kit (#106), 3c the shared pack (#107), 3d+3e the check and the table (#108). Open PRs: #105, #106, #107, #108, all draft, all CI green at their heads, all waiting on the reviewer; #107 and #108 retarget to main when #106 merges.
+- Item 4 (run 4 stage 4a) waits for the seven-day window reset (2026-10-24 18:00Z) or the operator's call; its preparation (a host-pack brief with the wrong-fix matrix up front, the T1 host-pack cells for build-core, build-tests, research-collect and docs-mechanical, the protocol freeze through the kit) can start before that.
+- Mistakes this phase, all caught and recorded: the F3 wording commit before its edit applied (amended); the fixture-pinned table edited instead of the revision-5 one; `decide` run twice; a commit message that said "dispatched" for a blocked decision (corrected); at sr-evidence integration an unhashable run_id, a broken exact count and a mis-indented test (gate refused, corrected).
