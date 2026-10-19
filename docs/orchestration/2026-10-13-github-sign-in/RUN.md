@@ -319,3 +319,35 @@ Before any launch: refresh the reading; stop at 0.90, launch nothing past 0.85.
 - Armed: a one-time local scheduled task `smartrouter-run4-at-reset` at 2026-10-24 18:07Z (fresh reading, then sr-pack-4a and sr-kit-cases per R4-7; it stops if another session already dispatched them). Prepared: MoonAliza `npm ci` in this clone for the packs' `MOONALIZA_CLONE` tests (lockfile identical at 16f637f, 01a8604 and the head).
 - Machine notes: `python3` is the broken Store alias here (the SmartRouter hook calls `python`, which works); bash scripts run under Git Bash.
 - Next action: at the reset, the scheduled task (or this chat, if the operator returns first): fresh reading, decide and dispatch sr-pack-4a and sr-kit-cases.
+## Resume point 2026-10-19 04:00 UTC (Chat B, Windows host; item 4 lead work done; context past 150k)
+
+State:
+- Item 4 (fix unit for calibration run 3's C-1..C-3): brief `briefs/fix-c1-c3.md` written (the lead's design D1-D7:
+  race the fetch and every body read against the bounded signal, never await a body cancel, bound reads as well as
+  bytes; six rejected alternatives; red-first tests per cluster with guard proofs G1-G4; pre-mortem (a)-(f)); request
+  `docs/orchestration/smartrouter/briefs/requests/fix-c1-c3.json` (category fix, `difficultyTier` T2, edit set: the
+  module, its test file, the map, the report; `now` and `deadline` are placeholders filled at dispatch).
+- Dry run of `decide` against a scratch copy of the trace (real ledger untouched): Gates 1-3 pass for cc-opus-high;
+  Gate 4 blocks (seven_day projected 0.8294 > 0.80). Reading 03:57Z from the plan card (get_usage): five_hour 0.11
+  (resets 05:20Z), seven_day 0.82 (resets 2026-10-24 18:00Z), weekly Fable 0.87. Not recorded in `trace/usage.jsonl`
+  (a trace record is a suite input; the dispatch takes its own fresh reading).
+- Planned base (stage 4b subject): the integration head at dispatch; until then the module and test file are unchanged
+  from this branch's head, blobs `src/main/github-oauth.ts` 1316a4b4 and `tests/github-oauth.test.ts` 5189699a. The
+  accepted revision is recorded here when the unit is accepted.
+- Node 24.20.0 on this host; `node_modules` installed with `npm ci` (no Windows baseline measured yet).
+
+Decisions and why:
+- Cancels are fire-and-forget, not raced: a race holds a decided result (a 429's wait) up to requestTimeoutMs; an
+  outer race per call would turn that 429 into transient. The read-count bound (more reads than maxBodyBytes) closes
+  the zero-length-chunk loop that a timer cannot end (microtask-only), without a timing dependency.
+- Same pattern outside the edit set, recorded for the integration review, not fixed in this unit:
+  `src/main/github-signin.ts:228`, `src/main/github.ts:19,57,59`, `src/main/inference.ts`, `src/main/ollama-locality.ts`.
+
+Open items (in order):
+1. At the reset (2026-10-24 18:00Z) or on the operator's override: fresh reading (`route.mjs usage --now <event ts>`),
+   fill `now`/`deadline`, `decide` and `dispatch` fix-c1-c3 to cc-opus-high from the integration head (record the base
+   here), with a refute-first review and up to two fix rounds; a Windows host needs its own full-suite baseline first.
+2. Item 5, lead-only now: briefs for the U5 extras re-verification (`reports/u5-extras-themes.md`, T1-T8, one reviewer
+   per theme) and the integration review (four reviewers, with U5-R18, U1-R11, U2-R15 re-reviews, U6-R2, the
+   calibration-1/2 extras, the sibling sites above); the draft PR text for `build/github-sign-in`. Delegated parts wait
+   for the reset; then auto-build Stages 6-9.

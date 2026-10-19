@@ -1,0 +1,41 @@
+{
+  "taskId": "fix-c1-c3",
+  "objective": "Fix calibration run 3's C-1..C-3 (S3): the wire module's body phase never observes the bounded signal, so a fetcher that ignores init.signal with a stalled body, a fetch promise that never settles, or a body cancel that never settles hangs requestToken, requestDeviceCode and fetchLogin past requestTimeoutMs. Race the fetch and every body read against the bounded signal, never await a body cancel, bound reads as well as bytes; red-first tests with guard proofs; one map clause (briefs/fix-c1-c3.md).",
+  "category": "fix",
+  "unit": "fix-c1-c3",
+  "estimatedTokens": 400000,
+  "difficultyTier": "T2",
+  "permittedEffects": [
+    "src/main/github-oauth.ts",
+    "tests/github-oauth.test.ts",
+    "docs/ARCHITECTURE.md",
+    "docs/orchestration/2026-10-13-github-sign-in/reports/fix-c1-c3-*.md"
+  ],
+  "sources": [
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/fix-c1-c3.md",
+    "docs/orchestration/2026-10-13-github-sign-in/briefs/common.md",
+    "docs/orchestration/smartrouter/trace/calibration-3/clusters.md",
+    "docs/orchestration/smartrouter/trace/calibration-3/adjudication.json",
+    "docs/orchestration/smartrouter/trace/calibration-3/lead-notes.md",
+    "docs/specification/github-sign-in.md"
+  ],
+  "nonGoals": [
+    "no push",
+    "no spec edit (the lead owns docs/specification)",
+    "no change beyond the brief's files (the sibling sites the brief names stay untouched)",
+    "never --no-verify"
+  ],
+  "acceptanceChecks": [
+    { "command": "npm run typecheck", "expect": "typecheck exit 0" },
+    { "command": "npx eslint src/main/github-oauth.ts tests/github-oauth.test.ts", "expect": "lint exit 0" },
+    { "command": "npx vitest run tests/github-oauth.test.ts", "expect": "red-first pin per finding, then green with guard-removal proofs" },
+    { "command": "the full suite as the launch prompt names it, compared with the dispatching host's baseline file", "expect": "full-suite comparison vs baseline: no new failures, no file without results" },
+    { "command": "refute-first review", "expect": "fresh re-review ACCEPT after at most two fix rounds" }
+  ],
+  "needsVision": false,
+  "dataClasses": ["repo-code", "run-docs"],
+  "projectStop": { "redSuite": false, "gateOff": false, "researchGateFailing": false },
+  "previousResult": null,
+  "deadline": "{{dispatch time + 8h, ISO-8601}}",
+  "now": "{{dispatch time, ISO-8601}}"
+}
