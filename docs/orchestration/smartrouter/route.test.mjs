@@ -2470,8 +2470,16 @@ test('usage windows (host-policy-3): the coefficients ratified from run 2 (0.05,
   assert.match(d.candidates['cc-opus-high'].walkthrough[3].note, /usage window five_hour binds: projected 0\.6273 <= 0\.65$/);
   assert.ok(d.uncertainty.includes(`usage windows: coefficients host-declared (${uw['coefficient-basis']})`));
   // rate on the committed readings: the ratification is after every observation, so nothing is considered or proposed
+  // The copied trace is cut at that instant: the live trace keeps growing, and its first clean reading pair after the
+  // ratification (2026-10-18T21:59:28Z to 2026-10-19T03:01:34Z, sr-pack and sr-evidence inside it, nothing in flight at
+  // either) is considered by rate - which is what the lead reserve and the coefficients exist to be measured by. The
+  // test pins the state at the ratification, so it stays a function of records no later record can change.
   const real = tmp();
   cpSync(join(HERE, 'trace'), real, { recursive: true });
+  for (const file of ['usage.jsonl', 'ledger.jsonl']) {
+    const kept = readFileSync(join(real, file), 'utf8').split('\n').filter((l) => l.trim() && JSON.parse(l).ts <= '2026-10-18T02:00:00Z');
+    writeFileSync(join(real, file), kept.map((l) => `${l}\n`).join(''));
+  }
   const r = rate({ traceDir: real, policyPath: HP3_POLICY_PATH, now: '2026-10-18T02:00:00Z' });
   for (const w of ['five_hour', 'seven_day']) {
     assert.equal(r.stats.usage[w]['ratified-at'], '2026-10-18T01:23:32Z', w);
