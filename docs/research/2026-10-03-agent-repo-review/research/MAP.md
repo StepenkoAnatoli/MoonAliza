@@ -6,7 +6,7 @@ What MoonAliza can adopt from three public repositories the user named (gpt-pilo
 
 ## Subtopics
 
-Drafted by `node "/root/.agents/research-kit/bin/decompose.mjs" --topic "What MoonAliza can adopt from three public repositories the user named (gpt-pilot, beelzebub, tffm) and the GitHub research-and-development topic: what each is, its license and maintenance state, and which patterns fit a local, approval-gated agent"`, seeded with the
+Drafted by `node "/root/.agents/fetchproof/bin/decompose.mjs" --topic "What MoonAliza can adopt from three public repositories the user named (gpt-pilot, beelzebub, tffm) and the GitHub research-and-development topic: what each is, its license and maintenance state, and which patterns fit a local, approval-gated agent"`, seeded with the
 universal checklist and statuses BLANK. Phase 0 gathers material; it does not judge.
 
 Mark every row COVERED (cite the U-## rows that cover it), DISMISSED (reason required -

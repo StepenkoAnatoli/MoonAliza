@@ -91,4 +91,4 @@ first poll.
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=17f9139075378ffe inputs=babdfbbb7bbf1c94 gate=pass -->
+<!-- fetchproof:brief-draft body=17f9139075378ffe inputs=babdfbbb7bbf1c94 gate=pass -->

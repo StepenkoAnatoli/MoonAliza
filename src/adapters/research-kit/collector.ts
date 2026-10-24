@@ -17,7 +17,7 @@ export const COLLECTOR_LIMITS = {
   watchDeadlineMs: 604_800_000, grantMs: 30_000, quitDrainMs: 15_000,
 } as const;
 /** Every DispatchError code in the pinned lib/dispatch.mjs, plus UNKNOWN from collect-remote. */
-export const KIT_CODES = ['REPOSITORY', 'TOKEN', 'NETWORK', 'NO_RUN_ID', 'NOT_FOUND', 'FORBIDDEN', 'HTTP', 'UNKNOWN', 'TIMEOUT', 'BAD_BODY', 'NO_ARTIFACT', 'EXPIRED', 'ARTIFACT_NAME', 'OUT_DIR'] as const;
+export const KIT_CODES = ['REPOSITORY', 'TOKEN', 'NETWORK', 'NO_RUN_ID', 'NOT_FOUND', 'FORBIDDEN', 'HTTP', 'UNKNOWN', 'TIMEOUT', 'BAD_BODY', 'NO_ARTIFACT', 'EXPIRED', 'ARTIFACT_NAME', 'OUT_DIR', 'BAD_FLAG'] as const;
 export type KitCode = typeof KIT_CODES[number];
 const CONCLUSIONS = ['failure', 'cancelled', 'timed_out', 'action_required', 'neutral', 'skipped', 'stale', 'startup_failure'] as const;
 export type Conclusion = typeof CONCLUSIONS[number];
@@ -56,10 +56,10 @@ const TokenSchema = z.string().regex(/^[\x21-\x7E]{1,16384}$/);
 /** Exactly the validator's minimal environment plus the token. Nothing is inherited: no PATH, proxy, CA or GITHUB_TOKEN. */
 export function collectorEnvironment(temp: string, token: string, source: NodeJS.ProcessEnv = process.env): Record<string, string> {
   if (!TokenSchema.safeParse(token).success) throw new Error('COLLECTOR_TOKEN_INVALID');
-  return { ...validatorEnvironment(temp, source), RESEARCH_KIT_GITHUB_TOKEN: token };
+  return { ...validatorEnvironment(temp, source), FETCHPROOF_GITHUB_TOKEN: token };
 }
-/** The file the watch saves: the runner names the artifact research-kit-corpus-v1-<client_ref> (collect.yml). */
-export function packageFileName(clientRef: string): string { return `research-kit-corpus-v1-${clientRef}.zip`; }
+/** The file the watch saves: the runner names the artifact fetchproof-corpus-v1-<client_ref> (collect.yml). */
+export function packageFileName(clientRef: string): string { return `fetchproof-corpus-v1-${clientRef}.zip`; }
 
 // ---------------------------------------------------------------- reading the kit's last line
 
@@ -167,6 +167,8 @@ export function classifyDispatch(attempt: CollectorAttempt): DispatchOutcome {
   if (line.kind !== 'error') return { kind: 'ambiguous', cause: 'KIT_OUTPUT_INVALID' };
   switch (line.code) {
     case 'REPOSITORY': return { kind: 'notDispatched', failure: 'COLLECTOR_REFUSED', cause: 'KIT_REPOSITORY' };
+    // Since the Fetchproof pin, a refused flag under --json is this error line rather than the usage text; it is checked before any GitHub call.
+    case 'BAD_FLAG': return { kind: 'notDispatched', failure: 'COLLECTOR_REFUSED', cause: 'KIT_BAD_FLAG' };
     case 'TOKEN': return { kind: 'notDispatched', failure: 'COLLECTOR_TOKEN_MISSING', cause: 'KIT_TOKEN' };
     case 'NOT_FOUND': return { kind: 'notDispatched', failure: 'COLLECTOR_NOT_FOUND', cause: 'KIT_NOT_FOUND' };
     case 'FORBIDDEN': return { kind: 'notDispatched', failure: 'COLLECTOR_FORBIDDEN', cause: 'KIT_FORBIDDEN' };

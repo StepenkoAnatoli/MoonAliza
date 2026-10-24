@@ -1,13 +1,14 @@
 {
-  "validatorRevision": "fcde0e6c4e9ba585454f81262d695609ef0af474",
+  "validatorRevision": "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
   "legacyRevision": "1a0337b9cb1be34127f655671d72f752fe47210c",
   "runtime": "v24.20.0",
   "platform": "win32",
+  "mutationRuntime": "v24.20.0",
   "identity": {
     "clientRef": "moonaliza-fixture",
     "repository": "moonaliza-fixtures/synthetic",
     "ref": "fixture",
-    "commit": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+    "commit": "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
     "workflow": "fixture-generation",
     "workflowRunId": 1,
     "runAttempt": 1
@@ -15,7 +16,7 @@
   "fixtures": [
     {
       "name": "approved",
-      "producerRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+      "producerRevision": "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
       "recipe": "Upstream approvedProject: rewrite synthetic Finding; render real brief and answer TODOs; append agent reviewer declaration; real producer derives approval.",
       "commands": [
         [
@@ -33,7 +34,7 @@
           "--ref",
           "fixture",
           "--commit",
-          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
           "--workflow",
           "fixture-generation",
           "--run-id",
@@ -42,26 +43,39 @@
           "1"
         ]
       ],
-      "byteLength": 18274,
-      "sha256": "2648f7f8ea02c86ce6dced90017a0371fd55f182b3fc954c17e81d05b23866c6",
+      "byteLength": 19283,
+      "sha256": "6ef7d7cebdb8adfc28b35745df72c09e20983fd89aa1102b715401e088169d96",
       "expected": {
         "exitCode": 0,
         "report": {
           "buildAuthorized": true,
           "clientRef": "moonaliza-fixture",
           "errors": [],
-          "packageId": "RK-50494616186CB769403C02DC22",
+          "packageId": "FP-032851AC4D9F4F801BAF2EF467",
           "reviewedBy": "agent",
           "state": "APPROVED_BRIEF",
           "status": "PASS",
-          "warnings": [],
+          "warnings": [
+            {
+              "code": "PORTABLE-BASELINE",
+              "message": "approval was re-derived with unpromoted portable findings and the shared 180-day freshness default; producer or consumer policy and hooks were not used",
+              "path": null,
+              "remedy": null
+            },
+            {
+              "code": "PREFLIGHT-single-source",
+              "message": "U-1 rests on E-01 alone - one reading, so a correct source and a lucky one look the same",
+              "path": null,
+              "remedy": null
+            }
+          ],
           "workflowRunId": 1
         }
       }
     },
     {
       "name": "collected",
-      "producerRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+      "producerRevision": "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
       "recipe": "Upstream collectedProject, untouched synthetic collector-style Finding and unreviewed brief.",
       "commands": [
         [
@@ -79,7 +93,7 @@
           "--ref",
           "fixture",
           "--commit",
-          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
           "--workflow",
           "fixture-generation",
           "--run-id",
@@ -88,15 +102,15 @@
           "1"
         ]
       ],
-      "byteLength": 18127,
-      "sha256": "43c093f09c8bbc89907a3a6ff14f557ecf03b4fe55c6b27733df58d177d55152",
+      "byteLength": 19044,
+      "sha256": "94cde9155ea4d60900b0f54312a3f29b14bb8fce96363f75b1d5bc5135feec31",
       "expected": {
         "exitCode": 0,
         "report": {
           "buildAuthorized": false,
           "clientRef": "moonaliza-fixture",
           "errors": [],
-          "packageId": "RK-32DD984BF57D96FCD9A809679F",
+          "packageId": "FP-8B0F63E43B54378DE5B653C00D",
           "reviewedBy": "undeclared",
           "state": "REVIEW_IN_PROGRESS",
           "status": "PASS",
@@ -107,7 +121,7 @@
     },
     {
       "name": "failed",
-      "producerRevision": "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+      "producerRevision": "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
       "recipe": "Empty synthetic input directory; producer derives collection failure.",
       "commands": [
         [
@@ -125,7 +139,7 @@
           "--ref",
           "fixture",
           "--commit",
-          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
           "--workflow",
           "fixture-generation",
           "--run-id",
@@ -134,15 +148,15 @@
           "1"
         ]
       ],
-      "byteLength": 5479,
-      "sha256": "d130c62ea596f11dbe420a87ee07bf424bc2e58d8cf40ba375b6c7e7fece85d7",
+      "byteLength": 5937,
+      "sha256": "386618e20c1069f1626179735d848fdd2c9204657c0e412b274d8df5796841c6",
       "expected": {
         "exitCode": 0,
         "report": {
           "buildAuthorized": false,
           "clientRef": "moonaliza-fixture",
           "errors": [],
-          "packageId": "RK-38D31E7675AA0B1EB1FD8B8E08",
+          "packageId": "FP-7B9CD9304C5E06A646EC7125C1",
           "reviewedBy": "undeclared",
           "state": "COLLECTION_FAILED",
           "status": "PASS",
@@ -171,7 +185,7 @@
           "--ref",
           "fixture",
           "--commit",
-          "5588ce3def50e7e3702e5f84251bfd3d445f3df0",
+          "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
           "--workflow",
           "fixture-generation",
           "--run-id",
@@ -180,20 +194,27 @@
           "1"
         ]
       ],
-      "byteLength": 18449,
-      "sha256": "f7f87805002827bc17a96cabe708b6f3c7986bf617fd30554ff6a68172c48263",
+      "byteLength": 18252,
+      "sha256": "42d70124814bfd49ea5a34f0d944507e212e8e5119a3d8eb3c807d586def8e35",
       "expected": {
-        "exitCode": 0,
+        "exitCode": 1,
         "report": {
           "buildAuthorized": false,
-          "clientRef": "moonaliza-fixture",
-          "errors": [],
-          "packageId": "RK-C4E61C43FBE8601D22F893409C",
+          "clientRef": null,
+          "errors": [
+            {
+              "code": "MANIFEST-SCHEMA",
+              "message": "manifest.json does not declare format \"fetchproof-artifact\"",
+              "path": "manifest.json",
+              "remedy": "this is not a Fetchproof artifact"
+            }
+          ],
+          "packageId": null,
           "reviewedBy": "undeclared",
-          "state": "REVIEW_REQUIRED",
-          "status": "PASS",
+          "state": null,
+          "status": "FAIL",
           "warnings": [],
-          "workflowRunId": 1
+          "workflowRunId": null
         }
       }
     },
@@ -202,27 +223,27 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: unsupported; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42215,
-      "sha256": "510002ab20e4892983883003c4320a6fe37925fe12cc019419597df6e60f655c",
+      "byteLength": 44319,
+      "sha256": "274fc087b24cdb75ea8090ce53f8fa76a003269e254c50a5bacee65eafba240a",
       "expected": {
         "exitCode": 2,
         "report": {
           "buildAuthorized": false,
-          "clientRef": "moonaliza-fixture",
+          "clientRef": null,
           "errors": [
             {
               "code": "FORMAT-UNSUPPORTED",
               "message": "this package declares format version 99.0.0; this validator reads majors 1 to 2",
               "path": "manifest.json",
-              "remedy": "upgrade Research-Kit to a version that reads format 99.x"
+              "remedy": "upgrade Fetchproof to a version that reads format 99.x"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
-          "reviewedBy": "agent",
-          "state": "APPROVED_BRIEF",
+          "packageId": null,
+          "reviewedBy": "undeclared",
+          "state": null,
           "status": "INCOMPLETE",
           "warnings": [],
-          "workflowRunId": 1
+          "workflowRunId": null
         }
       }
     },
@@ -231,8 +252,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: mixed-era; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42214,
-      "sha256": "fe8d2f931d4ed1a1e006a0d6d482c7ea6d30a34f5cfcc98a1d59dca9f3bc3ad7",
+      "byteLength": 44318,
+      "sha256": "bc2c4cdfe0b07fec8b30e02ac7d88d4c824734017cb2a351835215ef26e82fb0",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -246,7 +267,7 @@
               "remedy": "regenerate the artifact"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
+          "packageId": "FP-032851AC4D9F4F801BAF2EF467",
           "reviewedBy": "human",
           "state": "APPROVED_BRIEF",
           "status": "FAIL",
@@ -260,13 +281,13 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: contradictory; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42215,
-      "sha256": "a5232ad12be5c7cd052df050257990d3531cbad2efb6bd807c044279b8edd94e",
+      "byteLength": 44319,
+      "sha256": "ac2db6f86463840769c411546b951f3f5975d86af5f857302b8c473ef465bd20",
       "expected": {
         "exitCode": 1,
         "report": {
           "buildAuthorized": false,
-          "clientRef": "moonaliza-fixture",
+          "clientRef": null,
           "errors": [
             {
               "code": "MANIFEST-SCHEMA",
@@ -281,12 +302,12 @@
               "remedy": "do not build from this package; its authorization fields contradict its review and gate state"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
-          "reviewedBy": "agent",
-          "state": "APPROVED_BRIEF",
+          "packageId": null,
+          "reviewedBy": "undeclared",
+          "state": null,
           "status": "FAIL",
           "warnings": [],
-          "workflowRunId": 1
+          "workflowRunId": null
         }
       }
     },
@@ -295,8 +316,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: tampered; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 39831,
-      "sha256": "0f36be9e103163fdcf913191d6e6cfa830024ca4abe4028bc1b99e344ae1cb4b",
+      "byteLength": 41935,
+      "sha256": "e106c93e98c5c7843a1eeb58a3287d91a9db875f94e68f6ec332758d9af8df7e",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -310,7 +331,7 @@
               "remedy": "download the artifact again or regenerate it from the original corpus"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
+          "packageId": "FP-032851AC4D9F4F801BAF2EF467",
           "reviewedBy": "agent",
           "state": "APPROVED_BRIEF",
           "status": "FAIL",
@@ -324,8 +345,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: missing-capture; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 39618,
-      "sha256": "ab36b2a86b3e05aa34811f3799bcf95ae2ac4b9bb315f1d048b7fddb9fa987c0",
+      "byteLength": 41722,
+      "sha256": "b11c111105b8f7aafb8da64e24be499cbdc867d70785ef231128312dfe639293",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -351,7 +372,7 @@
               "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
+          "packageId": "FP-032851AC4D9F4F801BAF2EF467",
           "reviewedBy": "agent",
           "state": "APPROVED_BRIEF",
           "status": "FAIL",
@@ -365,8 +386,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: broken-chain; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42214,
-      "sha256": "d3c0af08b414daa2a921e5c960d36866047440716db1f2116d64f0bc559006e9",
+      "byteLength": 44318,
+      "sha256": "26e70710fcd737134cac155bbc26b2b9659713301cee312a0808beb4b83f203a",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -380,7 +401,7 @@
               "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
+          "packageId": "FP-032851AC4D9F4F801BAF2EF467",
           "reviewedBy": "agent",
           "state": "APPROVED_BRIEF",
           "status": "FAIL",
@@ -394,8 +415,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: broken-citation; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42196,
-      "sha256": "1ecb15ae3fecac30e1a60fcac03fbce35ef60e70c5fa5b3de7274ba0397d89bd",
+      "byteLength": 44300,
+      "sha256": "10501315bd4a3de9429c95e4c5cb2f7e72023a570a6a5c5dd3c143c6666f1cd0",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -409,7 +430,7 @@
               "remedy": "regenerate the artifact from a project that passes `handoff.mjs`"
             }
           ],
-          "packageId": "RK-50494616186CB769403C02DC22",
+          "packageId": "FP-032851AC4D9F4F801BAF2EF467",
           "reviewedBy": "agent",
           "state": "APPROVED_BRIEF",
           "status": "FAIL",
@@ -423,8 +444,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: traversal; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42315,
-      "sha256": "49da7d442913eb4dedb1c14340be36152548c9a1ff0a193fa5c838948dabe5f7",
+      "byteLength": 44419,
+      "sha256": "af7cff5ea95158b3005f273cc4218df0716bc4781b0c84fac107bc8553aad568",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -452,8 +473,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: duplicate; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42754,
-      "sha256": "0d2b033314fe93902db8402df9a70cf83db249d4d7aa658df0a09b983691e24f",
+      "byteLength": 45198,
+      "sha256": "c12d65192bf7664a6206742575c3f9b292c26cf737a927a4febd95f38f2813fd",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -481,8 +502,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: symlink; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 42324,
-      "sha256": "3646d5c271ca188d22dec13b0102e63b74129aa12466a1dd121cd8fd3058a8c9",
+      "byteLength": 44428,
+      "sha256": "ccc68bd2b885a762c35119051bc3fd9ac927b5fd5c6a241c27136367307200e9",
       "expected": {
         "exitCode": 1,
         "report": {
@@ -510,8 +531,8 @@
       "producerRevision": null,
       "recipe": "Negative mutation of approved.zip: bomb; see this generator for exact byte/field mutation. All other entry bytes preserved; ZIP rebuilt by upstream test-only rawZip. No producer approval is claimed.",
       "commands": [],
-      "byteLength": 44364,
-      "sha256": "e2859006167b574f07f90a74839ee0dc6b79746221cc9517f620dc58758a27b8",
+      "byteLength": 46468,
+      "sha256": "9b4fb2a1dd53f3d268152898552ac3db26a416bed2e7e768e2b56db4377dc7e8",
       "expected": {
         "exitCode": 1,
         "report": {

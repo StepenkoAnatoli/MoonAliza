@@ -22,7 +22,7 @@ import { RunSchema, type Research, type RunEvent } from '../src/shared';
 // the scripted model's approved edits) are doubles.
 let root: string; let nodeSha256: string; let fixtureBytes: Buffer; let fixtureSha: string;
 const fixture = resolve('tests/fixtures/research-kit/collected.zip');
-const kitRoot = resolve('.build/research-kit-external/research-kit');
+const kitRoot = resolve('.build/fetchproof-external/fetchproof');
 const at = '2026-10-04T00:00:00.000Z';
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 const SENTINEL = 'moonaliza-test-sentinel-not-a-secret';

@@ -1,7 +1,7 @@
 # Discovery Contract - Can the MoonAliza Electron desktop app sign users in to GitHub (OAuth device flow or another desktop-suited flow), to Claude with a Claude.ai subscription account, and to OpenAI Codex with Sign in with ChatGPT, and use those sign-ins for repository access and model calls - or must third-party apps use API keys
 
 Started 2026-10-12. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

@@ -129,4 +129,4 @@ Mistral's per-model rates (E-05); any model not named in the unknowns.
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=cfc428996fc3ff24 inputs=41890f4b5ff629eb gate=pass -->
+<!-- fetchproof:brief-draft body=cfc428996fc3ff24 inputs=41890f4b5ff629eb gate=pass -->

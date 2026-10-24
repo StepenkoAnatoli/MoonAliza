@@ -13,7 +13,7 @@ import { FAKE_HEAD_SHA, FAKE_REPOSITORY, startFakeGitHub, type FakeGitHub } from
 // the product reads it. See docs/specification/research-journeys.md.
 // Not a real credential: shaped like one, so a leak into any file under the data folder is found by a byte scan.
 const TOKEN = 'github_pat_e2e-only-journeys-0123456789abcdef';
-const KIT_ROOT = resolve('.build/research-kit-external/research-kit');
+const KIT_ROOT = resolve('.build/fetchproof-external/fetchproof');
 const PRELOAD = resolve('e2e/fixtures/collector-network.cjs');
 const DISPATCH = `/repos/${FAKE_REPOSITORY}/actions/workflows/collect.yml/dispatches`;
 const RUN = `/repos/${FAKE_REPOSITORY}/actions/runs/1`;
@@ -129,7 +129,7 @@ test.describe('research journeys', () => {
       producer = collectedProject('2026-10-03'); const zip = join(root, 'package.zip');
       const made = spawnSync(process.execPath, [join(KIT_ROOT, 'bin/artifact.mjs'), 'create', '--root', producer, '--output', zip, '--client-ref', started.clientRef, '--repository', FAKE_REPOSITORY, '--ref', 'main', '--commit', 'a'.repeat(40), '--workflow', 'collect.yml', '--run-id', '1', '--run-attempt', '1'], { encoding: 'utf8', windowsHide: true, timeout: 60_000 });
       expect(made.status, made.stderr).toBe(0);
-      fake.set({ zip: await readFile(zip), artifacts: [{ id: 7, name: `research-kit-corpus-v1-${started.clientRef}` }] });
+      fake.set({ zip: await readFile(zip), artifacts: [{ id: 7, name: `fetchproof-corpus-v1-${started.clientRef}` }] });
       await expect.poll(() => count(fake, 'GET', `/repos/${FAKE_REPOSITORY}/actions/artifacts/7/zip`), { timeout: 60_000, message: 'the watch must download the package' }).toBe(1);
       // The verified import's GitHub run read is refused by the harness before it leaves the machine (the fake does not
       // serve the run yet), so the import defers and the job stays collecting and parked. A transient outcome would
@@ -238,7 +238,7 @@ test.describe('research journeys', () => {
       const made = spawnSync(process.execPath, [join(KIT_ROOT, 'bin/artifact.mjs'), 'create', '--root', producer, '--output', zip, '--client-ref', started.clientRef, '--repository', FAKE_REPOSITORY, '--ref', 'main', '--commit', FAKE_HEAD_SHA, '--workflow', 'collect.yml', '--run-id', '1', '--run-attempt', '1'], { encoding: 'utf8', windowsHide: true, timeout: 60_000 });
       expect(made.status, made.stderr).toBe(0);
       const brief = await readFile(join(producer, 'research/BRIEF.md'), 'utf8');
-      fake.set({ zip: await readFile(zip), artifacts: [{ id: 7, name: `research-kit-corpus-v1-${started.clientRef}` }] });
+      fake.set({ zip: await readFile(zip), artifacts: [{ id: 7, name: `fetchproof-corpus-v1-${started.clientRef}` }] });
       await expect.poll(async () => (await read(page, started.id)).status, { timeout: 120_000, message: 'the verified import must commit collected' }).toBe('collected');
       expect(await read(page, started.id)).not.toHaveProperty('failure');
       // The import's run read was answered by the fake, never refused and never sent anywhere else.

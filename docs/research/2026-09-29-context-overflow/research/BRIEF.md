@@ -121,4 +121,4 @@ stays `PROVIDER_HTTP_400`.
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=550e86cb0537961a inputs=870f23562514b474 gate=pass -->
+<!-- fetchproof:brief-draft body=550e86cb0537961a inputs=870f23562514b474 gate=pass -->

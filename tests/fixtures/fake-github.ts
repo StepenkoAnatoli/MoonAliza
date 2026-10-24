@@ -82,7 +82,7 @@ export async function startFakeGitHub(token: string): Promise<FakeGitHub> {
         }
         if (request.method === 'GET' && path.split('?')[0] === `${base}/runs/${FAKE_RUN_ID}/artifacts`) {
           if (scenario.artifactsHttp) { json(scenario.artifactsHttp, { message: `HTTP ${scenario.artifactsHttp}` }); return; }
-          const artifacts = (scenario.artifacts ?? [{ id: FAKE_ARTIFACT_ID, name: 'research-kit-corpus-v1-moonaliza-fixture' }]).map(item => ({ expired: false, ...item }));
+          const artifacts = (scenario.artifacts ?? [{ id: FAKE_ARTIFACT_ID, name: 'fetchproof-corpus-v1-moonaliza-fixture' }]).map(item => ({ expired: false, ...item }));
           json(200, { total_count: artifacts.length, artifacts }); return;
         }
         if (request.method === 'GET' && path === `${base}/artifacts/${FAKE_ARTIFACT_ID}/zip`) {

@@ -442,4 +442,4 @@ LiveBench scores (U-20); stating a standard retention period for Anthropic (U-09
 4. On the collector machine, if the operator chooses: the pages named under "Decision" (U-09,
    U-10, U-11's DPA first), each URL copied from the capture its row cites.
 
-<!-- research-kit:brief-draft body=688bb8eb3415611d inputs=a8ee5db1c4eb5203 gate=pass -->
+<!-- fetchproof:brief-draft body=688bb8eb3415611d inputs=a8ee5db1c4eb5203 gate=pass -->

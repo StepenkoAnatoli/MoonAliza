@@ -1,5 +1,7 @@
 # Sub-agent Brief Templates
 
+<!-- Modified by Fetchproof on 2026-10-22: received as lead-orchestrator 2.0 (the owner's claude.ai account copy, dated 2026-10-04), which replaces the StepenkoAnatoli/SkillsMDs 3f2d2fc baseline (ADR-0190); the kit's old name, Research-Kit, is Fetchproof here, as are the paths and variables that spelled it (ADR-0186). -->
+
 Sub-agents start without any knowledge of the conversation, the plan, prior decisions or this
 skill. A brief must therefore be complete on its own: real file paths, real commands, real
 identifiers, and the working discipline written in. Vague briefs are the most common cause of weak
@@ -72,7 +74,7 @@ REPORT       Maximum 300 words:
 ## 3. Researcher
 
 ```
-OBJECTIVE    Run Research-Kit phase 1 for the topic "<topic>" to a passing gate and a brief.
+OBJECTIVE    Run Fetchproof phase 1 for the topic "<topic>" to a passing gate and a brief.
 RATIONALE    The design depends on these external facts: <list>. They must be collected as
              cited evidence, not assumed.
 CONTEXT      Kit: <kit path>. Research folder: <project-root>/<research-dir>. Machine role:
@@ -83,7 +85,7 @@ SCOPE        Create and edit files only inside <research-dir>. Write no product 
 BUDGET       At most <n> pages and <m> searches. Run `research.mjs --dry-run` and report the
              plan before collecting anything metered. If the folder already holds a corpus,
              run `research.mjs --status` first: cached pages cost nothing and are not re-fetched.
-PROTOCOL     Follow references/research-kit.md section 3 and the scaffolded AGENTS.md:
+PROTOCOL     Follow references/fetchproof.md section 3 and the scaffolded AGENTS.md:
              scaffold, decompose, classify every map row, write the contract (U-1, U-2, ...)
              and the plan, collect, rewrite every finding with a word-for-word [quote: ...],
              mark unreachable facts KNOWN-UNKNOWN with a day-one verification step, pass

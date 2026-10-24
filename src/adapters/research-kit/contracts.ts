@@ -27,7 +27,7 @@ export type Report = z.infer<typeof ReportSchema>;
 // A projection, not a replacement wire format. Only consumed fields are read here,
 // after the real validator has checked the full manifest, inventory and provenance.
 export const ManifestProjection = z.object({
-  format: z.literal('research-kit-artifact'), formatVersion: z.string().regex(/^[12]\.[0-9]+\.[0-9]+$/),
+  format: z.literal('fetchproof-artifact'), formatVersion: z.string().regex(/^[12]\.[0-9]+\.[0-9]+$/),
   packageId: id, clientRef: BindingSchema.shape.clientRef, state, buildAuthorized: z.boolean(),
   kind: z.enum(['COLLECTED_CORPUS', 'APPROVED_RESEARCH']),
   source: BindingSchema.pick({ repository: true, ref: true, commit: true, workflow: true, workflowRunId: true, runAttempt: true }).strip(),

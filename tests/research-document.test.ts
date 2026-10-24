@@ -20,7 +20,7 @@ import { cutUtf8, MAX_DOCUMENT_BYTES, readResearchDocument, readWorkspace, type 
 // real Store and ResearchJobs, the real ResearchKit adapter with the real pinned kit run by node, the collected and
 // approved fixture packages, and a real Vault with a test cryptor. Every path stays inside this file's own mkdtemp root.
 let root: string; let nodeSha256: string; let collectedBytes: Buffer; let approvedBytes: Buffer;
-const kitRoot = resolve('.build/research-kit-external/research-kit');
+const kitRoot = resolve('.build/fetchproof-external/fetchproof');
 const collectedFixture = resolve('tests/fixtures/research-kit/collected.zip');
 const approvedFixture = resolve('tests/fixtures/research-kit/approved.zip');
 const at = '2026-10-04T00:00:00.000Z';

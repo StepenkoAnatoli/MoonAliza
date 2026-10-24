@@ -95,4 +95,4 @@ Build a **local, version-matched documentation store** for MoonAliza's agents. D
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=4c9691622d0d68f3 inputs=05916b1b52ba7922 gate=pass -->
+<!-- fetchproof:brief-draft body=4c9691622d0d68f3 inputs=05916b1b52ba7922 gate=pass -->

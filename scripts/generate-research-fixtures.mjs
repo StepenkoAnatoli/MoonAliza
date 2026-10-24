@@ -4,17 +4,17 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
-import { revision, legacyRevision, exportSource, inventory, sha256, json } from './research-kit-source.mjs';
+import { revision, legacyRevision, exportSource, inventory, sha256, json } from './fetchproof-source.mjs';
 // Paths below are repository-relative: run from the repository root whatever the caller's cwd.
 process.chdir(fileURLToPath(new URL('../', import.meta.url)));
 // Parsed before anything is exported or written, so a mistyped option changes no file.
 const options = process.argv.slice(2);
 if (options.length > 1 || (options.length === 1 && !['--mutations-only', '--inventory-only'].includes(options[0]))) throw new Error('Use no option, --mutations-only or --inventory-only');
 const mode = options[0] ?? 'full';
-const repo = resolve('.build/research-kit-pin');
+const repo = resolve('.build/fetchproof-pin');
 const output = resolve('tests/fixtures/research-kit'); mkdirSync(output, { recursive: true });
 const previous = mode === 'full' ? null : JSON.parse(readFileSync(join(output, 'provenance.json'), 'utf8'));
-const work = mkdtempSync(resolve('.build/rk-generation-'));
+const work = mkdtempSync(resolve('.build/fp-generation-'));
 // The exported kits and synthetic inputs are scratch: removed on every exit (success, --inventory-only's exit, or a throw).
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));
 const kit = exportSource(repo, revision, join(work, 'current'));

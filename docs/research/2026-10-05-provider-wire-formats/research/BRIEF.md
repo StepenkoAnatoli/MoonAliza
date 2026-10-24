@@ -599,4 +599,4 @@ a content block with zero deltas accepted (E-10's fallback exception).
 3. If the Mandate chooses the Gemini Interactions API, collect its reference
    https://ai.google.dev/api/interactions-api on the collector machine first; no unknown needs it today.
 
-<!-- research-kit:brief-draft body=ff91ab8172f10b03 inputs=ccf8b8ba889440d6 gate=pass -->
+<!-- fetchproof:brief-draft body=ff91ab8172f10b03 inputs=ccf8b8ba889440d6 gate=pass -->

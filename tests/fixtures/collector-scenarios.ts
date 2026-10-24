@@ -13,7 +13,7 @@ import { zipFixture } from './zip';
 /** Test-only tokens. Neither has the shape of a real GitHub token, so a secret scanner has nothing to match. */
 export const TEST_TOKEN = 'github_pat_test-only-0123456789abcdefghijklmnopqrstuvwxyz';
 export const PLAIN_TOKEN = 'plain-test-token-ab12cd34ef56gh78';
-export const KIT_SCRIPT = resolve('.build/research-kit-external/research-kit/bin/collect-remote.mjs');
+export const KIT_SCRIPT = resolve('.build/fetchproof-external/fetchproof/bin/collect-remote.mjs');
 export const GOLDEN_FILE = resolve('tests/fixtures/research-kit/collector-golden/goldens.json');
 export const FIXTURE_CLIENT_REF = 'moonaliza-fixture';
 export const target: CollectorTarget = { collectorRevision: 1, repository: FAKE_REPOSITORY, workflow: 'collect.yml', ref: 'main' };
@@ -31,7 +31,7 @@ export interface Golden { name: string; exitCode: number | null; output: string 
 
 const packageBytes = async (name: string, wrapped = false) => {
   const bytes = await readFile(resolve('tests/fixtures/research-kit', `${name}.zip`));
-  return wrapped ? zipFixture([{ name: `research-kit-corpus-v1-${FIXTURE_CLIENT_REF}.zip`, content: bytes }]) : bytes;
+  return wrapped ? zipFixture([{ name: `fetchproof-corpus-v1-${FIXTURE_CLIENT_REF}.zip`, content: bytes }]) : bytes;
 };
 
 export const SCENARIOS: CollectorScenario[] = [

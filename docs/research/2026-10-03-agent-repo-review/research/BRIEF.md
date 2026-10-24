@@ -62,4 +62,4 @@ Take **patterns only**. No code from any of the three:
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=0385ec156d8b40a5 inputs=da98ae04d7fbb7ee gate=pass -->
+<!-- fetchproof:brief-draft body=0385ec156d8b40a5 inputs=da98ae04d7fbb7ee gate=pass -->

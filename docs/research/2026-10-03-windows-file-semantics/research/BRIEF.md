@@ -89,4 +89,4 @@ Out of scope: network shares and non-NTFS volumes (the helper admits only normal
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=c96010aadfb5085e inputs=cecfaa78ed44ac69 gate=pass -->
+<!-- fetchproof:brief-draft body=c96010aadfb5085e inputs=cecfaa78ed44ac69 gate=pass -->

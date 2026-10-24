@@ -56,4 +56,4 @@ Nothing is built from this corpus by the break test. For the owner: if the envir
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=8252241024a96253 inputs=71ab1b7f41bb8a25 gate=pass -->
+<!-- fetchproof:brief-draft body=8252241024a96253 inputs=71ab1b7f41bb8a25 gate=pass -->

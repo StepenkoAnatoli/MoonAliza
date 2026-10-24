@@ -19,7 +19,7 @@ const runner: OwnedRunner = async (request, signal, options = {}) => {
   return new Promise(done => execFile(request.executable, request.args, { cwd: request.cwd, env: request.env, timeout: request.timeoutMs, maxBuffer: request.maxOutputBytes, encoding: 'utf8' },
     (error, stdout) => done({ status: 'exited', code: error ? (typeof error.code === 'number' ? error.code : null) : 0, output: stdout, truncated: false, cancelled: false, timedOut: false })));
 };
-const make = (name: string) => new ResearchKit({ kitRoot: resolve('.build/research-kit-external/research-kit'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, name), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner);
+const make = (name: string) => new ResearchKit({ kitRoot: resolve('.build/fetchproof-external/fetchproof'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, name), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner);
 
 beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-review-kit-')); nodeSha256 = digest(await readFile(process.execPath)); });
 afterAll(async () => { if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
@@ -91,7 +91,7 @@ test('verifyRetained classifies by the bytes the validator read: intact without 
     await options.beforeStart?.(); options.onStarted?.({ pid: 4242, createdAt: '1' });
     return { status: 'exited', code: 1, output: '', truncated: false, cancelled: false, timedOut: false, ...patch };
   };
-  const at = (patch: object) => new ResearchKit({ kitRoot: resolve('.build/research-kit-external/research-kit'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, 'unavailable'), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, faulty(patch));
+  const at = (patch: object) => new ResearchKit({ kitRoot: resolve('.build/fetchproof-external/fetchproof'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, 'unavailable'), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, faulty(patch));
   const noVerdict = [{ timedOut: true }, { truncated: true }, { code: 0, output: 'not json' }, { status: 'unknown' }];
   for (const patch of noVerdict) {
     const kit = at(patch);

@@ -1,7 +1,7 @@
 # Discovery Contract - A local coding knowledge base for MoonAliza's agents: which language and platform documentation (Python, Node.js, Java, the web platform) may be stored offline and redistributed, in what packaging, how the version a project uses is chosen, and how agent-oriented documentation formats (llms.txt, Context7) work
 
 Started 2026-10-03. This file is the definition of "enough information to build".
-`node "/root/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "/root/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

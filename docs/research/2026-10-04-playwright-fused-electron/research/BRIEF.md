@@ -82,4 +82,4 @@ A point the choice should not overlook: turning the inspect fuse off does **not*
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=d1ee6b444fe12e7c inputs=14051d8340274b1e gate=pass -->
+<!-- fetchproof:brief-draft body=d1ee6b444fe12e7c inputs=14051d8340274b1e gate=pass -->

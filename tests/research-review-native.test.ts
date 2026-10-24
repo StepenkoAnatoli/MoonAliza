@@ -16,7 +16,7 @@ import { materialise, readPackage, reviewFolder, sameInventory, treeInventory } 
 // on Windows, so elsewhere the file is collected and skipped (as tests/guarded-fs-semantics.test.ts is).
 const windows = process.platform === 'win32';
 const SKIP_REASON = 'Windows only: the native helper MoonAlizaHost.exe';
-const kitRoot = resolve('.build/research-kit-external/research-kit');
+const kitRoot = resolve('.build/fetchproof-external/fetchproof');
 const helperPath = resolve('.build/native/MoonAlizaHost.exe');
 const collectedFixture = resolve('tests/fixtures/research-kit/collected.zip');
 const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');

@@ -1,7 +1,7 @@
 # Discovery Contract - Electron fuses and packaged-app code loading: whether a packaged Electron app honours NODE_OPTIONS, --require/-r, ELECTRON_RUN_AS_NODE and --inspect, how fuses (RunAsNode, EnableNodeOptionsEnvironmentVariable, EnableNodeCliInspectArguments, OnlyLoadAppFromAsar, EnableEmbeddedAsarIntegrityValidation) turn them off, and how electron-builder sets fuses
 
 Started 2026-10-03. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

@@ -24,13 +24,13 @@ The working methods this project uses live in `.claude/skills/`, copied verbatim
 
 | Skill | Use it for |
 |-------|-----------|
-| `lead-orchestrator` | Any multi-step task. Plan, research external facts through Research-Kit first (`references/research-kit.md`), freeze contracts, build in parallel, then review with independent spec, breaker, mutation and invariant roles. The facts below are its Phase 0 record. |
+| `lead-orchestrator` | Any multi-step task. Plan, research external facts through Fetchproof first (`references/fetchproof.md`), freeze contracts, build in parallel, then review with independent spec, breaker, mutation and invariant roles. The facts below are its Phase 0 record. |
 | `careful-coding` | Every code change: read before changing, verify by running, report mistakes in its format. Its `references/self-review-checklist.md` was not available to copy. |
 | `break-test` | Hardening a build or test suite. Each failure is proven with a repro, and fixes go in as separate commits. Revised on 2026-10-03 from its first complete run here ([report](docs/evidence/2026-10-03-break-test.md)); this copy is ahead of the user's synced original. |
 | `architecture-pass` | Restructuring a finished change without changing its behaviour. |
 | `four-dimension-audit` | Grading finished work on SPEC, DESIGN, CORRECTNESS and QUALITY, without changing it. |
 
-Next cycle (user instruction, 2026-10-03): run it with `lead-orchestrator` and `careful-coding`. Research the external facts through Research-Kit before designing anything, with 20 pages in total.
+Next cycle (user instruction, 2026-10-03): run it with `lead-orchestrator` and `careful-coding`. Research the external facts through Fetchproof (formerly Research-Kit) before designing anything, with 20 pages in total.
 
 ## Orchestrator facts
 _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`); environments and filesystem guard re-checked 2026-10-04 at `4627d8d`._
@@ -88,10 +88,10 @@ _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`); environ
 | Under a local-only policy no prompt byte reaches a user-run Ollama (profile kind `ollama`) unless, in the same model step, `GET <endpoint>/api/status` through the local session (no credential, no cache, no redirect, 5 s, 64 KiB) answered 200 with `cloud.disabled: true`. Scope: an `openai-compatible` profile on a loopback address is not checked (`docs/specification/more-models.md`, known limit) | `tests/ollama-locality.test.ts` (every refusal case sees only `GET /api/status`; the exact request init; a re-check on every step; cloud-allowed makes no status request; the order inside `infer()` pinned from source), `tests/application.test.ts` (the engine's full message, never retried) |
 | Provider state (adapter-owned model output: thinking, signatures, raw content blocks) lives only in a run's memory: never in the database, events, search index, renderer or logs, and never sent to a kind that does not own its format. A later phase that persists state changes this row, and that change goes to the user | `tests/application.test.ts` ("a tool step's provider state goes back on the next step of its run and never reaches disk, events or session.read": byte scan of the database, WAL and shared-memory files with an escape-free marker, red under a state hidden in an event's string field; "a later run's first request carries no provider state"), `e2e/anthropic.spec.ts` (userData scan for the signature marker after the app closes), the format-ownership refusals in `tests/provider-transport.test.ts`, the contract refines in its Phase 2 U0 test |
 
-### Research-Kit
+### Fetchproof (formerly Research-Kit)
 | Item | Value |
 |------|-------|
-| Kit path | `~/.agents/research-kit` (0.9.5, fast-forwarded and reinstalled from the Research-Kit checkout on 2026-10-04) |
+| Kit path | `~/.agents/fetchproof` (0.9.5, Fetchproof `main` at `ab2e605`, deployed 2026-10-24; the kit was renamed from Research-Kit in Fetchproof#433, and `~/.agents/research-kit` is gone) |
 | Machine role | collector |
 | Transport / policy | `firecrawl-cli` 1.25.3 with the key from the environment only / `pluralist` |
 | `doctor` result | READY on 2026-10-05 with the user's key, in the repository root; without a key it reports one blocker, `firecrawl-auth` (a collector that cannot collect) |
@@ -101,5 +101,5 @@ _Last verified: 2026-10-03, branch `main-axuse` at `e14fc2c` (= `main`); environ
 | Remote collector | none configured for MoonAliza |
 
 ### Parallel execution
-- Shared resources: OS temp (each test uses `mkdtemp`; give each agent its own short `TMPDIR`, since long paths break Chromium sockets), `.build/research-kit-external` (read-only for tests; copy per worktree), SQLite files (per test, under the temp dir), no fixed ports (fakes listen on port 0).
+- Shared resources: OS temp (each test uses `mkdtemp`; give each agent its own short `TMPDIR`, since long paths break Chromium sockets), `.build/fetchproof-external` (read-only for tests; copy per worktree), SQLite files (per test, under the temp dir), no fixed ports (fakes listen on port 0).
 - Git worktrees: available. Symlink `node_modules` from the main checkout and stage files by name (the symlink is untracked).

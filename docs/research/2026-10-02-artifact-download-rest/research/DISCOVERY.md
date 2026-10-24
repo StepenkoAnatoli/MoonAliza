@@ -1,7 +1,7 @@
 # Discovery Contract - Downloading a GitHub Actions run's artifacts over the REST API: listing a run's artifacts, the download redirect and how long its URL lives, the ZIP the bytes arrive in, the artifact's digest, size and expiry, and the limits on artifact size and count
 
 Started 2026-10-02. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

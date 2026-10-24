@@ -33,7 +33,7 @@ import type { Operation, Request, Research, Run, RunEvent, ToolSpec } from '../s
  */
 let root: string; let nodeSha256: string; let fixtureBytes: Buffer; let fixtureSha: string;
 const fixture = resolve('tests/fixtures/research-kit/collected.zip');
-const kitRoot = resolve('.build/research-kit-external/research-kit');
+const kitRoot = resolve('.build/fetchproof-external/fetchproof');
 const at = '2026-10-04T00:00:00.000Z';
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 const ORIGINAL_FINDING = 'The free plan allows 10 requests per minute and includes 1,000 credits.';

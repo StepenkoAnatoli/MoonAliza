@@ -29,7 +29,7 @@ const identity = provenance.identity; const CLIENT_REF = identity.clientRef;
 const fixture = (name: string) => provenance.fixtures.find(f => f.name === name)!;
 const goldens = new Map(goldenFile.goldens.map(g => [g.name, g]));
 const replay = (name: string): OwnedResult => ({ status: 'exited', code: goldens.get(name)!.exitCode, output: goldens.get(name)!.output, truncated: false, cancelled: false, timedOut: false });
-const kitRoot = resolve('.build/research-kit-external/research-kit');
+const kitRoot = resolve('.build/fetchproof-external/fetchproof');
 let nodeSha256: string;
 const roots: string[] = []; const closers: Array<() => Promise<unknown>> = [];
 beforeAll(async () => { nodeSha256 = createHash('sha256').update(await readFile(process.execPath)).digest('hex'); });
@@ -193,8 +193,10 @@ test('the importer rejects an approval or a failed collection, fails a tampered 
   expect(await h.importer(await handoff('approved'))).toEqual({ kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_UNEXPECTED_APPROVAL' });
   expect(await h.importer(await handoff('failed'))).toEqual({ kind: 'rejected', failure: 'COLLECTION_FAILED', cause: 'IMPORT_COLLECTION_FAILED' });
   expect(await h.importer(await handoff('tampered'))).toEqual({ kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_FAIL' });
-  expect(await h.importer(await handoff('legacy-review'))).toMatchObject({ kind: 'verified', verification: { state: 'REVIEW_REQUIRED', ref: identity.ref, jobRevision: 3 } });
-  expect(h.github.seen).toHaveLength(4);
+  // A pre-rename package declares research-kit-artifact, which Fetchproof refuses (no fallback).
+  expect(await h.importer(await handoff('legacy-review'))).toEqual({ kind: 'rejected', failure: 'ARTIFACT_INVALID', cause: 'IMPORT_FAIL' });
+  expect(await h.importer(await handoff('collected'))).toMatchObject({ kind: 'verified', verification: { state: 'REVIEW_IN_PROGRESS', ref: identity.ref, jobRevision: 3 } });
+  expect(h.github.seen).toHaveLength(5);
   const seen = h.github.seen.length;
   const deferred = [
     packageImporter({ epoch: () => 'epoch-1', vault: h.vault, settings: h.settings, kit: null, fetch: h.github.fetch }),
