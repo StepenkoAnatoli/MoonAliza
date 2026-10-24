@@ -3,8 +3,10 @@ import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { resolve, join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 
-export const revision = 'fcde0e6c4e9ba585454f81262d695609ef0af474';
+export const revision = 'ab2e605f04418e63dc4f0f5a44e631ae100b1c9b';
 export const legacyRevision = '1a0337b9cb1be34127f655671d72f752fe47210c';
+// The kit's folder in the external repository: Fetchproof renamed research-kit/ to fetchproof/ (Fetchproof#433, 763ea36).
+export const kitFolder = pin => pin === legacyRevision ? 'research-kit' : 'fetchproof';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export function exportSource(repo, pin, destination) {
   // --git-dir, not -C: if the pin clone is broken, git must fail rather than walk up into MoonAliza.
@@ -13,9 +15,9 @@ export function exportSource(repo, pin, destination) {
   try { execFileSync('git', [...git, 'cat-file', '-e', `${pin}^{commit}`], { stdio: 'ignore', windowsHide: true }); }
   catch { execFileSync('git', [...git, 'fetch', '--quiet', 'origin', pin], { stdio: 'inherit', windowsHide: true }); }
   mkdirSync(destination, { recursive: true });
-  const archive = execFileSync('git', [...git, 'archive', pin, 'research-kit'], { windowsHide: true, maxBuffer: 64 * 1024 ** 2 });
+  const archive = execFileSync('git', [...git, 'archive', pin, kitFolder(pin)], { windowsHide: true, maxBuffer: 64 * 1024 ** 2 });
   execFileSync('tar', ['-xf', '-', '-C', destination], { input: archive, windowsHide: true });
-  return join(destination, 'research-kit');
+  return join(destination, kitFolder(pin));
 }
 export function inventory(root) {
   const files = [];

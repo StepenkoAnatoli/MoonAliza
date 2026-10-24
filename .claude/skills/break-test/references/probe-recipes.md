@@ -1,5 +1,7 @@
 # Probe recipes
 
+<!-- Modified by Fetchproof on 2026-10-20: the kit's old name, Research-Kit, is Fetchproof here, as are the paths and variables that spelled it (ADR-0186). Modified by Fetchproof on 2026-10-22: the parallel-shell row is added to "What the first run taught", from the owner's claude.ai account copy of 2026-10-03, which has it and SkillsMDs does not (ADR-0190). Received baseline: StepenkoAnatoli/SkillsMDs at 3f2d2fc. -->
+
 Shell recipes that were run, as written here, during the skill's first complete run (MoonAliza, Linux container, 2026-10-03). Adapt names and runners to the project; keep the shape. `$S` is one absolute scratch directory outside the checkout that holds every throwaway clone, cache and log.
 
 ## Session layout
@@ -34,7 +36,7 @@ One script runs the gate and leaves a per-step log and exit code, so the same co
 step() { name=$1; shift; printf '### %s: %s\n' "$name" "$*" | tee -a "$L/gate.log"
   "$@" > "$L/$name.log" 2>&1; rc=$?; printf '### %s rc=%s\n' "$name" "$rc" | tee -a "$L/gate.log"; return $rc; }
 step install   npm ci
-step prepare   node scripts/prepare-research-kit.mjs
+step prepare   node scripts/prepare-fetchproof.mjs
 step typecheck npm run typecheck
 step lint      npm run lint
 step build     npm run build
@@ -99,7 +101,7 @@ fcntl.ioctl(s, SIOCSIFFLAGS, struct.pack('16sh', b'lo', flags | IFF_UP))
 ```sh
 unshare -rn bash -c "python3 $S/lo-up.py && \
   (curl -sS --max-time 5 https://registry.npmjs.org/ >/dev/null && echo 'network reachable: probe invalid' || echo 'offline') && \
-  node scripts/prepare-research-kit.mjs && npx vitest run --reporter=json --outputFile=$OUT"
+  node scripts/prepare-fetchproof.mjs && npx vitest run --reporter=json --outputFile=$OUT"
 ```
 
 The `curl` line is the control that the probe is actually offline. `npm ci --offline --cache "$S/emptycache"` fails for every project (`EAI_AGAIN`) and is not informative; what matters is whether provisioning and tests work once dependencies are installed.
@@ -142,18 +144,18 @@ Each rule added to SKILL.md on 2026-10-03, and the observation behind it.
 | Principle 2 and the control step: a probe can manufacture a failure | `unshare -rn npx vitest run` produced 3 new failures in `research-collector-protocol`; with loopback up and the network still unreachable, all 706 tests matched the baseline. The 3 were the probe's. |
 | Baseline is a set of identifiers, compared with `comm` | The baseline had 74 documented failures; "still 74" would not have shown a swap. Every comparison was done on names. |
 | One suite at a time | Vitest runs were timed at 91 to 99 s alone; the flakiness loop and offline run were kept in separate clones and never overlapped with a comparison run. |
-| Section 0 item 4: state-changing git only in throwaway paths; copy-then-diff when applying fixes | A `git checkout -- scripts/prepare-research-kit.mjs` meant for a clone ran in the checkout and discarded an uncommitted fix. |
+| Section 0 item 4: state-changing git only in throwaway paths; copy-then-diff when applying fixes | A `git checkout -- scripts/prepare-fetchproof.mjs` meant for a clone ran in the checkout and discarded an uncommitted fix. |
 | Section 0 item 7: install the declared toolchain session-locally and say so | The container had Node 22.22.0; `.node-version` says 24.21.0. Node 24.21.0 was installed under the scratch nvm directory for the run. |
 | Section 1: record the environment and what CI steps it cannot run | 74 tests need the Windows native helper; running as root made permission probes void; e2e needs Electron on Windows. |
 | Probe 2: read installer warnings | `npm ci` under npm 11 warned that `esbuild` and `electron-winstaller` install scripts were "not yet covered by allowScripts"; under npm 10 the policy does not exist and `EBADENGINE` is only a warning. |
 | Probe 3: run the maintainer-only regeneration scripts in the throwaway clone | `generate-research-fixtures.mjs --inventory-only` and `capture-collector-golden.ts` are documented as never-in-CI; both reproduced byte-identical output, which nothing else was checking. |
 | Probe 4: success under an unsupported version is a finding | The whole gate passed identically under Node 22. Fixed with `engine-strict=true`. |
 | Probe 9: offline install proves nothing; probe provisioning and tests offline instead | `npm ci --offline` failed with `EAI_AGAIN` as expected; the informative results were the kit-preparation script's raw stack without a pin and the clean pass with one. |
-| Probe 10: half-made state directories; root voids permission probes | An empty `.build/research-kit-pin` made every later preparation fail with "not a git repository". Read-only probes were recorded as not probed (root). |
+| Probe 10: half-made state directories; root voids permission probes | An empty `.build/fetchproof-pin` made every later preparation fail with "not a git repository". Read-only probes were recorded as not probed (root). |
 | Probe 12: audit production and development separately | `npm audit`: 8 high; `npm audit --omit=dev`: 0. The decision is about packaging tooling, not the shipped app. |
 | Severity: an all-Low result is reported as all-Low | All four findings were Low; the report says so. |
 | Report: probe defects, environment, probes-run table, repo-relative repro commands | The first offline result would otherwise have been reported as three findings; scratch paths in commands were useless to the reader. |
-| Principle 7 and the *External facts* section: a tool's behaviour is fetched through Research-Kit, not recalled | Two facts the probes could not settle (what npm 11 does with an uncovered install script; whether esbuild's skipped postinstall matters on Windows) had shaped a recommendation. Closed from the owner's pages in a nested kit project (`docs/research/2026-10-03-break-test-external-facts/`, gate PASS, keyless); see `references/research-kit.md`. |
-| Research-Kit rule 2: read doctor's whole verdict | `doctor` at the repository root raised a critical the research did not need: a private-key block in `tests/fixtures/github-tls/leaf.key`. |
+| Principle 7 and the *External facts* section: a tool's behaviour is fetched through Fetchproof, not recalled | Two facts the probes could not settle (what npm 11 does with an uncovered install script; whether esbuild's skipped postinstall matters on Windows) had shaped a recommendation. Closed from the owner's pages in a nested kit project (`docs/research/2026-10-03-break-test-external-facts/`, gate PASS, keyless); see `references/fetchproof.md`. |
+| Fetchproof rule 2: read doctor's whole verdict | `doctor` at the repository root raised a critical the research did not need: a private-key block in `tests/fixtures/github-tls/leaf.key`. |
 | Section 0 item 4: absolute paths; parallel shell calls share a working directory | Three edits issued in parallel wrote nothing: another call had changed the shared shell's directory first, and their relative paths pointed nowhere. Re-run with absolute paths. |
 | Fix step 6: follow the repository's commit convention | AGENTS.md prescribes a five-part body ("What changed / Why / ... / What you got wrong and fixed"); the fix commits use it. |

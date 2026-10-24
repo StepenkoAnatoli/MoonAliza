@@ -110,4 +110,4 @@ Then wire it between `complete()`'s stream and the renderer's IPC.
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=9d793065ea90b036 inputs=7b6fbf61df0b1c1b gate=pass -->
+<!-- fetchproof:brief-draft body=9d793065ea90b036 inputs=7b6fbf61df0b1c1b gate=pass -->

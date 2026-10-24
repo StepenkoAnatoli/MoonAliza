@@ -11,4 +11,4 @@ node scripts/prepare-research-kit.mjs
 node --import tsx scripts/capture-collector-golden.ts
 ```
 
-Recorded on Linux with Node 24.21.0. Windows CI re-runs the freshness test, so its outputs must match these too.
+Recorded on win32 with Node 24.20.0 at the Fetchproof pin `ab2e605` (2026-10-24; the earlier `fcde0e6` capture was Linux, Node 24.21.0). Windows CI re-runs the freshness test, so its outputs must match these too.

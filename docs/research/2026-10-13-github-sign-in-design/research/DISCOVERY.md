@@ -1,7 +1,7 @@
 # Discovery Contract - What does a GitHub App device-flow sign-in in the MoonAliza Electron app need on GitHub's side to read a user's private repositories read-only, refresh and end its tokens, and stay within GitHub's limits?
 
 Started 2026-10-13. This file is the definition of "enough information to build".
-`node "/root/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "/root/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

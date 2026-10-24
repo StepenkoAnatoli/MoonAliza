@@ -1,7 +1,7 @@
 # Discovery Contract - Facts the October 3 break test could not observe: what npm 11's allowScripts does with an uncovered install script, what esbuild's npm postinstall does and whether skipping it matters, and what engine-strict enforces
 
 Started 2026-10-03. This file is the definition of "enough information to build".
-`node "/home/user/Research-Kit/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "/home/user/Fetchproof/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

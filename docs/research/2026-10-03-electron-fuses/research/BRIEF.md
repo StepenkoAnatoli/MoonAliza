@@ -82,4 +82,4 @@ Then add a packaged-build check that reads the fuses of `release/win-unpacked/Mo
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=4f0bb9e0ac59229a inputs=59e870ab51036a0b gate=pass -->
+<!-- fetchproof:brief-draft body=4f0bb9e0ac59229a inputs=59e870ab51036a0b gate=pass -->

@@ -40,7 +40,7 @@ test('watch argv picks up the recorded run and can never dispatch', () => {
 });
 
 test('the pinned kit parses every argv element back to exactly the intended flag', async () => {
-  const { parseFlags } = await import(pathToFileURL(resolve('.build/research-kit-external/research-kit/lib/core.mjs')).href) as { parseFlags(argv: string[]): { flags: Record<string, unknown>; positional: string[] } };
+  const { parseFlags } = await import(pathToFileURL(resolve('.build/fetchproof-external/fetchproof/lib/core.mjs')).href) as { parseFlags(argv: string[]): { flags: Record<string, unknown>; positional: string[] } };
   const topic = 'a=b "quoted" back\\slash trailing\\ ünïcode 中文 --not-a-flag';
   const odd: CollectorJob = { topic, clientRef: 'mz-0123456789abcdef0123456789abcdef', inputs: { queries: ['a=b', '--query=evil', 'ends with \\'], urls: [], preferDomains: ['example.com'], depth: 'quick', maxPages: 2 } };
   const { flags, positional } = parseFlags(dispatchArgs(script, odd, target).slice(2));
@@ -53,8 +53,8 @@ test('the pinned kit parses every argv element back to exactly the intended flag
 test('the collector environment is exactly the validator environment plus the token', () => {
   const poisoned = { SystemRoot: 'C:\\Windows', PATH: '/bin', GITHUB_TOKEN: 'inherited', HTTPS_PROXY: 'http://proxy', https_proxy: 'http://proxy', NODE_OPTIONS: '--require x', NODE_EXTRA_CA_CERTS: 'ca.pem', NODE_TLS_REJECT_UNAUTHORIZED: '0', SSLKEYLOGFILE: 'keys', NODE_USE_ENV_PROXY: '1' };
   const env = collectorEnvironment('C:\\temp', TEST_TOKEN, poisoned);
-  expect(env).toEqual({ ...validatorEnvironment('C:\\temp', poisoned), RESEARCH_KIT_GITHUB_TOKEN: TEST_TOKEN });
-  expect(Object.keys(env).sort()).toEqual(['HOME', 'RESEARCH_KIT_GITHUB_TOKEN', 'SystemRoot', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE']);
+  expect(env).toEqual({ ...validatorEnvironment('C:\\temp', poisoned), FETCHPROOF_GITHUB_TOKEN: TEST_TOKEN });
+  expect(Object.keys(env).sort()).toEqual(['FETCHPROOF_GITHUB_TOKEN', 'HOME', 'SystemRoot', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE']);
   for (const token of ['', ' padded', 'new\nline', 'tab\t', 'nul\0', 'x'.repeat(16385), 'ünicode']) expect(() => collectorEnvironment('C:\\temp', token)).toThrow('COLLECTOR_TOKEN_INVALID');
 });
 
@@ -68,7 +68,7 @@ test('the command line is measured as CreateProcessW receives it; the contract w
   const worst: CollectorJob = { topic: 't'.repeat(2048), clientRef: 'mz-0123456789abcdef0123456789abcdef', inputs: { queries: Array(16).fill('"'.repeat(512)), urls: Array(25).fill(url), preferDomains: Array(16).fill('d'.repeat(253)), depth: 'normal', maxPages: 25 } };
   expect(windowsCommandLine(node, dispatchArgs(script, worst, target)).length).toBeGreaterThan(COLLECTOR_LIMITS.maxCommandLine);
   expect(commandLineFits(node, dispatchArgs(script, worst, target))).toBe(false);
-  expect(packageFileName(FIXTURE_CLIENT_REF)).toBe('research-kit-corpus-v1-moonaliza-fixture.zip');
+  expect(packageFileName(FIXTURE_CLIENT_REF)).toBe('fetchproof-corpus-v1-moonaliza-fixture.zip');
 });
 
 // ---------------------------------------------------------------- table A, over the real kit's output
@@ -87,7 +87,7 @@ const DISPATCH: Record<string, ReturnType<typeof classifyDispatch>> = {
   'dispatch-422': { kind: 'notDispatched', failure: 'COLLECTOR_REJECTED', cause: 'KIT_HTTP_422' },
   'dispatch-422-echo-token': { kind: 'notDispatched', failure: 'COLLECTOR_REJECTED', cause: 'KIT_HTTP_422' },
   'dispatch-no-token': { kind: 'notDispatched', failure: 'COLLECTOR_TOKEN_MISSING', cause: 'KIT_NO_TOKEN' },
-  'dispatch-help': { kind: 'notDispatched', failure: 'COLLECTOR_REFUSED', cause: 'KIT_REFUSED' },
+  'dispatch-help': { kind: 'notDispatched', failure: 'COLLECTOR_REFUSED', cause: 'KIT_BAD_FLAG' },
 };
 
 test.each(Object.entries(DISPATCH))('table A: %s', (name, expected) => {
@@ -128,7 +128,8 @@ const WATCH: Record<string, ReturnType<typeof classifyWatch>> = {
   'watch-collected': { kind: 'package', state: 'REVIEW_IN_PROGRESS' },
   'watch-collected-wrapped': { kind: 'package', state: 'REVIEW_IN_PROGRESS' },
   'watch-collected-redirect': { kind: 'package', state: 'REVIEW_IN_PROGRESS' },
-  'watch-legacy-review': { kind: 'package', state: 'REVIEW_REQUIRED' },
+  // A pre-rename package declares research-kit-artifact, which Fetchproof refuses (no fallback).
+  'watch-legacy-review': { kind: 'runFailed', failure: 'ARTIFACT_INVALID', cause: 'KIT_MANIFEST_SCHEMA' },
   'watch-approved': { kind: 'runFailed', failure: 'ARTIFACT_INVALID', cause: 'KIT_UNEXPECTED_APPROVAL' },
   'watch-failed-collection': { kind: 'runFailed', failure: 'COLLECTION_FAILED', cause: 'KIT_COLLECTION_FAILED' },
   'watch-tampered': { kind: 'runFailed', failure: 'ARTIFACT_INVALID', cause: 'KIT_FILE_SIZE_MISMATCH' },

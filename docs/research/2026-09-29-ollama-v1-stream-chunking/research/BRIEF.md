@@ -98,4 +98,4 @@ longer describes a fragment. Then make the change.
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=82cde7970a9ac3f7 inputs=cf4fee3bc1e6790b gate=pass -->
+<!-- fetchproof:brief-draft body=82cde7970a9ac3f7 inputs=cf4fee3bc1e6790b gate=pass -->

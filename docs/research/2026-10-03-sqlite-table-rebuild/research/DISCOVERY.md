@@ -1,7 +1,7 @@
 # Discovery Contract - How SQLite changes a CHECK constraint: the documented table-rebuild procedure and its rules for foreign keys, triggers, views, indexes and transactions, as better-sqlite3 runs it
 
 Started 2026-10-03. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

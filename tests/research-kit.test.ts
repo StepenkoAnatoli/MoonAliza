@@ -11,7 +11,7 @@ let root: string; let nodeSha256: string; let kit: ResearchKit;
 const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const fixture = (name: string) => resolve('tests/fixtures/research-kit', name + '.zip');
 const binding = { projectId: 'project-one', projectRevision: 1, jobId: 'job-one', jobRevision: 1, ...provenance.identity };
-const config = () => ({ kitRoot: resolve('.build/research-kit-external/research-kit'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, 'private'), helperPath: resolve('.build/native/MoonAlizaHost.exe') });
+const config = () => ({ kitRoot: resolve('.build/fetchproof-external/fetchproof'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, 'private'), helperPath: resolve('.build/native/MoonAlizaHost.exe') });
 beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-research-')); nodeSha256 = digest(await readFile(process.execPath)); kit = new ResearchKit(config()); }, 30000);
 afterAll(async () => { await kit?.close(); if (root) { const rel = relative(resolve(tmpdir()), root); if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('UNSAFE_TEST_CLEANUP'); await rm(root, { recursive: true, force: true }); } });
 
@@ -21,17 +21,17 @@ test.each(provenance.fixtures)('real pinned validator matches exact golden $name
   expect(await kit.inspect(bytes, binding.clientRef)).toEqual(golden.expected.report);
 }, 60000);
 
-test.each(['approved', 'collected', 'failed', 'legacy-review'])('consumer binds and retains producer artifact %s without granting app permission', async name => {
+test.each(['approved', 'collected', 'failed'])('consumer binds and retains producer artifact %s without granting app permission', async name => {
   const result = await kit.validate(fixture(name), binding);
   expect(result.status).toBe('PASS'); expect(result.researchReady).toBe(name === 'approved');
   expect(result).not.toHaveProperty('buildAuthorized');
   expect(result.receipt).toMatchObject({ validatorRevision: provenance.validatorRevision, binding });
   const bytes = await kit.readVerified(result.receipt!.id, binding);
   expect(bytes.equals(await readFile(fixture(name)))).toBe(true);
-  if (name === 'legacy-review') expect(result.state).toBe('REVIEW_REQUIRED');
 }, 60000);
 
-test.each(['unsupported', 'mixed-era', 'contradictory', 'tampered', 'missing-capture', 'broken-chain', 'broken-citation', 'traversal', 'duplicate', 'symlink', 'bomb'])('consumer fails closed for %s', async name => {
+// legacy-review: a pre-rename package declares research-kit-artifact, which Fetchproof refuses (no fallback).
+test.each(['legacy-review', 'unsupported', 'mixed-era', 'contradictory', 'tampered', 'missing-capture', 'broken-chain', 'broken-citation', 'traversal', 'duplicate', 'symlink', 'bomb'])('consumer fails closed for %s', async name => {
   const result = await kit.validate(fixture(name), binding);
   expect(result.status).not.toBe('PASS'); expect(result.researchReady).toBe(false); expect(result.receipt).toBeNull();
 }, 60000);

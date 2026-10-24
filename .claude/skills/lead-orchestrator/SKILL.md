@@ -1,7 +1,8 @@
 ---
 name: "lead-orchestrator"
-description: Run substantial work as a lead engineer who plans, researches external facts through Research-Kit before designing, freezes shared contracts, delegates independent units to parallel sub-agents on the model most likely to succeed at each role, has fresh-eyed reviewers try to break the result, and ships only what was verified. Every phase checkpoints to an on-disk run ledger, so a run that stops - usage limit, context reset, crash - is resumed from its last checkpoint, never repeated. Use it whenever a task is multi-step or multi-file in any project or language - a plan task, a feature, a batch of bug fixes, a migration, a refactor, a PR to deliver, "implement task N", "ship this", "break this into units" - when the user asks to orchestrate, use sub-agents, work in parallel, research before building, go faster without losing quality, be careful, or when they say "continue", "resume", "pick up where it stopped", "where were we". Skip it for one-step edits and quick questions.
+description: Run substantial work as a lead engineer who plans, researches external facts through Fetchproof before designing, freezes shared contracts, delegates independent units to parallel sub-agents on the model most likely to succeed at each role, has fresh-eyed reviewers try to break the result, and ships only what was verified. Every phase checkpoints to an on-disk run ledger, so a run that stops - usage limit, context reset, crash - is resumed from its last checkpoint, never repeated. Use it whenever a task is multi-step or multi-file in any project or language - a plan task, a feature, a batch of bug fixes, a migration, a refactor, a PR to deliver, "implement task N", "ship this", "break this into units" - when the user asks to orchestrate, use sub-agents, work in parallel, research before building, go faster without losing quality, be careful, or when they say "continue", "resume", "pick up where it stopped", "where were we". Skip it for one-step edits and quick questions.
 ---
+<!-- Modified by Fetchproof on 2026-10-22: received as lead-orchestrator 2.0 (the owner's claude.ai account copy, dated 2026-10-04), which replaces the StepenkoAnatoli/SkillsMDs 3f2d2fc baseline (ADR-0190); the kit's old name, Research-Kit, is Fetchproof here, as are the paths and variables that spelled it (ADR-0186). -->
 
 # Lead Orchestrator
 
@@ -24,7 +25,7 @@ more. Credits spent, commits made and reviews passed are never paid for twice.
 | R     | Orient and resume           | Lead                   | No       | `RUN.md` read or created; next action chosen        |
 | 0     | Project facts               | Lead                   | No       | "Orchestrator facts" current; baseline; kit READY   |
 | 1a    | Discovery (internal)        | Explorers              | Yes      | Area summaries saved under `reports/`               |
-| 1b    | Research (external)         | Researchers            | Yes      | Research-Kit project per topic: preflight PASS, `BRIEF.md` |
+| 1b    | Research (external)         | Researchers            | Yes      | Fetchproof project per topic: preflight PASS, `BRIEF.md` |
 | 2     | Plan and freeze contracts   | Lead                   | No       | Task statement; work breakdown; every brief written; contracts committed |
 | 3     | Build                       | Builders               | Yes      | One commit per unit, with accepted report           |
 | 4a    | Unit review (pipelined)     | Unit reviewer          | Yes      | Findings per landed unit, dispositioned             |
@@ -37,8 +38,8 @@ more. Credits spent, commits made and reviews passed are never paid for twice.
 1. **Parallelize only what is independent.** Units run concurrently only when they own disjoint
    files and build on frozen contracts. Contention between agents costs more than it saves.
 2. **Facts outside the repository are fetched, never guessed.** API limits, pricing, licence
-   terms, platform capabilities and third-party behaviour are collected through Research-Kit as
-   cited evidence before they shape a design. See `references/research-kit.md`.
+   terms, platform capabilities and third-party behaviour are collected through Fetchproof as
+   cited evidence before they shape a design. See `references/fetchproof.md`.
 3. **Freeze interfaces before implementation.** The lead defines shared types, schemas, error codes
    and signatures first, so builders never wait on, or guess at, each other.
 4. **Separate building from reviewing.** No agent reviews its own work. Independent review is the
@@ -132,7 +133,7 @@ pages are cached and ledgered, and reviews are saved as they return.
 |--------------------|--------------------------------------------------------------|-----------------------------------|
 | Lead               | Plan, contracts, briefs, triage, integration, ledger, final report | Working branch, run folder, plan, contracts |
 | Explorer           | Map code, tests and contracts for one area                   | None                              |
-| Researcher         | Run Research-Kit phase 1 for one topic to a passing gate and a brief | The research project folder only; no product code |
+| Researcher         | Run Fetchproof phase 1 for one topic to a passing gate and a brief | The research project folder only; no product code |
 | Builder            | Implement one unit, test-first, with evidence, from the brief | Owned files, own branch          |
 | Unit reviewer      | Spec check and adverse-condition probe of one landed unit    | Tests and scratch files only      |
 | Spec reviewer      | Compare the integrated change with task, plan, specification, design and research brief | None |
@@ -167,12 +168,12 @@ when the previous phase's deliverable exists on disk.
   (CLAUDE.md, AGENTS.md or equivalent). If present, use it and correct anything outdated. If
   absent, discover the facts and add the section using `references/project-facts-template.md`.
   Run the full gate on the base branch and record the **baseline**: the base commit and the exact
-  set of checks that already fail. Check Research-Kit readiness: run its `doctor` inside the
+  set of checks that already fail. Check Fetchproof readiness: run its `doctor` inside the
   project and record the result, the kit path, the machine role and the research folder
-  convention (see `references/research-kit.md`, "Readiness").
+  convention (see `references/fetchproof.md`, "Readiness").
 - **Checkpoint:** baseline (commit and failing set) recorded in `RUN.md`.
 - **Exit:** a current facts section with gate commands, acceptance environment, baseline, sources
-  of truth, conventions, invariants, run folder convention and Research-Kit facts. Tell the user
+  of truth, conventions, invariants, run folder convention and Fetchproof facts. Tell the user
   it was added or changed.
 
 The baseline is essential: without it, a regression cannot be distinguished from a pre-existing
@@ -188,13 +189,13 @@ failure. Re-measure it only when the base commit has moved; otherwise reuse it.
 - **Checkpoint:** each summary saved under `reports/`.
 - **Exit:** concise summaries with file paths, current behaviour, applicable contracts and risks.
 
-### Phase 1b: Research (parallel per topic, Research-Kit)
+### Phase 1b: Research (parallel per topic, Fetchproof)
 
 - **Entry:** the research trigger is met and no passing research project already covers the fact.
-  Research-Kit `doctor` ends with `READY` on this machine.
+  Fetchproof `doctor` ends with `READY` on this machine.
 - **Actions:**
   - Define one research topic per independent question. Launch one researcher per topic, each in
-    its own research project folder, following the kit's protocol in `references/research-kit.md`:
+    its own research project folder, following the kit's protocol in `references/fetchproof.md`:
     scaffold, decompose and classify the map, write the contract of unknowns and the plan, collect
     (dry run first), rewrite every finding with a quote, pass `preflight`, write the brief.
   - Give every researcher a page budget. Researchers share one collection budget and the kit's
@@ -405,7 +406,7 @@ and goes into every builder brief verbatim. The non-negotiables:
 | Rejected | Not a defect                                                                    | Record the reason in one line                                      |
 
 Every finding receives a disposition in `RUN.md`. None is dropped silently. Defects in
-Research-Kit itself are recorded as findings with the exact command, output and exit code, and
+Fetchproof itself are recorded as findings with the exact command, output and exit code, and
 reported to the user under "Kit findings"; they are never worked around by editing the kit's output.
 
 ## Failure modes and recovery
@@ -419,7 +420,7 @@ reported to the user under "Kit findings"; they are never worked around by editi
 | Two units need the same file                   | The plan                                        | Stop both; the lead changes the breakdown or sequences them; re-brief |
 | The gate is red after integration              | Per-unit evidence                               | Bisect by unit commit; treat as a review miss; fix red-first           |
 | A research project is INCOMPLETE or BLOCKED    | Its cache and ledger                            | Not a pass: return to the researcher or collect on the collector machine; builders wait |
-| Research-Kit is not READY                      | Nothing to lose yet                             | Apply `doctor`'s fix; if it cannot be fixed here, record a kit finding and stop Phase 1b |
+| Fetchproof is not READY                      | Nothing to lose yet                             | Apply `doctor`'s fix; if it cannot be fixed here, record a kit finding and stop Phase 1b |
 | An S1 arrives after documentation is done      | Everything                                      | Fix brief; re-review; re-run the documentation checks                  |
 
 ## Definition of Done
@@ -477,7 +478,7 @@ because a single long session is more likely to be cut.
 ## Non-engineering work
 
 The same structure applies to research, writing and analysis. Researchers collect sources by
-sub-topic in parallel through Research-Kit where facts must be cited; the lead freezes the
+sub-topic in parallel through Fetchproof where facts must be cited; the lead freezes the
 outline as the contract; writers draft sections in parallel; an independent reviewer traces every
 claim to its evidence row and identifies gaps and contradictions. "Verified" means each claim is
 sourced.
@@ -490,7 +491,7 @@ sourced.
   and the block to paste into briefs.
 - `references/agent-briefs.md`: self-contained brief templates for every role, including the
   resume clause and the unit reviewer. Read before writing the first brief of a task.
-- `references/research-kit.md`: Research-Kit readiness check, protocol, commands, rules and
+- `references/fetchproof.md`: Fetchproof readiness check, protocol, commands, rules and
   exit codes. Read before Phase 0 and before briefing a researcher.
 - `references/project-facts-template.md`: the per-project facts section created in Phase 0.
 - `references/report-templates.md`: commit message, pull request and final report templates.

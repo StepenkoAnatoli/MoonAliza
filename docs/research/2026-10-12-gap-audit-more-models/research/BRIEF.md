@@ -52,4 +52,4 @@ Nothing is built from this corpus: it backs an answer-only gap audit (lens GA-B)
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=5de671d28a8df974 inputs=6c0ed3ccb262d567 gate=pass -->
+<!-- fetchproof:brief-draft body=5de671d28a8df974 inputs=6c0ed3ccb262d567 gate=pass -->

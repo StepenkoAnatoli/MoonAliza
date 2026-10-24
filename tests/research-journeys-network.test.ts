@@ -46,7 +46,7 @@ async function run(script: string, writes: Buffer[], output = '', code = 0) {
   childProcess.spawn = recordingHelper(writes, [], output, code);
   const state = install(childProcess, network); syncBuiltinESMExports();
   Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
-  const result = await spawnOwned({ executable: '/kit/node.exe', args: ['--max-old-space-size=256', script, '--json'], cwd: '/work', env: { TEMP: '/t', RESEARCH_KIT_GITHUB_TOKEN: 'test-token', HOME: '/t', TMP: '/t' }, timeoutMs: 1000, maxOutputBytes: 64 }, undefined, { helperPath });
+  const result = await spawnOwned({ executable: '/kit/node.exe', args: ['--max-old-space-size=256', script, '--json'], cwd: '/work', env: { TEMP: '/t', FETCHPROOF_GITHUB_TOKEN: 'test-token', HOME: '/t', TMP: '/t' }, timeoutMs: 1000, maxOutputBytes: 64 }, undefined, { helperPath });
   expect(result.status).toBe('exited');
   return state;
 }
@@ -56,14 +56,14 @@ test('a collect-remote.mjs launch gains exactly the loopback proxy and the test 
   expect(state).toEqual({ collectors: 1, rewritten: 1, outcomes: [{ code: 0, status: null, clientRef: null, state: null }], refusedFetches: [] });
   const { fields, environment, tail } = decode(writes[0]!);
   expect(fields.slice(0, 3)).toEqual(['/kit/node.exe', '/kit/node.exe --max-old-space-size=256 /kit/bin/collect-remote.mjs --json', '/work']);
-  expect(environment).toEqual(['HOME=/t', `HTTPS_PROXY=${network.HTTPS_PROXY}`, `NODE_EXTRA_CA_CERTS=${network.NODE_EXTRA_CA_CERTS}`, 'RESEARCH_KIT_GITHUB_TOKEN=test-token', 'TEMP=/t', 'TMP=/t']);
+  expect(environment).toEqual(['FETCHPROOF_GITHUB_TOKEN=test-token', 'HOME=/t', `HTTPS_PROXY=${network.HTTPS_PROXY}`, `NODE_EXTRA_CA_CERTS=${network.NODE_EXTRA_CA_CERTS}`, 'TEMP=/t', 'TMP=/t']);
   expect(tail.length).toBe(0);
 });
 
 test('every other helper launch and the guard list pass byte for byte', async () => {
   const writes: Buffer[] = []; const state = await run('/kit/bin/artifact.mjs', writes);
   expect(state).toEqual({ collectors: 0, rewritten: 0, outcomes: [], refusedFetches: [] });
-  expect(decode(writes[0]!).environment).toEqual(['HOME=/t', 'RESEARCH_KIT_GITHUB_TOKEN=test-token', 'TEMP=/t', 'TMP=/t']);
+  expect(decode(writes[0]!).environment).toEqual(['FETCHPROOF_GITHUB_TOKEN=test-token', 'HOME=/t', 'TEMP=/t', 'TMP=/t']);
   // spawnOwned cannot encode a guard list off Windows (drive-letter paths), so the guarded form is the encoded
   // collector protocol plus a guard list, written to the wrapped helper directly.
   const plain: Buffer[] = []; childProcess.spawn = recordingHelper(plain); syncBuiltinESMExports();

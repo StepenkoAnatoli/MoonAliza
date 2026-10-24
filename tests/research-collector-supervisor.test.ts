@@ -113,8 +113,8 @@ test('a queued job is dispatched once, watched, and handed to import with the en
   const stored = h.store.getResearch(job.id)!;
   expect(stored).toMatchObject({ status: 'collecting', workflowRunId: '1', repository: 'o/r' });
   expect(h.calls.map(c => c.kind)).toEqual(['dispatch', 'watch']);
-  expect(Object.keys(h.calls[0]!.env).sort()).toEqual(['HOME', 'RESEARCH_KIT_GITHUB_TOKEN', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE', ...(process.env.SystemRoot ? ['SystemRoot'] : [])].sort());
-  expect(h.calls[0]!.env.RESEARCH_KIT_GITHUB_TOKEN).toBe(TOKEN);
+  expect(Object.keys(h.calls[0]!.env).sort()).toEqual(['HOME', 'FETCHPROOF_GITHUB_TOKEN', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE', ...(process.env.SystemRoot ? ['SystemRoot'] : [])].sort());
+  expect(h.calls[0]!.env.FETCHPROOF_GITHUB_TOKEN).toBe(TOKEN);
   expect(h.calls[1]!.args).toContain('--run-id=1');
   // The whole pre-start step is bounded by admissionMs (60 s), for a dispatch and for a watch alike.
   expect(h.calls.map(c => c.admissionTimeoutMs)).toEqual([60_000, 60_000]);

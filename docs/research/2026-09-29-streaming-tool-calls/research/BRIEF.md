@@ -95,4 +95,4 @@ E-04 and E-07 through the accumulator and asserts one complete call. Then flip `
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=8422df5cc7941595 inputs=30b4c18e5e23339c gate=pass -->
+<!-- fetchproof:brief-draft body=8422df5cc7941595 inputs=30b4c18e5e23339c gate=pass -->

@@ -1,7 +1,7 @@
 # Discovery Contract - Facts the 2026-10-04 break test could not observe on Linux: the Windows environment-block sort rule, Node's fs open flags on Windows, and where Node takes its default locale
 
 Started 2026-10-04. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

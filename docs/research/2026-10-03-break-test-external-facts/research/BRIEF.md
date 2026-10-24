@@ -59,4 +59,4 @@ Out of scope: changing `allowScripts`, electron-builder or any dependency; those
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=343d1859cfd1d798 inputs=92ad74e625072b94 gate=pass -->
+<!-- fetchproof:brief-draft body=343d1859cfd1d798 inputs=92ad74e625072b94 gate=pass -->

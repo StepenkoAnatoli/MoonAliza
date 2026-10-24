@@ -1,5 +1,7 @@
 # Changelog and Recorded Lessons
 
+<!-- Modified by Fetchproof on 2026-10-22: received as lead-orchestrator 2.0 (the owner's claude.ai account copy, dated 2026-10-04), which replaces the StepenkoAnatoli/SkillsMDs 3f2d2fc baseline (ADR-0190); the kit's old name, Research-Kit, is Fetchproof here, as are the paths and variables that spelled it (ADR-0186), dated entries included. -->
+
 Dated, from runs of this skill and from reviews of it. Each lesson entry names the rule it changed,
 so a reader can tell whether a rule is a principle or a scar. The version is recorded in `RUN.md`
 so a resumed run knows which rules it was started under.
@@ -43,7 +45,7 @@ Changes:
 
 ## Lessons
 
-- **2026-10-04, Research-Kit PR #236 (merge `a4f6d9d`).** Four reviewers passed a new filesystem
+- **2026-10-04, Fetchproof PR #236 (merge `a4f6d9d`).** Four reviewers passed a new filesystem
   test that then failed on the Windows CI leg: it planted a symlink to `/etc/hostname` without the
   project's symlink guard and compared the link's stored text, which Windows resolves to a drive
   path. The same test also stayed green with the guard it named removed, because an earlier rule
@@ -55,5 +57,5 @@ Changes:
 
 ## 1.0 - before 2026-10-04
 
-Initial version: phases 0-6, model selection, engagement levels, roles, Research-Kit integration,
+Initial version: phases 0-6, model selection, engagement levels, roles, Fetchproof integration,
 report acceptance, builder standards, finding triage, Definition of Done.

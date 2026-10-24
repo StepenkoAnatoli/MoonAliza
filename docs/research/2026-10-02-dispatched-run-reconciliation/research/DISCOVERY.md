@@ -1,7 +1,7 @@
 # Discovery Contract - Reconciling a dispatched GitHub Actions run durably: finding the run a workflow_dispatch started, polling its status over the REST API, and how long its logs and artifacts stay available
 
 Started 2026-10-02. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

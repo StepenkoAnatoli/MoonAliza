@@ -9,7 +9,7 @@ import type { OwnedCommand, OwnedOptions, OwnedResult, OwnedRunner } from '../sr
 // The collector launch against the real pinned kit, with the native helper replaced by a runner that does what the
 // helper does before CreateProcessW: take the read locks, run beforeStart, then report the child. Runs on any OS.
 let root: string; let nodeSha256: string;
-const kitRoot = resolve('.build/research-kit-external/research-kit');
+const kitRoot = resolve('.build/fetchproof-external/fetchproof');
 const exited: OwnedResult = { status: 'exited', code: 0, output: '{}', truncated: false, cancelled: false, timedOut: false };
 interface Seen { request: OwnedCommand; options: OwnedOptions; started: boolean }
 function runner(seen: Seen[], hold?: Promise<void>): OwnedRunner {

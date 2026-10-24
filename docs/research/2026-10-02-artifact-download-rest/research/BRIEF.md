@@ -119,4 +119,4 @@ digest before any download is attempted.
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=ba8d4a9600949839 inputs=c0cd8d22b06391d3 gate=pass -->
+<!-- fetchproof:brief-draft body=ba8d4a9600949839 inputs=c0cd8d22b06391d3 gate=pass -->

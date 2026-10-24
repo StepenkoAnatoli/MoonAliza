@@ -1,7 +1,7 @@
 # Discovery Contract - How the Anthropic Messages API, the OpenAI Responses API and the Google Gemini native API authenticate, stream text and tool calls, report usage and refuse over-window requests, and which vendors' OpenAI-compatible Chat Completions endpoints accept Moonzila's current request shape
 
 Started 2026-10-05. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

@@ -6,7 +6,7 @@ How the Anthropic Messages API, the OpenAI Responses API and the Google Gemini n
 
 ## Subtopics
 
-Drafted by `node "$HOME/.agents/research-kit/bin/decompose.mjs" --dry-run --recipe api-integration`
+Drafted by `node "$HOME/.agents/fetchproof/bin/decompose.mjs" --dry-run --recipe api-integration`
 on 2026-10-05: 9 universal rows plus 4 from the api-integration recipe, statuses blank. The
 dry run gathered no material (no credits spent). Classified below by the planning agent; T-1..T-8
 are topic-specific rows added because the checklist does not name the seams a provider adapter

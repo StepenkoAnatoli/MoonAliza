@@ -1,7 +1,7 @@
 # Discovery Contract - What MoonAliza can adopt from three public repositories the user named (gpt-pilot, beelzebub, tffm) and the GitHub research-and-development topic: what each is, its license and maintenance state, and which patterns fit a local, approval-gated agent
 
 Started 2026-10-03. This file is the definition of "enough information to build".
-`node "/root/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "/root/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent

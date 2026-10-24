@@ -20,7 +20,7 @@ const runner: OwnedRunner = async (request, signal, options = {}) => {
   return new Promise(done => execFile(request.executable, request.args, { cwd: request.cwd, env: request.env, timeout: request.timeoutMs, maxBuffer: request.maxOutputBytes, encoding: 'utf8' },
     (error, stdout) => done({ status: 'exited', code: error ? (typeof error.code === 'number' ? error.code : null) : 0, output: stdout, truncated: false, cancelled: false, timedOut: false })));
 };
-const make = (name: string) => new ResearchKit({ kitRoot: resolve('.build/research-kit-external/research-kit'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, name), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner);
+const make = (name: string) => new ResearchKit({ kitRoot: resolve('.build/fetchproof-external/fetchproof'), nodePath: process.execPath, nodeSha256, storageRoot: join(root, name), helperPath: resolve('.build/native/MoonAlizaHost.exe') }, runner);
 
 beforeAll(async () => { root = await mkdtemp(join(tmpdir(), 'moonaliza-retain-')); nodeSha256 = digest(await readFile(process.execPath)); });
 afterAll(async () => { if (root) await rm(root, { recursive: true, force: true }); });

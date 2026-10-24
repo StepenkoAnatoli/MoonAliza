@@ -83,4 +83,4 @@ Tests to write: a v3 fixture database with rows and events migrates to v4 with i
    redrafts this file while it is unedited; after any edit it refuses without `--force`,
    so your judgements are preserved.
 
-<!-- research-kit:brief-draft body=083f2185f29f8138 inputs=b53166836d72b280 gate=pass -->
+<!-- fetchproof:brief-draft body=083f2185f29f8138 inputs=b53166836d72b280 gate=pass -->

@@ -1,5 +1,7 @@
 # Project Facts Template
 
+<!-- Modified by Fetchproof on 2026-10-22: received as lead-orchestrator 2.0 (the owner's claude.ai account copy, dated 2026-10-04), which replaces the StepenkoAnatoli/SkillsMDs 3f2d2fc baseline (ADR-0190); the kit's old name, Research-Kit, is Fetchproof here, as are the paths and variables that spelled it (ADR-0186). -->
+
 Add this section to the project's agent instructions (CLAUDE.md, AGENTS.md or equivalent) during
 Phase 0 and keep it current. Record only facts that were checked. Mark anything unconfirmed as
 "unverified" rather than estimating it.
@@ -52,10 +54,10 @@ _Last verified: <date>, branch <name> at <commit>_
 |---------------|--------------------------|
 | <invariant>   | <test or check>          |
 
-### Research-Kit
+### Fetchproof
 | Item                     | Value                                                   |
 |--------------------------|---------------------------------------------------------|
-| Kit path                 | `<~/.agents/research-kit or RESEARCH_KIT_HOME>`         |
+| Kit path                 | `<~/.agents/fetchproof or FETCHPROOF_HOME>`         |
 | Machine role             | `<collector / builder>`                                 |
 | Transport / policy       | `<firecrawl-cli / http-keyless / browser>` / `<pluralist / strict>` |
 | `doctor` result          | `<READY or the reported problem>`, <date>               |

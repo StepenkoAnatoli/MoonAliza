@@ -1,7 +1,7 @@
 {
-  "kitRevision": "fcde0e6c4e9ba585454f81262d695609ef0af474",
-  "node": "v24.21.0",
-  "platform": "linux",
+  "kitRevision": "ab2e605f04418e63dc4f0f5a44e631ae100b1c9b",
+  "node": "v24.20.0",
+  "platform": "win32",
   "goldens": [
     {
       "name": "dispatch-ok",
@@ -51,12 +51,12 @@
     {
       "name": "dispatch-no-token",
       "exitCode": 3,
-      "output": "{\"error\":\"no GitHub token in the environment. Set one of: RESEARCH_KIT_GITHUB_TOKEN, GITHUB_TOKEN\",\"remedy\":\"create a fine-grained token with Actions: read and write on this repository only\"}\n"
+      "output": "{\"error\":\"no GitHub token in the environment. Set one of: FETCHPROOF_GITHUB_TOKEN, GITHUB_TOKEN\",\"remedy\":\"create a fine-grained token with Actions: read and write on this repository only\"}\n"
     },
     {
       "name": "dispatch-help",
       "exitCode": 3,
-      "output": "unknown option --bogus\ncollect-remote - run the collector on GitHub Actions and bring the result back.\n\n  node research-kit/bin/collect-remote.mjs --repository OWNER/REPO --topic \"<what to research>\"\n  node research-kit/bin/collect-remote.mjs --repository OWNER/REPO --run-id <n>\n\n  --repository OWNER/REPO   required\n  --topic \"<text>\"          required. Visible to anyone who can read the repository.\n  --prefer <domains>        optional, comma-separated. Domains that OWN the fact; ranked\n                            above pages merely about it. On a shared host, name the path:\n                            github.com/actions/upload-artifact, not github.com.\n  --query \"<text>\"          optional, repeatable. The real search queries. Without one the\n                            topic is used verbatim, which returns the words and not the\n                            subject when the topic is made of common ones. Visible to\n                            anyone who can read the repository, like --topic.\n  --url \"<https://...>\"     optional, repeatable. A page you already know, fetched directly\n                            instead of searched. Each counts against --max-pages. With only\n                            --url and no --query, nothing is searched. Visible to anyone who\n                            can read the repository, like --topic: never a signed URL.\n  --prior \"<text>\"          optional. What you EXPECT to find, chained ahead of the first\n                            page. Only possible now; refused once collection starts.\n  --max-pages <1-25>        default 8. Each page costs at least one credit.\n  --search-transport <name> auto | serpapi | firecrawl-cli. Default auto: a SerpApi key\n                            wins, else the fetch provider. Pin one to compare them.\n  --depth probe|quick|normal  default quick\n  --client-ref <id>         optional. PUBLIC: it becomes the run and artifact name.\n  --runner ubuntu-latest|windows-latest   default ubuntu-latest\n  --workflow <file.yml>     default collect.yml\n  --ref <branch>            default main\n  --out <dir>               where to save the artifact (default .)\n  --timeout <seconds>       how long to wait (default 1800)\n  --no-wait                 dispatch and exit, printing the run id\n  --run-id <n>              pick up a run already dispatched - after --no-wait, a timeout\n                            (exit 4) or a lost connection - instead of dispatching another.\n                            Waits for it, then downloads and judges it. Takes no --topic.\n  --json                    machine-readable result\n\nThe token is read from the environment: RESEARCH_KIT_GITHUB_TOKEN or GITHUB_TOKEN.\nThere is no --token flag, on purpose.\n\nA fine-grained token needs exactly one permission: Actions -> Read and write, on this\nrepository only. Nothing else.\n\nExit: 0 valid, 1 invalid, 2 run failed/incomplete, 3 could not start, 4 still running.\nA 0 does not authorize building - read buildAuthorized.\n"
+      "output": "{\"code\":\"BAD_FLAG\",\"error\":\"unknown option --bogus\",\"remedy\":\"known options: --repository --topic --max-pages --depth --client-ref --runner --workflow --ref --search-transport --prior --prefer --query --url --out --timeout --no-wait --json --help --run-id\"}\n"
     },
     {
       "name": "dispatch-echo-token",
@@ -76,47 +76,47 @@
     {
       "name": "watch-collected",
       "exitCode": 0,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-8B0F63E43B54378DE5B653C00D\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-collected-wrapped",
       "exitCode": 0,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-8B0F63E43B54378DE5B653C00D\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-collected-redirect",
       "exitCode": 0,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-8B0F63E43B54378DE5B653C00D\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-legacy-review",
-      "exitCode": 0,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-C4E61C43FBE8601D22F893409C\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_REQUIRED\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "exitCode": 1,
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":null,\"errors\":[{\"code\":\"MANIFEST-SCHEMA\",\"message\":\"manifest.json does not declare format \\\"fetchproof-artifact\\\"\",\"path\":\"manifest.json\",\"remedy\":\"this is not a Fetchproof artifact\"}],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":null,\"reviewedBy\":\"undeclared\",\"state\":null,\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-approved",
       "exitCode": 0,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":true,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-50494616186CB769403C02DC22\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":true,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-032851AC4D9F4F801BAF2EF467\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"PASS\",\"warnings\":[{\"code\":\"PORTABLE-BASELINE\",\"message\":\"approval was re-derived with unpromoted portable findings and the shared 180-day freshness default; producer or consumer policy and hooks were not used\",\"path\":null,\"remedy\":null},{\"code\":\"PREFLIGHT-single-source\",\"message\":\"U-1 rests on E-01 alone - one reading, so a correct source and a lucky one look the same\",\"path\":null,\"remedy\":null}],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-failed-collection",
       "exitCode": 0,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-38D31E7675AA0B1EB1FD8B8E08\",\"reviewedBy\":\"undeclared\",\"state\":\"COLLECTION_FAILED\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-7B9CD9304C5E06A646EC7125C1\",\"reviewedBy\":\"undeclared\",\"state\":\"COLLECTION_FAILED\",\"status\":\"PASS\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-tampered",
       "exitCode": 1,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"FILE-SIZE-MISMATCH\",\"message\":\"project/research/raw/2026-09-30-limits-example-a4e22bcd.md is 21 bytes; the manifest declares 2405\",\"path\":\"project/research/raw/2026-09-30-limits-example-a4e22bcd.md\",\"remedy\":\"download the artifact again or regenerate it from the original corpus\"}],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-50494616186CB769403C02DC22\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"FILE-SIZE-MISMATCH\",\"message\":\"project/research/raw/2026-09-30-limits-example-a4e22bcd.md is 21 bytes; the manifest declares 2405\",\"path\":\"project/research/raw/2026-09-30-limits-example-a4e22bcd.md\",\"remedy\":\"download the artifact again or regenerate it from the original corpus\"}],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-032851AC4D9F4F801BAF2EF467\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-unsupported",
       "exitCode": 2,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"FORMAT-UNSUPPORTED\",\"message\":\"this package declares format version 99.0.0; this validator reads majors 1 to 2\",\"path\":\"manifest.json\",\"remedy\":\"upgrade Research-Kit to a version that reads format 99.x\"}],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-50494616186CB769403C02DC22\",\"reviewedBy\":\"agent\",\"state\":\"APPROVED_BRIEF\",\"status\":\"INCOMPLETE\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":null,\"errors\":[{\"code\":\"FORMAT-UNSUPPORTED\",\"message\":\"this package declares format version 99.0.0; this validator reads majors 1 to 2\",\"path\":\"manifest.json\",\"remedy\":\"upgrade Fetchproof to a version that reads format 99.x\"}],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":null,\"reviewedBy\":\"undeclared\",\"state\":null,\"status\":\"INCOMPLETE\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-client-ref-mismatch",
       "exitCode": 1,
-      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"CLIENT-REF-MISMATCH\",\"message\":\"this package carries clientRef \\\"moonaliza-fixture\\\", not \\\"mz-0123456789abcdef0123456789abcdef\\\"\",\"path\":\"manifest.json\",\"remedy\":\"you are holding a different job's artifact; check source.workflowRunId against the run you dispatched\"}],\"file\":\"<out>/research-kit-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"RK-32DD984BF57D96FCD9A809679F\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
+      "output": "{\"apiVersion\":\"2026-03-10\",\"buildAuthorized\":false,\"clientRef\":\"moonaliza-fixture\",\"errors\":[{\"code\":\"CLIENT-REF-MISMATCH\",\"message\":\"this package carries clientRef \\\"moonaliza-fixture\\\", not \\\"mz-0123456789abcdef0123456789abcdef\\\"\",\"path\":\"manifest.json\",\"remedy\":\"you are holding a different job's artifact; check source.workflowRunId against the run you dispatched\"}],\"file\":\"<out>/fetchproof-corpus-v1-moonaliza-fixture.zip\",\"htmlUrl\":\"https://github.com/o/r/actions/runs/1\",\"packageId\":\"FP-8B0F63E43B54378DE5B653C00D\",\"reviewedBy\":\"undeclared\",\"state\":\"REVIEW_IN_PROGRESS\",\"status\":\"FAIL\",\"warnings\":[],\"workflowRunId\":1}\n"
     },
     {
       "name": "watch-run-failure",
@@ -166,7 +166,7 @@
     {
       "name": "watch-no-token",
       "exitCode": 3,
-      "output": "{\"error\":\"no GitHub token in the environment. Set one of: RESEARCH_KIT_GITHUB_TOKEN, GITHUB_TOKEN\",\"remedy\":\"create a fine-grained token with Actions: read and write on this repository only\"}\n"
+      "output": "{\"error\":\"no GitHub token in the environment. Set one of: FETCHPROOF_GITHUB_TOKEN, GITHUB_TOKEN\",\"remedy\":\"create a fine-grained token with Actions: read and write on this repository only\"}\n"
     }
   ]
 }

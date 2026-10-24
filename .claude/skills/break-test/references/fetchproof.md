@@ -1,15 +1,17 @@
-# Research-Kit in a break test
+# Fetchproof in a break test
+
+<!-- Modified by Fetchproof on 2026-10-20: the kit's old name, Research-Kit, is Fetchproof here, as are the paths and variables that spelled it (ADR-0186); this file was received as references/research-kit.md. Received baseline: StepenkoAnatoli/SkillsMDs at 3f2d2fc. -->
 
 How the kit was actually used on 2026-10-03 to close the facts the probes could not observe, with the parts that cost time written down so they cost it once. The kit's own `README.md` and the `research-first` skill it installs are the reference for anything not covered here.
 
 ## When the kit is not deployed
 
-`doctor` looked for `~/.agents/research-kit` and found nothing: the session container had only the user's checkout. Running from the checkout for the session, without installing anything on the machine:
+`doctor` looked for `~/.agents/fetchproof` and found nothing: the session container had only the user's checkout. Running from the checkout for the session, without installing anything on the machine:
 
 ```sh
-export RESEARCH_KIT_HOME=/path/to/Research-Kit/research-kit   # the kit folder inside the checkout
-export RESEARCH_KIT_TRANSPORT=http-keyless                      # free; no key on this machine
-node "$RESEARCH_KIT_HOME/bin/doctor.mjs"                        # from the repository root
+export FETCHPROOF_HOME=/path/to/Fetchproof/fetchproof   # the kit folder inside the checkout
+export FETCHPROOF_TRANSPORT=http-keyless                      # free; no key on this machine
+node "$FETCHPROOF_HOME/bin/doctor.mjs"                        # from the repository root
 ```
 
 `doctor` then warns that the commit and edit gates are not installed and that no install state is recorded. Those warnings go in the report; they do not stop a collection. Say in the report that the kit ran from a checkout.
@@ -20,9 +22,9 @@ Read the whole verdict. At MoonAliza's root, `doctor` raised one *critical* that
 
 ```sh
 P=docs/research/$(date +%F)-break-test-external-facts
-node "$RESEARCH_KIT_HOME/bin/new-project.mjs" "$P" --topic "Facts the break test could not observe: ..." --kit "$RESEARCH_KIT_HOME"
+node "$FETCHPROOF_HOME/bin/new-project.mjs" "$P" --topic "Facts the break test could not observe: ..." --kit "$FETCHPROOF_HOME"
 cd "$P"
-node "$RESEARCH_KIT_HOME/bin/decompose.mjs" --dry-run     # writes research/MAP.md; keyless, so spends nothing either way
+node "$FETCHPROOF_HOME/bin/decompose.mjs" --dry-run     # writes research/MAP.md; keyless, so spends nothing either way
 ```
 
 The nine universal map rows are about data sources; for documentation facts most are `DISMISSED` with a reason (no auth, no quota, no cost, public pages) and a few are `COVERED` by the unknowns. Add one topic row per tool (`S-1 npm's install-script policy`, `S-2 esbuild's postinstall`, `S-3 engine-strict`).

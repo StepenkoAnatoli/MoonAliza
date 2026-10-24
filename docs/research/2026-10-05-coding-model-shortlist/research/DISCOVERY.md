@@ -1,7 +1,7 @@
 # Discovery Contract - Which cloud and local coding models are worth offering in Moonzila as of 2026-10-05: current API model ids with context and output limits, tool-calling reliability, how vendors use and retain API inputs, and for small local models their licences, Ollama availability and sizes, runtime version and CPU requirements
 
 Started 2026-10-05. This file is the definition of "enough information to build".
-`node "$HOME/.agents/research-kit/bin/preflight.mjs"` reads it and blocks the build until every unknown
+`node "$HOME/.agents/fetchproof/bin/preflight.mjs"` reads it and blocks the build until every unknown
 below is either `CLOSED` with evidence or `KNOWN-UNKNOWN` with a verification step.
 
 ## Build intent
@@ -160,8 +160,8 @@ query's own list, which would give every listed host the owner's +10 in every se
 query names only its own owner hosts.
 
 ```
-node "$HOME/.agents/research-kit/bin/research.mjs" --plan research/plan.json      # run 1, cloud side, 16 pages
-node "$HOME/.agents/research-kit/bin/research.mjs" --plan research/plan-2.json    # run 2, local side, 15 pages
+node "$HOME/.agents/fetchproof/bin/research.mjs" --plan research/plan.json      # run 1, cloud side, 16 pages
+node "$HOME/.agents/fetchproof/bin/research.mjs" --plan research/plan-2.json    # run 2, local side, 15 pages
 ```
 
 `research/plan-conditional.json` is not run unless the lead decides, and then only the

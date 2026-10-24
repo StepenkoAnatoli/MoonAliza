@@ -679,4 +679,4 @@ design needs (contract: `research/DISCOVERY.md`).
    available), the field statuses including SAML - and U-16's three questions to GitHub
    Support, before release.
 
-<!-- research-kit:brief-draft body=3eef5793aeee1808 inputs=d0b150cc3a9fdb78 gate=pass -->
+<!-- fetchproof:brief-draft body=3eef5793aeee1808 inputs=d0b150cc3a9fdb78 gate=pass -->
